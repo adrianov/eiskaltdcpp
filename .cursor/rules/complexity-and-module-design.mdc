@@ -1,0 +1,21 @@
+---
+description: 200-line module target and end-of-turn shrink for edited C++ sources.
+alwaysApply: true
+---
+
+# Module length (~200 lines)
+
+**Goal:** keep production modules small enough to review, navigate, and edit safely (including with AI). Target **~200 lines** per module file.
+
+Applies to implementation-heavy sources: `dcpp/`, `dht/`, `eiskaltdcpp-cli/`, `eiskaltdcpp-daemon/`, `eiskaltdcpp-gtk/`, `eiskaltdcpp-qt/` — `*.cpp`, `*.cc`, `*.h`, `*.hpp`, `*.hh`. Use **`wc -l`** on the file you edited; headers count when they hold most of the logic.
+
+## End of every request (before finishing the turn)
+
+1. List **production files you edited** this request (not docs-only, icons, translations, or CMake-only edits unless they add new sources). Run **`wc -l`**, sort **longest first**.
+2. If the **longest** edited file is **≥ 200 lines**, shrink it **in the same turn** (one file only — do not refactor unrelated modules):
+   - Remove **dead code** and **duplication** first.
+   - If still **≥ 200 lines**, **extract ≥ 100 lines** into a cohesive sibling module (responsibility-shaped name — not `part2.cpp`; use a matching `.h` + `.cpp` pair when splitting implementation).
+   - Register new sources in the relevant **`CMakeLists.txt`**. Keep public API stable; behavior must not change.
+3. **Skip** only when shrinking would make the code longer or less clear — state what you tried and why.
+
+If several modules are over the limit across requests, refactor **one file at a time, longest first**.
