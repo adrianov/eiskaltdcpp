@@ -26,7 +26,8 @@ ArenaWidgetManager::~ArenaWidgetManager(){
 
     disconnect(this, nullptr, nullptr, nullptr);
 
-    for (const auto &awgt : widgets) {
+    const QList<ArenaWidget*> widgetsCopy = widgets;
+    for (const auto &awgt : widgetsCopy) {
         if (!dynamic_cast<QObject*>(awgt)){
             continue;
         }
@@ -81,7 +82,8 @@ void ArenaWidgetManager::rem ( ArenaWidget *awgt ) {
     
     emit removed(awgt);
     
-    QApplication::processEvents();
+    if (!awgt->isUnload())
+        QApplication::processEvents();
     
     if (!dynamic_cast<QObject*>(awgt))
         return;

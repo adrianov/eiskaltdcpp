@@ -1089,6 +1089,9 @@ bool HubFrame::eventFilter(QObject *obj, QEvent *e){
 void HubFrame::closeEvent(QCloseEvent *e){
     Q_D(HubFrame);
 
+    if (!d->client)
+        return;
+
     blockSignals(true);
 
     QObject::disconnect(this, nullptr, this, nullptr);
@@ -1100,15 +1103,17 @@ void HubFrame::closeEvent(QCloseEvent *e){
     d->client->removeListener(this);
     d->client->disconnect(true);
     ClientManager::getInstance()->putClient(d->client);
+    d->client = nullptr;
 
     save();
 
     for (const auto &it : d->pm){
-        PMWindow *w = const_cast<PMWindow*>(it);
+        PMWindow *w = it;
 
         disconnect(w, SIGNAL(privateMessageClosed(QString)), this, SLOT(slotPMClosed(QString)));
 
-        ArenaWidgetManager::getInstance()->rem(w);
+        if (!isUnload())
+            ArenaWidgetManager::getInstance()->rem(w);
     }
 
     d->pm.clear();
@@ -1133,7 +1138,7 @@ void HubFrame::closeEvent(QCloseEvent *e){
     e->accept();
 
     blockSignals(false);
-    {
+    if (!isUnload()) {
         emit closeRequest();
     }
     blockSignals(true);
@@ -1342,8 +1347,7 @@ void HubFrame::load(){
 
     QString ustate = WSGET(WS_CHAT_USERLIST_STATE);
 
-    if (!ustate.isEmpty())
-        treeView_USERS->header()->restoreState(QByteArray::fromBase64(ustate.toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView_USERS->header(), QByteArray::fromBase64(ustate.toUtf8()));
 
     if (w_chat >= 0 && w_ulist >= 0){
         QList<int> frames;
