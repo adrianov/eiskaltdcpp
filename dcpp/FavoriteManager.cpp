@@ -603,17 +603,16 @@ string FavoriteManager::nextHubNick(const string& url, const string& currentNick
         suffix = 0;
     }
 
-    for(int next = suffix + 1; next < 1000; ++next) {
-        const string suf = Util::toString(next);
-        string nick = base;
-        if(nick.size() + suf.size() > 35)
-            nick = nick.substr(0, 35 - suf.size());
-        if(nick.empty())
-            break;
-        nick += suf;
-        return nick;
-    }
-    return Util::emptyString;
+    if(suffix >= 999)
+        return Util::emptyString;
+
+    const string suf = Util::toString(suffix + 1);
+    string nick = base;
+    if(nick.size() + suf.size() > 35)
+        nick = nick.substr(0, 35 - suf.size());
+    if(nick.empty())
+        return Util::emptyString;
+    return nick + suf;
 }
 
 FavoriteHubEntryList FavoriteManager::getFavoriteHubs(const string& group) const {
