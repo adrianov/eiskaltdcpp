@@ -196,6 +196,7 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
         state = STATE_NORMAL;
         setAutoReconnect(true);
         setMyIdentity(u->getIdentity());
+        storeHubNick();
         updateCounts(false);
     }
 
@@ -503,6 +504,13 @@ void AdcHub::handle(AdcCommand::STA, AdcCommand& c) noexcept {
         }
         return;
     }
+
+    case AdcCommand::ERROR_NICK_TAKEN:
+        if(u->getUser() == getMyIdentity().getUser() && tryAlternateNick())
+            return;
+        disconnect(false);
+        fire(ClientListener::NickTaken(), this);
+        return;
     }
     ChatMessage message = { c.getParam(1), u, nullptr, nullptr, false, 0 };
     fire(ClientListener::Message(), this, message);
@@ -690,13 +698,15 @@ void AdcHub::connect(const OnlineUser& user, string const& token, bool secure) {
     const string* proto;
     if(secure) {
         if(user.getUser()->isSet(User::NO_ADCS_0_10_PROTOCOL)) {
-            /// @todo log
+            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: user does not support ADCS") %
+                user.getIdentity().getNick()));
             return;
         }
         proto = &SECURE_CLIENT_PROTOCOL_TEST;
     } else {
         if(user.getUser()->isSet(User::NO_ADC_1_0_PROTOCOL) || SETTING(REQUIRE_TLS)) {
-            /// @todo log, consider removing from queue
+            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: TLS/ADC required but user does not support it") %
+                user.getIdentity().getNick()));
             return;
         }
         proto = &CLIENT_PROTOCOL;

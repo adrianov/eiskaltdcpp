@@ -26,6 +26,7 @@
 #include "DebugManager.h"
 #include "FavoriteManager.h"
 #include "TimerManager.h"
+#include "format.h"
 #include "version.h"
 
 namespace dcpp {
@@ -83,7 +84,10 @@ void Client::reloadSettings(bool updateNick) {
 
     if(fav) {
         if(updateNick) {
-            setCurrentNick(checkNick(fav->getNick(true)));
+            string nick = FavoriteManager::getInstance()->getHubNick(getHubUrl());
+            if(nick.empty())
+                nick = fav->getNick(true);
+            setCurrentNick(checkNick(nick));
         }
 
         if(!fav->getUserDescription().empty()) {
@@ -108,7 +112,10 @@ void Client::reloadSettings(bool updateNick) {
         setSearchInterval(fav->getSearchInterval());
     } else {
         if(updateNick) {
-            setCurrentNick(checkNick(SETTING(NICK)));
+            string nick = FavoriteManager::getInstance()->getHubNick(getHubUrl());
+            if(nick.empty())
+                nick = SETTING(NICK);
+            setCurrentNick(checkNick(nick));
         }
         setCurrentDescription(SETTING(DESCRIPTION));
         setSearchInterval(SETTING(MINIMUM_SEARCH_INTERVAL));
@@ -301,6 +308,31 @@ void Client::on(Second, uint64_t aTick) noexcept {
             search(s.sizeType, s.size, s.fileType , s.query, s.token, s.exts);
         }
     }
+}
+
+bool Client::tryAlternateNick() {
+    FavoriteManager* fm = FavoriteManager::getInstance();
+    const string oldNick = getCurrentNick();
+    const string next = fm->nextHubNick(getHubUrl(), oldNick);
+    if(next.empty())
+        return false;
+
+    fm->setHubNick(getHubUrl(), next);
+    setCurrentNick(checkNick(next));
+
+    fire(ClientListener::StatusMessage(), this,
+         str(F_("Nick \"%1%\" is taken, trying \"%2%\"...") % oldNick % next),
+         ClientListener::FLAG_NORMAL);
+
+    disconnect(true);
+    setAutoReconnect(true);
+    const int delay = SETTING(RECONNECT_DELAY);
+    setReconnDelay(delay < 5 ? 5 : delay);
+    return true;
+}
+
+void Client::storeHubNick() {
+    FavoriteManager::getInstance()->setHubNick(getHubUrl(), getCurrentNick());
 }
 #ifdef LUA_SCRIPT
 string ClientScriptInstance::formatChatMessage(const tstring& aLine) {

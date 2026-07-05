@@ -200,6 +200,10 @@ protected:
     virtual void search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList) = 0;
     virtual string checkNick(const string& nick) = 0;
 
+    /** Try next nick with numeric suffix after a nick conflict. */
+    bool tryAlternateNick();
+    void storeHubNick();
+
     // TimerManagerListener
     virtual void on(Second, uint64_t aTick) noexcept;
     // BufferedSocketListener

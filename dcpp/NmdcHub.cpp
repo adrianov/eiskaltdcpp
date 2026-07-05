@@ -660,6 +660,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 
             if(state == STATE_IDENTIFY && u.getUser() == getMyIdentity().getUser()) {
                 state = STATE_NORMAL;
+                storeHubNick();
                 updateCounts(false);
 
                 version();
@@ -682,6 +683,8 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         line.replace(0,9,str2);
         fire(ClientListener::StatusMessage(), this, unescape(line), ClientListener::FLAG_NORMAL);
     } else if(cmd == "$ValidateDenide") {       // Mind the spelling...
+        if(tryAlternateNick())
+            return;
         disconnect(false);
         fire(ClientListener::NickTaken(), this);
     } else if(cmd == "$UserIP") {

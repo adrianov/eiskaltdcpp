@@ -574,6 +574,48 @@ FavoriteHubEntryPtr FavoriteManager::getFavoriteHubEntry(const string& aServer) 
     return NULL;
 }
 
+string FavoriteManager::getHubNick(const string& url) const {
+    Lock l(cs);
+    auto i = hubNicks.find(url);
+    return i != hubNicks.end() ? i->second : Util::emptyString;
+}
+
+void FavoriteManager::setHubNick(const string& url, const string& nick) {
+    Lock l(cs);
+    hubNicks[url] = nick;
+}
+
+string FavoriteManager::nextHubNick(const string& url, const string& currentNick) const {
+    string base;
+    if(FavoriteHubEntryPtr fav = getFavoriteHubEntry(url)) {
+        base = fav->getNick(false);
+    }
+    if(base.empty())
+        base = SETTING(NICK);
+
+    int suffix = 0;
+    if(currentNick.size() > base.size() && Util::stricmp(currentNick.substr(0, base.size()), base) == 0) {
+        suffix = Util::toInt(currentNick.substr(base.size()));
+        if(suffix <= 0)
+            return Util::emptyString;
+    } else if(Util::stricmp(currentNick, base) != 0) {
+        base = currentNick;
+        suffix = 0;
+    }
+
+    for(int next = suffix + 1; next < 1000; ++next) {
+        const string suf = Util::toString(next);
+        string nick = base;
+        if(nick.size() + suf.size() > 35)
+            nick = nick.substr(0, 35 - suf.size());
+        if(nick.empty())
+            break;
+        nick += suf;
+        return nick;
+    }
+    return Util::emptyString;
+}
+
 FavoriteHubEntryList FavoriteManager::getFavoriteHubs(const string& group) const {
     FavoriteHubEntryList ret;
     for(auto i = favoriteHubs.begin(), iend = favoriteHubs.end(); i != iend; ++i)

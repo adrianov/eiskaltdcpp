@@ -81,7 +81,9 @@ public:
     bool isFavoriteHub(const std::string& aUrl);
     FavoriteHubEntryPtr getFavoriteHubEntry(const string& aServer) const;
 
-    // Favorite hub groups
+    string getHubNick(const string& url) const;
+    void setHubNick(const string& url, const string& nick);
+    string nextHubNick(const string& url, const string& currentNick) const;
     const FavHubGroups& getFavHubGroups() const { return favHubGroups; }
     void setFavHubGroups(const FavHubGroups& favHubGroups_) { favHubGroups = favHubGroups_; }
 
@@ -118,6 +120,9 @@ private:
     int lastId;
 
     FavoriteMap users;
+
+    typedef unordered_map<string, string> HubNickMap;
+    HubNickMap hubNicks; // session-only, per-hub nick in use
 
     mutable CriticalSection cs;
 
