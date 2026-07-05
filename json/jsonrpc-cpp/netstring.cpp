@@ -38,7 +38,7 @@ namespace netstring
     std::string ret;
     
     /* format of a netstring is [len]:[string], */
-    sprintf(strLen, "%lu:", len);
+    snprintf(strLen, sizeof(strLen), "%lu:", len);
     ret.append(strLen);
     ret.append(str);
     ret.append(",");

@@ -92,7 +92,7 @@ namespace Json
             return false;
         }
         char tmp_port[30];
-        sprintf(tmp_port,"%s:%d", GetAddress().c_str(),GetPort());
+        snprintf(tmp_port, sizeof(tmp_port), "%s:%d", GetAddress().c_str(), GetPort());
         mg_set_option(server, "listening_port", tmp_port);
         serving_thread_func(server);
         return true;
