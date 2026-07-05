@@ -162,9 +162,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(cqi->getUser().user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive()) {
-                    StringList nicks = ClientManager::getInstance()->getNicks(cqi->getUser());
-                    const string name = nicks.empty() ? cqi->getUser().user->getCID().toBase32() : nicks[0];
-                    LogManager::getInstance()->message(str(F_("Waiting for active user instead of passive %1%") % name));
+                    LogManager::getInstance()->message(str(F_("Waiting for active user instead of passive %1%") % ClientManager::getInstance()->getNickOrCid(cqi->getUser())));
                     passiveUsers.push_back(cqi->getUser());
                     removed.push_back(cqi);
                     continue;

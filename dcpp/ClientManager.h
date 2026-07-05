@@ -53,6 +53,11 @@ public:
     StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
 
     StringList getNicks(const HintedUser& user) { return getNicks(user.user->getCID(), user.hint); }
+    string getNickOrCid(const CID& cid, const string& hintUrl) {
+        StringList nicks = getNicks(cid, hintUrl);
+        return nicks.empty() ? cid.toBase32() : nicks[0];
+    }
+    string getNickOrCid(const HintedUser& user) { return getNickOrCid(user.user->getCID(), user.hint); }
     StringList getHubNames(const HintedUser& user) { return getHubNames(user.user->getCID(), user.hint); }
     StringList getHubs(const HintedUser& user) { return getHubs(user.user->getCID(), user.hint); }
 
