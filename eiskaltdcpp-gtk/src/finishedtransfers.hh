@@ -59,7 +59,6 @@ private:
     static void onRemoveItems_gui(GtkMenuItem *item, gpointer data);
     static void onRemoveAll_gui(GtkMenuItem *item, gpointer data);
     static void onPageSwitched_gui(GtkNotebook *notebook, GtkWidget *page, guint num, gpointer data);
-    static void onShowOnlyFullFilesToggled_gui(GtkWidget *widget, gpointer data);
 
     // Client functions
     void initializeList_client();
@@ -68,6 +67,7 @@ private:
     void removeFile_client(std::string target);
     void removeUser_client(std::string cid);
     void removeAll_client();
+    void pruneMissingFiles_client();
 
     // Client callbacks
     virtual void on(dcpp::FinishedManagerListener::AddedFile, bool upload, const std::string &file, const dcpp::FinishedFileItemPtr &item) noexcept;
@@ -83,6 +83,7 @@ private:
     TreeView fileView;
     GtkTreeSelection *fileSelection,*userSelection;
     bool isUpload;
+    bool diskPruned;
     int totalFiles;
     int totalUsers;
     int64_t totalBytes, totalTime;

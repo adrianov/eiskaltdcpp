@@ -12,6 +12,7 @@
 #include <QWidget>
 #include <QEvent>
 #include <QCloseEvent>
+#include <QShowEvent>
 #include <QDir>
 #include <QComboBox>
 #include <QItemSelectionModel>
@@ -80,13 +81,13 @@ typedef QVariantMap VarMap;
 friend class dcpp::Singleton< FinishedTransfers<isUpload> >;
 
 public:
-    QWidget *getWidget() { return this;}
-    QString getArenaTitle(){ return (isUpload? uploadTitle() : downloadTitle()); }
-    QString getArenaShortTitle(){ return getArenaTitle(); }
-    QMenu *getMenu() { return nullptr; }
-    ArenaWidget::Role role() const;
+    QWidget *getWidget() override { return this;}
+    QString getArenaTitle() override { return (isUpload? uploadTitle() : downloadTitle()); }
+    QString getArenaShortTitle() override { return getArenaTitle(); }
+    QMenu *getMenu() override { return nullptr; }
+    ArenaWidget::Role role() const override;
 
-    const QPixmap &getPixmap(){
+    const QPixmap &getPixmap() override {
         if (isUpload)
             return WICON(WulforUtil::eiUPLIST);
         else
@@ -94,19 +95,31 @@ public:
     }
 
 protected:
-    virtual void closeEvent(QCloseEvent *e){
+    void closeEvent(QCloseEvent *e) override {
         isUnload()? e->accept() : e->ignore();
+    }
+
+    void showEvent(QShowEvent *e) override {
+        QWidget::showEvent(e);
+        if (!isUpload && !diskPruned) {
+            diskPruned = true;
+            pruneMissingFiles();
+        }
     }
 
 private:
     FinishedTransfers(QWidget *parent = nullptr) :
-        FinishedTransferProxy(parent), db_opened(false)
+        FinishedTransferProxy(parent), db_opened(false), diskPruned(false)
     {
         setupUi(this);
 
         model = new FinishedTransfersModel();
 
-        proxy = new FinishedTransferProxyModel();
+        proxy = new FinishedTransferProxyModel(!isUpload, !isUpload);
+        if (!isUpload) {
+            model->setHideFileLists(true);
+            model->setRequireFullFile(true);
+        }
         proxy->setDynamicSortFilter(true);
         proxy->setSourceModel(model);
 
@@ -155,7 +168,12 @@ private:
         QObject::connect(treeView->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu()));
         QObject::connect(checkBox_FULL, SIGNAL(toggled(bool)), this, SLOT(slotSwitchOnlyFull(bool)));
 
-        FinishedTransfers::slotSwitchOnlyFull(false);
+        if (isUpload) {
+            FinishedTransfers::slotSwitchOnlyFull(false);
+        } else {
+            checkBox_FULL->hide();
+            FinishedTransfers::slotSwitchOnlyFull(true);
+        }
         FinishedTransfers::slotTypeChanged(0);
 
         ArenaWidget::setState( ArenaWidget::Flags(ArenaWidget::state() | ArenaWidget::Singleton | ArenaWidget::Hidden) );
@@ -179,25 +197,42 @@ private:
 
     void loadList(){
         VarMap params;
+        StringList removeFileLists;
 
-        auto lock = FinishedManager::getInstance()->lock();
-        const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(isUpload);
-        const FinishedManager::MapByUser &user = FinishedManager::getInstance()->getMapByUser(isUpload);
+        {
+            auto lock = FinishedManager::getInstance()->lock();
+            const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(isUpload);
+            const FinishedManager::MapByUser &user = FinishedManager::getInstance()->getMapByUser(isUpload);
 
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            params.clear();
+            for (auto it = list.begin(); it != list.end(); ++it) {
+                if (!isUpload && isFileListPath(it->first)) {
+                    removeFileLists.push_back(it->first);
+                    continue;
+                }
 
-            getParams(it->second, it->first, params);
+                if (!showDownload(it->first, it->second))
+                    continue;
 
-            model->addFile(params);
+                params.clear();
+
+                getParams(it->second, it->first, params);
+
+                model->addFile(params);
+            }
+
+            for (auto uit = user.begin(); uit != user.end(); ++uit) {
+                params.clear();
+
+                getParams(uit->second, uit->first, params);
+
+                model->addUser(params);
+            }
         }
 
-        for (auto uit = user.begin(); uit != user.end(); ++uit) {
-            params.clear();
-
-            getParams(uit->second, uit->first, params);
-
-            model->addUser(params);
+        for (const auto &file : removeFileLists) {
+            try {
+                FinishedManager::getInstance()->remove(false, file);
+            } catch (const std::exception&) {}
         }
 
         AsyncRunner *runner = new AsyncRunner(this);
@@ -237,6 +272,17 @@ private:
             params["TARGET"]= q.value(i++);
             params["ELAP"]  = q.value(i++);
             params["FULL"]  = q.value(i++);
+
+            if (!showDownloadParams(params))
+                continue;
+
+            if (!isUpload && !Util::fileExists(_tq(params["TARGET"].toString()))) {
+                QSqlQuery del(db);
+                del.prepare("DELETE FROM files WHERE TARGET = ?;");
+                del.bindValue(0, params["TARGET"]);
+                del.exec();
+                continue;
+            }
 
             emit coreAddedFile(params);
         }
@@ -345,7 +391,7 @@ private:
 #endif
     }
 
-    void slotTypeChanged(int index){
+    void slotTypeChanged(int index) override {
         QString from_key = (index == 0)? WS_FTRANSFERS_USERS_STATE : WS_FTRANSFERS_FILES_STATE;
         QString to_key = (index == 0)? WS_FTRANSFERS_FILES_STATE : WS_FTRANSFERS_USERS_STATE;
         QByteArray old_state = treeView->header()->saveState();
@@ -364,7 +410,7 @@ private:
             proxy->setFilterKeyColumn(COLUMN_FINISHED_CRC32);
     }
 
-    void slotClear(){
+    void slotClear() override {
         model->clearModel();
 
         try {
@@ -401,7 +447,7 @@ private:
         QDesktopServices::openUrl(QUrl::fromLocalFile(file));
     }
 
-    void slotItemDoubleClicked(const QModelIndex &proxyIndex){
+    void slotItemDoubleClicked(const QModelIndex &proxyIndex) override {
         Q_UNUSED(proxyIndex);
 
         if (comboBox->currentIndex())
@@ -435,7 +481,7 @@ private:
             openFile(f);
     }
 
-    void slotContextMenu(){
+    void slotContextMenu() override {
         static WulforUtil *WU = WulforUtil::getInstance();
 
         QItemSelectionModel *s_model = treeView->selectionModel();
@@ -471,7 +517,7 @@ private:
                 file_list = item->data(COLUMN_FINISHED_PATH).toString();
 
                 if (!file_list.isEmpty()){
-                    files.append(file_list.split("; ", QString::SkipEmptyParts));
+                    files.append(file_list.split("; ", Qt::SkipEmptyParts));
                 }
 
             }
@@ -493,44 +539,46 @@ private:
                 openFile(f);
         }
         else if (ret == open_dir){
-            for (auto &f : files){
-                f = f.left(f.lastIndexOf(QDir::separator())) + QDir::separator();
-
-                if (f.startsWith(QChar('/')))
-                    f.prepend("file://");
-                else
-                    f.prepend("file:///");
-
-                QDesktopServices::openUrl(QUrl(f));
-            }
+            for (const auto &f : files)
+                WulforUtil::revealPath(f);
         }
 
     }
 
-    void slotHeaderMenu(){
+    void slotHeaderMenu() override {
         WulforUtil::headerMenu(treeView);
     }
 
-    void slotSwitchOnlyFull(bool checked){
+    void slotSwitchOnlyFull(bool checked) override {
         proxy->setFilterFixedString((checked? "1" : ""));
     }
 
-    void slotSettingsChanged(const QString &key, const QString &){
+    void slotSettingsChanged(const QString &key, const QString &) override {
         if (key == WS_TRANSLATION_FILE)
             retranslateUi(this);
     }
 
-    void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept{
-        if (isUpload == upload){
-            VarMap params;
+    void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override {
+        if (isUpload != upload)
+            return;
 
-            getParams(item, file, params);
-
-            emit coreAddedFile(params);
+        if (!showDownload(file, item)) {
+            if (!isUpload && isFileListPath(file)) {
+                try {
+                    FinishedManager::getInstance()->remove(false, file);
+                } catch (const std::exception&) {}
+            }
+            return;
         }
+
+        VarMap params;
+
+        getParams(item, file, params);
+
+        emit coreAddedFile(params);
     }
 
-    void on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept{
+    void on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept override {
         if (isUpload == upload){
             VarMap params;
 
@@ -540,8 +588,8 @@ private:
         }
     }
 
-    void on(FinishedManagerListener::UpdatedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept{
-        if (isUpload == upload){
+    void on(FinishedManagerListener::UpdatedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override {
+        if (isUpload == upload && showDownload(file, item)){
             VarMap params;
 
             getParams(item, file, params);
@@ -550,13 +598,41 @@ private:
         }
     }
 
-    void on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept{
+    void on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept override {
         if (isUpload == upload){
+            removeFileFromDB(_q(file));
             emit coreRemovedFile(_q(file));
         }
     }
 
-    void on(FinishedManagerListener::UpdatedUser, bool upload, const dcpp::HintedUser &user) noexcept{
+    void removeFileFromDB(const QString &target) {
+#ifdef USE_QT_SQLITE
+        if (!db_opened || target.isEmpty())
+            return;
+
+        QSqlQuery q(db);
+        q.prepare("DELETE FROM files WHERE TARGET = ?;");
+        q.bindValue(0, target);
+        q.exec();
+#endif
+    }
+
+    void pruneMissingFiles() {
+        const QStringList targets = model->fileTargets();
+        for (const QString &qtarget : targets) {
+            if (Util::fileExists(_tq(qtarget)))
+                continue;
+
+            try {
+                FinishedManager::getInstance()->remove(false, _tq(qtarget));
+            } catch (const std::exception&) {}
+
+            removeFileFromDB(qtarget);
+            model->remFile(qtarget);
+        }
+    }
+
+    void on(FinishedManagerListener::UpdatedUser, bool upload, const dcpp::HintedUser &user) noexcept override {
         if (isUpload == upload){
             const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
             auto userit = umap.find(user);
@@ -573,7 +649,7 @@ private:
         }
     }
 
-    void on(FinishedManagerListener::RemovedUser, bool upload, const dcpp::HintedUser &user) noexcept{
+    void on(FinishedManagerListener::RemovedUser, bool upload, const dcpp::HintedUser &user) noexcept override {
         if (isUpload == upload){
             emit coreRemovedUser(_q(user.user->getCID().toBase32()));
         }
@@ -582,11 +658,45 @@ private:
     FinishedTransferProxyModel *proxy;
     FinishedTransfersModel *model;
 
+    static bool isFileListPath(const std::string &file) {
+        if(file.empty())
+            return false;
+
+        const string listPath = Util::getListPath();
+        if(!listPath.empty() && file.size() >= listPath.size() &&
+           Util::stricmp(file.substr(0, listPath.size()).c_str(), listPath.c_str()) == 0)
+            return true;
+
+        if(file.size() >= 4 && Util::stricmp(file.substr(file.size() - 4).c_str(), ".xml") == 0)
+            return true;
+        if(file.size() >= 7 && Util::stricmp(file.substr(file.size() - 7).c_str(), ".xml.bz2") == 0)
+            return true;
+        return Util::stricmp(Util::getFileExt(file).c_str(), ".DcLst") == 0;
+    }
+
+    bool showDownload(const std::string &file, const FinishedFileItemPtr &item) const {
+        if (isUpload)
+            return true;
+        return item->isFull() && !isFileListPath(file);
+    }
+
+    bool showDownloadParams(const VarMap &params) const {
+        if (isUpload)
+            return true;
+        if (!params["FULL"].toBool())
+            return false;
+
+        const string target = _tq(params["TARGET"].toString());
+        const string path = _tq(params["PATH"].toString() + params["FNAME"].toString());
+        return !isFileListPath(target) && !isFileListPath(path);
+    }
+
 #ifdef USE_QT_SQLITE
     QSqlDatabase db;
     QString db_file;
 #endif
     bool db_opened;
+    bool diskPruned;
 };
 
 template <>

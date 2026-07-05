@@ -38,8 +38,30 @@
 
 using namespace dcpp;
 
+namespace {
+
+bool isDownloadFileList(const string& path) {
+    if(path.empty())
+        return false;
+
+    const string listPath = Util::getListPath();
+    if(!listPath.empty() && path.size() >= listPath.size() &&
+       Util::stricmp(path.substr(0, listPath.size()).c_str(), listPath.c_str()) == 0)
+        return true;
+
+    if(path.size() >= 4 && Util::stricmp(path.substr(path.size() - 4).c_str(), ".xml") == 0)
+        return true;
+    if(path.size() >= 7 && Util::stricmp(path.substr(path.size() - 7).c_str(), ".xml.bz2") == 0)
+        return true;
+
+    return Util::stricmp(Util::getFileExt(path).c_str(), ".DcLst") == 0;
+}
+
+} // namespace
+
 FinishedTransfersModel::FinishedTransfersModel(QObject *parent):
-        QAbstractItemModel(parent), sortColumn(0), sortOrder(Qt::AscendingOrder)
+        QAbstractItemModel(parent), sortColumn(0), sortOrder(Qt::AscendingOrder),
+        hideFileLists(false), requireFullFile(false)
 {
     QList<QVariant> userData;
     userData << tr("User")<< tr("Files") << tr("Time") << tr("Transferred")
@@ -102,7 +124,7 @@ QVariant FinishedTransfersModel::data(const QModelIndex &index, int role) const
         {
             if (rootItem == fileItem){
                 if (index.column() == COLUMN_FINISHED_NAME)
-                    return WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FINISHED_TARGET).toString()).scaled(16, 16);
+                    return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FINISHED_TARGET).toString()), 16);
             }
 
             break;
@@ -152,7 +174,7 @@ QVariant FinishedTransfersModel::data(const QModelIndex &index, int role) const
 Qt::ItemFlags FinishedTransfersModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
-        return nullptr;
+        return Qt::ItemFlags();
 
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
@@ -371,7 +393,55 @@ void FinishedTransfersModel::clearModel(){
     endResetModel();
 }
 
+bool FinishedTransfersModel::acceptDownloadFile(const QVariantMap &params) const {
+    if (!hideFileLists && !requireFullFile)
+        return true;
+
+    const string target = _tq(params["TARGET"].toString());
+    const string path = _tq(params["PATH"].toString() + params["FNAME"].toString());
+
+    if (hideFileLists && (isDownloadFileList(target) || isDownloadFileList(path)))
+        return false;
+
+    if (requireFullFile && !params["FULL"].toBool())
+        return false;
+
+    return true;
+}
+
+bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
+    if (!QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent))
+        return false;
+
+    if (!hideFileLists_ && !requireFullFile_)
+        return true;
+
+    const QAbstractItemModel *model = sourceModel();
+    if (!model)
+        return true;
+
+    const QModelIndex targetIndex = model->index(sourceRow, COLUMN_FINISHED_TARGET, sourceParent);
+    const QModelIndex pathIndex = model->index(sourceRow, COLUMN_FINISHED_PATH, sourceParent);
+    const QModelIndex nameIndex = model->index(sourceRow, COLUMN_FINISHED_NAME, sourceParent);
+    const QModelIndex fullIndex = model->index(sourceRow, COLUMN_FINISHED_FULL, sourceParent);
+
+    const string target = _tq(model->data(targetIndex, Qt::DisplayRole).toString());
+    const string path = _tq(model->data(pathIndex, Qt::DisplayRole).toString() +
+                            model->data(nameIndex, Qt::DisplayRole).toString());
+
+    if (hideFileLists_ && (isDownloadFileList(target) || isDownloadFileList(path)))
+        return false;
+
+    if (requireFullFile_ && model->data(fullIndex, Qt::DisplayRole).toString() != QLatin1String("1"))
+        return false;
+
+    return true;
+}
+
 void FinishedTransfersModel::addFile(const QVariantMap &params){
+    if (!acceptDownloadFile(params))
+        return;
+
     FinishedTransfersItem *item = findFile(params["TARGET"].toString());
 
     if (!item)

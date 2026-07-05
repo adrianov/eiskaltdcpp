@@ -162,89 +162,115 @@ void FinishedManager::getParams(const string & target, ParamMap& params) {
     params["time"] = Util::formatSeconds(entry->getMilliSeconds() / 1000);
 }
 
+namespace {
+
+bool isFileListPath(const string& path) {
+    if(path.empty())
+        return false;
+
+    const string listPath = Util::getListPath();
+    if(!listPath.empty() && path.size() >= listPath.size() &&
+       Util::stricmp(path.substr(0, listPath.size()).c_str(), listPath.c_str()) == 0)
+        return true;
+
+    if(path.size() >= 4 && Util::stricmp(path.substr(path.size() - 4).c_str(), ".xml") == 0)
+        return true;
+    if(path.size() >= 7 && Util::stricmp(path.substr(path.size() - 7).c_str(), ".xml.bz2") == 0)
+        return true;
+
+    return Util::stricmp(Util::getFileExt(path).c_str(), ".DcLst") == 0;
+}
+
+} // namespace
+
 void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
-    if(t->getType() == Transfer::TYPE_FILE || (t->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS))) {
-        string file = t->getPath();
-        const HintedUser& user = t->getHintedUser();
+    if(!upload) {
+        if(t->getType() != Transfer::TYPE_FILE)
+            return;
+    } else if(t->getType() != Transfer::TYPE_FILE && !(t->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS))) {
+        return;
+    }
 
-        uint64_t milliSeconds = GET_TICK() - t->getStart();
-        time_t time = GET_TIME();
+    string file = t->getPath();
+    if(!upload && isFileListPath(file))
+        return;
+    const HintedUser& user = t->getHintedUser();
 
-        int64_t size = 0, pos = 0;
-        // get downloads' file size here to avoid deadlocks
-        if(!upload) {
-            if(t->getType() == Transfer::TYPE_FULL_LIST) {
-                // find the correct extension of the downloaded file list
-                file += ".xml";
-                if(File::getSize(file) == -1) {
-                    file += ".bz2";
-                    if(File::getSize(file) == -1) {
-                        // no file list?
-                        return;
-                    }
-                }
-                size = t->getSize();
-            } else {
-                QueueManager::getInstance()->getSizeInfo(size, pos, file);
-                if (size == -1) {
-                    // not in the queue anymore?
-                    return;
-                }
+    uint64_t milliSeconds = GET_TICK() - t->getStart();
+    time_t time = GET_TIME();
+
+    int64_t size = 0, pos = 0;
+    // get downloads' file size here to avoid deadlocks
+    if(!upload) {
+        QueueManager::getInstance()->getSizeInfo(size, pos, file);
+        if (size == -1) {
+            // not in the queue anymore?
+            return;
+        }
+    } else if(t->getType() == Transfer::TYPE_FULL_LIST) {
+        // find the correct extension of the downloaded file list
+        file += ".xml";
+        if(File::getSize(file) == -1) {
+            file += ".bz2";
+            if(File::getSize(file) == -1) {
+                // no file list?
+                return;
             }
         }
+        size = t->getSize();
+    }
 
-        Lock l(cs);
+    Lock l(cs);
 
-        {
-            MapByFile& map = upload ? ULByFile : DLByFile;
-            auto it = map.find(file);
-            if(it == map.end()) {
-                FinishedFileItemPtr p = new FinishedFileItem(
-                            pos + t->getPos(),
-                            milliSeconds,
-                            time,
-                            upload ? File::getSize(file) : size,
-                            t->getActual(),
-                            crc32Checked,
-                            user
-                            );
-                map[file] = p;
-                fire(FinishedManagerListener::AddedFile(), upload, file, p);
-            } else {
-                it->second->update(
-                            crc32Checked ? 0 : t->getPos(), // in case of a successful crc check at the end we want to update the status only
-                            milliSeconds,
-                            time,
-                            t->getActual(),
-                            crc32Checked,
-                            user
-                            );
-                // we still dispatch a FinishedFileItem pointer in case previous ones were ignored
-                fire(FinishedManagerListener::UpdatedFile(), upload, file, it->second);
-            }
+    {
+        MapByFile& map = upload ? ULByFile : DLByFile;
+        auto it = map.find(file);
+        if(it == map.end()) {
+            FinishedFileItemPtr p = new FinishedFileItem(
+                        pos + t->getPos(),
+                        milliSeconds,
+                        time,
+                        upload ? File::getSize(file) : size,
+                        t->getActual(),
+                        crc32Checked,
+                        user
+                        );
+            map[file] = p;
+            fire(FinishedManagerListener::AddedFile(), upload, file, p);
+        } else {
+            it->second->update(
+                        crc32Checked ? 0 : t->getPos(), // in case of a successful crc check at the end we want to update the status only
+                        milliSeconds,
+                        time,
+                        t->getActual(),
+                        crc32Checked,
+                        user
+                        );
+            // we still dispatch a FinishedFileItem pointer in case previous ones were ignored
+            fire(FinishedManagerListener::UpdatedFile(), upload, file, it->second);
         }
+    }
 
-        {
-            MapByUser& map = upload ? ULByUser : DLByUser;
-            auto it = map.find(user);
-            if(it == map.end()) {
-                FinishedUserItemPtr p = new FinishedUserItem(
-                            t->getPos(),
-                            milliSeconds,
-                            time,
-                            file
-                            );
-                map[user] = p;
-                fire(FinishedManagerListener::AddedUser(), upload, user, p);
-            } else {
-                it->second->update(
-                            t->getPos(),
-                            milliSeconds,
-                            time,
-                            file
-                            );
-                fire(FinishedManagerListener::UpdatedUser(), upload, user);
-            }
+    {
+        MapByUser& map = upload ? ULByUser : DLByUser;
+        auto it = map.find(user);
+        if(it == map.end()) {
+            FinishedUserItemPtr p = new FinishedUserItem(
+                        t->getPos(),
+                        milliSeconds,
+                        time,
+                        file
+                        );
+            map[user] = p;
+            fire(FinishedManagerListener::AddedUser(), upload, user, p);
+        } else {
+            it->second->update(
+                        t->getPos(),
+                        milliSeconds,
+                        time,
+                        file
+                        );
+            fire(FinishedManagerListener::UpdatedUser(), upload, user);
         }
     }
 }
@@ -258,8 +284,7 @@ void FinishedManager::on(DownloadManagerListener::Complete, Download* d) noexcep
 }
 
 void FinishedManager::on(DownloadManagerListener::Failed, Download* d, const string&) noexcept {
-    if(d->getPos() > 0)
-        onComplete(d, false);
+    (void)d;
 }
 
 void FinishedManager::on(UploadManagerListener::Complete, Upload* u) noexcept {

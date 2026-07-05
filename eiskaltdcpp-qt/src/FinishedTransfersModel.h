@@ -53,10 +53,20 @@ class FinishedTransferProxyModel: public QSortFilterProxyModel {
     Q_OBJECT
 
 public:
-    virtual void sort(int column, Qt::SortOrder order) {
+    FinishedTransferProxyModel(bool hideFileLists = false, bool requireFullFile = false) :
+        hideFileLists_(hideFileLists), requireFullFile_(requireFullFile) {}
+
+    void sort(int column, Qt::SortOrder order) override {
         if (sourceModel())
             sourceModel()->sort(column, order);
     }
+
+protected:
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+
+private:
+    bool hideFileLists_;
+    bool requireFullFile_;
 };
 
 class FinishedTransfersModel : public QAbstractItemModel
@@ -101,6 +111,11 @@ public:
     /** */
     void switchViewType(ViewType);
 
+    void setHideFileLists(bool hide) { hideFileLists = hide; }
+    void setRequireFullFile(bool require) { requireFullFile = require; }
+
+    QStringList fileTargets() const { return file_hash.keys(); }
+
 public Q_SLOTS:
     /** */
     void addFile(const VarMap &params);
@@ -128,4 +143,9 @@ private:
     QHash<QString, FinishedTransfersItem* > user_hash;
     QMap<int, QString> file_header_table;
     QMap<int, QString> user_header_table;
+
+    bool hideFileLists;
+    bool requireFullFile;
+
+    bool acceptDownloadFile(const QVariantMap &params) const;
 };

@@ -29,6 +29,27 @@
 using namespace std;
 using namespace dcpp;
 
+namespace {
+
+bool isFileListPath(const string& path) {
+    if(path.empty())
+        return false;
+
+    const string listPath = Util::getListPath();
+    if(!listPath.empty() && path.size() >= listPath.size() &&
+       Util::stricmp(path.substr(0, listPath.size()).c_str(), listPath.c_str()) == 0)
+        return true;
+
+    if(path.size() >= 4 && Util::stricmp(path.substr(path.size() - 4).c_str(), ".xml") == 0)
+        return true;
+    if(path.size() >= 7 && Util::stricmp(path.substr(path.size() - 7).c_str(), ".xml.bz2") == 0)
+        return true;
+
+    return Util::stricmp(Util::getFileExt(path).c_str(), ".DcLst") == 0;
+}
+
+} // namespace
+
 FinishedTransfers* FinishedTransfers::createFinishedDownloads()
 {
     return new FinishedTransfers(Entry::FINISHED_DOWNLOADS, _("Finished Downloads"), false);
@@ -42,6 +63,7 @@ FinishedTransfers* FinishedTransfers::createFinishedUploads()
 FinishedTransfers::FinishedTransfers(const EntryType type, const string &title, bool isUpload):
     BookEntry(type, title, "finishedtransfers.ui"),
     isUpload(isUpload),
+    diskPruned(false),
     totalFiles(0),
     totalUsers(0),
     totalBytes(0),
@@ -112,11 +134,7 @@ FinishedTransfers::FinishedTransfers(const EntryType type, const string &title, 
     g_signal_connect(userView.get(), "key-release-event", G_CALLBACK(onKeyReleased_gui), (gpointer)this);
     g_signal_connect_after(getWidget("finishedbook"), "switch-page", G_CALLBACK(onPageSwitched_gui), (gpointer)this);
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(getWidget("showOnlyFullFilesCheckButton")), BOOLSETTING(FINISHED_DL_ONLY_FULL));
-
     if (type == Entry::FINISHED_DOWNLOADS)
-        g_signal_connect(getWidget("showOnlyFullFilesCheckButton"), "toggled", G_CALLBACK(onShowOnlyFullFilesToggled_gui), (gpointer)this);
-    else
         gtk_widget_hide(getWidget("showOnlyFullFilesCheckButton"));
 }
 
@@ -125,12 +143,15 @@ FinishedTransfers::~FinishedTransfers()
     FinishedManager::getInstance()->removeListener(this);
     g_object_unref(getWidget("menu"));
     delete appsPreviewMenu;
-    int active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(getWidget("showOnlyFullFilesCheckButton")));
-    SettingsManager::getInstance()->set(SettingsManager::FINISHED_DL_ONLY_FULL, active);
 }
 
 void FinishedTransfers::show()
 {
+    if (!isUpload && !diskPruned) {
+        diskPruned = true;
+        pruneMissingFiles_client();
+    }
+
     initializeList_client();
     //Func0<FinishedTransfers> *func = new Func0<FinishedTransfers>(this, &FinishedTransfers::initializeList_client);
     //WulforManager::get()->dispatchClientFunc(func);
@@ -215,10 +236,13 @@ void FinishedTransfers::addUser_gui(StringMap params, bool update)
 
 void FinishedTransfers::addFile_gui(StringMap params, bool update)
 {
-    if (!isUpload && params["full"] == "0" &&
-            gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(getWidget("showOnlyFullFilesCheckButton"))))
-    {
-        return;
+    if (!isUpload) {
+        if (params["full"] == "0")
+            return;
+
+        if (isFileListPath(params["Target"]) ||
+                isFileListPath(params["Path"] + params["Filename"]))
+            return;
     }
 
     GtkTreeIter iter;
@@ -262,11 +286,7 @@ void FinishedTransfers::updateStatus_gui()
             gtk_notebook_page_num(GTK_NOTEBOOK(getWidget("finishedbook")), getWidget("viewWindowFile")))
     {
         status = Util::toString(totalFiles) + _(" files");
-
-        if (getType() == Entry::FINISHED_DOWNLOADS)
-            gtk_widget_show(getWidget("showOnlyFullFilesCheckButton"));
-        else
-            gtk_widget_hide(getWidget("showOnlyFullFilesCheckButton"));
+        gtk_widget_hide(getWidget("showOnlyFullFilesCheckButton"));
     }
     else
     {
@@ -447,25 +467,6 @@ gboolean FinishedTransfers::onKeyReleased_gui(GtkWidget *widget, GdkEventKey *ev
     }
 
     return false;
-}
-
-void FinishedTransfers::onShowOnlyFullFilesToggled_gui(GtkWidget *widget, gpointer data)
-{
-    (void)widget;
-    FinishedTransfers *ft = (FinishedTransfers *)data;
-    StringMap params;
-    gtk_list_store_clear(ft->fileStore);
-
-    auto lock = FinishedManager::getInstance()->lock();
-
-    const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(ft->isUpload);
-
-    for (auto it = list.begin(); it != list.end(); ++it)
-    {
-        params.clear();
-        ft->getFinishedParams_client(it->second, it->first, params);
-        ft->addFile_gui(params, false);
-    }
 }
 
 void FinishedTransfers::onOpen_gui(GtkMenuItem *item, gpointer data)
@@ -728,6 +729,22 @@ void FinishedTransfers::removeFile_client(string target)
 void FinishedTransfers::removeAll_client()
 {
     FinishedManager::getInstance()->removeAll(isUpload);
+}
+
+void FinishedTransfers::pruneMissingFiles_client()
+{
+    StringList missing;
+    {
+        auto lock = FinishedManager::getInstance()->lock();
+        const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(false);
+        for (auto it = list.begin(); it != list.end(); ++it) {
+            if (!Util::fileExists(it->first))
+                missing.push_back(it->first);
+        }
+    }
+
+    for (const auto &file : missing)
+        removeFile_client(file);
 }
 
 void FinishedTransfers::on(FinishedManagerListener::AddedFile, bool upload, const string& file, const FinishedFileItemPtr& item) noexcept
