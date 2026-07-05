@@ -24,6 +24,7 @@
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
 #include "format.h"
+#include "HubSearchDenied.h"
 #include "SearchManager.h"
 #include "StringTokenizer.h"
 #include "UserCommand.h"
@@ -44,6 +45,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         string line = toUtf8(aLine);
         if(line[0] != '<') {
             stopInfectedConnect(unescape(line));
+            noteSearchDenied(*this, unescape(line));
             fire(ClientListener::StatusMessage(), this, unescape(line));
             return;
         }
@@ -70,6 +72,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         }
 
         stopInfectedConnect(unescape(message), nick);
+        noteSearchDenied(*this, unescape(message));
 
         ChatMessage chatMessage = { unescape(message), findUser(nick), nullptr, nullptr, false, 0 };
 

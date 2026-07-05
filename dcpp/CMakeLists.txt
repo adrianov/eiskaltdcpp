@@ -6,6 +6,12 @@ file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
 set(DCPP_EXTRA_SOURCES
+    ClientConnect.cpp
+    ClientSearch.cpp
+    HubSearchDenied.cpp
+    ListCache.cpp
+    QueueAutoSearch.cpp
+    QueueManagerList.cpp
     NmdcHubLine.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp

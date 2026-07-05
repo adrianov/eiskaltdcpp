@@ -26,6 +26,7 @@
 #include "ConnectivityManager.h"
 #include "CryptoManager.h"
 #include "format.h"
+#include "HubSearchDenied.h"
 #include "LogManager.h"
 #include "ShareManager.h"
 #include "StringTokenizer.h"
@@ -275,6 +276,7 @@ void AdcHub::handle(AdcCommand::MSG, AdcCommand& c) noexcept {
     if(c.getParam("TS", 1, temp))
         message.timestamp = Util::toInt64(temp);
 
+    noteSearchDenied(*this, c.getParam(0));
     fire(ClientListener::Message(), this, message);
 }
 
@@ -512,6 +514,7 @@ void AdcHub::handle(AdcCommand::STA, AdcCommand& c) noexcept {
         fire(ClientListener::NickTaken(), this);
         return;
     }
+    noteSearchDenied(*this, c.getParam(1));
     ChatMessage message = { c.getParam(1), u, nullptr, nullptr, false, 0 };
     fire(ClientListener::Message(), this, message);
 }

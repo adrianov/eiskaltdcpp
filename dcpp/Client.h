@@ -153,6 +153,7 @@ public:
     GETSET(uint64_t, lastActivity, LastActivity);
     GETSET(bool, registered, Registered);
     GETSET(bool, autoReconnect, AutoReconnect);
+    GETSET(bool, searchBlocked, SearchBlocked);
     GETSET(string, encoding, Encoding);
     GETSET(string, clientId, ClientId);
     GETSET(string, currentNick, CurrentNick);
