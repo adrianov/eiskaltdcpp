@@ -92,8 +92,7 @@ void Notification::enableTray(bool enable){
         checkSystemTrayCounter = 0;
 
         tray = new QSystemTrayIcon(this);
-        tray->setIcon(WICON(WulforUtil::eiICON_APPL)
-                    .scaled(22, 22, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        tray->setIcon(WICON(WulforUtil::eiICON_APPL));
 
         QMenu *menu = new QMenu(MainWindow::getInstance());
         menu->setTitle("EiskaltDC++");
@@ -343,8 +342,7 @@ void Notification::slotSuppressSnd(){
 
 void Notification::resetTrayIcon(){
     if (tray)
-        tray->setIcon(WICON(WulforUtil::eiICON_APPL)
-                    .scaled(22, 22, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        tray->setIcon(WICON(WulforUtil::eiICON_APPL));
 }
 
 void QtNotifyModule::showMessage(const QString &title, const QString &msg, QObject *obj) {

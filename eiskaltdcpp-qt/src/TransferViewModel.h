@@ -176,10 +176,6 @@ private:
     Qt::SortOrder sortOrder;
     /** */
     TransferViewItem *rootItem;
-    /** */
-    bool iconsScaled;
-    /** */
-    QSize iconsSize;
 
     bool showTranferedFilesOnly;
 };

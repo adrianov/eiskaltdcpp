@@ -28,8 +28,10 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QApplication>
+#if QT_VERSION >= 0x050000
 #include <QGuiApplication>
 #include <QScreen>
+#endif
 #include <QInputDialog>
 #include <QDesktopServices>
 #include <QUrl>
@@ -38,8 +40,14 @@
 #include <QMenu>
 #include <QHeaderView>
 #include <QAbstractItemView>
+#include <QAbstractItemModel>
+#include <QTableView>
+#include <QTreeView>
+#include <QFontMetrics>
+#include <QIcon>
 #include <QResource>
 #include <QTimer>
+#include <memory>
 #include <QDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -326,26 +334,34 @@ QPixmap *WulforUtil::getUserIcon(const UserPtr &id, bool isAway, bool isOp, cons
     }
 
     if (userIconCache[x][y] == nullptr) {
+        const int cell = userIcons->width() / USERLIST_XPM_COLUMNS;
         userIconCache[x][y] = new QPixmap(scalePixmap(
                 QPixmap::fromImage(userIcons->copy(
-                        x * USERLIST_ICON_SIZE,
-                        y * USERLIST_ICON_SIZE,
-                        USERLIST_ICON_SIZE,
-                        USERLIST_ICON_SIZE)),
+                        x * cell, y * cell, cell, cell)),
                 USERLIST_ICON_SIZE));
     }
 
     return userIconCache[x][y];
 }
 
-static const int PXMTHEMESIDE = 22;
+static const int PXMTHEMESIDE = THEME_ICON_SIZE;
 
 qreal WulforUtil::iconDeviceRatio()
 {
-    const QScreen *screen = QGuiApplication::primaryScreen();
-    return screen ? screen->devicePixelRatio() : 1.0;
+#if QT_VERSION >= 0x050000
+    qreal dpr = 1.0;
+    const auto screens = QGuiApplication::screens();
+    for (const QScreen *screen : screens) {
+        if (screen)
+            dpr = qMax(dpr, screen->devicePixelRatio());
+    }
+    return dpr;
+#else
+    return 1.0;
+#endif
 }
 
+// Render a pixmap at the physical resolution of the screen so icons stay sharp on Retina.
 QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide)
 {
     if (source.isNull() || logicalSide <= 0)
@@ -353,18 +369,21 @@ QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide)
 
     const qreal dpr = iconDeviceRatio();
     const int pixelSide = qMax(1, qRound(logicalSide * dpr));
-    QImage img = source.toImage();
 
-    if (img.isNull())
-        return source;
-
-    if (img.width() == pixelSide && img.height() == pixelSide
+#if QT_VERSION >= 0x050000
+    if (source.width() == pixelSide && source.height() == pixelSide
             && qFuzzyCompare(source.devicePixelRatio(), dpr))
         return source;
+#else
+    if (source.width() == pixelSide && source.height() == pixelSide)
+        return source;
+#endif
 
-    img = img.scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    QPixmap result = QPixmap::fromImage(img);
+    QPixmap result = QPixmap::fromImage(
+        source.toImage().scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+#if QT_VERSION >= 0x050000
     result.setDevicePixelRatio(dpr);
+#endif
     return result;
 }
 
@@ -468,6 +487,9 @@ bool WulforUtil::loadIcons(){
     m_PixmapMap[eiUSERS]        = FROMTHEME("users", resourceFound);
     m_PixmapMap[eiQT_LOGO]      = FROMTHEME("qt-logo", resourceFound);
 
+    if (!m_bError)
+        emit iconsLoaded();
+
     return !m_bError;
 }
 
@@ -492,6 +514,11 @@ QPixmap WulforUtil::loadPixmap(const QString &file){
 
 const QPixmap &WulforUtil::getPixmap(enum WulforUtil::Icons e){
     return m_PixmapMap[static_cast<qulonglong>(e)];
+}
+
+QIcon WulforUtil::getIcon(Icons e)
+{
+    return QIcon(getPixmap(e));
 }
 
 QString WulforUtil::getNicks(const QString &cid, const QString &hintUrl){
@@ -862,6 +889,24 @@ bool WulforUtil::openUrl(const QString &url){
     return true;
 }
 
+bool WulforUtil::revealPath(const QString &path)
+{
+    if (path.isEmpty())
+        return false;
+
+    const QString localPath = QFileInfo(path).absoluteFilePath();
+    if (localPath.isEmpty())
+        return false;
+
+#if defined(Q_OS_MAC)
+    return QProcess::startDetached("open", QStringList{"-R", localPath});
+#elif defined(Q_OS_WIN)
+    return QProcess::startDetached("explorer", QStringList{"/select,", QDir::toNativeSeparators(localPath)});
+#else
+    return QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(localPath).absolutePath()));
+#endif
+}
+
 bool WulforUtil::getUserCommandParams(const UserCommand& uc, StringMap& params) {
 
     StringList names;
@@ -1131,65 +1176,185 @@ QString WulforUtil::compactToolTipText(QString text, int maxlen, QString sep)
     return text;
 }
 
-void WulforUtil::fixTreeHeader(QHeaderView *header)
+static QHeaderView *viewHeader(QAbstractItemView *view)
 {
-#if defined(Q_OS_MAC)
-    const QAbstractItemView *view = qobject_cast<const QAbstractItemView*>(header->parentWidget());
-    const int viewWidth = view ? view->viewport()->width() : header->width();
+    if (QTableView *table = qobject_cast<QTableView*>(view))
+        return table->horizontalHeader();
+    if (QTreeView *tree = qobject_cast<QTreeView*>(view))
+        return tree->header();
+    return nullptr;
+}
+
+static QList<int> visibleColumns(QHeaderView *header)
+{
+    QList<int> visible;
+    for (int v = 0; v < header->count(); ++v) {
+        const int i = header->logicalIndex(v);
+        if (!header->isSectionHidden(i))
+            visible.append(i);
+    }
+    return visible;
+}
+
+static int columnContentWidth(QAbstractItemView *view, QHeaderView *header, int column)
+{
+    if (QTreeView *tree = qobject_cast<QTreeView*>(view))
+        tree->resizeColumnToContents(column);
+    else if (QTableView *table = qobject_cast<QTableView*>(view))
+        table->resizeColumnToContents(column);
+
+    int w = qMax(header->sectionSize(column), header->sectionSizeHint(column) + 16);
+
+    QAbstractItemModel *model = view->model();
+    if (!model)
+        return w;
+
+    const QFontMetrics fm(view->font());
+    const int rows = qMin(model->rowCount(), 300);
+    for (int r = 0; r < rows; ++r) {
+        const QModelIndex idx = model->index(r, column);
+        if (!idx.isValid())
+            continue;
+
+        int rowW = fm.horizontalAdvance(idx.data(Qt::DisplayRole).toString()) + 20;
+        const QVariant deco = idx.data(Qt::DecorationRole);
+        if (deco.canConvert<QPixmap>())
+            rowW += deco.value<QPixmap>().width() + 4;
+        else if (deco.canConvert<QIcon>()) {
+            const QIcon icon = deco.value<QIcon>();
+            if (!icon.isNull())
+                rowW += icon.actualSize(QSize(16, 16)).width() + 4;
+        }
+        w = qMax(w, rowW);
+    }
+
+    return w;
+}
+
+static void autosizeColumns(QAbstractItemView *view)
+{
+    if (!view || !view->model() || view->model()->rowCount() == 0)
+        return;
+
+    QHeaderView *header = viewHeader(view);
+    if (!header || header->count() < 1)
+        return;
+
+    const int viewWidth = view->viewport()->width();
     if (viewWidth < 40)
         return;
 
-    int firstVisible = -1;
-    int lastVisible = -1;
-    int usedWidth = 0;
+    header->setStretchLastSection(false);
 
-    for (int i = 0; i < header->count(); ++i) {
-        if (header->isSectionHidden(i))
-            continue;
-        if (firstVisible < 0)
-            firstVisible = i;
-        lastVisible = i;
-        usedWidth += header->sectionSize(i);
-    }
-
-    if (firstVisible < 0)
+    const QList<int> visible = visibleColumns(header);
+    const int n = visible.size();
+    if (n < 1)
         return;
 
-    const int firstSize = header->sectionSize(firstVisible);
-
-    if (usedWidth < viewWidth) {
-        header->resizeSection(firstVisible, firstSize + (viewWidth - usedWidth));
+    if (n == 1) {
+        header->resizeSection(visible.first(), qMax(columnContentWidth(view, header, visible.first()), viewWidth));
         return;
     }
 
-    const int minFirst = qMin(viewWidth - header->minimumSectionSize(), qMax(120, viewWidth / 3));
-    if (firstSize >= minFirst)
+    const int maxCol = (n == 2)? viewWidth / 2 : viewWidth / 3;
+
+    if (n == 2) {
+        int w0 = qMin(columnContentWidth(view, header, visible.at(0)), maxCol);
+        int w1 = qMin(columnContentWidth(view, header, visible.at(1)), maxCol);
+        if (w0 + w1 < viewWidth)
+            w0 = qMin(w0 + (viewWidth - w0 - w1), maxCol);
+        header->resizeSection(visible.at(0), w0);
+        header->resizeSection(visible.at(1), w1);
+        return;
+    }
+
+    int othersWidth = 0;
+    for (int k = 1; k < n; ++k) {
+        const int col = visible.at(k);
+        const int w = qMin(columnContentWidth(view, header, col), maxCol);
+        header->resizeSection(col, w);
+        othersWidth += w;
+    }
+
+    const int first = visible.first();
+    const int firstW = qMax(columnContentWidth(view, header, first), viewWidth - othersWidth);
+    header->resizeSection(first, qMin(firstW, viewWidth));
+}
+
+static void autosizeOnceWhenReady(QAbstractItemView *view)
+{
+    if (!view || view->property("_eiskalt_autosized").toBool())
         return;
 
-    int need = minFirst - firstSize;
-    for (int i = lastVisible; i > firstVisible && need > 0; --i) {
-        if (header->isSectionHidden(i))
-            continue;
-        const int minSize = qMax(header->minimumSectionSize(), header->sectionSizeHint(i));
-        const int take = qMin(need, header->sectionSize(i) - minSize);
-        if (take <= 0)
-            continue;
-        header->resizeSection(i, header->sectionSize(i) - take);
-        need -= take;
+    const auto run = [view]() {
+        if (!view || view->property("_eiskalt_autosized").toBool())
+            return;
+        if (!view->model() || view->viewport()->width() < 40)
+            return;
+        if (view->model()->rowCount() == 0)
+            return;
+        autosizeColumns(view);
+        view->setProperty("_eiskalt_autosized", true);
+    };
+
+    run();
+    if (view->property("_eiskalt_autosized").toBool())
+        return;
+
+    QAbstractItemModel *model = view->model();
+    if (!model) {
+        const int retries = view->property("_eiskalt_autosize_retries").toInt();
+        if (retries < 20) {
+            view->setProperty("_eiskalt_autosize_retries", retries + 1);
+            QTimer::singleShot(0, view, [view]() { autosizeOnceWhenReady(view); });
+        }
+        return;
     }
-    header->resizeSection(firstVisible, minFirst - need);
-#endif
+
+    if (!view->property("_eiskalt_autosize_hook").toBool()) {
+        view->setProperty("_eiskalt_autosize_hook", true);
+
+        auto conn = std::make_shared<QMetaObject::Connection>();
+        *conn = QObject::connect(model, &QAbstractItemModel::rowsInserted, view,
+            [view, conn, run]() {
+                run();
+                if (view->property("_eiskalt_autosized").toBool())
+                    QObject::disconnect(*conn);
+            });
+        QObject::connect(model, &QAbstractItemModel::modelReset, view, [view, run]() {
+            run();
+        });
+    }
+
+    if (view->model()->rowCount() > 0 && view->viewport()->width() < 40) {
+        QTimer::singleShot(0, view, [view]() { autosizeOnceWhenReady(view); });
+    }
 }
 
 void WulforUtil::restoreTreeHeader(QHeaderView *header, const QByteArray &state)
 {
-    if (!state.isEmpty())
-        header->restoreState(state);
+    if (!header)
+        return;
 
-#if defined(Q_OS_MAC)
-    fixTreeHeader(header);
-    QTimer::singleShot(0, header, [header]() { fixTreeHeader(header); });
-#endif
+    QAbstractItemView *view = qobject_cast<QAbstractItemView*>(header->parentWidget());
+    if (!view)
+        return;
+
+    header->setStretchLastSection(false);
+
+    if (!state.isEmpty()) {
+        header->restoreState(state);
+        const QList<int> visible = visibleColumns(header);
+        if (!visible.isEmpty() &&
+            header->sectionSize(visible.first()) < header->sectionSizeHint(visible.first()) + 8)
+        {
+            view->setProperty("_eiskalt_autosized", false);
+            autosizeOnceWhenReady(view);
+        }
+        return;
+    }
+
+    autosizeOnceWhenReady(view);
 }
 
 void WulforUtil::headerMenu(QTreeView *tree){

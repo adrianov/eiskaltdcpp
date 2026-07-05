@@ -9,6 +9,7 @@
 
 #include "FileBrowserModel.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 
 #if QT_VERSION >= 0x050000
 #include <QtWidgets>
@@ -37,7 +38,7 @@ using namespace dcpp;
 static void sortRecursive(int column, Qt::SortOrder order, FileBrowserItem *i);
 
 FileBrowserModel::FileBrowserModel(QObject *parent)
-    : QAbstractItemModel(parent), listing(nullptr), iconsScaled(false), restrictionsLoaded(false), ownList(false)
+    : QAbstractItemModel(parent), listing(nullptr), restrictionsLoaded(false), ownList(false)
 {
     QList<QVariant> rootItemCulumns;
     for (int k = 0; k < NUM_OF_COLUMNS; ++k)
@@ -102,9 +103,9 @@ QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
         case Qt::DecorationRole:
         {
             if (item->dir && index.column() == COLUMN_FILEBROWSER_NAME)
-                return WICON(WulforUtil::eiFOLDER_BLUE).scaled(16, 16);
+                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
             else if (index.column() == COLUMN_FILEBROWSER_NAME)
-                return WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()).scaled(16, 16);
+                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()), 16);
         }
         case Qt::DisplayRole:
         {
@@ -135,7 +136,7 @@ QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
             if (ShareManager::getInstance()->isTTHShared(t)){
                 static QColor c;
 
-                c.setNamedColor(WSGET(WS_APP_SHARED_FILES_COLOR));
+                c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
                 c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
 
                 return c;
@@ -462,11 +463,6 @@ FileBrowserItem *FileBrowserModel::getRootElem() const {
     return rootItem;
 }
 
-void FileBrowserModel::setIconsScaled(bool scaled, const QSize &size){
-    iconsScaled = scaled;
-    iconsSize = size;
-}
-
 int FileBrowserModel::getSortColumn() const {
     return sortColumn;
 }
@@ -511,7 +507,7 @@ FileBrowserItem *FileBrowserModel::createRootForPath(const QString &path, FileBr
     QString _path = path;
     _path.replace("\\", "/");
 
-    QStringList list = _path.split("/", QString::SkipEmptyParts);
+    QStringList list = _path.split("/", Qt::SkipEmptyParts);
     FileBrowserItem *root = pathRoot?pathRoot:rootItem;
 
     if (list.empty() || !root)

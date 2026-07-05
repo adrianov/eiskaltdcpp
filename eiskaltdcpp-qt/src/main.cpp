@@ -67,6 +67,8 @@ using namespace std;
 #endif
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QGuiApplication>
 #include <QMainWindow>
 #include <QRegExp>
 #include <QObject>
@@ -126,6 +128,17 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
 #endif
     setlocale(LC_ALL, "");
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+            Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+#endif
 
     EiskaltApp app(argc, argv, _q(dcpp::Util::getLoginName()+"EDCPP"));
     int ret = 0;

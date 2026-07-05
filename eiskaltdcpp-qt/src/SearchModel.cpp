@@ -22,6 +22,7 @@
 #include "SearchModel.h"
 #include "SearchFrame.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Util.h"
@@ -81,9 +82,9 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         case Qt::DecorationRole: // icon
         {
             if (index.column() == COLUMN_SF_FILENAME && !item->isDir)
-                return WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_SF_FILENAME).toString()).scaled(16, 16);
+                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_SF_FILENAME).toString()), 16);
             else if (index.column() == COLUMN_SF_FILENAME && item->isDir)
-                return WICON(WulforUtil::eiFOLDER_BLUE).scaled(16, 16);
+                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
             break;
         }
         case Qt::DisplayRole:
@@ -110,7 +111,7 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
                 if (ShareManager::getInstance()->isTTHShared(t)){
                     static QColor c;
 
-                    c.setNamedColor(WSGET(WS_APP_SHARED_FILES_COLOR));
+                    c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
                     c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
 
                     return c;
@@ -147,7 +148,7 @@ void SearchModel::repaint(){
 Qt::ItemFlags SearchModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
-        return nullptr;
+        return Qt::ItemFlags();
 
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }

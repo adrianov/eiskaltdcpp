@@ -107,8 +107,6 @@ public:
 
     /** */
     DownloadQueueItem *getRootElem() const;
-    /** */
-    void setIconsScaled(bool, const QSize&);
 
     /** */
     QModelIndex createIndexForItem(DownloadQueueItem*);

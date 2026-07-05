@@ -9,6 +9,7 @@
 
 #include "DownloadQueueModel.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 
 #if QT_VERSION >= 0x050000
 #include <QtWidgets>
@@ -60,10 +61,6 @@ public:
     Qt::SortOrder sortOrder;
     /** */
     DownloadQueueItem *rootItem;
-    /** */
-    bool iconsScaled;
-    /** */
-    QSize iconsSize;
 };
 
 DownloadQueueModel::DownloadQueueModel(QObject *parent)
@@ -71,7 +68,6 @@ DownloadQueueModel::DownloadQueueModel(QObject *parent)
 {
     Q_D(DownloadQueueModel);
 
-    d->iconsScaled = false;
     d->total_files = 0;
     d->total_size  = 0;
 
@@ -117,9 +113,9 @@ QVariant DownloadQueueModel::data(const QModelIndex &index, int role) const
         case Qt::DecorationRole:
         {
             if (item->dir && index.column() == COLUMN_DOWNLOADQUEUE_NAME)
-                return WICON(WulforUtil::eiFOLDER_BLUE).scaled(16, 16);
+                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
             else if (index.column() == COLUMN_DOWNLOADQUEUE_NAME)
-                return WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_DOWNLOADQUEUE_NAME).toString()).scaled(16, 16);
+                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_DOWNLOADQUEUE_NAME).toString()), 16);
         }
         case Qt::DisplayRole:
         {
@@ -171,7 +167,7 @@ QVariant DownloadQueueModel::data(const QModelIndex &index, int role) const
             QString errors = item->data(COLUMN_DOWNLOADQUEUE_ERR).toString();
 
             if (!errors.isEmpty() && errors != tr("No errors"))
-                return QColor(0xff, 0x00, 0x00);
+                return AppTheme::errorColor();
 
             break;
         }
@@ -509,13 +505,6 @@ DownloadQueueItem *DownloadQueueModel::getRootElem() const{
     return d->rootItem;
 }
 
-void DownloadQueueModel::setIconsScaled(bool scaled, const QSize &size){
-    Q_D(DownloadQueueModel);
-
-    d->iconsScaled = scaled;
-    d->iconsSize = size;
-}
-
 int DownloadQueueModel::getSortColumn() const {
     Q_D(const DownloadQueueModel);
 
@@ -558,7 +547,7 @@ DownloadQueueItem *DownloadQueueModel::createPath(const QString & path){
     QString _path = path;
     _path.replace("\\", "/");
 
-    QStringList list = _path.split("/", QString::SkipEmptyParts);
+    QStringList list = _path.split("/", Qt::SkipEmptyParts);
 
     DownloadQueueItem *root = d->rootItem;
 

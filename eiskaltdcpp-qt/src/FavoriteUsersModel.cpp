@@ -63,7 +63,7 @@ QVariant FavoriteUsersModel::data(const QModelIndex &index, int role) const
 
                     if (_q(u.getUser()->getCID().toBase32()) == item->cid){
                         if (u.isSet(FavoriteUser::FLAG_GRANTSLOT))
-                            return WICON(WulforUtil::eiBALL_GREEN).scaled(16, 16);
+                            return WICON_SIZE(WulforUtil::eiBALL_GREEN, 16);
                     }
                 }
             }
@@ -88,7 +88,7 @@ QVariant FavoriteUsersModel::data(const QModelIndex &index, int role) const
 Qt::ItemFlags FavoriteUsersModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
-        return nullptr;
+        return Qt::ItemFlags();
 
     Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 

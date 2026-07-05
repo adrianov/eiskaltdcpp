@@ -9,6 +9,7 @@
 
 #include "WulforSettings.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 
 #ifdef USE_ASPELL
 #include "SpellCheck.h"
@@ -392,7 +393,7 @@ void WulforSettings::save(){
 }
 
 void WulforSettings::parseCmd(const QString &cmd, QString& res) {
-    QStringList args = cmd.split(" ", QString::SkipEmptyParts);
+    QStringList args = cmd.split(" ", Qt::SkipEmptyParts);
 
     if (args.size() == 1) {
         res = tr("GUI setting %1: %2").arg(args.at(0)).arg(getStr(args.at(0)));
@@ -488,6 +489,8 @@ void WulforSettings::installTranslator(QTranslator &translator,
 void WulforSettings::loadTheme(){
     if (!getStr(WS_APP_THEME).isEmpty())
         qApp->setStyle(getStr(WS_APP_THEME));
+
+    AppTheme::apply();
 }
 
 QString WulforSettings::getStr(const QString & key, const QString &default_value) {

@@ -22,7 +22,7 @@ LineEdit::LineEdit(QWidget *parent) :
 {
     parentHeight = QLineEdit::sizeHint().height();//save parent height before setting up new stylesheet
                                                   //because we losing top and bottom margins
-    pxm = WulforUtil::getInstance()->getPixmap(WulforUtil::eiEDITCLEAR).scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);;
+    pxm = WICON_SIZE(WulforUtil::eiEDITCLEAR, 16);
 
     label = new QLabel(this);
     label->setPixmap(pxm);

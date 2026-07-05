@@ -29,13 +29,16 @@
 #include "WulforSettings.h"
 
 class QHeaderView;
+class QAbstractItemView;
 
 #define USERLIST_ICON_SIZE      16
 #define USERLIST_XPM_COLUMNS    9
 #define USERLIST_XPM_ROWS       32
+#define THEME_ICON_SIZE         22
 
 #define WICON(x)(WulforUtil::getInstance()->getPixmap((x)))
 #define WICON_SIZE(x, s)(WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmap((x)), (s)))
+#define WICON_QICON(x)(WulforUtil::getInstance()->getIcon((x)))
 
 using namespace dcpp;
 
@@ -136,6 +139,10 @@ public:
     typedef QHash<qulonglong, QPixmap> PixmapMap;
 
     bool loadUserIcons();
+
+    QIcon getIcon(Icons e);
+
+public Q_SLOTS:
     bool loadIcons();
 
     QPixmap *getUserIcon(const UserPtr&, bool, bool, const QString&);
@@ -176,9 +183,7 @@ public:
 
     static void headerMenu(QTreeView*);
 
-    /** On macOS widen a too narrow first column using free space or trailing columns. */
-    static void fixTreeHeader(QHeaderView *header);
-    /** Restore header state (if any) and apply fixTreeHeader now and after layout. */
+    /** Restore saved layout, or autosize once after data loads when no saved state exists. */
     static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
 
     QString getHubNames(const dcpp::CID&);
@@ -192,8 +197,12 @@ public:
     QMenu *buildUserCmdMenu(const QList<QString> &hub_list, int ctx, QWidget* = nullptr);
 
     static bool isTTH(const QString &text);
+    static bool revealPath(const QString &path);
 
     QString getNickViaOnlineUser(const QString &cid, const QString &hintUrl);
+
+Q_SIGNALS:
+    void iconsLoaded();
 
 public Q_SLOTS:
     const QPixmap &getPixmap(Icons);

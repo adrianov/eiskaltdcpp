@@ -44,7 +44,7 @@
 
 
 TransferViewModel::TransferViewModel(QObject *parent)
-    : QAbstractItemModel(parent), iconsScaled(false), showTranferedFilesOnly(false)
+    : QAbstractItemModel(parent), showTranferedFilesOnly(false)
 {
     QList<QVariant> rootData;
     rootData << tr("Users") << tr("Speed") << tr("Status") << tr("Flags") << tr("Size")
@@ -96,11 +96,11 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
                 break;
 
             if (item->download && index.column() == COLUMN_TRANSFER_USERS)
-                return WICON(WulforUtil::eiDOWN).scaled(18, 18, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                return WICON_SIZE(WulforUtil::eiDOWN, 18);
             else if (index.column() != COLUMN_TRANSFER_FNAME)
-                return WICON(WulforUtil::eiUP).scaled(18, 18, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                return WICON_SIZE(WulforUtil::eiUP, 18);
             else
-                return WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_TRANSFER_FNAME).toString()).scaled(16, 16);
+                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_TRANSFER_FNAME).toString()), 16);
         }
         case Qt::DisplayRole:
         {
@@ -356,7 +356,7 @@ void TransferViewModel::addConnection(const VarMap &params){
     if (item->download && bGroup)
         item->target = vstr(params["TARGET"]);
 
-    transfer_hash.insertMulti(item->cid, item);
+    transfer_hash.insert(item->cid, item);
 
     if (showTranferedFilesOnly){
         if (vstr(params["FNAME"]).isEmpty() || (tr("File list") == params["FNAME"]) ){

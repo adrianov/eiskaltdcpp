@@ -98,8 +98,6 @@ public:
     /** */
     FileBrowserItem *getRootElem() const;
     /** */
-    void setIconsScaled(bool, const QSize&);
-    /** */
     void setListing(dcpp::DirectoryListing *l) {listing = l; }
 
     /** */
@@ -147,10 +145,6 @@ private:
     Qt::SortOrder sortOrder;
     /** */
     FileBrowserItem *rootItem;
-    /** */
-    bool iconsScaled;
-    /** */
-    QSize iconsSize;
     /** */
     QHash<QString, dcpp::DirectoryListing::File*> hash;
     /** */
