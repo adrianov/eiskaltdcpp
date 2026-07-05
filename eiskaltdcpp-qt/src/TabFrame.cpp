@@ -81,11 +81,11 @@ bool TabFrame::eventFilter(QObject *obj, QEvent *e){
     QWheelEvent *w_e = reinterpret_cast<QWheelEvent*>(e);
 
     if (btn && (e->type() == QEvent::Wheel) && w_e){
-        int numDegrees = (w_e->delta() < 0)? (-1*w_e->delta()/8) : (w_e->delta()/8);
+        int numDegrees = (w_e->angleDelta().y() < 0)? (-1*w_e->angleDelta().y()/8) : (w_e->angleDelta().y()/8);
         int numSteps = numDegrees/15;
         std::function<void()> f = [this]() { this->nextTab(); };
 
-        if (w_e->delta() < 0)
+        if (w_e->angleDelta().y() < 0)
             f = [this]() { this->prevTab(); };
 
         for (int i = 0; i < numSteps; i++)

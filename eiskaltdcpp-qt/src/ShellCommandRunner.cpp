@@ -52,8 +52,11 @@ void ShellCommandRunner::run() {
 
     if (useArgList)
         process.start(cmd, argList);
-    else
-        process.start(args);
+    else {
+        const QStringList parts = QProcess::splitCommand(args);
+        if (!parts.isEmpty())
+            process.start(parts.constFirst(), parts.mid(1));
+    }
 
     process.closeWriteChannel();
     process.waitForFinished(100);
