@@ -1,7 +1,6 @@
 # CMake / local build outputs
 build*/
-install/
-INSTALL/
+dist/
 
 # IDE
 CMakeLists.txt.user*

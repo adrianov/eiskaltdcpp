@@ -1,0 +1,37 @@
+#!/bin/sh
+set -e
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+build=$root/build
+dist=$root/dist
+
+export HOMEBREW=${HOMEBREW:-$(brew --prefix)}
+export OSX_ARCHITECTURES=${OSX_ARCHITECTURES:-arm64}
+export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-11.0}
+
+mkdir -p "$build"
+cd "$build"
+
+cmake "$root" \
+    -DCMAKE_TOOLCHAIN_FILE="$root/macos/homebrew-toolchain.cmake" \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX="$dist" \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+make -j"$(sysctl -n hw.ncpu)"
+make install
+
+app=$dist/EiskaltDC++.app
+aspell=$app/Contents/Resources/aspell
+
+if [ ! -d "$aspell/dict" ]; then
+    tmp=$(mktemp -d)
+    curl -L -o "$tmp/aspell.zip" \
+        "https://sourceforge.net/projects/eiskaltdcpp/files/Other/aspell.zip/download"
+    unzip -q "$tmp/aspell.zip" -d "$tmp"
+    cp -R "$tmp/aspell" "$app/Contents/Resources/"
+    rm -rf "$tmp"
+fi
+
+codesign --force --deep --sign - "$app"
+open "$app"
