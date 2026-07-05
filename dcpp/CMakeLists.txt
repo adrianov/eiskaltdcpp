@@ -4,6 +4,21 @@ project (dcpp)
 aux_source_directory(${PROJECT_SOURCE_DIR} dcpp_srcs)
 file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
 
+# Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
+set(DCPP_EXTRA_SOURCES
+    NmdcHubLine.cpp
+    NmdcHubSend.cpp
+    NmdcHubUsers.cpp
+)
+foreach(_src ${DCPP_EXTRA_SOURCES})
+    set(_path ${PROJECT_SOURCE_DIR}/${_src})
+    if(NOT EXISTS ${_path})
+        message(FATAL_ERROR "dcpp source missing: ${_src}")
+    elseif(NOT "${_path}" IN_LIST dcpp_srcs)
+        list(APPEND dcpp_srcs ${_path})
+    endif()
+endforeach()
+
 list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/FileReader.cpp)
 list (REMOVE_ITEM dcpp_hdrs ${PROJECT_SOURCE_DIR}/FileReader.h)
 

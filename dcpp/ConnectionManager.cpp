@@ -862,6 +862,7 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
     Lock l(cs);
     auto i = find(downloads.begin(), downloads.end(), user);
     if(i != downloads.end()) {
+        // errors is int; -1 blocks reconnect (see ConnectionQueueItem::errors)
         (*i)->setErrors(-1);
         if((*i)->getState() == ConnectionQueueItem::CONNECTING)
             (*i)->setState(ConnectionQueueItem::WAITING);
