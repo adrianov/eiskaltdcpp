@@ -28,7 +28,9 @@
 #include "FinishedItem.h"
 #include "FinishedManager.h"
 #include "HashManager.h"
+#include "ListCache.h"
 #include "LogManager.h"
+#include "QueueAutoSearch.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchManager.h"
 #include "SearchResult.h"
@@ -123,51 +125,6 @@ QueueManager::QueueItemList QueueManager::FileQueue::find(const TTHValue& tth) {
         }
     }
     return ql;
-}
-
-static QueueItem* findCandidate(QueueItem* cand, QueueItem::StringIter start, QueueItem::StringIter end, const StringList& recent) {
-    for(auto i = start; i != end; ++i) {
-        QueueItem* q = i->second;
-
-        // We prefer to search for things that are not running...
-        if((cand != NULL) && q->isRunning())
-            continue;
-        // No finished files
-        if(q->isFinished())
-            continue;
-        // No user lists
-        if(q->isSet(QueueItem::FLAG_USER_LIST))
-            continue;
-        // No paused downloads
-        if(q->getPriority() == QueueItem::PAUSED)
-            continue;
-        // No files that already have more than AUTO_SEARCH_LIMIT online sources
-        if(q->countOnlineUsers() >= SETTING(AUTO_SEARCH_LIMIT))
-            continue;
-        // Did we search for it recently?
-        if(find(recent.begin(), recent.end(), q->getTarget()) != recent.end())
-            continue;
-
-        cand = q;
-
-        if(cand->isWaiting())
-            break;
-    }
-    return cand;
-}
-
-QueueItem* QueueManager::FileQueue::findAutoSearch(StringList& recent) {
-    // We pick a start position at random, hoping that we will find something to search for...
-    QueueItem::StringMap::size_type start = (QueueItem::StringMap::size_type)Util::rand((uint32_t)queue.size());
-
-    auto i = queue.begin();
-    advance(i, start);
-
-    QueueItem* cand = findCandidate(NULL, i, queue.end(), recent);
-    if(cand == NULL || cand->isRunning()) {
-        cand = findCandidate(cand, queue.begin(), i, recent);
-    }
-    return cand;
 }
 
 void QueueManager::FileQueue::move(QueueItem* qi, const string& aTarget) {
@@ -514,7 +471,8 @@ QueueManager::QueueManager() :
     queueFile(Util::getPath(Util::PATH_USER_CONFIG) + "Queue.xml"),
     rechecker(this),
     dirty(true),
-    nextSearch(0)
+    nextSearch(0),
+    nextAutoSearchTTH(true)
 {
     TimerManager::getInstance()->addListener(this);
     SearchManager::getInstance()->addListener(this);
@@ -539,6 +497,11 @@ QueueManager::~QueueManager() {
                                                              protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()), &File::deleteFile);
 
         filelists = File::findFiles(path, "*.DcLst");
+        std::sort(filelists.begin(), filelists.end());
+        std::for_each(filelists.begin(), std::set_difference(filelists.begin(), filelists.end(),
+                                                             protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()), &File::deleteFile);
+
+        filelists = File::findFiles(path, "*.sharesize");
         std::sort(filelists.begin(), filelists.end());
         std::for_each(filelists.begin(), std::set_difference(filelists.begin(), filelists.end(),
                                                              protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()), &File::deleteFile);
@@ -567,6 +530,7 @@ struct PartsInfoReqParam{
 void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
     string fn;
     string searchString;
+    SearchManager::TypeModes searchType = SearchManager::TYPE_TTH;
     vector<const PartsInfoReqParam*> params;
     TTHValue* tthPub = NULL;
     {
@@ -605,18 +569,19 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
 #endif
 
         if(BOOLSETTING(AUTO_SEARCH) && (aTick >= nextSearch) && (fileQueue.getSize() > 0)) {
-            // We keep 30 recent searches to avoid duplicate searches
-            while((recent.size() >= fileQueue.getSize()) || (recent.size() > 30)) {
-                recent.erase(recent.begin());
-            }
-
-            QueueItem* qi = fileQueue.findAutoSearch(recent);
-            if(qi) {
-                searchString = qi->getTTH().toBase32();
-                recent.push_back(qi->getTarget());
+            const AutoSearchPick pick = QueueAutoSearch::pickAlternating(fileQueue.getQueue(),
+                recent, recentKeywords, nextAutoSearchTTH);
+            if(pick.item) {
+                searchString = pick.query;
+                searchType = pick.type;
                 nextSearch = aTick + (SETTING(AUTO_SEARCH_TIME) * 60000);
-                if (BOOLSETTING(REPORT_ALTERNATES))
-                    LogManager::getInstance()->message(str(F_("Searching TTH alternates for: %1%")%Util::getFileName(qi->getTargetFileName())));
+                nextAutoSearchTTH = (pick.type != SearchManager::TYPE_TTH);
+                if(BOOLSETTING(REPORT_ALTERNATES)) {
+                    if(pick.type == SearchManager::TYPE_TTH)
+                        LogManager::getInstance()->message(str(F_("Searching TTH alternates for: %1%") % pick.item->getTargetFileName()));
+                    else
+                        LogManager::getInstance()->message(str(F_("Searching keyword alternates for: %1% (from %2%)") % searchString % pick.item->getTargetFileName()));
+                }
             }
         }
     }
@@ -644,19 +609,8 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
         delete tthPub;
     }
 
-    if(!searchString.empty()) {
-        SearchManager::getInstance()->search(searchString, 0, SearchManager::TYPE_TTH, SearchManager::SIZE_DONTCARE, "auto");
-    }
-}
-
-void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
-    add(aInitialDir, -1, TTHValue(), aUser, QueueItem::FLAG_USER_LIST | aFlags);
-}
-
-string QueueManager::getListPath(const HintedUser& user) {
-    StringList nicks = ClientManager::getInstance()->getNicks(user);
-    string nick = nicks.empty() ? Util::emptyString : Util::cleanPathChars(nicks[0]) + ".";
-    return checkTarget(Util::getListPath() + nick + user.user->getCID().toBase32(), /*checkExistence*/ false);
+    if(!searchString.empty())
+        SearchManager::getInstance()->search(searchString, 0, searchType, SearchManager::SIZE_DONTCARE, "auto");
 }
 
 // NOTE: freedcpp: begin
@@ -884,33 +838,6 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     return wantConnection;
 }
 
-void QueueManager::addDirectory(const string& aDir, const HintedUser& aUser, const string& aTarget, QueueItem::Priority p /* = QueueItem::DEFAULT */) noexcept {
-    bool needList;
-    {
-        Lock l(cs);
-
-        auto dp = directories.equal_range(aUser);
-
-        for(auto i = dp.first; i != dp.second; ++i) {
-            if(Util::stricmp(aDir.c_str(), i->second->getName().c_str()) == 0)
-                return;
-        }
-
-        // Unique directory, fine...
-        directories.emplace(aUser, new DirectoryItem(aUser, aDir, aTarget, p));
-        needList = (dp.first == dp.second);
-        setDirty();
-    }
-
-    if(needList) {
-        try {
-            addList(aUser, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
-        } catch(const Exception&) {
-            // Ignore, we don't really care...
-        }
-    }
-}
-
 QueueItem::Priority QueueManager::hasDownload(const UserPtr& aUser) noexcept {
     Lock l(cs);
     QueueItem* qi = userQueue.getNext(aUser, QueueItem::LOWEST);
@@ -918,51 +845,6 @@ QueueItem::Priority QueueManager::hasDownload(const UserPtr& aUser) noexcept {
         return QueueItem::PAUSED;
     }
     return qi->getPriority();
-}
-
-typedef unordered_map<TTHValue, const DirectoryListing::File*> TTHMap;
-
-namespace {
-void buildMap(const DirectoryListing::Directory* dir, TTHMap& tthMap) noexcept {
-    std::for_each(dir->directories.cbegin(), dir->directories.cend(), [&](DirectoryListing::Directory* d) {
-        if(!d->getAdls())
-            buildMap(d, tthMap);
-    });
-
-    std::for_each(dir->files.cbegin(), dir->files.cend(), [&](DirectoryListing::File* f) {
-        tthMap.emplace(f->getTTH(), f);
-    });
-}
-}
-
-int QueueManager::matchListing(const DirectoryListing& dl) noexcept {
-    int matches = 0;
-
-    {
-        Lock l(cs);
-        TTHMap tthMap;
-        buildMap(dl.getRoot(), tthMap);
-
-        for(auto& i: fileQueue.getQueue()) {
-            auto qi = i.second;
-            if(qi->isFinished())
-                continue;
-            if(qi->isSet(QueueItem::FLAG_USER_LIST))
-                continue;
-            auto j = tthMap.find(qi->getTTH());
-            if(j != tthMap.end() && j->second->getSize() == qi->getSize()) {
-                try {
-                    addSource(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
-                } catch(...) {
-                    // Ignore...
-                }
-                matches++;
-            }
-        }
-    }
-    if(matches > 0)
-        ConnectionManager::getInstance()->getDownloadConnection(dl.getUser());
-    return matches;
 }
 
 int64_t QueueManager::getPos(const string& target) noexcept {
@@ -1317,6 +1199,8 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
                         if(d->getType() == Transfer::TYPE_FULL_LIST) {
                             dir = q->getTempTarget();
                             q->addSegment(Segment(0, q->getSize()));
+                            ListCache::saveShareSize(getListPath(d->getHintedUser()),
+                                ClientManager::getInstance()->getBytesShared(d->getUser()));
                         } else if(d->getType() == Transfer::TYPE_FILE) {
                             q->addSegment(d->getSegment());
                         }
@@ -1392,38 +1276,6 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
 
     if(!fl_fname.empty()) {
         processList(fl_fname, fl_user, fl_flag);
-    }
-}
-
-void QueueManager::processList(const string& name, const HintedUser& user, int flags) {
-    DirectoryListing dirList(user);
-    try {
-        dirList.loadFile(name);
-    } catch(const Exception&) {
-        LogManager::getInstance()->message(str(F_("Unable to open filelist: %1%") % Util::addBrackets(name)));
-        return;
-    }
-
-    if(flags & QueueItem::FLAG_DIRECTORY_DOWNLOAD) {
-        DirectoryItem::List dl;
-        {
-            Lock l(cs);
-            auto dp = directories.equal_range(user);
-            for(auto i = dp.first; i != dp.second; ++i) {
-                dl.push_back(i->second);
-            }
-            directories.erase(user);
-        }
-
-        for(auto di: dl) {
-            dirList.download(di->getName(), di->getTarget(), false);
-            delete di;
-        }
-    }
-    if(flags & QueueItem::FLAG_MATCH_QUEUE) {
-        size_t files = matchListing(dirList);
-        LogManager::getInstance()->message(str(FN_("%1%: Matched %2% file", "%1%: Matched %2% files", files) %
-                                               Util::toString(ClientManager::getInstance()->getNicks(user)) % files));
     }
 }
 
@@ -1731,8 +1583,6 @@ static const string sSize = "Size";
 static const string sDownloaded = "Downloaded";
 static const string sPriority = "Priority";
 static const string sSource = "Source";
-static const string sNick = "Nick";
-static const string sDirectory = "Directory";
 static const string sAdded = "Added";
 static const string sTTH = "TTH";
 static const string sCID = "CID";
@@ -2192,40 +2042,6 @@ void QueueManager::logFinishedDownload(QueueItem* qi, Download*, bool crcChecked
     }
 
     LOG(LogManager::FINISHED_DOWNLOAD, params);
-}
-
-class ListMatcher : public dcpp::Thread
-{
-public:
-    ListMatcher(const StringList& files_) : files(files_) { }
-    int run() {
-        for (auto i = files.cbegin(); i != files.cend(); ++i) {
-            UserPtr u = DirectoryListing::getUserFromFilename(*i);
-            if (!u)
-                continue;
-
-            HintedUser user(u, Util::emptyString);
-            DirectoryListing dl(user);
-            try {
-                dl.loadFile(*i);
-                LogManager::getInstance()->message(str(F_("%1% : Matched %2% files") % Util::toString(ClientManager::getInstance()->getNicks(user)) % QueueManager::getInstance()->matchListing(dl)));
-            } catch (const Exception&) { }
-        }
-        delete this;// Cleanup the thread object
-        return 0;
-    }
-private:
-    StringList files;
-};
-
-void QueueManager::matchAllListings() {
-    ListMatcher* matcher = new ListMatcher(File::findFiles(Util::getListPath(), "*.xml*"));
-    try {
-        matcher->start();
-    } catch (const ThreadException&) {
-        ///@todo add error message
-        delete matcher;
-    }
 }
 
 } // namespace dcpp

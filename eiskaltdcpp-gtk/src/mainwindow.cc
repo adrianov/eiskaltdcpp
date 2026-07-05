@@ -2425,6 +2425,13 @@ void MainWindow::on(QueueManagerListener::Finished, QueueItem *item, const strin
     }
 }
 
+void MainWindow::on(QueueManagerListener::ListFromCache, const HintedUser& user, const string& listPath, const string& initialDir) noexcept
+{
+    typedef Func4<MainWindow, UserPtr, string, string, bool> F4;
+    F4 *func = new F4(this, &MainWindow::showShareBrowser_gui, user.user, listPath, initialDir, true);
+    WulforManager::get()->dispatchGuiFunc(func);
+}
+
 void MainWindow::on(TimerManagerListener::Second, uint64_t ticks) noexcept
 {
     // Avoid calculating status update if it's not needed

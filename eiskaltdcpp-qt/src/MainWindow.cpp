@@ -3119,6 +3119,10 @@ void MainWindow::on(dcpp::QueueManagerListener::Finished, QueueItem *item, const
         emit notifyMessage(Notification::TRANSFER, tr("Download Queue"), tr("All downloads complete"));
 }
 
+void MainWindow::on(dcpp::QueueManagerListener::ListFromCache, const dcpp::HintedUser& user, const std::string& listPath, const std::string& initialDir) noexcept {
+    emit coreOpenShare(user.user, _q(listPath), _q(initialDir));
+}
+
 void MainWindow::on(dcpp::TimerManagerListener::Second, uint64_t ticks) noexcept{
     static quint32 lastUpdate = 0;
     static quint64 lastUp = 0, lastDown = 0;

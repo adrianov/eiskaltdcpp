@@ -264,6 +264,7 @@ friend class dcpp::Singleton<MainWindow>;
         virtual void on(dcpp::TimerManagerListener::Second, uint64_t) noexcept;
         /** QueueManagerListener */
         virtual void on(dcpp::QueueManagerListener::Finished, dcpp::QueueItem*, const std::string&, int64_t) noexcept;
+        virtual void on(dcpp::QueueManagerListener::ListFromCache, const dcpp::HintedUser&, const std::string& listPath, const std::string& initialDir) noexcept;
 
         // Interface setup functions
         void init();

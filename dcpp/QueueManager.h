@@ -212,7 +212,6 @@ private:
         TTHValue* findPFSPubTTH();
 #endif
 
-        QueueItem* findAutoSearch(StringList& recent);
         size_t getSize() { return queue.size(); }
         QueueItem::StringMap& getQueue() { return queue; }
         void move(QueueItem* qi, const string& aTarget);
@@ -263,12 +262,16 @@ private:
     UserQueue userQueue;
     /** Directories queued for downloading */
     DirectoryItem::DirectoryMap directories;
-    /** Recent searches list, to avoid searching for the same thing too often */
+    /** Recent TTH auto-searches by target, to avoid duplicate searches */
     StringList recent;
+    /** Recent keyword auto-searches by longest filename word */
+    StringList recentKeywords;
     /** The queue needs to be saved */
     bool dirty;
-    /** Next search */
+    /** Next auto-search tick */
     uint64_t nextSearch;
+    /** Alternate TTH and keyword background searches */
+    bool nextAutoSearchTTH;
     /** File lists not to delete */
     StringList protectedFileLists;
     /** Sanity check for the target filename */
@@ -277,6 +280,7 @@ private:
     bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad);
 
     void processList(const string& name, const HintedUser& user, int flags);
+    bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);
 
     void load(const SimpleXML& aXml);
     void moveFile(const string& source, const string& target);
