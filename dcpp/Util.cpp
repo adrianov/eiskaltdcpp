@@ -834,7 +834,37 @@ string Util::getLocalIp(unsigned short as_family) {
     if (addresses.empty())
         return (((as_family == AF_UNSPEC) || (as_family == AF_INET)) ? "0.0.0.0" : "::");
 
-    return addresses[0];
+    const bool wantV4 = (as_family == AF_UNSPEC) || (as_family == AF_INET);
+    const bool wantV6 = (as_family == AF_UNSPEC) || (as_family == AF_INET6);
+    string best;
+
+    if(wantV4) {
+        for(const auto& ip : addresses) {
+            if(ip.find(':') != string::npos)
+                continue;
+            if(Util::isPrivateIp(ip) && ::strncmp(ip.c_str(), "169", 3) != 0) {
+                best = ip;
+                break;
+            }
+        }
+        if(best.empty()) {
+            for(const auto& ip : addresses) {
+                if(ip.find(':') == string::npos && ::strncmp(ip.c_str(), "169", 3) != 0) {
+                    best = ip;
+                    break;
+                }
+            }
+        }
+    }
+    if(best.empty() && wantV6) {
+        for(const auto& ip : addresses) {
+            if(ip.find(':') != string::npos && ip.compare(0, 4, "fe80") != 0) {
+                best = ip;
+                break;
+            }
+        }
+    }
+    return best.empty() ? addresses[0] : best;
 #else
     string tmp;
 
