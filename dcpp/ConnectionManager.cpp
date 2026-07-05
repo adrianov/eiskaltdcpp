@@ -372,7 +372,7 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
     uc->setEncoding(Text::utf8);
     uc->setState(UserConnection::STATE_CONNECT);
 #ifdef WITH_DHT
-    uc->setHubUrl(&aUser.getClient() == NULL ? "DHT" : aUser.getClient().getHubUrl());
+    uc->setHubUrl(aUser.getClient().getType() == Client::DHT ? "DHT" : aUser.getClient().getHubUrl());
 #else
     uc->setHubUrl(aUser.getClient().getHubUrl());
 #endif
@@ -856,6 +856,17 @@ void ConnectionManager::disconnect(const UserPtr& user, int isDownload) {
             break;
         }
     }
+}
+
+void ConnectionManager::blockRetry(const UserPtr& user) {
+    Lock l(cs);
+    auto i = find(downloads.begin(), downloads.end(), user);
+    if(i != downloads.end()) {
+        (*i)->setErrors(-1);
+        if((*i)->getState() == ConnectionQueueItem::CONNECTING)
+            (*i)->setState(ConnectionQueueItem::WAITING);
+    }
+    disconnect(user);
 }
 
 void ConnectionManager::shutdown() {

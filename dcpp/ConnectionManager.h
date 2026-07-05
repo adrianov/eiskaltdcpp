@@ -116,6 +116,7 @@ public:
 
     void disconnect(const UserPtr& user); // disconnect all transfers for the user
     void disconnect(const UserPtr& user, int isDownload);
+    void blockRetry(const UserPtr& user);
 
     void shutdown();
 

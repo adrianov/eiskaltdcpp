@@ -121,6 +121,7 @@ private:
     void myInfo(bool alwaysSend);
     void supports(const StringList& feat);
     void clearFlooders(uint64_t tick);
+    void stopInfectedConnect(const string& message);
 
     void updateFromTag(Identity& id, const string& tag);
 

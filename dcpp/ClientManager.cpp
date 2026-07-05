@@ -25,6 +25,8 @@
 #include "CryptoManager.h"
 #include "FavoriteManager.h"
 #include "FinishedManager.h"
+#include "LogManager.h"
+#include "format.h"
 #include "File.h"
 #include "NmdcHub.h"
 #include "QueueManager.h"
@@ -421,6 +423,15 @@ void ClientManager::connect(const HintedUser& user, const string& token) {
     if(u) {
         u->getClient().connect(*u, token);
     }
+}
+
+void ClientManager::stopConnect(const HintedUser& user) {
+    if(!user.user)
+        return;
+
+    ConnectionManager::getInstance()->blockRetry(user.user);
+    QueueManager::getInstance()->removeSource(user.user, QueueItem::Source::FLAG_REMOVED);
+    LogManager::getInstance()->message(str(F_("Stopped connecting to %1%: user marked as virus-infected") % getNickOrCid(user)));
 }
 
 void ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson) {

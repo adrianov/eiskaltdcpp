@@ -114,6 +114,34 @@ OnlineUser* NmdcHub::findUser(const string& aNick) {
     return i == users.end() ? NULL : i->second;
 }
 
+void NmdcHub::stopInfectedConnect(const string& message) {
+    if((Util::findSubString(message, "зараж") == string::npos &&
+        Util::findSubString(message, "infected") == string::npos) ||
+       (Util::findSubString(message, "отклон") == string::npos &&
+        Util::findSubString(message, "reject") == string::npos))
+        return;
+
+    auto pos = message.rfind(':');
+    if(pos == string::npos || pos + 1 >= message.length())
+        return;
+
+    string nick = message.substr(pos + 1);
+    while(!nick.empty() && (nick.back() == ' ' || nick.back() == '\r'))
+        nick.pop_back();
+    while(!nick.empty() && nick.front() == ' ')
+        nick.erase(0, 1);
+    if(nick.empty())
+        return;
+
+    OnlineUser* u = findUser(nick);
+    if(u) {
+        ClientManager::getInstance()->stopConnect(*u);
+    } else {
+        UserPtr user = ClientManager::getInstance()->getUser(nick, getHubUrl());
+        ClientManager::getInstance()->stopConnect(HintedUser(user, getHubUrl()));
+    }
+}
+
 void NmdcHub::putUser(const string& aNick) {
     OnlineUser* ou = NULL;
     {
@@ -192,6 +220,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         }
         string line = toUtf8(aLine);
         if(line[0] != '<') {
+            stopInfectedConnect(unescape(line));
             fire(ClientListener::StatusMessage(), this, unescape(line));
             return;
         }
@@ -216,6 +245,8 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             fire(ClientListener::StatusMessage(), this, unescape(line), ClientListener::FLAG_IS_SPAM);
             return;
         }
+
+        stopInfectedConnect(unescape(message));
 
         ChatMessage chatMessage = { unescape(message), findUser(nick), nullptr, nullptr, false, 0 };
 

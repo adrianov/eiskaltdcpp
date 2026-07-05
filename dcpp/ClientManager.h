@@ -142,6 +142,7 @@ public:
 
     void send(AdcCommand& c, const CID& to);
     void connect(const HintedUser& user, const string& token);
+    void stopConnect(const HintedUser& user);
     void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
     void userCommand(const HintedUser& user, const UserCommand& uc, ParamMap& params, bool compatibility);
     int getMode(const string& aHubUrl) const;
