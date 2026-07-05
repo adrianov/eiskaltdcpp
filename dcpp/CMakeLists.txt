@@ -1,6 +1,5 @@
+cmake_minimum_required (VERSION 3.10)
 project (dcpp)
-
-cmake_minimum_required (VERSION 3.2.0)
 
 aux_source_directory(${PROJECT_SOURCE_DIR} dcpp_srcs)
 file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
@@ -46,10 +45,20 @@ if (NOT LINK)
 endif (NOT LINK)
 
 if (APPLE)
-    set (APPLE_LIBS "iconv")
+    if (ICONV_LIBRARIES)
+        set (APPLE_LIBS "")
+    else ()
+        set (APPLE_LIBS "iconv")
+    endif ()
 endif (APPLE)
 
 set (UPNP "extra")
+
+if (APPLE)
+    set (DCPP_EXTRA_LINK "")
+else ()
+    set (DCPP_EXTRA_LINK ${UPNP})
+endif ()
 
 add_library (dcpp ${LINK} ${dcpp_srcs})
 
@@ -122,6 +131,8 @@ else ()
     set_property(TARGET dcpp PROPERTY COMPILE_FLAGS -fPIC)
 endif ()
 
+target_compile_definitions (dcpp PRIVATE OPENSSL_API_COMPAT=0x10100000L)
+
 target_link_libraries (dcpp
                        ${DHT_LIB}
                        ${PTHREADS}
@@ -135,7 +146,7 @@ target_link_libraries (dcpp
                        ${APPLE_LIBS}
                        ${HAIKU_LIBS}
                        ${LUA_LIBRARIES}
-                       ${UPNP}
+                       ${DCPP_EXTRA_LINK}
                        ${PCRE}
                        ${XATTR_LIBRARIES})
 set_target_properties(dcpp PROPERTIES

@@ -7,7 +7,7 @@ dist=$root/dist
 
 export HOMEBREW=${HOMEBREW:-$(brew --prefix)}
 export OSX_ARCHITECTURES=${OSX_ARCHITECTURES:-arm64}
-export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-11.0}
+export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-26.0}
 
 mkdir -p "$build"
 cd "$build"
@@ -15,8 +15,7 @@ cd "$build"
 cmake "$root" \
     -DCMAKE_TOOLCHAIN_FILE="$root/macos/homebrew-toolchain.cmake" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_INSTALL_PREFIX="$dist" \
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    -DCMAKE_INSTALL_PREFIX="$dist"
 
 make -j"$(sysctl -n hw.ncpu)"
 make install

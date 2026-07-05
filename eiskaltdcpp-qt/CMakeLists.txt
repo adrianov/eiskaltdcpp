@@ -1,6 +1,5 @@
+cmake_minimum_required (VERSION 3.10)
 project (eiskaltdcpp-qt)
-
-cmake_minimum_required (VERSION 3.2.0)
 
 include_directories(${PROJECT_BINARY_DIR})
 
@@ -271,7 +270,9 @@ include_directories (${PROJECT_SOURCE_DIR}
                      ${PROJECT_SOURCE_DIR}/scriptengine
                      ${PROJECT_SOURCE_DIR}/..
                      ${GETTEXT_INCLUDE_DIR})
-list (APPEND LIBS ${ICONV_LIBRARIES})
+if (NOT APPLE)
+    list (APPEND LIBS ${ICONV_LIBRARIES})
+endif ()
 
 if (BUILD_STATIC AND USE_QT5)
     if (WIN32)
@@ -477,7 +478,7 @@ else ()
 endif ()
 
 if (APPLE)
-    target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp iconv)
+    target_link_libraries (${PROJECT_NAME} ${LIBS} dcpp extra)
 elseif (HAIKU)
     target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp be)
 else (APPLE)
@@ -569,5 +570,9 @@ if (APPLE)
     endif (USE_QT)
     set (CPACK_BINARY_DRAGNDROP ON)
 endif (APPLE)
+
+if (POLICY CMP0077)
+    cmake_policy (SET CMP0077 NEW)
+endif ()
 
 include(CPack)

@@ -70,7 +70,7 @@ static void SigHandler(int sig) {
 
 #if defined(_WIN32)
 #define USE_NO_DAEMON
-#elif !defined(HAVE_DAEMON) || defined(__UCLIBC__)
+#elif !defined(HAVE_DAEMON) || defined(__UCLIBC__) || defined(__APPLE__)
 #define USE_EIDCPP_DAEMON
 #else
 #define USE_OS_DAEMON

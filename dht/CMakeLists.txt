@@ -1,6 +1,5 @@
+cmake_minimum_required (VERSION 3.10)
 project (dht)
-
-cmake_minimum_required (VERSION 3.2.0)
 
 aux_source_directory(${PROJECT_SOURCE_DIR} dht_srcs)
 
@@ -22,4 +21,6 @@ if (WIN32 OR CYGWIN)
 else ()
     set_property(TARGET dht PROPERTY COMPILE_FLAGS -fPIC)
 endif ()
+
+target_compile_definitions (dht PRIVATE OPENSSL_API_COMPAT=0x10100000L)
 

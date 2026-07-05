@@ -1,6 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
 project(eiskaltdcpp-cli)
-
-cmake_minimum_required(VERSION 3.2.0)
 
 if (USE_CLI_XMLRPC)
     install (FILES cli-xmlrpc.pl DESTINATION ${BINDIR} RENAME ${PROJECT_NAME}-xmlrpc
