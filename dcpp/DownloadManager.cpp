@@ -20,6 +20,7 @@
 #include "DownloadManager.h"
 
 #include "QueueManager.h"
+#include "ClientManager.h"
 #include "Download.h"
 #include "LogManager.h"
 #include "User.h"
@@ -122,6 +123,9 @@ void DownloadManager::addConnection(UserConnectionPtr conn) {
 
     if(!conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET)) {
         // Can't download from these...
+        StringList nicks = ClientManager::getInstance()->getNicks(conn->getHintedUser());
+        const string name = nicks.empty() ? conn->getUser()->getCID().toBase32() : nicks[0];
+        LogManager::getInstance()->message(str(F_("Download rejected from %1%: client does not support ADC/TTH") % name));
         conn->getUser()->setFlag(User::OLD_CLIENT);
         QueueManager::getInstance()->removeSource(conn->getUser(), QueueItem::Source::FLAG_NO_TTHF);
         conn->disconnect();
@@ -136,7 +140,11 @@ void DownloadManager::addConnection(UserConnectionPtr conn) {
         return;
     }
 
-    if(SETTING(REQUIRE_TLS) && !conn->isSecure()) {
+    // TLS is required for ADC transfers only; NMDC transfers are usually unencrypted
+    if(SETTING(REQUIRE_TLS) && !conn->isSet(UserConnection::FLAG_NMDC) && !conn->isSecure()) {
+        StringList nicks = ClientManager::getInstance()->getNicks(conn->getHintedUser());
+        const string name = nicks.empty() ? conn->getUser()->getCID().toBase32() : nicks[0];
+        LogManager::getInstance()->message(str(F_("Download rejected from %1%: TLS required but connection is not encrypted") % name));
         conn->error("Secure connection required!");
         QueueManager::getInstance()->removeSource(conn->getUser(), QueueItem::Source::FLAG_UNENCRYPTED);
         return;

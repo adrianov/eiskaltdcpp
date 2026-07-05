@@ -162,6 +162,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(cqi->getUser().user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive()) {
+                    StringList nicks = ClientManager::getInstance()->getNicks(cqi->getUser());
+                    const string name = nicks.empty() ? cqi->getUser().user->getCID().toBase32() : nicks[0];
+                    LogManager::getInstance()->message(str(F_("Waiting for active user instead of passive %1%") % name));
                     passiveUsers.push_back(cqi->getUser());
                     removed.push_back(cqi);
                     continue;
@@ -351,7 +354,8 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
     uc->setFlag(UserConnection::FLAG_NMDC);
     try {
         uc->connect(aServer, aPort, localPort, natRole);
-    } catch(const Exception&) {
+    } catch(const Exception& e) {
+        LogManager::getInstance()->message(str(F_("NMDC connect to %1%:%2% failed: %3%") % aServer % aPort % e.getError()));
         putConnection(uc);
         delete uc;
     }

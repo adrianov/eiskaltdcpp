@@ -869,6 +869,9 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     qi->addSource(aUser);
 
     if(aUser.user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive() ) {
+        StringList nicks = ClientManager::getInstance()->getNicks(aUser);
+        const string name = nicks.empty() ? aUser.user->getCID().toBase32() : nicks[0];
+        LogManager::getInstance()->message(str(F_("Skipping passive source %1% (passive-to-passive not supported)") % name));
         qi->removeSource(aUser, QueueItem::Source::FLAG_PASSIVE);
         wantConnection = false;
     } else if(qi->isFinished()) {
