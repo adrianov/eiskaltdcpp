@@ -196,7 +196,7 @@ void TransferView::load(){
     if (h >= 0)
         resize(this->width(), h);
 
-    treeView_TRANSFERS->header()->restoreState(QByteArray::fromBase64(WSGET(WS_TRANSFERS_STATE).toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView_TRANSFERS->header(), QByteArray::fromBase64(WSGET(WS_TRANSFERS_STATE).toUtf8()));
 }
 
 QSize TransferView::sizeHint() const{

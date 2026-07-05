@@ -29,7 +29,7 @@ SpyFrame::SpyFrame(QWidget *parent)
 
     treeView->setModel(model);
     treeView->setContextMenuPolicy(Qt::CustomContextMenu);
-    treeView->header()->restoreState(WVGET("spyframe-header-state", QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET("spyframe-header-state", QByteArray()).toByteArray());
 
     connect(this, SIGNAL(coreIncomingSearch(QString,bool)), model, SLOT(addResult(QString,bool)), Qt::QueuedConnection);
     connect(pushButton, SIGNAL(clicked()), this, SLOT(slotStartStop()));

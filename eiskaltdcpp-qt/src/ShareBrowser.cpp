@@ -396,8 +396,8 @@ void ShareBrowser::load(){
         splitter->setSizes(frames);
     }
 
-    treeView_LPANE->header()->restoreState(QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
-    treeView_RPANE->header()->restoreState(QByteArray::fromBase64(WSGET(WS_SHARE_RPANE_STATE).toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView_LPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView_RPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_RPANE_STATE).toUtf8()));
 
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_ESIZE);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TTH);

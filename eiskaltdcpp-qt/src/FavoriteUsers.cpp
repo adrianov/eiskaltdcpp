@@ -39,7 +39,7 @@ FavoriteUsers::FavoriteUsers(QWidget *parent) :
     treeView->installEventFilter(this);
     treeView->setModel(model);
     treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
-    treeView->header()->restoreState(WVGET(WS_FAVUSERS_STATE, QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_FAVUSERS_STATE, QByteArray()).toByteArray());
     treeView->setSortingEnabled(true);
 
     connect(treeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu()));

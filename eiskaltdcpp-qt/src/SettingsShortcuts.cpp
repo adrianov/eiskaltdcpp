@@ -12,6 +12,7 @@
 #include "MainWindow.h"
 #include "ShortcutGetter.h"
 #include "WulforSettings.h"
+#include "WulforUtil.h"
 
 #include <QMap>
 #include <QKeySequence>
@@ -28,7 +29,7 @@ SettingsShortcuts::SettingsShortcuts(QWidget *parent) :
 
     model = new ShortcutsModel(this);
     treeView->setModel(model);
-    treeView->header()->restoreState(QByteArray::fromBase64(WSGET(TREEVIEW_STATE_KEY).toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView->header(), QByteArray::fromBase64(WSGET(TREEVIEW_STATE_KEY).toUtf8()));
 
     connect(treeView, SIGNAL(clicked(QModelIndex)), this, SLOT(slotIndexClicked(QModelIndex)));
 }

@@ -353,7 +353,7 @@ private:
         if (sender() == comboBox)
             WVSET(from_key, old_state);
 
-        treeView->header()->restoreState(WVGET(to_key, QByteArray()).toByteArray());
+        WulforUtil::restoreTreeHeader(treeView->header(), WVGET(to_key, QByteArray()).toByteArray());
         treeView->setSortingEnabled(true);
 
         model->switchViewType(static_cast<FinishedTransfersModel::ViewType>(index));

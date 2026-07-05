@@ -521,7 +521,7 @@ void SearchFrame::init(){
     d->focusShortcut->setContext(Qt::WidgetWithChildrenShortcut);
 
     lineEdit_SEARCHSTR->setMenu(m);
-    lineEdit_SEARCHSTR->setPixmap(WICON(WulforUtil::eiEDITADD).scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    lineEdit_SEARCHSTR->setPixmap(WICON_SIZE(WulforUtil::eiEDITADD, 16));
 
     lineEdit_FILTER->installEventFilter(this);
 
@@ -564,7 +564,7 @@ void SearchFrame::init(){
 void SearchFrame::load(){
     Q_D(SearchFrame);
 
-    treeView_RESULTS->header()->restoreState(QByteArray::fromBase64(WSGET(WS_SEARCH_STATE).toUtf8()));
+    WulforUtil::restoreTreeHeader(treeView_RESULTS->header(), QByteArray::fromBase64(WSGET(WS_SEARCH_STATE).toUtf8()));
     treeView_RESULTS->setSortingEnabled(true);
 
     d->filterShared = static_cast<SearchFrame::AlreadySharedAction>(WIGET(WI_SEARCH_SHARED_ACTION));

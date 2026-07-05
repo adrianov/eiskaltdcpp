@@ -52,6 +52,7 @@ void SettingsSharing::showEvent(QShowEvent *e){
     if (WSGET(WS_SHAREHEADER_STATE).isEmpty() && model){
         for (int i = 0; i < model->columnCount(); i++)
             treeView->setColumnWidth(i, treeView->width()/4);
+        WulforUtil::fixTreeHeader(treeView->header());
     }
 }
 
@@ -263,7 +264,7 @@ void SettingsSharing::slotSimpleShareModeChanged(){
             treeView->header()->hideSection(2);
 
             if (!WSGET(WS_SHAREHEADER_STATE).isEmpty())
-                treeView->header()->restoreState(QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
+                WulforUtil::restoreTreeHeader(treeView->header(), QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
 
             connect(model, SIGNAL(getName(QModelIndex)), this, SLOT(slotGetName(QModelIndex)));
             connect(model, SIGNAL(expandMe(QModelIndex)), treeView, SLOT(expand(QModelIndex)));
@@ -275,7 +276,7 @@ void SettingsSharing::slotSimpleShareModeChanged(){
         }
     }
     else{
-        treeWidget_SIMPLE_MODE->header()->restoreState(QByteArray::fromBase64((WSGET("settings-simple-share-headerstate").toUtf8())));
+        WulforUtil::restoreTreeHeader(treeWidget_SIMPLE_MODE->header(), QByteArray::fromBase64((WSGET("settings-simple-share-headerstate").toUtf8())));
 
         updateShareView();
     }

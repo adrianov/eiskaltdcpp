@@ -28,7 +28,7 @@ ShareBrowserSearch::ShareBrowserSearch(FileBrowserModel *model, QWidget *parent)
         resize(WVGET("sharebrowsersearch/size").toSize());
 
     comboBox_TYPE_SEARCH->setCurrentIndex(WVGET("sharebrowsersearch/currenttype").toInt());
-    treeWidget->header()->restoreState(WVGET("sharebrowsersearch/columnstate").toByteArray());
+    WulforUtil::restoreTreeHeader(treeWidget->header(), WVGET("sharebrowsersearch/columnstate").toByteArray());
 
     setAttribute(Qt::WA_DeleteOnClose, true);
 

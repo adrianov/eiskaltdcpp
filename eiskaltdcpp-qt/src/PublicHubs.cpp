@@ -31,7 +31,7 @@ PublicHubs::PublicHubs(QWidget *parent) :
 
     treeView->setModel(model);
     treeView->setItemDelegate(new AutoToolTipDelegate(treeView));
-    treeView->header()->restoreState(WVGET(WS_PUBLICHUBS_STATE, QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_PUBLICHUBS_STATE, QByteArray()).toByteArray());
 
     lineEdit_FILTER->installEventFilter(this);
 

@@ -67,7 +67,7 @@ QMenu *FavoriteHubs::getMenu(){
 }
 
 void FavoriteHubs::load(){
-    treeView->header()->restoreState(WVGET(WS_FAV_HUBS_STATE, QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_FAV_HUBS_STATE, QByteArray()).toByteArray());
 }
 
 void FavoriteHubs::save(){

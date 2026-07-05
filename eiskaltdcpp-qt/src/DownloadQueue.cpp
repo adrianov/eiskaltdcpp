@@ -312,7 +312,7 @@ void DownloadQueue::init(){
 }
 
 void DownloadQueue::load(){
-    treeView_TARGET->header()->restoreState(WVGET(WS_DQUEUE_STATE, QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView_TARGET->header(), WVGET(WS_DQUEUE_STATE, QByteArray()).toByteArray());
     treeView_TARGET->setSortingEnabled(true);
 }
 

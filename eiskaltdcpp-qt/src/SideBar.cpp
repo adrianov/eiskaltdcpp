@@ -116,9 +116,9 @@ QVariant SideBarModel::data(const QModelIndex &index, int role) const
     case Qt::DecorationRole:
     {
         if (!item->getWidget())
-            return item->pixmap.scaled(18, 18, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            return WulforUtil::scalePixmap(item->pixmap, 18);
         else if (item->getWidget())
-            return item->getWidget()->getPixmap().scaled(18, 18, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            return WulforUtil::scalePixmap(item->getWidget()->getPixmap(), 18);
     }
     case Qt::DisplayRole:
     {
@@ -476,11 +476,12 @@ void SideBarDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     QStyledItemDelegate::paint(painter, option, index);
 
     if ((option.state & (QStyle::State_MouseOver | QStyle::State_Selected)) && showCloseBtn){
-        QPixmap px = WICON(WulforUtil::eiEDITDELETE).scaled(16, 16, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        QPixmap px = WICON_SIZE(WulforUtil::eiEDITDELETE, 16);
+        const int side = 16;
 
-        painter->drawPixmap(option.rect.x() + (option.rect.width() - 16)/2,
-                            option.rect.y() + (option.rect.height() - 16)/2,
-                            16, 16, px);
+        painter->drawPixmap(option.rect.x() + (option.rect.width() - side)/2,
+                            option.rect.y() + (option.rect.height() - side)/2,
+                            px);
 
         return;
     }
@@ -697,14 +698,18 @@ void SideBarView::slotWidgetActivated ( QModelIndex i ) {
 
 void SideBarView::slotUpdateHeaderSize()
 {
+    const int width = viewport()->width();
+    if (width <= 0)
+        return;
+
     if (WBGET(SIDEBAR_SHOW_CLOSEBUTTONS, true)){
         header()->showSection(1);
         header()->resizeSection(1, 30);
-        header()->resizeSection(0, header()->width() - 32);
+        header()->resizeSection(0, width - 32);
     }
     else{
         header()->hideSection(1);
-        header()->resizeSection(0, header()->width());
+        header()->resizeSection(0, width);
     }
 }
 

@@ -28,6 +28,8 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QApplication>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QInputDialog>
 #include <QDesktopServices>
 #include <QUrl>
@@ -35,6 +37,7 @@
 #include <QHostAddress>
 #include <QMenu>
 #include <QHeaderView>
+#include <QAbstractItemView>
 #include <QResource>
 #include <QTimer>
 #include <QDialog>
@@ -323,37 +326,56 @@ QPixmap *WulforUtil::getUserIcon(const UserPtr &id, bool isAway, bool isOp, cons
     }
 
     if (userIconCache[x][y] == nullptr) {
-        userIconCache[x][y] = new QPixmap(
-                QPixmap::fromImage(
-                                    userIcons->copy(
-                                                    x * USERLIST_ICON_SIZE,
-                                                    y * USERLIST_ICON_SIZE,
-                                                    USERLIST_ICON_SIZE,
-                                                    USERLIST_ICON_SIZE
-                                                   )
-                                    )
-                );
+        userIconCache[x][y] = new QPixmap(scalePixmap(
+                QPixmap::fromImage(userIcons->copy(
+                        x * USERLIST_ICON_SIZE,
+                        y * USERLIST_ICON_SIZE,
+                        USERLIST_ICON_SIZE,
+                        USERLIST_ICON_SIZE)),
+                USERLIST_ICON_SIZE));
     }
 
     return userIconCache[x][y];
 }
 
 static const int PXMTHEMESIDE = 22;
+
+qreal WulforUtil::iconDeviceRatio()
+{
+    const QScreen *screen = QGuiApplication::primaryScreen();
+    return screen ? screen->devicePixelRatio() : 1.0;
+}
+
+QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide)
+{
+    if (source.isNull() || logicalSide <= 0)
+        return source;
+
+    const qreal dpr = iconDeviceRatio();
+    const int pixelSide = qMax(1, qRound(logicalSide * dpr));
+    QImage img = source.toImage();
+
+    if (img.isNull())
+        return source;
+
+    if (img.width() == pixelSide && img.height() == pixelSide
+            && qFuzzyCompare(source.devicePixelRatio(), dpr))
+        return source;
+
+    img = img.scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap result = QPixmap::fromImage(img);
+    result.setDevicePixelRatio(dpr);
+    return result;
+}
+
 QPixmap WulforUtil::FROMTHEME(const QString &name, bool resource){
-    if (resource){
-        return QIcon(":/"+name+".png").pixmap(PXMTHEMESIDE, PXMTHEMESIDE);
-    }
-    else{
-        return loadPixmap(name+".png");
-    }
+    const QPixmap source = resource ? QPixmap(":/" + name + ".png") : loadPixmap(name + ".png");
+    return scalePixmap(source, PXMTHEMESIDE);
 }
 
 QPixmap WulforUtil::FROMTHEME_SIDE(const QString &name, bool resource, const int side){
-    if (resource)
-        return QIcon(":/"+name+".png").pixmap(side, side);
-    else{
-        return loadPixmap(name+".png").scaled(side, side);
-    }
+    const QPixmap source = resource ? QPixmap(":/" + name + ".png") : loadPixmap(name + ".png");
+    return scalePixmap(source, side);
 }
 
 bool WulforUtil::loadIcons(){
@@ -419,7 +441,7 @@ bool WulforUtil::loadIcons(){
     m_PixmapMap[eiFIND]         = FROMTHEME("find", resourceFound);
     m_PixmapMap[eiFREESPACE]    = FROMTHEME("freespace", resourceFound);
     m_PixmapMap[eiGUI]          = FROMTHEME("gui", resourceFound);
-    m_PixmapMap[eiGV]           = QPixmap(gv_xpm);
+    m_PixmapMap[eiGV]           = scalePixmap(QPixmap(gv_xpm), PXMTHEMESIDE);
     m_PixmapMap[eiHASHING]      = FROMTHEME("hashing", resourceFound);
     m_PixmapMap[eiHUBMSG]       = FROMTHEME("hubmsg", resourceFound);
     m_PixmapMap[eiICON_APPL]    = FROMTHEME_SIDE("icon_appl_big", resourceFound, 128);
@@ -463,7 +485,7 @@ QPixmap WulforUtil::loadPixmap(const QString &file){
 
     m_bError = true;
 
-    p = QPixmap(gv_xpm);
+    p = scalePixmap(QPixmap(gv_xpm), PXMTHEMESIDE);
 
     return p;
 }
@@ -1107,6 +1129,67 @@ QString WulforUtil::compactToolTipText(QString text, int maxlen, QString sep)
     }
 
     return text;
+}
+
+void WulforUtil::fixTreeHeader(QHeaderView *header)
+{
+#if defined(Q_OS_MAC)
+    const QAbstractItemView *view = qobject_cast<const QAbstractItemView*>(header->parentWidget());
+    const int viewWidth = view ? view->viewport()->width() : header->width();
+    if (viewWidth < 40)
+        return;
+
+    int firstVisible = -1;
+    int lastVisible = -1;
+    int usedWidth = 0;
+
+    for (int i = 0; i < header->count(); ++i) {
+        if (header->isSectionHidden(i))
+            continue;
+        if (firstVisible < 0)
+            firstVisible = i;
+        lastVisible = i;
+        usedWidth += header->sectionSize(i);
+    }
+
+    if (firstVisible < 0)
+        return;
+
+    const int firstSize = header->sectionSize(firstVisible);
+
+    if (usedWidth < viewWidth) {
+        header->resizeSection(firstVisible, firstSize + (viewWidth - usedWidth));
+        return;
+    }
+
+    const int minFirst = qMin(viewWidth - header->minimumSectionSize(), qMax(120, viewWidth / 3));
+    if (firstSize >= minFirst)
+        return;
+
+    int need = minFirst - firstSize;
+    for (int i = lastVisible; i > firstVisible && need > 0; --i) {
+        if (header->isSectionHidden(i))
+            continue;
+        const int minSize = qMax(header->minimumSectionSize(), header->sectionSizeHint(i));
+        const int take = qMin(need, header->sectionSize(i) - minSize);
+        if (take <= 0)
+            continue;
+        header->resizeSection(i, header->sectionSize(i) - take);
+        need -= take;
+    }
+    header->resizeSection(firstVisible, minFirst - need);
+#endif
+}
+
+void WulforUtil::restoreTreeHeader(QHeaderView *header, const QByteArray &state)
+{
+    if (!state.isEmpty())
+        header->restoreState(state);
+
+#if defined(Q_OS_MAC)
+    fixTreeHeader(header);
+    QTimer::singleShot(0, header, [header]() { fixTreeHeader(header); });
+#endif
 }
 
 void WulforUtil::headerMenu(QTreeView *tree){

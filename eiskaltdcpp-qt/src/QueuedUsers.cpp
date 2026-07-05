@@ -28,7 +28,7 @@ QueuedUsers::QueuedUsers(){
     model = new QueuedUsersModel(this);
     treeView_USERS->setModel(model);
     treeView_USERS->setContextMenuPolicy(Qt::CustomContextMenu);
-    treeView_USERS->header()->restoreState(WVGET("queued-users/headerstate", QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView_USERS->header(), WVGET("queued-users/headerstate", QByteArray()).toByteArray());
 
     connect(this, SIGNAL(coreWaitingAddFile(VarMap)), this, SLOT(slotWaitingAddFile(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreWaitingRemoved(VarMap)), this, SLOT(slotWaitingRemoved(VarMap)), Qt::QueuedConnection);

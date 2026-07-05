@@ -28,11 +28,14 @@
 
 #include "WulforSettings.h"
 
+class QHeaderView;
+
 #define USERLIST_ICON_SIZE      16
 #define USERLIST_XPM_COLUMNS    9
 #define USERLIST_XPM_ROWS       32
 
 #define WICON(x)(WulforUtil::getInstance()->getPixmap((x)))
+#define WICON_SIZE(x, s)(WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmap((x)), (s)))
 
 using namespace dcpp;
 
@@ -168,7 +171,15 @@ public:
 
     static QString formatBytes(int64_t bytes);
 
+    static qreal iconDeviceRatio();
+    static QPixmap scalePixmap(const QPixmap &source, int logicalSide);
+
     static void headerMenu(QTreeView*);
+
+    /** On macOS widen a too narrow first column using free space or trailing columns. */
+    static void fixTreeHeader(QHeaderView *header);
+    /** Restore header state (if any) and apply fixTreeHeader now and after layout. */
+    static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
 
     QString getHubNames(const dcpp::CID&);
     QString getHubNames(const dcpp::UserPtr&);

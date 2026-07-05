@@ -62,7 +62,7 @@ QMenu *ADLS::getMenu(){
 }
 
 void ADLS::load(){
-    treeView->header()->restoreState(WVGET(WS_ADLS_STATE, QByteArray()).toByteArray());
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_ADLS_STATE, QByteArray()).toByteArray());
 }
 
 void ADLS::save(){
