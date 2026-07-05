@@ -15,6 +15,7 @@ Applies to implementation-heavy sources: `dcpp/`, `dht/`, `eiskaltdcpp-cli/`, `e
 2. If the **longest** edited file is **≥ 200 lines**, shrink it **in the same turn** (one file only — do not refactor unrelated modules):
    - Remove **dead code** and **duplication** first.
    - If still **≥ 200 lines**, **extract ≥ 100 lines** into a cohesive sibling module (responsibility-shaped name — not `part2.cpp`; use a matching `.h` + `.cpp` pair when splitting implementation).
+   - **Pre-existing size does not waive extraction:** if the file was already far over 200 lines before your edit (e.g. 500+), you must still extract **≥ 100 lines** in that turn — a small or targeted change is not an excuse to leave the module oversized.
    - Register new sources in the relevant **`CMakeLists.txt`**. Keep public API stable; behavior must not change.
    - **No excuses:** scope (“small change”, “targeted fix”, “separate refactor”, “unrelated to the task”), file age, or pre-existing size do **not** waive this step. If you edited the file, you shrink it when it is ≥ 200 lines.
 3. **Skip** only when shrinking would make the code longer or less clear — state what you tried and why. “Would need a bigger refactor” is **not** a valid skip reason.
