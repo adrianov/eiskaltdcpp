@@ -234,7 +234,7 @@ public:
         return len;
     }
 
-    string getString() { return move(str); }
+    string getString() { return std::move(str); }
     string& stringRef() { return str; }
 
 private:
