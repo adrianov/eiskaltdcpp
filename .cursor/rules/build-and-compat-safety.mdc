@@ -1,0 +1,24 @@
+---
+description: Build registration, compat headers, and safe refactors — avoid macro and CMake footguns.
+alwaysApply: true
+---
+
+# Build and compat safety
+
+## Compat headers and macros
+
+- **Never bulk-replace** a symbol inside the file that **defines** it (macros, aliases, constexpr wrappers). Exclude compat headers (`*Compat.h`, `*Util.h` macro blocks) from project-wide sed/replace.
+- Prefer **`namespace { constexpr auto ... }` + `#define ALIAS ns::value`** over `#define ALIAS Qt::Thing` so a mistaken replace cannot make the macro self-referential.
+- After editing a compat header, add or keep a **compile-time smoke check** (e.g. a one-line inline helper that uses the macro/constant) so a broken definition fails in that header, not at random call sites.
+
+## New translation units
+
+- **`dcpp/`** uses `aux_source_directory` — new `*.cpp` files in that directory are picked up on **cmake reconfigure**, not on incremental `make` alone.
+- When adding a new `*.cpp` in a globbed directory, still **append it to the explicit `DCPP_EXTRA_SOURCES` list** in `dcpp/CMakeLists.txt` (documents intent; adds missing files if glob is ever removed).
+- After adding sources: **re-run cmake** and **build the affected target** before finishing the turn.
+
+## Behavior-preserving security fixes
+
+- Do not drop **fallback paths** (e.g. `getUser` when `findUser` misses) unless the replacement covers the same cases.
+- When parsing **untrusted hub text** (status lines, colons, free-form bodies), **validate** extracted fields (nick-like: length, no spaces/control/protocol chars) before acting; use **trusted fields** from structured parsers (chat nick from `<nick>`) without re-parsing the body.
+- If validation fails, **return silently** — do not call `stopConnect` / block with a guessed identity.
