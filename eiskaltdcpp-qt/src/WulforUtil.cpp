@@ -477,8 +477,7 @@ QString WulforUtil::getNicks(const QString &cid, const QString &hintUrl){
 }
 
 QString WulforUtil::getNickViaOnlineUser(const QString &cid, const QString &hintUrl) {
-    OnlineUser* user = ClientManager::getInstance()->findOnlineUser(CID(_tq(cid)), _tq(hintUrl), true);
-    return user ? _q(user->getIdentity().getNick()) : QString();
+    return _q(ClientManager::getInstance()->getField(CID(_tq(cid)), _tq(hintUrl), "NI"));
 }
 
 QString WulforUtil::getNicks(const CID &cid, const QString &hintUrl){

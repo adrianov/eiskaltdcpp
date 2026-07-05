@@ -1,7 +1,18 @@
-data/aspell*
-CMakeLists.txt.user*
-.gitignore
-.DS_Store
+# CMake / local build outputs
 build*/
+install/
+INSTALL/
+
+# IDE
+CMakeLists.txt.user*
+*.user
+
+# macOS
+.DS_Store
+
+# Generated / bundled local data
+data/aspell*
+
+# Misc
 boost*
 tags

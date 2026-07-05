@@ -373,6 +373,7 @@ void ClientManager::putOffline(OnlineUser* ou, bool disconnect) noexcept {
 }
 
 OnlineUser* ClientManager::findOnlineUserHint(const CID& cid, const string& hintUrl, OnlinePairC& p) const {
+    Lock l(cs);
     p = onlineUsers.equal_range(cid);
     if(p.first == p.second) // no user found with the given CID.
         return 0;
@@ -394,6 +395,7 @@ OnlineUser* ClientManager::findOnlineUser(const HintedUser& user, bool priv) {
 }
 
 OnlineUser* ClientManager::findOnlineUser(const CID& cid, const string& hintUrl, bool priv) {
+    Lock l(cs);
     OnlinePairC p;
     OnlineUser* u = findOnlineUserHint(cid, hintUrl, p);
     if(u) // found an exact match (CID + hint).
