@@ -46,6 +46,7 @@ void IPFilterFrame::InitDocument() {
     treeView_RULES->setModel(model);
     treeView_RULES->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RULES->setAlternatingRowColors(true);
+    WulforUtil::restoreTreeHeader(treeView_RULES->header(), QByteArray());
 
     slotCheckBoxClick();
 

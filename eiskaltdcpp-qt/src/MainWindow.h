@@ -162,6 +162,7 @@ friend class dcpp::Singleton<MainWindow>;
         virtual void closeEvent(QCloseEvent*);
         virtual void showEvent(QShowEvent *);
         virtual void hideEvent(QHideEvent *);
+        virtual void changeEvent(QEvent *);
         virtual bool eventFilter(QObject *, QEvent *);
 
     private Q_SLOTS:
@@ -205,6 +206,7 @@ friend class dcpp::Singleton<MainWindow>;
         void slotJSFileChanged(const QString&);
         void slotToolsTransfer(bool);
         void slotToolsSwitchSpeedLimit();
+        void updateActionIcons();
         void slotPanelMenuActionClicked();
         void slotWidgetsToggle();
         void slotQC();

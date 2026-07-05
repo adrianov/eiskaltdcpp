@@ -49,11 +49,8 @@ SettingsSharing::~SettingsSharing(){
 void SettingsSharing::showEvent(QShowEvent *e){
     e->accept();
 
-    if (WSGET(WS_SHAREHEADER_STATE).isEmpty() && model){
-        for (int i = 0; i < model->columnCount(); i++)
-            treeView->setColumnWidth(i, treeView->width()/4);
-        WulforUtil::fixTreeHeader(treeView->header());
-    }
+    if (model)
+        WulforUtil::restoreTreeHeader(treeView->header(), QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
 }
 
 void SettingsSharing::ok(){
@@ -114,7 +111,7 @@ void SettingsSharing::init(){
     checkBox_FASTHASH->setChecked(BOOLSETTING(FAST_HASH));
     groupBox_FASTHASH->setEnabled(BOOLSETTING(FAST_HASH));
 
-    listWidget_SKIPLIST->addItems(_q(SETTING(SKIPLIST_SHARE)).split('|', QString::SkipEmptyParts));
+    listWidget_SKIPLIST->addItems(_q(SETTING(SKIPLIST_SHARE)).split('|', Qt::SkipEmptyParts));
 
     label_TOTALSHARED->setText(tr("Total shared: %1")
                                .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
@@ -384,6 +381,11 @@ void SettingsSharing::slotContextMenu(const QPoint &){
     updateShareView();
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 QString ShareDirModel::filePath( const QModelIndex & index ) const {
     return QDir::toNativeSeparators( QDirModel::filePath(index) );
 }
@@ -552,3 +554,7 @@ void ShareDirModel::beginExpanding(){
             emit expandMe(stack.pop());
     }
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

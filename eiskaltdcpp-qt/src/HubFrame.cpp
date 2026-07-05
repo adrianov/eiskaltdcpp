@@ -11,6 +11,7 @@
 #include "HubFrame.h"
 #include "PMWindow.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 #include "Antispam.h"
 #include "HubManager.h"
 #include "Notification.h"
@@ -1266,7 +1267,7 @@ void HubFrame::init(){
     plainTextEdit_INPUT->setAcceptRichText(false);
 
     textEdit_CHAT->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    textEdit_CHAT->setTabStopWidth(40);
+    textEdit_CHAT->setTabStopDistance(40);
     updateStyles();
 
     load();
@@ -1367,18 +1368,18 @@ void HubFrame::reloadSomeSettings(){
 
     label_LAST_STATUS->setVisible(WBGET(WB_LAST_STATUS));
 
-    if (!WSGET("hubframe/chat-background-color", "").isEmpty()){
-        QPalette p = textEdit_CHAT->palette();
-        QColor clr = p.color(QPalette::Active, QPalette::Base);
+    QPalette p = textEdit_CHAT->palette();
+    QColor clr = AppTheme::chatBackground();
 
+    if (WBGET("hubframe/change-chat-background-color", false)){
         clr.setNamedColor(WSGET("hubframe/chat-background-color"));
 
-        if (clr.isValid()){
-            p.setColor(QPalette::Base, clr);
-
-            textEdit_CHAT->setPalette(p);
-        }
+        if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
+            clr = AppTheme::chatBackground();
     }
+
+    p.setColor(QPalette::Base, clr);
+    textEdit_CHAT->setPalette(p);
 }
 
 QWidget *HubFrame::getWidget(){
@@ -1557,7 +1558,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
     PMWindow *pm = qobject_cast<PMWindow *>(wg);
     Q_D(HubFrame);
 
-    QStringList list = line.split(" ", QString::SkipEmptyParts);
+    QStringList list = line.split(" ", Qt::SkipEmptyParts);
 
     if (list.isEmpty())
         return false;
@@ -1600,7 +1601,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
         }
     }
     else if (cmd == "/alias" && !emptyParam){
-        QStringList lex = line.split(" ", QString::SkipEmptyParts);
+        QStringList lex = line.split(" ", Qt::SkipEmptyParts);
 
         if (lex.size() >= 2){
             QString aliases = QByteArray::fromBase64(WSGET(WS_CHAT_CMD_ALIASES).toUtf8());
@@ -1621,10 +1622,10 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
             }
             else if (lex.at(1) == "purge" && lex.size() == 3){
                 QString alias = lex.at(2);
-                QStringList alias_list = aliases.split('\n', QString::SkipEmptyParts);
+                QStringList alias_list = aliases.split('\n', Qt::SkipEmptyParts);
 
                 for (const auto &line : alias_list){
-                    QStringList cmds = line.split('\t', QString::SkipEmptyParts);
+                    QStringList cmds = line.split('\t', Qt::SkipEmptyParts);
 
                     if (cmds.size() == 2 && alias == cmds.at(0)){
                         alias_list.removeAt(alias_list.indexOf(line));
@@ -1654,7 +1655,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
                         pm->addStatus(tr("Invalid alias syntax."));
                 }
                 else {
-                    QStringList new_cmd = raw.split("::", QString::SkipEmptyParts);
+                    QStringList new_cmd = raw.split("::", Qt::SkipEmptyParts);
 
                     if (new_cmd.size() < 2 || new_cmd.at(1).isEmpty()){
                         if (fr == this)
@@ -1940,11 +1941,11 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
     }
     else if (!WSGET(WS_CHAT_CMD_ALIASES).isEmpty()){
         QString aliases = QByteArray::fromBase64(WSGET(WS_CHAT_CMD_ALIASES).toUtf8());
-        QStringList alias_list = aliases.split('\n', QString::SkipEmptyParts);
+        QStringList alias_list = aliases.split('\n', Qt::SkipEmptyParts);
         bool ok = false;
 
         for (const auto &line : alias_list){
-            QStringList cmds = line.split('\t', QString::SkipEmptyParts);
+            QStringList cmds = line.split('\t', Qt::SkipEmptyParts);
 
             if (cmds.size() == 2 && cmd == ("/" + cmds.at(0))){
                 parseForCmd(cmds.at(1), wg);
@@ -2003,7 +2004,7 @@ void HubFrame::addStatus(QString msg){
 
     QString nick = " * ";
 
-    QStringList lines = msg.split(QRegExp("[\\n\\r\\f]+"), QString::SkipEmptyParts);
+    QStringList lines = msg.split(QRegExp("[\\n\\r\\f]+"), Qt::SkipEmptyParts);
     for (int i = 0; i < lines.size(); ++i) {
         if (lines.at(i).contains(QRegExp("\\w+"))) {
             short_msg = lines.at(i);
@@ -2017,15 +2018,15 @@ void HubFrame::addStatus(QString msg){
     short_msg = LinkParser::parseForLinks(short_msg, false);
     msg       = LinkParser::parseForLinks(msg, true);
 
-    pure_msg        = "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\">" + pure_msg + "</font>";
-    short_msg       = "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\">" + short_msg + "</font>";
-    msg             = "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\">" + msg + "</font>";
+    pure_msg        = "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\">" + pure_msg + "</font>";
+    short_msg       = "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\">" + short_msg + "</font>";
+    msg             = "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\">" + msg + "</font>";
     QString time    = "";
 
     if (!WSGET(WS_CHAT_TIMESTAMP).isEmpty())
-        time = "<font color=\"" + WSGET(WS_CHAT_TIME_COLOR)+ "\">[" + QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP)) + "]</font>";
+        time = "<font color=\"" + AppTheme::chatColor(WS_CHAT_TIME_COLOR)+ "\">[" + QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP)) + "]</font>";
 
-    status   = time + "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
+    status   = time + "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
 
     QRegExp rot_msg = QRegExp("is(\\s+)kicking(\\s+)(\\S+)*(\\s+)because:");
 
@@ -2401,7 +2402,7 @@ void HubFrame::newMsg(const VarMap &map){
 
     QString nick = map["NICK"].toString();
     QString message = map["MSG"].toString();
-    QString time = "<font color=\"" + WSGET(WS_CHAT_TIME_COLOR)+ "\">[" + map["TIME"].toString() + "]</font>";;
+    QString time = "<font color=\"" + AppTheme::chatColor(WS_CHAT_TIME_COLOR)+ "\">[" + map["TIME"].toString() + "]</font>";;
     QString color = map["CLR"].toString();
     QString msg_color = WS_CHAT_MSG_COLOR;
     QString trigger;
@@ -2441,16 +2442,16 @@ void HubFrame::newMsg(const VarMap &map){
 
     WulforUtil::getInstance()->textToHtml(nicktoout, true);
 
-    message = "<font color=\"" + WSGET(msg_color) + "\">" + message + "</font>";
+    message = "<font color=\"" + AppTheme::chatColor(msg_color) + "\">" + message + "</font>";
 
     output  += time;
     string info= Util::formatAdditionalInfo(map["I4"].toString().toStdString(),BOOLSETTING(USE_IP),BOOLSETTING(GET_USER_COUNTRY));
 
     if (!info.empty())
-        output  += " <font color=\"" + WSGET(WS_CHAT_TIME_COLOR)+ "\">" + _q(info) + "</font>";
+        output  += " <font color=\"" + AppTheme::chatColor(WS_CHAT_TIME_COLOR)+ "\">" + _q(info) + "</font>";
 
     output  += QString(" <a style=\"text-decoration:none\" href=\"user://%1\"><font color=\"%2\"><b>%3</b></font></a>")
-               .arg(nicktoout).arg(WSGET(color)).arg(nicktoout.replace("\"", "&quot;"));
+               .arg(nicktoout).arg(AppTheme::chatColor(color)).arg(nicktoout.replace("\"", "&quot;"));
     output  += message;
 
     if (!isVisible()){
@@ -2530,7 +2531,7 @@ void HubFrame::newPm(const VarMap &map){
     Q_D(HubFrame);
     QString nick = map["NICK"].toString();
     QString message = map["MSG"].toString();
-    QString time    = "<font color=\"" + WSGET(WS_CHAT_TIME_COLOR)+ "\">[" + map["TIME"].toString() + "]</font>";
+    QString time    = "<font color=\"" + AppTheme::chatColor(WS_CHAT_TIME_COLOR)+ "\">[" + map["TIME"].toString() + "]</font>";
     QString color = map["CLR"].toString();
     QString full_message;
 
@@ -2559,15 +2560,15 @@ void HubFrame::newPm(const VarMap &map){
 
     WulforUtil::getInstance()->textToHtml(nick, true);
 
-    message       = "<font color=\"" + WSGET(WS_CHAT_MSG_COLOR) + "\">" + message + "</font>";
+    message       = "<font color=\"" + AppTheme::chatColor(WS_CHAT_MSG_COLOR) + "\">" + message + "</font>";
     full_message  += time;
     string info= Util::formatAdditionalInfo(map["I4"].toString().toStdString(),BOOLSETTING(USE_IP),BOOLSETTING(GET_USER_COUNTRY));
 
     if (!info.empty())
-        full_message += " <font color=\"" + WSGET(WS_CHAT_TIME_COLOR)+ "\">" + _q(info) + "</font>";
+        full_message += " <font color=\"" + AppTheme::chatColor(WS_CHAT_TIME_COLOR)+ "\">" + _q(info) + "</font>";
 
     full_message  += QString(" <a style=\"text-decoration:none\" href=\"user://%1\"><font color=\"%2\"><b>%3</b></font></a>")
-                     .arg(nick).arg(WSGET(color)).arg(nick.replace("\"", "&quot;"));
+                     .arg(nick).arg(AppTheme::chatColor(color)).arg(nick.replace("\"", "&quot;"));
     full_message  += message;
 
     WulforUtil::getInstance()->textToHtml(full_message, false);
@@ -2624,13 +2625,13 @@ void HubFrame::pmUserEvent(const QString &cid, const QString &e){
     QString output = "";
     QString nick    = " * ";
 
-    QString msg     = "<font color=\"" + WSGET(WS_CHAT_MSG_COLOR) + "\">" + e + "</font>";
+    QString msg     = "<font color=\"" + AppTheme::chatColor(WS_CHAT_MSG_COLOR) + "\">" + e + "</font>";
     QString time    = "";
 
     if (!WSGET(WS_CHAT_TIMESTAMP).isEmpty())
-        time = "<font color=\""+WSGET(WS_CHAT_TIME_COLOR)+">["+QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP))+"]</font>";
+        time = "<font color=\""+AppTheme::chatColor(WS_CHAT_TIME_COLOR)+">["+QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP))+"]</font>";
 
-    output = time + "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
+    output = time + "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
     output += msg;
 
     WulforUtil::getInstance()->textToHtml(output, false);
@@ -3403,7 +3404,7 @@ void HubFrame::slotFindTextEdited(const QString & text){
     QTextCursor c = textEdit_CHAT->textCursor();
 
     c.movePosition(QTextCursor::StartOfLine,QTextCursor::MoveAnchor,1);
-    c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, nullptr);
+    c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, {});
     if (!c.isNull()) {
         textEdit_CHAT->setExtraSelections(QList<QTextEdit::ExtraSelection>());
         textEdit_CHAT->setTextCursor(c);
@@ -3424,18 +3425,18 @@ void HubFrame::slotFindAll(){
         QTextEdit::ExtraSelection selection;
 
         QColor color;
-        color.setNamedColor(WSGET(WS_CHAT_FIND_COLOR));
+        color.setNamedColor(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
         color.setAlpha(WIGET(WI_CHAT_FIND_COLOR_ALPHA));
 
         selection.format.setBackground(color);
 
-        QTextCursor c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), 0, nullptr);
+        QTextCursor c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), 0, {});
 
         while (!c.isNull()) {
             selection.cursor = c;
             extraSelections.append(selection);
 
-            c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, nullptr);
+            c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, {});
         }
     }
     textEdit_CHAT->setExtraSelections(extraSelections);
@@ -3537,7 +3538,7 @@ void HubFrame::slotInputTextChanged(){
         return;
 
     SpellCheck *sp = SpellCheck::getInstance();
-    QStringList words = line.split(QRegExp("\\W+"), QString::SkipEmptyParts);
+    QStringList words = line.split(QRegExp("\\W+"), Qt::SkipEmptyParts);
 
     if (words.isEmpty())
         return;
@@ -3548,7 +3549,7 @@ void HubFrame::slotInputTextChanged(){
 
     QTextEdit::ExtraSelection selection;
     selection.format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-    selection.format.setUnderlineColor(Qt::red);
+    selection.format.setUnderlineColor(AppTheme::errorColor());
 
     bool ok = false;
     while (!words.empty()){
@@ -3683,18 +3684,8 @@ void HubFrame::slotSettingsChanged(const QString &key, const QString &value){
                 connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
         }
     }
-    else if (key == "hubframe/chat-background-color"){
-        QPalette p = textEdit_CHAT->palette();
-        QColor clr = p.color(QPalette::Active, QPalette::Base);
-
-        clr.setNamedColor(value);
-
-        if (clr.isValid()){
-            p.setColor(QPalette::Base, clr);
-
-            textEdit_CHAT->setPalette(p);
-        }
-    }
+    else if (key == "hubframe/chat-background-color" || key == "hubframe/change-chat-background-color")
+        reloadSomeSettings();
     else if (key == WS_TRANSLATION_FILE){
         retranslateUi(this);
     }

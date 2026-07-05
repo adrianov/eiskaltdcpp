@@ -10,6 +10,7 @@
 #include "PMWindow.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 #include "HubManager.h"
 #include "MainWindow.h"
 #include "Notification.h"
@@ -84,7 +85,7 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
     textEdit_CHAT->viewport()->setMouseTracking(true);
     textEdit_CHAT->document()->setMaximumBlockCount(WIGET(WI_CHAT_MAXPARAGRAPHS));
     textEdit_CHAT->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    textEdit_CHAT->setTabStopWidth(40);
+    textEdit_CHAT->setTabStopDistance(40);
 
     frame_2->setVisible(false);
 
@@ -105,17 +106,19 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
     QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), arena_menu);
     arena_menu->addAction(close_wnd);
 
-    if (!WSGET("hubframe/chat-background-color", "").isEmpty()){
+    {
         QPalette p = textEdit_CHAT->palette();
-        QColor clr = p.color(QPalette::Active, QPalette::Base);
+        QColor clr = AppTheme::chatBackground();
 
-        clr.setNamedColor(WSGET("hubframe/chat-background-color"));
+        if (WBGET("hubframe/change-chat-background-color", false)){
+            clr.setNamedColor(WSGET("hubframe/chat-background-color"));
 
-        if (clr.isValid()){
-            p.setColor(QPalette::Base, clr);
-
-            textEdit_CHAT->setPalette(p);
+            if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
+                clr = AppTheme::chatBackground();
         }
+
+        p.setColor(QPalette::Base, clr);
+        textEdit_CHAT->setPalette(p);
     }
 
     connect(close_wnd, SIGNAL(triggered()), this, SLOT(slotClose()));
@@ -392,7 +395,7 @@ void PMWindow::addStatusMessage(const QString &msg){
         time = "[" + QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP)) + "]";
 
     status = time + status;
-    status += "<font color=\"" + WulforSettings::getInstance()->getStr(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>: ";
+    status += "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>: ";
     status += msg;
 
     addOutput(status);
@@ -405,13 +408,13 @@ void PMWindow::addStatus(QString msg){
     WulforUtil::getInstance()->textToHtml(msg, true);
     WulforUtil::getInstance()->textToHtml(nick, true);
 
-    msg             = "<font color=\"" + WSGET(WS_CHAT_MSG_COLOR) + "\">" + msg + "</font>";
+    msg             = "<font color=\"" + AppTheme::chatColor(WS_CHAT_MSG_COLOR) + "\">" + msg + "</font>";
     QString time    = "";
 
     if (!WSGET(WS_CHAT_TIMESTAMP).isEmpty())
-        time = "<font color=\""+WSGET(WS_CHAT_TIME_COLOR)+">["+QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP))+"]</font>";
+        time = "<font color=\""+AppTheme::chatColor(WS_CHAT_TIME_COLOR)+">["+QDateTime::currentDateTime().toString(WSGET(WS_CHAT_TIMESTAMP))+"]</font>";
 
-    status = time + "<font color=\"" + WSGET(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
+    status = time + "<font color=\"" + AppTheme::chatColor(WS_CHAT_STAT_COLOR) + "\"><b>" + nick + "</b> </font>";
     status += msg;
 
     WulforUtil::getInstance()->textToHtml(status, false);
@@ -660,17 +663,19 @@ void PMWindow::slotSettingChanged(const QString &key, const QString &value){
 
         toolButton_SMILE->setVisible(!value.isEmpty() && WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance());
     }
-    else if (key == "hubframe/chat-background-color"){
+    else if (key == "hubframe/chat-background-color" || key == "hubframe/change-chat-background-color"){
         QPalette p = textEdit_CHAT->palette();
-        QColor clr = p.color(QPalette::Active, QPalette::Base);
+        QColor clr = AppTheme::chatBackground();
 
-        clr.setNamedColor(value);
+        if (WBGET("hubframe/change-chat-background-color", false)){
+            clr.setNamedColor(WSGET("hubframe/chat-background-color"));
 
-        if (clr.isValid()){
-            p.setColor(QPalette::Base, clr);
-
-            textEdit_CHAT->setPalette(p);
+            if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
+                clr = AppTheme::chatBackground();
         }
+
+        p.setColor(QPalette::Base, clr);
+        textEdit_CHAT->setPalette(p);
     }
     else if (key == WS_TRANSLATION_FILE)
         retranslateUi(this);
@@ -704,7 +709,7 @@ void PMWindow::slotFindTextEdited(const QString & text){
     QTextCursor c = textEdit_CHAT->textCursor();
 
     c.movePosition(QTextCursor::StartOfLine,QTextCursor::MoveAnchor,1);
-    c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, nullptr);
+    c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, {});
     if (!c.isNull()) {
         textEdit_CHAT->setExtraSelections(QList<QTextEdit::ExtraSelection>());
         textEdit_CHAT->setTextCursor(c);
@@ -725,18 +730,18 @@ void PMWindow::slotFindAll(){
         QTextEdit::ExtraSelection selection;
 
         QColor color;
-        color.setNamedColor(WSGET(WS_CHAT_FIND_COLOR));
+        color.setNamedColor(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
         color.setAlpha(WIGET(WI_CHAT_FIND_COLOR_ALPHA));
 
         selection.format.setBackground(color);
 
-        QTextCursor c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), 0, nullptr);
+        QTextCursor c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), 0, {});
 
         while (!c.isNull()){
             selection.cursor = c;
             extraSelections.append(selection);
 
-            c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, nullptr);
+            c = textEdit_CHAT->document()->find(lineEdit_FIND->text(), c, {});
         }
     }
 

@@ -10,6 +10,7 @@
 #include "SettingsGUI.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"
+#include "AppTheme.h"
 #include "MainWindow.h"
 #include "Notification.h"
 #include "EmoticonFactory.h"
@@ -222,51 +223,51 @@ void SettingsGUI::init(){
         QColor c;
         QPixmap p(10, 10);
 
-        c.setNamedColor(WSGET(WS_CHAT_LOCAL_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_LOCAL_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Local user"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_OP_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_OP_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Operator"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_BOT_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_BOT_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Bot"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_PRIV_LOCAL_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_PRIV_LOCAL_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Private: local user"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_PRIV_USER_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_PRIV_USER_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Private: user"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_SAY_NICK));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_SAY_NICK));
         p.fill(c);
         new QListWidgetItem(p, tr("Chat: Say nick"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_STAT_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_STAT_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Status"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_USER_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_USER_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("User"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_FAVUSER_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_FAVUSER_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Favorite User"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_TIME_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_TIME_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Time stamp"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_MSG_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_MSG_COLOR));
         p.fill(c);
         new QListWidgetItem(p, tr("Message"), listWidget_CHATCOLOR);
 
-        c.setNamedColor(WSGET(WS_CHAT_FIND_COLOR));
+        c.setNamedColor(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
         h_color = c;
 
         c.setAlpha(WIGET(WI_CHAT_FIND_COLOR_ALPHA));

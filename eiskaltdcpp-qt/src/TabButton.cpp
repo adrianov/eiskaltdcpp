@@ -47,7 +47,7 @@ TabButton::TabButton(QWidget *parent) :
     parentHeight = QPushButton::sizeHint().height();
 
     label = new QLabel(this);
-    label->setPixmap(WulforUtil::getInstance()->getPixmap(WulforUtil::eiEDITDELETE).scaled(CLOSEPXWIDTH, CLOSEPXWIDTH, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    label->setPixmap(WICON_SIZE(WulforUtil::eiEDITDELETE, CLOSEPXWIDTH));
     label->setFixedSize(QSize(LABELWIDTH, LABELWIDTH));
     label->setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
 
@@ -130,7 +130,7 @@ void TabButton::mouseMoveEvent(QMouseEvent *e){
         return;
     }
 
-    QPixmap pxm = QPixmap::grabWidget(this, rect());
+    QPixmap pxm = grab(rect());
 
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
@@ -173,11 +173,11 @@ void TabButton::paintEvent(QPaintEvent *e){
         QLinearGradient gr(0, 0, this->width(), 0);
 
         gr.setSpread(QGradient::PadSpread);
-        gr.setColorAt(0.00, this->palette().background().color());
+        gr.setColorAt(0.00, this->palette().window().color());
         gr.setColorAt(0.25, this->palette().highlight().color().lighter(sideFactor));
         gr.setColorAt(0.50, this->palette().highlight().color().lighter(centralFactor));
         gr.setColorAt(0.75, this->palette().highlight().color().lighter(sideFactor));
-        gr.setColorAt(1.00, this->palette().background().color());
+        gr.setColorAt(1.00, this->palette().window().color());
 
         return gr;
     };
@@ -207,7 +207,7 @@ QSize TabButton::sizeHint() const {
 int TabButton::normalWidth() const {
     QFontMetrics metrics = qApp->fontMetrics();
 
-    return LABELWIDTH*2+metrics.width(text())+margin*3;
+    return LABELWIDTH*2+metrics.horizontalAdvance(text())+margin*3;
 }
 
 int TabButton::normalHeight() const {
@@ -215,7 +215,7 @@ int TabButton::normalHeight() const {
 }
 
 void TabButton::setWidgetIcon(const QPixmap &px){
-    px_label->setPixmap(px.scaled(PXWIDTH, PXWIDTH, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    px_label->setPixmap(WulforUtil::scalePixmap(px, PXWIDTH));
 }
 
 void TabButton::updateStyles() {

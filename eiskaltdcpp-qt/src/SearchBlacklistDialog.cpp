@@ -15,7 +15,6 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QItemSelectionModel>
-#include <QResizeEvent>
 
 SearchBlackListDialog::SearchBlackListDialog(QWidget *parent): QDialog(parent){
     setupUi(this);
@@ -29,6 +28,8 @@ SearchBlackListDialog::SearchBlackListDialog(QWidget *parent): QDialog(parent){
 
     connect(treeView_RULES, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu()));
     connect(this, SIGNAL(accepted()), this, SLOT(ok()));
+
+    WulforUtil::restoreTreeHeader(treeView_RULES->header(), QByteArray());
 }
 
 SearchBlackListDialog::~SearchBlackListDialog(){
@@ -37,17 +38,6 @@ SearchBlackListDialog::~SearchBlackListDialog(){
 
 void SearchBlackListDialog::ok(){
     model->save();
-}
-
-void SearchBlackListDialog::resizeEvent(QResizeEvent *e){
-    e->accept();
-
-    treeView_RULES->resizeColumnToContents(COLUMN_SBL_TYPE);
-
-    int sblTypeWidth = treeView_RULES->columnWidth(COLUMN_SBL_TYPE);
-    int sblKeyWidth = treeView_RULES->contentsRect().width() - sblTypeWidth;
-
-    treeView_RULES->setColumnWidth(COLUMN_SBL_KEY, sblKeyWidth);
 }
 
 void SearchBlackListDialog::slotContextMenu(){
@@ -141,7 +131,7 @@ int SearchBlackListModel::columnCount(const QModelIndex & ) const {
 
 Qt::ItemFlags SearchBlackListModel::flags(const QModelIndex &index) const {
     if (!index.isValid())
-        return nullptr;
+        return Qt::ItemFlags();
 
     return Qt::ItemIsEditable | Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }

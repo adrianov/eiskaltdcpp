@@ -35,6 +35,7 @@ ScriptManagerDialog::ScriptManagerDialog(QWidget *parent) :
     connect(comboBox, SIGNAL(activated(int)), this, SLOT(slotSetChangedAction(int)));
 
     treeView->setModel(model);
+    WulforUtil::restoreTreeHeader(treeView->header(), QByteArray());
 
     comboBox->setCurrentIndex(WIGET("scriptmanager/script-changed-action", 0));
 

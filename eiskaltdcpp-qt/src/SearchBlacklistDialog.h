@@ -98,9 +98,6 @@ public:
     SearchBlackListDialog(QWidget* = nullptr);
     virtual ~SearchBlackListDialog();
 
-protected:
-    virtual void resizeEvent(QResizeEvent *);
-
 private Q_SLOTS:
     void ok();
     void slotContextMenu();
