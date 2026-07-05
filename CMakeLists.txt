@@ -230,10 +230,14 @@ elseif (GIT_FOUND)
     if (EXISTS "${PROJECT_SOURCE_DIR}/.git/config")
         execute_process (COMMAND ${GIT_EXECUTABLE} describe --tags
                          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                         OUTPUT_VARIABLE APP_VERSION
+                         OUTPUT_VARIABLE GIT_VERSION
+                         ERROR_QUIET
                          OUTPUT_STRIP_TRAILING_WHITESPACE)
-        string (REGEX REPLACE "^v" "" APP_VERSION "${APP_VERSION}")
-        string (REGEX REPLACE "-" "+" APP_VERSION "${APP_VERSION}")
+        if (GIT_VERSION)
+            set (APP_VERSION "${GIT_VERSION}")
+            string (REGEX REPLACE "^v" "" APP_VERSION "${APP_VERSION}")
+            string (REGEX REPLACE "-" "+" APP_VERSION "${APP_VERSION}")
+        endif()
     endif()
 endif (REPLACE_VERSION)
 
