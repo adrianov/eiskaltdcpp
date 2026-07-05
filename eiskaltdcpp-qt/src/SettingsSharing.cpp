@@ -111,7 +111,7 @@ void SettingsSharing::init(){
     checkBox_FASTHASH->setChecked(BOOLSETTING(FAST_HASH));
     groupBox_FASTHASH->setEnabled(BOOLSETTING(FAST_HASH));
 
-    listWidget_SKIPLIST->addItems(_q(SETTING(SKIPLIST_SHARE)).split('|', Qt::SkipEmptyParts));
+    listWidget_SKIPLIST->addItems(_q(SETTING(SKIPLIST_SHARE)).split('|', WULFOR_SKIP_EMPTY));
 
     label_TOTALSHARED->setText(tr("Total shared: %1")
                                .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));

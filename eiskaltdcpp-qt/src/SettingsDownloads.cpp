@@ -114,8 +114,8 @@ void SettingsDownloads::init(){
         aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
         paths   = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
 
-        QStringList a = aliases.split("\n", Qt::SkipEmptyParts);
-        QStringList p = paths.split("\n", Qt::SkipEmptyParts);
+        QStringList a = aliases.split("\n", WULFOR_SKIP_EMPTY);
+        QStringList p = paths.split("\n", WULFOR_SKIP_EMPTY);
 
         if (a.size() == p.size() && !a.isEmpty()){
             for (int i = 0; i < a.size(); i++){

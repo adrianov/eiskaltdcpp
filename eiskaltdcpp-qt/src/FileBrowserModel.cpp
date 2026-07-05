@@ -507,7 +507,7 @@ FileBrowserItem *FileBrowserModel::createRootForPath(const QString &path, FileBr
     QString _path = path;
     _path.replace("\\", "/");
 
-    QStringList list = _path.split("/", Qt::SkipEmptyParts);
+    QStringList list = _path.split("/", WULFOR_SKIP_EMPTY);
     FileBrowserItem *root = pathRoot?pathRoot:rootItem;
 
     if (list.empty() || !root)

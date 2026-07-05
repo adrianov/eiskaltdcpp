@@ -45,9 +45,10 @@ MultiLineToolBar::~MultiLineToolBar(){
 void MultiLineToolBar::wheelEvent(QWheelEvent *e){
     e->ignore();
 
-    if (e->angleDelta().y() > 0)
+    const int dy = wulforWheelDeltaY(e);
+    if (dy > 0)
         emit nextTab();
-    else if (e->angleDelta().y() < 0)
+    else if (dy < 0)
         emit prevTab();
 }
 

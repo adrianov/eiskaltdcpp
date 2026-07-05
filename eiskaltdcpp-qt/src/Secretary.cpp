@@ -592,7 +592,7 @@ void Secretary::addOutput(const QString& htmlMsg, const QString& origMsg, const 
 
     if (checkBox_HUBS_FILTER->isChecked()) {
         const QStringList &&urlParts = url.split(":");
-        const QStringList &&addresses = lineEdit_HUBS_FILTER->text().split(",", Qt::SkipEmptyParts);
+        const QStringList &&addresses = lineEdit_HUBS_FILTER->text().split(",", WULFOR_SKIP_EMPTY);
         if (urlParts.isEmpty() || addresses.isEmpty())
             return;
 
@@ -630,7 +630,7 @@ void Secretary::addOutput(const QString& htmlMsg, const QString& origMsg, const 
     }
 
     if (checkBox_KEYWORDS->isChecked()) {
-        const QStringList &&keywords = lineEdit_KEYWORDS->text().split(",", Qt::SkipEmptyParts);
+        const QStringList &&keywords = lineEdit_KEYWORDS->text().split(",", WULFOR_SKIP_EMPTY);
         for (const auto &k : keywords) {
             if (origMsg.contains(k, Qt::CaseInsensitive)) {
                 storeMessage = true;

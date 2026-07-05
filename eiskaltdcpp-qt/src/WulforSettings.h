@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "QtCompat.h"
+
 #include <QObject>
 #include <QMap>
 #include <QTranslator>

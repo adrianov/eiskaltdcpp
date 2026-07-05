@@ -145,7 +145,7 @@ bool CmdDebug::eventFilter(QObject *obj, QEvent *e){
 void CmdDebug::addOutput(const QString& msg, const QString& url) {
     if (checkBoxFilterIP->isChecked()) {
         const QStringList &&urlList = url.split(":");
-        const QStringList &&addresses = lineEditIP->text().split(",", Qt::SkipEmptyParts);
+        const QStringList &&addresses = lineEditIP->text().split(",", WULFOR_SKIP_EMPTY);
         if (urlList.isEmpty() || addresses.isEmpty())
             return;
 

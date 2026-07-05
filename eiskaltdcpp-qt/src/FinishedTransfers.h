@@ -517,7 +517,7 @@ private:
                 file_list = item->data(COLUMN_FINISHED_PATH).toString();
 
                 if (!file_list.isEmpty()){
-                    files.append(file_list.split("; ", Qt::SkipEmptyParts));
+                    files.append(file_list.split("; ", WULFOR_SKIP_EMPTY));
                 }
 
             }

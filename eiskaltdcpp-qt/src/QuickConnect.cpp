@@ -17,7 +17,7 @@
 QuickConnect::QuickConnect(QWidget *parent) : QDialog(parent) {
     setupUi(this);
 
-    comboBox_HUB->addItems(WulforSettings::getInstance()->getStr(WS_QCONNECT_HISTORY).split(" ", Qt::SkipEmptyParts));
+    comboBox_HUB->addItems(WulforSettings::getInstance()->getStr(WS_QCONNECT_HISTORY).split(" ", WULFOR_SKIP_EMPTY));
 
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(slotAccept()));
     connect(comboBox_HUB, SIGNAL(activated(int)), this, SLOT(slotAccept()));
@@ -53,7 +53,7 @@ void QuickConnect::slotAccept() {
 
         MainWindow::getInstance()->newHubFrame(hub, (encoding.isEmpty())? (WSGET(WS_DEFAULT_LOCALE)) : (encoding));
 
-        QStringList list = WulforSettings::getInstance()->getStr(WS_QCONNECT_HISTORY).split(" ", Qt::SkipEmptyParts);
+        QStringList list = WulforSettings::getInstance()->getStr(WS_QCONNECT_HISTORY).split(" ", WULFOR_SKIP_EMPTY);
 
         if (!list.contains(hub))
             list.push_back(hub);

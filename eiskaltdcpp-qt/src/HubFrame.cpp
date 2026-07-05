@@ -1558,7 +1558,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
     PMWindow *pm = qobject_cast<PMWindow *>(wg);
     Q_D(HubFrame);
 
-    QStringList list = line.split(" ", Qt::SkipEmptyParts);
+    QStringList list = line.split(" ", WULFOR_SKIP_EMPTY);
 
     if (list.isEmpty())
         return false;
@@ -1601,7 +1601,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
         }
     }
     else if (cmd == "/alias" && !emptyParam){
-        QStringList lex = line.split(" ", Qt::SkipEmptyParts);
+        QStringList lex = line.split(" ", WULFOR_SKIP_EMPTY);
 
         if (lex.size() >= 2){
             QString aliases = QByteArray::fromBase64(WSGET(WS_CHAT_CMD_ALIASES).toUtf8());
@@ -1622,10 +1622,10 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
             }
             else if (lex.at(1) == "purge" && lex.size() == 3){
                 QString alias = lex.at(2);
-                QStringList alias_list = aliases.split('\n', Qt::SkipEmptyParts);
+                QStringList alias_list = aliases.split('\n', WULFOR_SKIP_EMPTY);
 
                 for (const auto &line : alias_list){
-                    QStringList cmds = line.split('\t', Qt::SkipEmptyParts);
+                    QStringList cmds = line.split('\t', WULFOR_SKIP_EMPTY);
 
                     if (cmds.size() == 2 && alias == cmds.at(0)){
                         alias_list.removeAt(alias_list.indexOf(line));
@@ -1655,7 +1655,7 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
                         pm->addStatus(tr("Invalid alias syntax."));
                 }
                 else {
-                    QStringList new_cmd = raw.split("::", Qt::SkipEmptyParts);
+                    QStringList new_cmd = raw.split("::", WULFOR_SKIP_EMPTY);
 
                     if (new_cmd.size() < 2 || new_cmd.at(1).isEmpty()){
                         if (fr == this)
@@ -1941,11 +1941,11 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
     }
     else if (!WSGET(WS_CHAT_CMD_ALIASES).isEmpty()){
         QString aliases = QByteArray::fromBase64(WSGET(WS_CHAT_CMD_ALIASES).toUtf8());
-        QStringList alias_list = aliases.split('\n', Qt::SkipEmptyParts);
+        QStringList alias_list = aliases.split('\n', WULFOR_SKIP_EMPTY);
         bool ok = false;
 
         for (const auto &line : alias_list){
-            QStringList cmds = line.split('\t', Qt::SkipEmptyParts);
+            QStringList cmds = line.split('\t', WULFOR_SKIP_EMPTY);
 
             if (cmds.size() == 2 && cmd == ("/" + cmds.at(0))){
                 parseForCmd(cmds.at(1), wg);
@@ -2004,7 +2004,7 @@ void HubFrame::addStatus(QString msg){
 
     QString nick = " * ";
 
-    QStringList lines = msg.split(QRegExp("[\\n\\r\\f]+"), Qt::SkipEmptyParts);
+    QStringList lines = msg.split(QRegExp("[\\n\\r\\f]+"), WULFOR_SKIP_EMPTY);
     for (int i = 0; i < lines.size(); ++i) {
         if (lines.at(i).contains(QRegExp("\\w+"))) {
             short_msg = lines.at(i);
@@ -3538,7 +3538,7 @@ void HubFrame::slotInputTextChanged(){
         return;
 
     SpellCheck *sp = SpellCheck::getInstance();
-    QStringList words = line.split(QRegExp("\\W+"), Qt::SkipEmptyParts);
+    QStringList words = line.split(QRegExp("\\W+"), WULFOR_SKIP_EMPTY);
 
     if (words.isEmpty())
         return;

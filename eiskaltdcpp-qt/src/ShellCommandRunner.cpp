@@ -53,9 +53,13 @@ void ShellCommandRunner::run() {
     if (useArgList)
         process.start(cmd, argList);
     else {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         const QStringList parts = QProcess::splitCommand(args);
         if (!parts.isEmpty())
             process.start(parts.constFirst(), parts.mid(1));
+#else
+        process.start(args);
+#endif
     }
 
     process.closeWriteChannel();

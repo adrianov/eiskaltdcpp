@@ -1497,7 +1497,7 @@ void MainWindow::initToolbar(){
     d->fBar = new ToolBar(this);
     d->fBar->setObjectName("fBar");
 
-    QStringList enabled_actions = QString(QByteArray::fromBase64(WSGET(WS_MAINWINDOW_TOOLBAR_ACTS).toUtf8())).split(";", Qt::SkipEmptyParts);
+    QStringList enabled_actions = QString(QByteArray::fromBase64(WSGET(WS_MAINWINDOW_TOOLBAR_ACTS).toUtf8())).split(";", WULFOR_SKIP_EMPTY);
 
     if (enabled_actions.isEmpty())
         d->fBar->addActions(d->toolBarActions);
@@ -1931,7 +1931,7 @@ void MainWindow::parseInstanceLine(const QString &data){
         redrawToolPanel();
     }
 
-    const QStringList args = data.split("\n", Qt::SkipEmptyParts);
+    const QStringList args = data.split("\n", WULFOR_SKIP_EMPTY);
     parseCmdLine(args);
 }
 

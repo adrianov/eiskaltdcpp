@@ -547,7 +547,7 @@ DownloadQueueItem *DownloadQueueModel::createPath(const QString & path){
     QString _path = path;
     _path.replace("\\", "/");
 
-    QStringList list = _path.split("/", Qt::SkipEmptyParts);
+    QStringList list = _path.split("/", WULFOR_SKIP_EMPTY);
 
     DownloadQueueItem *root = d->rootItem;
 

@@ -47,7 +47,7 @@ AntiSpam& operator <<(AntiSpam &sp, const QString &list){
     QString users = list;
     users += ",";
 
-    sp << users.split(",", Qt::SkipEmptyParts);
+    sp << users.split(",", WULFOR_SKIP_EMPTY);
 
     return sp;
 }
@@ -372,7 +372,7 @@ void AntiSpam::loadSettings() {
                 keys.append("10");
             }
             else {
-                QList<QString> words = line.split("|", Qt::SkipEmptyParts);
+                QList<QString> words = line.split("|", WULFOR_SKIP_EMPTY);
                 keys.clear();
                 keys.append(words);
             }

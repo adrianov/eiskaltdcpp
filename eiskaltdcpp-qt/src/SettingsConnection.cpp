@@ -345,7 +345,7 @@ bool SettingsConnection::validateIp(QString &ip){
     if (ip.isEmpty() || ip.isNull())
         return false;
 
-    QStringList l = ip.split(".", Qt::SkipEmptyParts);
+    QStringList l = ip.split(".", WULFOR_SKIP_EMPTY);
 
     if (l.size() != 4)
         return false;
