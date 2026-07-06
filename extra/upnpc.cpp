@@ -32,42 +32,77 @@
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 
+#include <algorithm>
+
 static UPNPUrls urls;
 static IGDdatas data;
+static char lanaddr[64];
+static bool haveUrls = false;
 const std::string UPnPc::name = "MiniUPnP";
 
 using namespace std;
 using namespace dcpp;
 
+static UPNPDev* discover(const char* iface)
+{
+#if (MINIUPNPC_API_VERSION >= 14)
+    return upnpDiscover(5000, iface, nullptr, 0, 0, 2, nullptr);
+#else
+    return upnpDiscover(5000, iface, nullptr, 0, 0, nullptr);
+#endif
+}
+
 bool UPnPc::init()
 {
+    if (haveUrls) {
+        FreeUPNPUrls(&urls);
+        haveUrls = false;
+    }
+
+    // Use the configured bind address only while it is assigned to an interface;
+    // a stale address would make SSDP discovery fail every time.
     const string bind_address = SETTING(BIND_ADDRESS);
-    const char *multicast_interface = SettingsManager::getInstance()->isDefault(SettingsManager::BIND_ADDRESS) ? nullptr : bind_address.c_str();
+    const char* iface = nullptr;
+    if (!SettingsManager::getInstance()->isDefault(SettingsManager::BIND_ADDRESS)) {
+        const auto ips = Util::getLocalIPs(AF_INET);
+        if (std::find(ips.begin(), ips.end(), bind_address) != ips.end())
+            iface = bind_address.c_str();
+    }
 
-#if (MINIUPNPC_API_VERSION >= 14)
-    UPNPDev *devices = upnpDiscover(5000, multicast_interface, nullptr, 0, 0, 2, nullptr);
-#else
-    UPNPDev *devices = upnpDiscover(5000, multicast_interface, nullptr, 0, 0, nullptr);
-#endif
-
+    UPNPDev *devices = discover(iface);
+    if (!devices && iface)
+        devices = discover(nullptr);
     if (!devices)
         return false;
 
+    lanaddr[0] = 0;
 #if (MINIUPNPC_API_VERSION >= 18)
-    bool ret = UPNP_GetValidIGD(devices, &urls, &data, nullptr, 0, nullptr, 0);
+    int ret = UPNP_GetValidIGD(devices, &urls, &data, lanaddr, sizeof(lanaddr), nullptr, 0);
+    const int worstUsable = 3; // 2 = private-IP IGD, 3 = disconnected IGD
 #else
-    bool ret = UPNP_GetValidIGD(devices, &urls, &data, nullptr, 0);
+    int ret = UPNP_GetValidIGD(devices, &urls, &data, lanaddr, sizeof(lanaddr));
+    const int worstUsable = 2; // 2 = IGD not connected; 3 = not an IGD
 #endif
 
     freeUPNPDevlist(devices);
 
-    return ret;
+    haveUrls = (ret != 0);
+    return ret >= 1 && ret <= worstUsable;
 }
 
 bool UPnPc::add(const string& port, const UPnP::Protocol protocol, const string& description)
 {
+    // The IGD reports which of our addresses routes to it; trust that over guessing.
+    const string local = lanaddr[0] ? lanaddr : Util::getLocalIp(AF_INET);
+
+    if (UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, port.c_str(), port.c_str(),
+            local.c_str(), description.c_str(), protocols[protocol], nullptr, nullptr) == UPNPCOMMAND_SUCCESS)
+        return true;
+
+    // A stale mapping left by an unclean shutdown blocks the port; drop it and retry.
+    UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(), protocols[protocol], nullptr);
     return UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, port.c_str(), port.c_str(),
-        Util::getLocalIp(AF_INET).c_str(), description.c_str(), protocols[protocol], nullptr, nullptr) == UPNPCOMMAND_SUCCESS;
+        local.c_str(), description.c_str(), protocols[protocol], nullptr, nullptr) == UPNPCOMMAND_SUCCESS;
 }
 
 bool UPnPc::remove(const string& port, const UPnP::Protocol protocol)
