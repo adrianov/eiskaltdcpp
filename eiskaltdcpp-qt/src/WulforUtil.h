@@ -185,8 +185,11 @@ public Q_SLOTS:
 
     static void headerMenu(QTreeView*);
 
-    /** Restore saved layout, or autosize once after data loads when no saved state exists. */
+    /** Restore saved layout; autosize when columns are too narrow once the view is visible. */
     static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
+
+    /** Re-check column widths after the view becomes visible or its model changes. */
+    static void ensureTreeHeaderAutosized(QAbstractItemView *view);
 
     QString getHubNames(const dcpp::CID&);
     QString getHubNames(const dcpp::UserPtr&);
