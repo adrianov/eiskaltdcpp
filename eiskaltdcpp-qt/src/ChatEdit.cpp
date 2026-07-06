@@ -8,20 +8,12 @@
 ***************************************************************************/
 
 #include "ChatEdit.h"
-#include "WulforUtil.h"
 
-#include "dcpp/HashManager.h"
-
+#include <QAbstractItemView>
 #include <QCompleter>
 #include <QKeyEvent>
-#include <QScrollBar>
-#include <QTextBlock>
-#include <QUrl>
-#include <QFileInfo>
-#include <QDir>
-#include <QMimeData>
 
-ChatEdit::ChatEdit(QWidget *parent) : QTextEdit(parent), cc(nullptr)
+ChatEdit::ChatEdit(QWidget *parent) : QTextEdit(parent)
 {
     setMinimumHeight(10);
 
@@ -34,27 +26,6 @@ ChatEdit::ChatEdit(QWidget *parent) : QTextEdit(parent), cc(nullptr)
 
 ChatEdit::~ChatEdit()
 {}
-
-void ChatEdit::setCompleter(QCompleter *completer, UserListModel *model)
-{
-    if (cc)
-        QObject::disconnect(cc, nullptr, this, nullptr);
-
-    cc = completer;
-
-    if (!cc || !model)
-        return;
-
-    cc->setWidget(this);
-    cc->setWrapAround(false);
-    cc->setCaseSensitivity(Qt::CaseInsensitive);
-    cc->setCompletionMode(QCompleter::PopupCompletion);
-
-    cc_model = model;
-
-    QObject::connect(cc, SIGNAL(activated(const QModelIndex&)),
-                     this, SLOT(insertCompletion(const QModelIndex&)));
-}
 
 QSize ChatEdit::minimumSizeHint() const{
     QSize sh = QTextEdit::minimumSizeHint();
@@ -69,61 +40,6 @@ QSize ChatEdit::sizeHint() const{
     sh += QSize(0, QFrame::lineWidth() * 2);
     ((QTextEdit*)this)->setMaximumHeight(sh.height());
     return sh;
-}
-
-void ChatEdit::insertCompletion(const QModelIndex & index)
-{
-    if (cc->widget() != this || !index.isValid())
-        return;
-
-    QString nick = cc->completionModel()->index(index.row(), index.column()).data().toString();
-    int begin = textCursor().position() - cc->completionPrefix().length();
-
-    insertToPos(nick, begin);
-}
-
-void ChatEdit::insertToPos(const QString & completeText, int begin)
-{
-    if (completeText.isEmpty())
-        return;
-
-    if (begin < 0)
-        begin = 0;
-
-    QTextCursor cursor = textCursor();
-    int end = cursor.position();
-    cursor.setPosition(begin);
-    cursor.setPosition(end, QTextCursor::KeepAnchor);
-
-    if (!begin)
-        cursor.insertText(completeText + ": ");
-    else
-        cursor.insertText(completeText + " ");
-
-    setTextCursor(cursor);
-}
-
-QString ChatEdit::textUnderCursor() const
-{
-    QTextCursor cursor = textCursor();
-
-    int curpos = cursor.position();
-    QString text = cursor.block().text().left(curpos);
-
-    QStringList wordList = text.split(QRegExp("\\s"));
-
-    if (wordList.isEmpty())
-        return QString();
-
-    return wordList.last();
-}
-
-void ChatEdit::focusInEvent(QFocusEvent *e)
-{
-    if (cc)
-        cc->setWidget(this);
-
-    QTextEdit::focusInEvent(e);
 }
 
 void ChatEdit::keyPressEvent(QKeyEvent *e)
@@ -167,6 +83,9 @@ void ChatEdit::keyPressEvent(QKeyEvent *e)
     if (ctrlOrShift && e->text().isEmpty())
         return;
 
+    if (!cc)
+        return;
+
     if (cc->popup()->isVisible() && (hasModifier || e->text().isEmpty())) {
         cc->popup()->hide();
         return;
@@ -192,102 +111,6 @@ void ChatEdit::keyReleaseEvent(QKeyEvent *e)
     default:
         break;
     }
-}
-
-void ChatEdit::complete()
-{
-    QString completionPrefix = textUnderCursor();
-
-    if (completionPrefix.isEmpty()) {
-        if (cc->popup()->isVisible())
-            cc->popup()->hide();
-
-        return;
-    }
-
-    if (!cc->popup()->isVisible() || completionPrefix.length() < cc->completionPrefix().length()) {
-        QString pattern = QString("(\\[.*\\])?%1.*").arg( QRegExp::escape(completionPrefix) );
-        QStringList nicks = cc_model->findItems(pattern, Qt::MatchRegExp, 0);
-
-        if (nicks.isEmpty())
-            return;
-
-        if (nicks.count() == 1) {
-            insertToPos(nicks.last(), textCursor().position() - completionPrefix.length());
-            return;
-        }
-
-        NickCompletionModel *tmpModel = new NickCompletionModel(nicks, cc);
-        cc->setModel(tmpModel);
-    }
-
-    if (completionPrefix != cc->completionPrefix()) {
-        cc->setCompletionPrefix(completionPrefix);
-        cc->popup()->setCurrentIndex(cc->completionModel()->index(0, 0));
-    }
-
-    QRect cr = cursorRect();
-    cr.setWidth(cc->popup()->sizeHintForColumn(0)
-                + cc->popup()->verticalScrollBar()->sizeHint().width());
-
-    cc->complete(cr);
-}
-
-void ChatEdit::dragMoveEvent(QDragMoveEvent *event) {
-    event->accept();
-}
-
-void ChatEdit::dragEnterEvent(QDragEnterEvent *e)
-{
-    if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
-        e->acceptProposedAction();
-    } else {
-        e->ignore();
-    }
-}
-
-void ChatEdit::dropEvent(QDropEvent *e)
-{
-    if (e->mimeData()->hasUrls()) {
-
-        e->setDropAction(Qt::IgnoreAction);
-
-        QStringList fileNames;
-        for (const auto url : e->mimeData()->urls()) {
-            QString urlStr = url.toString();
-            if (url.scheme().toLower() == "file") {
-                QFileInfo fi( url.toLocalFile() );
-                QString str = QDir::toNativeSeparators( fi.absoluteFilePath() );
-
-                if ( fi.exists() && fi.isFile() && !str.isEmpty() ) {
-                    const TTHValue *tth = HashManager::getInstance()->getFileTTHif(str.toStdString());
-                    if ( !tth ) {
-                        str = QDir::toNativeSeparators( fi.canonicalFilePath() ); // try to follow symlinks
-                        tth = HashManager::getInstance()->getFileTTHif(str.toStdString());
-                    }
-                    if (tth)
-                        urlStr = WulforUtil::getInstance()->makeMagnet(fi.fileName(), fi.size(), _q(tth->toBase32()));
-                }
-            };
-
-            if (!urlStr.isEmpty())
-                fileNames << urlStr;
-        }
-
-        if (!fileNames.isEmpty()) {
-
-            QString dropText = (fileNames.count() == 1) ? fileNames.last() : "\n" + fileNames.join("\n");
-
-            QMimeData mime;
-            mime.setText(dropText);
-            QDropEvent drop(e->pos(), Qt::CopyAction, &mime, e->mouseButtons(),
-                            e->keyboardModifiers(), e->type());
-
-            QTextEdit::dropEvent(&drop);
-            return;
-        }
-    }
-    QTextEdit::dropEvent(e);
 }
 
 void ChatEdit::updateScrollBar(){

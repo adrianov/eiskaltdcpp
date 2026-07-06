@@ -12,6 +12,7 @@
 #include <QTextEdit>
 #include <QAbstractTextDocumentLayout>
 #include <QStringListModel>
+#include <QPointer>
 
 #include <QDebug>
 
@@ -79,6 +80,6 @@ private:
     void insertToPos(const QString &, int);
     void complete();
 
-    UserListModel *cc_model;
-    QCompleter *cc;
+    UserListModel *cc_model = nullptr;
+    QPointer<QCompleter> cc;
 };
