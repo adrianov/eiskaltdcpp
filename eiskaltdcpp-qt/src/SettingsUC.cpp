@@ -9,6 +9,8 @@
 
 #include "SettingsUC.h"
 #include "UCModel.h"
+#include "WulforUtil.h"
+#include "WulforSettings.h"
 
 #include <QItemSelectionModel>
 
@@ -23,6 +25,7 @@ SettingsUC::SettingsUC(QWidget *parent) :
     model->loadUC();
 
     treeView->setModel(model);
+    WulforUtil::restoreTreeHeader(treeView->header(), WVGET("settings-uc/headerstate", QByteArray()).toByteArray());
 
     connect(pushButton_ADD, SIGNAL(clicked()),          model, SLOT(newUC()));
     connect(pushButton_REM, SIGNAL(clicked()),          this,  SLOT(slotRemClicked()));
@@ -37,6 +40,7 @@ SettingsUC::SettingsUC(QWidget *parent) :
 }
 
 SettingsUC::~SettingsUC(){
+    WVSET("settings-uc/headerstate", treeView->header()->saveState());
     model->deleteLater();
 }
 
