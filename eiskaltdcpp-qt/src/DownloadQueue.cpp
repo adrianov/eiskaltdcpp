@@ -19,6 +19,7 @@
 #include <QDir>
 #include <QShortcut>
 
+#include "DownloadQueuePrivate.h"
 #include "DownloadQueueModel.h"
 #include "ArenaWidgetFactory.h"
 #include "SearchFrame.h"
@@ -35,23 +36,6 @@
 #endif
 
 using namespace dcpp;
-
-class DownloadQueuePrivate {
-    typedef QVariantMap VarMap;
-    typedef QMap<QString, QMap<QString, QString> > SourceMap;
-
-public:
-    QShortcut *deleteShortcut;
-
-    DownloadQueueModel *queue_model;
-    DownloadQueueModel *file_model;
-    DownloadQueueDelegate *delegate;
-
-    DownloadQueue::Menu *menu;
-
-    SourceMap sources;
-    SourceMap badSources;
-};
 
 DownloadQueue::Menu::Menu() : menu(new QMenu(nullptr))
 {
@@ -320,99 +304,6 @@ void DownloadQueue::save(){
     WVSET(WS_DQUEUE_STATE, treeView_TARGET->header()->saveState());
 }
 
-void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *item){
-    QString nick = "";
-    QMap<QString, QString> source;
-    int online = 0;
-
-    if (!item)
-        return;
-
-    params["FNAME"]     = _q(item->getTargetFileName());
-    params["PATH"]      = _q(Util::getFilePath(item->getTarget()));
-    params["TARGET"]    = _q(item->getTarget());
-
-    params["USERS"] = QString("");
-
-    QStringList user_list;
-
-    for (const auto &src : item->getSources()){
-        HintedUser usr = src.getUser();
-        const dcpp::CID &cid = usr.user->getCID();
-
-        if (usr.user->isOnline())
-            ++online;
-
-        nick = WulforUtil::getInstance()->getNicks(cid, _q(usr.hint));
-
-        if (!nick.isEmpty()){
-            source[nick] = _q(cid.toBase32());
-            user_list.push_back(nick);
-        }
-    }
-
-    if (!user_list.isEmpty())
-        params["USERS"] = user_list.join(", ");
-    else
-        params["USERS"] = tr("No users...");
-
-    Q_D(DownloadQueue);
-
-    d->sources[_q(item->getTarget())] = source;
-
-    if (item->isWaiting())
-        params["STATUS"] = tr("%1 of %2 user(s) online").arg(online).arg(item->getSources().size());
-    else
-        params["STATUS"] = tr("Running...");
-
-    params["ESIZE"] = (qlonglong)item->getSize();
-    params["DOWN"]  = (qlonglong)item->getDownloadedBytes();
-    params["PRIO"]  = static_cast<int>(item->getPriority());
-
-    source.clear();
-
-    params["ERRORS"] = QString("");
-
-    for (const auto &src : item->getBadSources()){
-        QString errors = params["ERRORS"].toString();
-        UserPtr usr = src.getUser();
-
-        nick = WulforUtil::getInstance()->getNicks(usr->getCID());
-        source[nick] = _q(usr->getCID().toBase32());
-
-        if (!src.isSet(QueueItem::Source::FLAG_REMOVED)){
-            if (!errors.isEmpty())
-                errors += ", ";
-
-            errors += nick + " (";
-
-            if (src.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
-                errors += tr("File not available");
-            else if (src.isSet(QueueItem::Source::FLAG_PASSIVE))
-                errors += tr("Passive user");
-            else if (src.isSet(QueueItem::Source::FLAG_CRC_FAILED))
-                errors += tr("Checksum mismatch");
-            else if (src.isSet(QueueItem::Source::FLAG_BAD_TREE))
-                errors += tr("Full tree does not match TTH root");
-            else if (src.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
-                errors += tr("Source too slow");
-            else if (src.isSet(QueueItem::Source::FLAG_NO_TTHF))
-                errors += tr("Remote client does not fully support TTH - cannot download");
-
-            params["ERRORS"] = errors + ")";
-        }
-    }
-
-    if (params["ERRORS"].toString().isEmpty())
-        params["ERRORS"] = tr("No errors");
-
-    d->badSources[_q(item->getTarget())] = source;
-
-    params["ADDED"] = _q(Util::formatTime("%Y-%m-%d %H:%M", item->getAdded()));
-    params["TTH"] = _q(item->getTTH().toBase32());
-
-}
-
 QStringList DownloadQueue::getSources(){
     Q_D(DownloadQueue);
 
@@ -478,6 +369,7 @@ void DownloadQueue::addFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
 
     d->queue_model->addItem(map);
+    syncSourceMaps(map["TARGET"].toString());
 }
 
 void DownloadQueue::remFile(const VarMap &map){
@@ -500,6 +392,7 @@ void DownloadQueue::updateFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
 
     d->queue_model->updItem(map);
+    syncSourceMaps(map["TARGET"].toString());
 }
 
 QString DownloadQueue::getCID(const VarMap &map){

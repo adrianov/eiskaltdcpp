@@ -142,6 +142,7 @@ private:
     void save();
 
     void getParams(VarMap&, const dcpp::QueueItem*);
+    void syncSourceMaps(const QString &target);
     void loadList();
 
     void getChilds(DownloadQueueItem *i, QList<DownloadQueueItem*>&);
