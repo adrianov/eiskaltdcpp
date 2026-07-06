@@ -162,23 +162,20 @@ vector<uint8_t> Client::getKeyprint() const {
     return isReady() ? sock->getKeyprint() : vector<uint8_t>();
 }
 
+// Each candidate is validated; invalid ones fall through to the next source.
 string Client::getLocalIp() const {
-    if (!externalIP.empty())
-        return Socket::resolve(externalIP);
-
-    if((!BOOLSETTING(NO_IP_OVERRIDE) || SETTING(EXTERNAL_IP).empty()) && !getMyIdentity().getIp().empty()) {
-        return getMyIdentity().getIp();
-    }
-
-    if(!SETTING(EXTERNAL_IP).empty()) {
-        return Socket::resolve(SETTING(EXTERNAL_IP));
-    }
-
-    if(localIp.empty()) {
-        return Util::getLocalIp();
-    }
-
-    return localIp;
+    string ip;
+    if(!externalIP.empty())
+        ip = Util::normalizeIpv4(Socket::resolve(externalIP));
+    if(ip.empty() && (!BOOLSETTING(NO_IP_OVERRIDE) || SETTING(EXTERNAL_IP).empty()))
+        ip = Util::normalizeIpv4(getMyIdentity().getIp());
+    if(ip.empty() && !SETTING(EXTERNAL_IP).empty())
+        ip = Util::normalizeIpv4(Socket::resolve(SETTING(EXTERNAL_IP)));
+    if(ip.empty())
+        ip = Util::normalizeIpv4(localIp);
+    if(ip.empty())
+        ip = Util::normalizeIpv4(Util::getLocalIp(AF_INET));
+    return ip;
 }
 
 } // namespace dcpp

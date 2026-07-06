@@ -387,6 +387,8 @@ public:
     static string getLocalIp(unsigned short sa_family = AF_UNSPEC);
     static std::vector<string> getLocalIPs(unsigned short sa_family = AF_UNSPEC);
     static bool isPrivateIp(string const& ip);
+    /** Trim and return IPv4 suitable for NMDC/ADC, or empty if invalid. */
+    static string normalizeIpv4(const string& ip);
     static string formatAdditionalInfo(const std::string& aIp, bool sIp, bool sCC);
     /**
      * Case insensitive substring search.

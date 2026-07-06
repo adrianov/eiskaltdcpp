@@ -1009,13 +1009,13 @@ void AdcHub::info(bool /*alwaysSend*/) {
         addParam(lastInfoMap, c, "KP", "SHA256/" + Encoder::toBase32(&kp[0], kp.size()));
     }
 
-    if (!getFavIp().empty()) {
-        addParam(lastInfoMap, c, "I4", getFavIp());
-    } else if(BOOLSETTING(NO_IP_OVERRIDE) && !SETTING(EXTERNAL_IP).empty()) {
-        addParam(lastInfoMap, c, "I4", Socket::resolve(SETTING(EXTERNAL_IP)));
-    } else {
-        addParam(lastInfoMap, c, "I4", "0.0.0.0");
-    }
+    string i4;
+    if (!getFavIp().empty())
+        i4 = Util::normalizeIpv4(Socket::resolve(getFavIp()));
+    if (i4.empty() && BOOLSETTING(NO_IP_OVERRIDE) && !SETTING(EXTERNAL_IP).empty())
+        i4 = Util::normalizeIpv4(Socket::resolve(SETTING(EXTERNAL_IP)));
+    // 0.0.0.0 asks the hub to fill in our real address.
+    addParam(lastInfoMap, c, "I4", i4.empty() ? "0.0.0.0" : i4);
 
     if(isActive()) {
         addParam(lastInfoMap, c, "U4", SearchManager::getInstance()->getPort());

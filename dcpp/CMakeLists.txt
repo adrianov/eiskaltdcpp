@@ -15,6 +15,7 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubLine.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
+    UtilIp.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
@@ -143,6 +144,7 @@ endif (FORCE_XDG)
 
 if (HAVE_IFADDRS_H)
     set_property(SOURCE ${PROJECT_SOURCE_DIR}/Util.cpp
+                        ${PROJECT_SOURCE_DIR}/UtilIp.cpp
                  PROPERTY COMPILE_DEFINITIONS HAVE_IFADDRS_H APPEND)
 endif (HAVE_IFADDRS_H)
 
