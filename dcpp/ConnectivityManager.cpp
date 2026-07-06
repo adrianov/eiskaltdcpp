@@ -69,8 +69,11 @@ void ConnectivityManager::detectConnection() {
     SettingsManager::getInstance()->unset(SettingsManager::TCP_PORT);
     SettingsManager::getInstance()->unset(SettingsManager::UDP_PORT);
     SettingsManager::getInstance()->unset(SettingsManager::TLS_PORT);
-    SettingsManager::getInstance()->unset(SettingsManager::EXTERNAL_IP);
-    SettingsManager::getInstance()->unset(SettingsManager::NO_IP_OVERRIDE);
+    // Keep a manually entered External IP (address or DynDNS hostname).
+    if(SETTING(EXTERNAL_IP).empty()) {
+        SettingsManager::getInstance()->unset(SettingsManager::EXTERNAL_IP);
+        SettingsManager::getInstance()->unset(SettingsManager::NO_IP_OVERRIDE);
+    }
     //SettingsManager::getInstance()->unset(SettingsManager::MAPPER);
     SettingsManager::getInstance()->unset(SettingsManager::BIND_ADDRESS);
 

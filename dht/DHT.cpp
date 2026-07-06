@@ -82,9 +82,6 @@ namespace dht
 
         if(!bucket)
         {
-            if(!BOOLSETTING(NO_IP_OVERRIDE))
-                SettingsManager::getInstance()->set(SettingsManager::EXTERNAL_IP, Util::emptyString);
-
             bucket = new KBucket();
 
             BootstrapManager::newInstance();
@@ -598,8 +595,11 @@ namespace dht
                         firewalled = false;
                     }
 
-                    if(!BOOLSETTING(NO_IP_OVERRIDE))
-                        SettingsManager::getInstance()->set(SettingsManager::EXTERNAL_IP, externalIP);
+                    if(!BOOLSETTING(NO_IP_OVERRIDE)) {
+                        const string ip = Util::normalizeIpv4(externalIP);
+                        if(!ip.empty())
+                            SettingsManager::getInstance()->set(SettingsManager::EXTERNAL_IP, ip);
+                    }
 
                     firewalledChecks.clear();
                     firewalledWanted.clear();

@@ -116,14 +116,10 @@ int MappingManager::run() {
 #endif
 
         if(!BOOLSETTING(NO_IP_OVERRIDE)) {
-            // now lets configure the external IP (connect to me) address
-            string ExternalIP = impl.getExternalIP();
+            const string ExternalIP = Util::normalizeIpv4(impl.getExternalIP());
             if(!ExternalIP.empty()) {
-                // woohoo, we got the external IP from the UPnP framework
                 SettingsManager::getInstance()->set(SettingsManager::EXTERNAL_IP, ExternalIP);
             } else {
-                //:-( Looks like we have to rely on the user setting the external IP manually
-                // no need to do cleanup here because the mappings work
                 log(_("Failed to get external IP"));
             }
         }

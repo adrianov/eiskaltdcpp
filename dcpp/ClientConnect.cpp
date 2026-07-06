@@ -162,6 +162,18 @@ vector<uint8_t> Client::getKeyprint() const {
     return isReady() ? sock->getKeyprint() : vector<uint8_t>();
 }
 
+// Public IP that some connected hub reported for us ($UserIP / ADC INF).
+static string hubReportedIp() {
+    auto cm = ClientManager::getInstance();
+    auto lock = cm->lock();
+    for(auto c: cm->getClients()) {
+        const string ip = Util::normalizeIpv4(c->getMyIdentity().getIp());
+        if(!ip.empty() && !Util::isPrivateIp(ip))
+            return ip;
+    }
+    return Util::emptyString;
+}
+
 // Each candidate is validated; invalid ones fall through to the next source.
 string Client::getLocalIp() const {
     string ip;
@@ -171,6 +183,9 @@ string Client::getLocalIp() const {
         ip = Util::normalizeIpv4(getMyIdentity().getIp());
     if(ip.empty() && !SETTING(EXTERNAL_IP).empty())
         ip = Util::normalizeIpv4(Socket::resolve(SETTING(EXTERNAL_IP)));
+    // On a public hub a LAN address is known-wrong; prefer an IP another hub told us.
+    if(ip.empty() && !Util::isPrivateIp(getIp()))
+        ip = hubReportedIp();
     if(ip.empty())
         ip = Util::normalizeIpv4(localIp);
     if(ip.empty())
