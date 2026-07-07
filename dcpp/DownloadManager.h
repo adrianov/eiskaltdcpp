@@ -84,6 +84,7 @@ private:
     virtual void on(Failed, UserConnection* aSource, const string& aError) noexcept { onFailed(aSource, aError); }
     virtual void on(ProtocolError, UserConnection* aSource, const string& aError) noexcept { onFailed(aSource, aError); }
     virtual void on(MaxedOut, UserConnection*, size_t queuePos) noexcept;
+    virtual void on(Send, UserConnection*) noexcept;
     virtual void on(FileNotAvailable, UserConnection*) noexcept;
     virtual void on(Updated, UserConnection*) noexcept;
 

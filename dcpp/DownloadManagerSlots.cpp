@@ -16,6 +16,7 @@
 #include "Download.h"
 #include "LogManager.h"
 #include "QueueManager.h"
+#include "SettingsManager.h"
 #include "UserConnection.h"
 #include "format.h"
 
@@ -38,6 +39,9 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
         return;
     }
 
+    // Keep the connection open until the uploader sends $Send / ADC SND (queue cleared).
+    aSource->setLastActivity(GET_TICK());
+
     const string nick = ClientManager::getInstance()->getNickOrCid(aSource->getHintedUser());
     const string file = Util::addBrackets(d->getTargetFileName());
     string msg = queuePos > 0 ?
@@ -47,6 +51,15 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
     dcdebug("DM::noSlots %s\n", msg.c_str());
 
     fire(DownloadManagerListener::Queued(), d, queuePos);
+}
+
+void DownloadManager::on(UserConnectionListener::Send, UserConnection* aSource) noexcept {
+    if(aSource->getState() != UserConnection::STATE_SND || !aSource->getDownload())
+        return;
+
+    Download* d = aSource->getDownload();
+    startData(aSource, d->getStartPos(), d->getSize(),
+              aSource->isSet(UserConnection::FLAG_SUPPORTS_ZLIB_GET) && BOOLSETTING(COMPRESS_TRANSFERS));
 }
 
 void DownloadManager::onFailed(UserConnection* aSource, const string& aError) {
