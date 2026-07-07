@@ -25,6 +25,7 @@
 #include "format.h"
 #include "version.h"
 #include "ConnectivityManager.h"
+#include "SettingsManager.h"
 #ifdef USE_MINIUPNP
 #include "extra/upnpc.h"
 #endif
@@ -32,6 +33,20 @@
 #include "dht/DHT.h"
 #endif
 namespace dcpp {
+
+bool MappingManager::readyForPeerConnect() const {
+    if(SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_UPNP)
+        return true;
+#ifndef USE_MINIUPNP
+    return true;
+#else
+    if(opened)
+        return true;
+    if(portMapping)
+        return false;
+    return mappingAttemptDone;
+#endif
+}
 
 void MappingManager::addImplementation(UPnP* impl) {
     impls.push_back(std::unique_ptr<UPnP>(impl));
@@ -43,6 +58,7 @@ bool MappingManager::open() {
 
     if(impls.empty()) {
         log(_("No UPnP implementation available"));
+        mappingAttemptDone = true;
         return false;
     }
 
@@ -51,6 +67,7 @@ bool MappingManager::open() {
         return false;
     }
 
+    mappingAttemptDone = false;
     start();
 
     return true;
@@ -133,6 +150,7 @@ int MappingManager::run() {
         log(_("Failed to create port mappings"));
         ConnectivityManager::getInstance()->mappingFinished(false);
     }
+    mappingAttemptDone = true;
     portMapping = false;
     return 0;
 }

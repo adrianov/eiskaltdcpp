@@ -51,6 +51,7 @@ public:
     void close();
 
     bool getOpened() const { return opened; }
+    bool readyForPeerConnect() const;
 
 private:
     friend class Singleton<MappingManager>;
@@ -59,9 +60,10 @@ private:
     Impls impls;
 
     bool opened;
+    bool mappingAttemptDone;
     Atomic<bool,memory_ordering_strong> portMapping;
 
-    MappingManager() : opened(false), portMapping(false) { }
+    MappingManager() : opened(false), mappingAttemptDone(false), portMapping(false) { }
     virtual ~MappingManager() noexcept { join(); }
 
     int run();

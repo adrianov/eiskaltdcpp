@@ -77,7 +77,7 @@ namespace dht
         void info(const string& ip, const string &port, uint32_t type, const CID& targetCID, const CID& udpKey);
 
         /** Sends Connect To Me request to online node */
-        void connect(const OnlineUser& ou, const string& token);
+        void connect(const OnlineUser& ou, const string& token, bool reverseConnect = false);
 
         /** Sends private message to online node */
         void privateMessage(const OnlineUser& ou, const string& aMessage, bool thirdPerson);

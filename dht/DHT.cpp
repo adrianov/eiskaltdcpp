@@ -338,7 +338,7 @@ namespace dht
     /*
      * Sends Connect To Me request to online node
      */
-    void DHT::connect(const OnlineUser& ou, const string& token)
+    void DHT::connect(const OnlineUser& ou, const string& token, bool /*reverseConnect*/)
     {
         // this is DHT's node, so we can cast ou to Node
         ConnectionManager::getInstance()->connect((Node*)&ou, token);

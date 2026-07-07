@@ -55,7 +55,7 @@ public:
     virtual const string& getHubUrl() const = 0;
     virtual string getHubName() const = 0;
     virtual bool isOp() const = 0;
-    virtual void connect(const OnlineUser& user, const string& token) = 0;
+    virtual void connect(const OnlineUser& user, const string& token, bool reverseConnect = false) = 0;
     virtual void privateMessage(const OnlineUser& user, const string& aMessage, bool thirdPerson = false) = 0;
 
 };
@@ -74,7 +74,7 @@ public:
     virtual void connect();
     virtual void disconnect(bool graceless);
 
-    virtual void connect(const OnlineUser& user, const string& token) = 0;
+    virtual void connect(const OnlineUser& user, const string& token, bool reverseConnect = false) = 0;
     virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
     virtual void privateMessage(const OnlineUser& user, const string& aMessage, bool thirdPerson = false) = 0;
     virtual void sendUserCmd(const UserCommand& command, const ParamMap& params) = 0;

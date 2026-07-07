@@ -44,22 +44,22 @@ public:
     using Client::send;
     using Client::connect;
 
-    void connect(const OnlineUser& user, const string& token);
-    void connect(const OnlineUser& user, string const& token, bool secure);
+    void connect(const OnlineUser& user, const string& token, bool reverseConnect = false) override;
+    void connectSecure(const OnlineUser& user, string const& token, bool secure);
 
-    virtual void hubMessage(const string& aMessage, bool thirdPerson = false);
-    virtual void privateMessage(const OnlineUser& user, const string& aMessage, bool thirdPerson = false);
-    virtual void sendUserCmd(const UserCommand& command, const ParamMap& params);
-    virtual void search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList);
-    virtual void password(const string& pwd);
-    virtual void info(bool alwaysSend);
+    void hubMessage(const string& aMessage, bool thirdPerson = false) override;
+    void privateMessage(const OnlineUser& user, const string& aMessage, bool thirdPerson = false) override;
+    void sendUserCmd(const UserCommand& command, const ParamMap& params) override;
+    void search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList) override;
+    void password(const string& pwd) override;
+    void info(bool alwaysSend) override;
 
-    virtual size_t getUserCount() const { Lock l(cs); return users.size(); }
-    virtual int64_t getAvailable() const;
+    size_t getUserCount() const override { Lock l(cs); return users.size(); }
+    int64_t getAvailable() const override;
 
     static string escape(const string& str) { return AdcCommand::escape(str, false); }
-    void emulateCommand(const string& cmd) { dispatch(cmd); }
-    virtual void send(const AdcCommand& cmd);
+    void emulateCommand(const string& cmd) override { dispatch(cmd); }
+    void send(const AdcCommand& cmd) override;
 
     string getMySID() { return AdcCommand::fromSID(sid); }
 
@@ -111,7 +111,7 @@ private:
 
     static const vector<StringList> searchExts;
 
-    virtual string checkNick(const string& nick);
+    string checkNick(const string& nick) override;
 
     OnlineUser& getUser(const uint32_t aSID, const CID& aCID);
     OnlineUser* findUser(const uint32_t sid) const;
@@ -145,12 +145,12 @@ private:
     void sendUDP(const AdcCommand& cmd) noexcept;
     void unknownProtocol(uint32_t target, const string& protocol, const string& token);
     bool secureAvail(uint32_t target, const string& protocol, const string& token);
-    virtual void on(Connecting) noexcept { fire(ClientListener::Connecting(), this); }
-    virtual void on(Connected) noexcept;
-    virtual void on(Line, const string& aLine) noexcept;
-    virtual void on(Failed, const string& aLine) noexcept;
+    void on(Connecting) noexcept override { fire(ClientListener::Connecting(), this); }
+    void on(Connected) noexcept override;
+    void on(Line, const string& aLine) noexcept override;
+    void on(Failed, const string& aLine) noexcept override;
 
-    virtual void on(Second, uint64_t aTick) noexcept;
+    void on(Second, uint64_t aTick) noexcept override;
 
 };
 

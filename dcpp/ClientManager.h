@@ -141,7 +141,8 @@ public:
     UserPtr& getMe();
 
     void send(AdcCommand& c, const CID& to);
-    void connect(const HintedUser& user, const string& token);
+    bool wantRevConnect(const HintedUser& user, int attempt);
+    void connect(const HintedUser& user, const string& token, bool reverseConnect = false);
     void stopConnect(const HintedUser& user);
     void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
     void userCommand(const HintedUser& user, const UserCommand& uc, ParamMap& params, bool compatibility);

@@ -55,23 +55,23 @@ public:
     using Client::connect;
 
     void onLine(const string& aLine) noexcept;
-    virtual void connect(const OnlineUser& aUser, const string&);
+    virtual void connect(const OnlineUser& aUser, const string&, bool reverseConnect = false) override;
 
-    virtual void hubMessage(const string& aMessage, bool /*thirdPerson*/ = false);
-    virtual void privateMessage(const OnlineUser& aUser, const string& aMessage, bool /*thirdPerson*/ = false);
-    virtual void sendUserCmd(const UserCommand& command, const ParamMap& params);
-    virtual void search(int aSizeType, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList);
-    virtual void password(const string& aPass) { send("$MyPass " + fromUtf8(aPass) + "|"); }
-    virtual void info(bool force) { myInfo(force); }
+    void hubMessage(const string& aMessage, bool /*thirdPerson*/ = false) override;
+    void privateMessage(const OnlineUser& aUser, const string& aMessage, bool /*thirdPerson*/ = false) override;
+    void sendUserCmd(const UserCommand& command, const ParamMap& params) override;
+    void search(int aSizeType, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList) override;
+    void password(const string& aPass) override { send("$MyPass " + fromUtf8(aPass) + "|"); }
+    void info(bool force) override { myInfo(force); }
 
-    virtual size_t getUserCount() const { Lock l(cs); return users.size(); }
-    virtual int64_t getAvailable() const;
+    size_t getUserCount() const override { Lock l(cs); return users.size(); }
+    int64_t getAvailable() const override;
 
     static string escape(const string& str) { return validateMessage(str, false); }
     static string unescape(const string& str) { return validateMessage(str, true); }
 
-    void emulateCommand(const string& cmd) { onLine(cmd); }
-    virtual void send(const AdcCommand&) { dcassert(0); }
+    void emulateCommand(const string& cmd) override { onLine(cmd); }
+    void send(const AdcCommand&) override { dcassert(0); }
 
     static string validateMessage(string tmp, bool reverse);
 
@@ -124,15 +124,16 @@ private:
     void stopInfectedConnect(const string& message, const string& aNick = Util::emptyString);
 
     void updateFromTag(Identity& id, const string& tag);
+    void findTagInMyINFO(Identity& id, const string& param, size_t start);
 
-    virtual string checkNick(const string& aNick);
+    string checkNick(const string& aNick) override;
 
     // TimerManagerListener
-    virtual void on(Second, uint64_t aTick) noexcept;
+    void on(Second, uint64_t aTick) noexcept override;
 
-    virtual void on(Connected) noexcept;
-    virtual void on(Line, const string& l) noexcept;
-    virtual void on(Failed, const string&) noexcept;
+    void on(Connected) noexcept override;
+    void on(Line, const string& l) noexcept override;
+    void on(Failed, const string&) noexcept override;
 
 };
 
