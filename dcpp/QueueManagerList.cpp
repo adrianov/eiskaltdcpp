@@ -19,6 +19,8 @@
 #include "PeerConnectLog.h"
 #include "PeerConnectFilter.h"
 
+#include <unordered_set>
+
 namespace dcpp {
 
 void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
@@ -26,7 +28,8 @@ void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
     if(nicks.empty())
         return;
 
-    const string& nick = nicks[0];
+    std::unordered_set<CID> sameNick;
+    ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
     StringList stale;
 
     {
@@ -40,8 +43,7 @@ void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
             if(src.user == aUser.user)
                 continue;
 
-            StringList srcNicks = ClientManager::getInstance()->getNicks(src);
-            if(!srcNicks.empty() && Util::stricmp(srcNicks[0].c_str(), nick.c_str()) == 0)
+            if(sameNick.count(src.user->getCID()))
                 stale.push_back(qi->getTarget());
         }
     }
