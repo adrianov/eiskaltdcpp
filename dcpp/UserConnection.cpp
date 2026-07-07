@@ -27,7 +27,6 @@
 #include "DebugManager.h"
 #include "format.h"
 #include "SettingsManager.h"
-#include "StringTokenizer.h"
 #include "Transfer.h"
 #ifdef LUA_SCRIPT
 #include "ScriptManager.h"
@@ -50,109 +49,6 @@ const string UserConnection::FILE_NOT_AVAILABLE = "File Not Available";
 
 const string UserConnection::UPLOAD = "Upload";
 const string UserConnection::DOWNLOAD = "Download";
-
-void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexcept {
-    if(aLine.length() < 2) {
-        fire(UserConnectionListener::ProtocolError(), this, _("Invalid data"));
-        return;
-    }
-
-    if(aLine[0] == 'C' && !isSet(FLAG_NMDC)) {
-        if(!Text::validateUtf8(aLine)) {
-            fire(UserConnectionListener::ProtocolError(), this, _("Non-UTF-8 data in an ADC connection"));
-            return;
-        }
-        COMMAND_DEBUG(aLine, DebugManager::CLIENT_IN, getRemoteIp());
-        dispatch(aLine);
-        return;
-    } else if(aLine[0] == '$') {
-        setFlag(FLAG_NMDC);
-    } else {
-        fire(UserConnectionListener::ProtocolError(), this, _("Invalid data"));
-        return;
-    }
-    COMMAND_DEBUG((Util::stricmp(getEncoding(), Text::utf8) != 0 ? Text::toUtf8(aLine, getEncoding()) : aLine), DebugManager::CLIENT_IN, getRemoteIp());
-    string cmd;
-    string param;
-
-    string::size_type x;
-#ifdef LUA_SCRIPT
-    if(onUserConnectionMessageIn(this, aLine)) {
-        disconnect(true);
-        return;
-    }
-#endif
-
-    if( (x = aLine.find(' ')) == string::npos) {
-        cmd = aLine;
-    } else {
-        cmd = aLine.substr(0, x);
-        param = aLine.substr(x+1);
-    }
-
-    if(cmd == "$MyNick") {
-        if(!param.empty())
-            fire(UserConnectionListener::MyNick(), this, param);
-    } else if(cmd == "$Direction") {
-        x = param.find(" ");
-        if(x != string::npos) {
-            fire(UserConnectionListener::Direction(), this, param.substr(0, x), param.substr(x+1));
-        }
-    } else if(cmd == "$Error") {
-        if(Util::stricmp(param.c_str(), FILE_NOT_AVAILABLE) == 0 ||
-                param.rfind(/*path/file*/" no more exists") != string::npos) {
-            fire(UserConnectionListener::FileNotAvailable(), this);
-        } else {
-            fire(UserConnectionListener::ProtocolError(), this, param);
-        }
-    } else if(cmd == "$GetListLen") {
-        fire(UserConnectionListener::GetListLength(), this);
-    } else if(cmd == "$Get") {
-        x = param.find('$');
-        if(x != string::npos) {
-            fire(UserConnectionListener::Get(), this, Text::toUtf8(param.substr(0, x), encoding), Util::toInt64(param.substr(x+1)) - (int64_t)1);
-        }
-    } else if(cmd == "$Key") {
-        if(!param.empty())
-            fire(UserConnectionListener::Key(), this, param);
-    } else if(cmd == "$Lock") {
-        if(!param.empty()) {
-            x = param.find(" Pk=");
-            if(x != string::npos) {
-                fire(UserConnectionListener::CLock(), this, param.substr(0, x), param.substr(x + 4));
-            } else {
-                // Workaround for faulty linux clients...
-                x = param.find(' ');
-                if(x != string::npos) {
-                    setFlag(FLAG_INVALIDKEY);
-                    fire(UserConnectionListener::CLock(), this, param.substr(0, x), Util::emptyString);
-                } else {
-                    fire(UserConnectionListener::CLock(), this, param, Util::emptyString);
-                }
-            }
-        }
-    } else if(cmd == "$Send") {
-        fire(UserConnectionListener::Send(), this);
-    } else if(cmd == "$MaxedOut") {
-        size_t queuePos = 0;
-        if(!param.empty()) {
-            string pos = param;
-            if(!pos.empty() && pos.back() == '|')
-                pos.pop_back();
-            if(!pos.empty())
-                queuePos = Util::toUInt(pos);
-        }
-        fire(UserConnectionListener::MaxedOut(), this, queuePos);
-    } else if(cmd == "$Supports") {
-        if(!param.empty()) {
-            fire(UserConnectionListener::Supports(), this, StringTokenizer<string>(param, ' ').getTokens());
-        }
-    } else if(cmd.compare(0, 4, "$ADC") == 0) {
-        dispatch(aLine, true);
-    } else {
-        fire(UserConnectionListener::ProtocolError(), this, _("Invalid data"));
-    }
-}
 
 #ifdef LUA_SCRIPT
 bool UserConnectionScriptInstance::onUserConnectionMessageIn(UserConnection* aConn, const string& aLine) {
@@ -257,51 +153,12 @@ void UserConnection::on(Updated) noexcept {
 }
 
 void UserConnection::on(Failed, const string& aLine) noexcept {
-    setState(STATE_UNCONNECTED);
     fire(UserConnectionListener::Failed(), this, aLine);
-
+    setState(STATE_UNCONNECTED);
     delete this;
 }
 
 // # ms we should aim for per segment
-static const int64_t SEGMENT_TIME = 120*1000;
-static const int64_t MIN_CHUNK_SIZE = 64*1024;
-
-void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks) {
-
-    if(chunkSize == 0) {
-        chunkSize = std::max(MIN_CHUNK_SIZE, std::min(lastChunk, (int64_t)1024*1024));
-        return;
-    }
-
-    if(ticks <= 10) {
-        // Can't rely on such fast transfers - double
-        chunkSize *= 2;
-        return;
-    }
-
-    double lastSpeed = (1000. * lastChunk) / ticks;
-
-    int64_t targetSize = chunkSize;
-
-    // How long current chunk size would take with the last speed...
-    double msecs = 1000 * targetSize / lastSpeed;
-
-    if(msecs < SEGMENT_TIME / 4) {
-        targetSize *= 2;
-    } else if(msecs < SEGMENT_TIME / 1.25) {
-        targetSize += leafSize;
-    } else if(msecs < SEGMENT_TIME * 1.25) {
-        // We're close to our target size - don't change it
-    } else if(msecs < SEGMENT_TIME * 4) {
-        targetSize = std::max(MIN_CHUNK_SIZE, targetSize - chunkSize);
-    } else {
-        targetSize = std::max(MIN_CHUNK_SIZE, targetSize / 2);
-    }
-
-    chunkSize = targetSize;
-}
-
 void UserConnection::send(const string &aString) {
     lastActivity = GET_TICK();
     COMMAND_DEBUG((Util::stricmp(getEncoding(), Text::utf8) != 0 ? Text::toUtf8(aString, getEncoding()) : aString), DebugManager::CLIENT_OUT, getRemoteIp());
