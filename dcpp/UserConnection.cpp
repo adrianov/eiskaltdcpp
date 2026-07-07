@@ -134,7 +134,15 @@ void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexc
     } else if(cmd == "$Send") {
         fire(UserConnectionListener::Send(), this);
     } else if(cmd == "$MaxedOut") {
-        fire(UserConnectionListener::MaxedOut(), this);
+        size_t queuePos = 0;
+        if(!param.empty()) {
+            string pos = param;
+            if(!pos.empty() && pos.back() == '|')
+                pos.pop_back();
+            if(!pos.empty())
+                queuePos = Util::toUInt(pos);
+        }
+        fire(UserConnectionListener::MaxedOut(), this, queuePos);
     } else if(cmd == "$Supports") {
         if(!param.empty()) {
             fire(UserConnectionListener::Supports(), this, StringTokenizer<string>(param, ' ').getTokens());

@@ -913,6 +913,22 @@ void Transfers::on(DownloadManagerListener::Requesting, Download* dl) noexcept
     WulforManager::get()->dispatchGuiFunc(f1);
 }
 
+void Transfers::on(DownloadManagerListener::Queued, Download* dl, size_t queuePos) noexcept
+{
+    StringMap params;
+
+    getParams_client(params, dl);
+    params["Status"] = queuePos > 0 ?
+            str(F_("Queue position %1%") % queuePos) :
+            _("Waiting in upload queue");
+    params["Sort Order"] = "w" + params["User"];
+    params["Failed"] = "0";
+
+    typedef Func3<Transfers, StringMap, bool, Sound::TypeSound> F3;
+    F3* f3 = new F3(this, &Transfers::updateTransfer_gui, params, false, Sound::NONE);
+    WulforManager::get()->dispatchGuiFunc(f3);
+}
+
 void Transfers::on(DownloadManagerListener::Starting, Download* dl) noexcept
 {
     StringMap params;

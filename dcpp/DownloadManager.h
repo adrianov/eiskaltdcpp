@@ -61,7 +61,7 @@ private:
     void removeConnection(UserConnectionPtr aConn);
     void removeDownload(Download* aDown);
     void fileNotAvailable(UserConnection* aSource);
-    void noSlots(UserConnection* aSource);
+    void noSlots(UserConnection* aSource, size_t queuePos);
 
     void logDownload(UserConnection* aSource, Download* d);
     int64_t getResumePos(const string& file, const TigerTree& tt, int64_t startPos);
@@ -83,7 +83,7 @@ private:
     virtual void on(Data, UserConnection*, const uint8_t*, size_t) noexcept;
     virtual void on(Failed, UserConnection* aSource, const string& aError) noexcept { onFailed(aSource, aError); }
     virtual void on(ProtocolError, UserConnection* aSource, const string& aError) noexcept { onFailed(aSource, aError); }
-    virtual void on(MaxedOut, UserConnection*) noexcept;
+    virtual void on(MaxedOut, UserConnection*, size_t queuePos) noexcept;
     virtual void on(FileNotAvailable, UserConnection*) noexcept;
     virtual void on(Updated, UserConnection*) noexcept;
 

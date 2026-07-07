@@ -222,6 +222,7 @@ void TransferView::init(){
     connect(treeView_TRANSFERS->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu(QPoint)));
 
     connect(this, SIGNAL(coreDMRequesting(VarMap)),     model, SLOT(initTransfer(VarMap)), Qt::QueuedConnection);
+    connect(this, SIGNAL(coreDMQueued(VarMap)),         model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDMStarting(VarMap)),       model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDMTick(VarMap)),           model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreUpdateParents()),          model, SLOT(updateParents()), Qt::QueuedConnection);
@@ -604,6 +605,19 @@ void TransferView::on(dcpp::DownloadManagerListener::Requesting, dcpp::Download*
     params["FAIL"]  = false;
 
     emit coreDMRequesting(params);
+}
+
+void TransferView::on(dcpp::DownloadManagerListener::Queued, dcpp::Download* dl, size_t queuePos) noexcept{
+    VarMap params;
+
+    getParams(params, dl);
+
+    params["STAT"] = queuePos > 0 ?
+            tr("Queue position %1").arg(static_cast<qlonglong>(queuePos)) :
+            tr("Waiting in upload queue");
+    params["FAIL"] = false;
+
+    emit coreDMQueued(params);
 }
 
 void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* dl) noexcept{

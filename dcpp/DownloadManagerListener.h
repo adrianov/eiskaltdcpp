@@ -44,12 +44,16 @@ public:
     typedef X<2> Starting;
     typedef X<3> Tick;
     typedef X<4> Requesting;
+    typedef X<5> Queued;
 
     /**
      * This is the first message sent before a download starts.
      * No other messages will be sent before this.
      */
     virtual void on(Requesting, Download*) noexcept { }
+
+    /** Remote uploader has no slot; queuePos is 1-based, 0 if unknown. */
+    virtual void on(Queued, Download*, size_t queuePos) noexcept { }
 
     /**
      * This is the first message sent before a download starts.

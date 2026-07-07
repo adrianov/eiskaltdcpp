@@ -94,6 +94,7 @@ private:
 
     // DownloadManager
     virtual void on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept;
+    virtual void on(dcpp::DownloadManagerListener::Queued, dcpp::Download* dl, size_t queuePos) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Starting, dcpp::Download* dl) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadList& dls) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Complete, dcpp::Download* dl) noexcept;

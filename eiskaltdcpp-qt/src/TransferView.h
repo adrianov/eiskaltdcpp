@@ -85,6 +85,7 @@ public:
 Q_SIGNALS:
     /** DownloadManger signals */
     void coreDMRequesting(VarMap);
+    void coreDMQueued(VarMap);
     void coreDMStarting(VarMap);
     void coreDMTick(VarMap);
     void coreDMComplete(VarMap);
@@ -128,6 +129,7 @@ protected:
     void onFailed(dcpp::Download* dl, const std::string& reason);
     // DownloadManager
     virtual void on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept;
+    virtual void on(dcpp::DownloadManagerListener::Queued, dcpp::Download* dl, size_t queuePos) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Starting, dcpp::Download* dl) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadList& dls) noexcept;
     virtual void on(dcpp::DownloadManagerListener::Complete, dcpp::Download* dl) noexcept;
