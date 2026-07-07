@@ -14,6 +14,7 @@
 namespace dcpp {
 
 class OnlineUser;
+class UserConnection;
 
 namespace PeerConnectLog {
 
@@ -33,6 +34,8 @@ void tcpOut(const string& user, const string& host, const string& port, bool sec
 void tcpFail(const string& user, const string& host, const string& port, const string& err);
 void incomingReject(const string& nick, const string& reason);
 void skip(const string& target, const string& hub, const string& reason);
+void connectionFail(const UserConnection* uc, const string& err, bool protocolError);
+void connectionReject(const UserConnection* uc, const string& reason);
 
 } // namespace PeerConnectLog
 
