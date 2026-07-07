@@ -14,7 +14,6 @@
 #include "ConnectionManager.h"
 #include "HttpConnection.h"
 #include "LogManager.h"
-#include "LogManager.h"
 #include "Text.h"
 #include "format.h"
 
@@ -80,6 +79,8 @@ IncomingPortCheck::Result IncomingPortCheck::fetchPort(const string& port, const
         }
         Thread::sleep(100);
     }
+
+    http.removeListener(this);
 
     Lock l(cs);
     if(httpFailed || response.empty())
