@@ -102,12 +102,14 @@ string Identity::getApplication() const {
     auto application = get("AP");
     auto version = get("VE");
 
+    if(application == "++")
+        application = "DC++";
+
     if(version.empty()) {
         return application;
     }
 
     if(application.empty()) {
-        // AP is an extension, so we can't guarantee that the other party supports it, so default to VE.
         return version;
     }
 
