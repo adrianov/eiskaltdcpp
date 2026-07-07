@@ -19,10 +19,19 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubUsers.cpp
     PeerConnectLog.cpp
     PeerConnectFilter.cpp
+    PeerConnectTls.cpp
     DownloadManagerSlots.cpp
     ConnectionManagerQueue.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
+    ConnectionManagerNmdcHandshake.cpp
+    ConnectionManagerAssoc.cpp
+    ConnectionManagerAdcHandshake.cpp
+    ConnectionManagerConnectOut.cpp
+    ConnectionManagerLifecycle.cpp
+    PeerConnectLogFail.cpp
+    UserConnectionLine.cpp
+    UserConnectionChunk.cpp
     UtilIp.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
