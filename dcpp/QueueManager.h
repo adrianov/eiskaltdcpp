@@ -281,6 +281,7 @@ private:
 
     void processList(const string& name, const HintedUser& user, int flags);
     bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);
+    void purgeOtherListQueues(const HintedUser& aUser);
 
     void load(const SimpleXML& aXml);
     void moveFile(const string& source, const string& target);

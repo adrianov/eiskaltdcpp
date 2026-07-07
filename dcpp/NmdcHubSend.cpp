@@ -15,6 +15,7 @@
 #include "ChatMessage.h"
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
+#include "PeerConnectLog.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
 #include "ThrottleManager.h"
@@ -42,13 +43,17 @@ void NmdcHub::connectToMe(const OnlineUser& aUser) {
     ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
     bool secure = CryptoManager::getInstance()->TLSOk() && aUser.getUser()->isSet(User::TLS);
     string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+    const string detail = getLocalIp() + ":" + port + (secure ? " TLS" : "");
+    PeerConnectLog::nmdcSend(aUser, "$ConnectToMe", detail);
     send("$ConnectToMe " + nick + " " + getLocalIp() + ":" + port + (secure ? "S" : "") + "|");
 }
 
 void NmdcHub::revConnectToMe(const OnlineUser& aUser) {
     checkstate();
     dcdebug("NmdcHub::revConnectToMe %s\n", aUser.getIdentity().getNick().c_str());
-    send("$RevConnectToMe " + fromUtf8(getMyNick()) + " " + fromUtf8(aUser.getIdentity().getNick()) + "|");
+    const string target = fromUtf8(aUser.getIdentity().getNick());
+    PeerConnectLog::nmdcSend(aUser, "$RevConnectToMe", fromUtf8(getMyNick()));
+    send("$RevConnectToMe " + fromUtf8(getMyNick()) + " " + target + "|");
 }
 
 void NmdcHub::hubMessage(const string& aMessage, bool thirdPerson) {

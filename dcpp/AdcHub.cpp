@@ -28,6 +28,7 @@
 #include "format.h"
 #include "HubSearchDenied.h"
 #include "LogManager.h"
+#include "PeerConnectLog.h"
 #include "ShareManager.h"
 #include "StringTokenizer.h"
 #include "ThrottleManager.h"
@@ -690,17 +691,18 @@ void AdcHub::handle(AdcCommand::ZOF, AdcCommand& c) noexcept {
     }
 }
 
-void AdcHub::connect(const OnlineUser& user, const string& token) {
-    connect(user, token, CryptoManager::getInstance()->TLSOk() && user.getUser()->isSet(User::TLS));
+void AdcHub::connect(const OnlineUser& user, const string& token, bool /*reverseConnect*/) {
+    connectSecure(user, token, CryptoManager::getInstance()->TLSOk() && user.getUser()->isSet(User::TLS));
 }
 
-void AdcHub::connect(const OnlineUser& user, string const& token, bool secure) {
+void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure) {
     if(state != STATE_NORMAL)
         return;
 
     const string* proto;
     if(secure) {
         if(user.getUser()->isSet(User::NO_ADCS_0_10_PROTOCOL)) {
+            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("user does not support ADCS"));
             LogManager::getInstance()->message(str(F_("Connect to %1% skipped: user does not support ADCS") %
                 user.getIdentity().getNick()));
             return;
@@ -708,6 +710,7 @@ void AdcHub::connect(const OnlineUser& user, string const& token, bool secure) {
         proto = &SECURE_CLIENT_PROTOCOL_TEST;
     } else {
         if(user.getUser()->isSet(User::NO_ADC_1_0_PROTOCOL) || SETTING(REQUIRE_TLS)) {
+            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("TLS/ADC required but user does not support it"));
             LogManager::getInstance()->message(str(F_("Connect to %1% skipped: TLS/ADC required but user does not support it") %
                 user.getIdentity().getNick()));
             return;
@@ -718,12 +721,14 @@ void AdcHub::connect(const OnlineUser& user, string const& token, bool secure) {
     if(isActive()) {
         const string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
         if(port.empty()) {
-            // Oops?
+            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("not listening for connections"));
             LogManager::getInstance()->message(str(F_("Not listening for connections - please restart %1%") % APPNAME));
             return;
         }
+        PeerConnectLog::adcSend(user, "CTM", port + (secure ? " TLS" : ""));
         send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token));
     } else {
+        PeerConnectLog::adcSend(user, "RCM", secure ? "TLS" : "ADC");
         send(AdcCommand(AdcCommand::CMD_RCM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(token));
     }
 }

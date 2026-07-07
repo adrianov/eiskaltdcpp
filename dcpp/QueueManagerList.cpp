@@ -16,10 +16,59 @@
 #include "DirectoryListing.h"
 #include "ListCache.h"
 #include "LogManager.h"
+#include "PeerConnectLog.h"
+#include "PeerConnectFilter.h"
 
 namespace dcpp {
 
+void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
+    StringList nicks = ClientManager::getInstance()->getNicks(aUser);
+    if(nicks.empty())
+        return;
+
+    const string& nick = nicks[0];
+    StringList stale;
+
+    {
+        Lock l(cs);
+        for(auto& i: fileQueue.getQueue()) {
+            QueueItem* qi = i.second;
+            if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
+                continue;
+
+            const HintedUser& src = qi->getSources()[0].getUser();
+            if(src.user == aUser.user)
+                continue;
+
+            StringList srcNicks = ClientManager::getInstance()->getNicks(src);
+            if(!srcNicks.empty() && Util::stricmp(srcNicks[0].c_str(), nick.c_str()) == 0)
+                stale.push_back(qi->getTarget());
+        }
+    }
+
+    for(auto& target: stale)
+        remove(target);
+}
+
 void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
+    OnlineUser* ou = 0;
+    if(!aUser.hint.empty())
+        ou = ClientManager::getInstance()->findOnlineUser(aUser.user->getCID(), aUser.hint, true);
+    else
+        ou = ClientManager::getInstance()->findOnlineUser(aUser, false);
+
+    if(!ou) {
+        PeerConnectLog::skip(ClientManager::getInstance()->getNickOrCid(aUser), aUser.hint, _("user not online on hub"));
+        throw QueueException(_("User is not online on this hub"));
+    }
+
+    if(!PeerConnectFilter::isViablePeer(*ou)) {
+        PeerConnectLog::skip(ClientManager::getInstance()->getNickOrCid(aUser), aUser.hint, _("stale or ghost hub user entry"));
+        throw QueueException(_("User has no valid client profile on this hub"));
+    }
+
+    purgeOtherListQueues(aUser);
+
     if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST) && tryUseCachedList(aUser, aFlags, aInitialDir))
         return;
     add(aInitialDir, -1, TTHValue(), aUser, QueueItem::FLAG_USER_LIST | aFlags);
@@ -36,6 +85,7 @@ bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const s
         processList(listFile, aUser, processFlags);
 
     if(aFlags & QueueItem::FLAG_CLIENT_VIEW) {
+        PeerConnectLog::cachedList(aUser, listFile);
         fire(QueueManagerListener::ListFromCache(), aUser, listFile, aInitialDir);
         return true;
     }

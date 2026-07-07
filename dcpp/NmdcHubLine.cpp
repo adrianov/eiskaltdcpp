@@ -23,6 +23,7 @@
 #include "ChatMessage.h"
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
+#include "PeerConnectLog.h"
 #include "format.h"
 #include "HubSearchDenied.h"
 #include "SearchManager.h"
@@ -221,8 +222,10 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             return;
 
         string tmpDesc = unescape(param.substr(i, j-i));
+        while(!tmpDesc.empty() && tmpDesc.back() == ' ')
+            tmpDesc.pop_back();
         // Look for a tag...
-        if(!tmpDesc.empty() && tmpDesc[tmpDesc.size()-1] == '>') {
+        if(!tmpDesc.empty() && tmpDesc.back() == '>') {
             x = tmpDesc.rfind('<');
             if(x != string::npos) {
                 // Hm, we have something...disassemble it...
@@ -231,6 +234,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             }
         }
         u.getIdentity().setDescription(tmpDesc);
+        findTagInMyINFO(u.getIdentity(), param, i);
 
         i = j + 3;
         j = param.find('$', i);
@@ -354,8 +358,11 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             }
         }
 
-        if(port.empty())
+        if(port.empty()) {
+            PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe ignored: empty port")));
             return;
+        }
+        PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe from %1%:%2%") % server % port));
         // For simplicity, we make the assumption that users on a hub have the same character encoding
         ConnectionManager::getInstance()->nmdcConnect(server, port, getMyNick(), getHubUrl(), getEncoding(), secure);
     } else if(cmd == "$RevConnectToMe") {
@@ -369,12 +376,16 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         }
 
         OnlineUser* u = findUser(param.substr(0, j));
-        if(u == NULL)
+        if(u == NULL) {
+            PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$RevConnectToMe: sender %1% not in user list") % param.substr(0, j)));
             return;
+        }
 
         if(isActive()) {
+            PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, replying with $ConnectToMe");
             connectToMe(*u);
         } else if(BOOLSETTING(ALLOW_NATT) && (u->getIdentity().getStatus() & Identity::NAT)) {
+            PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
             bool secure = CryptoManager::getInstance()->TLSOk() && u->getUser()->isSet(User::TLS);
             // NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
             // sender_nick at the end should work at least in most used hubsofts
@@ -383,6 +394,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
                  (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
         } else {
             if(!u->getUser()->isSet(User::PASSIVE)) {
+                PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — asking them to connect");
                 u->getUser()->setFlag(User::PASSIVE);
                 // Notify the user that we're passive too...
                 revConnectToMe(*u);
@@ -390,6 +402,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 
                 return;
             }
+            PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — no connection possible");
         }
     } else if(cmd == "$SR") {
         SearchManager::getInstance()->onSearchResult(aLine);

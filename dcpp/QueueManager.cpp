@@ -30,6 +30,7 @@
 #include "HashManager.h"
 #include "ListCache.h"
 #include "LogManager.h"
+#include "PeerConnectLog.h"
 #include "QueueAutoSearch.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchManager.h"
@@ -823,7 +824,7 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     qi->addSource(aUser);
 
     if(aUser.user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive() ) {
-        LogManager::getInstance()->message(str(F_("Skipping passive source %1% (passive-to-passive not supported)") % ClientManager::getInstance()->getNickOrCid(aUser)));
+        PeerConnectLog::passiveSkip(aUser);
         qi->removeSource(aUser, QueueItem::Source::FLAG_PASSIVE);
         wantConnection = false;
     } else if(qi->isFinished()) {

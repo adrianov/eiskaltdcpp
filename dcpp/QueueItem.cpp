@@ -20,8 +20,10 @@
 #include "QueueItem.h"
 
 #include "HashManager.h"
+#include "ClientManager.h"
 #include "Download.h"
 #include "File.h"
+#include "PeerConnectFilter.h"
 #include "Util.h"
 
 namespace dcpp {
@@ -47,9 +49,16 @@ int QueueItem::countOnlineUsers() const {
 }
 
 void QueueItem::getOnlineUsers(HintedUserList& l) const {
-    for(auto& i: sources)
-        if(i.getUser().user->isOnline())
-            l.push_back(i.getUser());
+    for(auto& i: sources) {
+        if(!i.getUser().user->isOnline())
+            continue;
+        OnlineUser* ou = ClientManager::getInstance()->findOnlineUser(i.getUser(), false);
+        if(ou && !PeerConnectFilter::isViablePeer(*ou))
+            continue;
+        l.push_back(i.getUser());
+        if(isSet(FLAG_USER_LIST))
+            return;
+    }
 }
 
 void QueueItem::addSource(const HintedUser& aUser) {
