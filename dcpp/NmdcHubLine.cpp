@@ -24,6 +24,7 @@
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectTls.h"
 #include "format.h"
 #include "HubSearchDenied.h"
 #include "SearchManager.h"
@@ -386,7 +387,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             connectToMe(*u);
         } else if(BOOLSETTING(ALLOW_NATT) && (u->getIdentity().getStatus() & Identity::NAT)) {
             PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
-            bool secure = CryptoManager::getInstance()->TLSOk() && u->getUser()->isSet(User::TLS);
+            bool secure = PeerConnectTls::resolveSecure(PeerConnectTls::AUTO, u->getUser());
             // NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
             // sender_nick at the end should work at least in most used hubsofts
             send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
