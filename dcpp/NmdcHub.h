@@ -55,7 +55,7 @@ public:
     using Client::connect;
 
     void onLine(const string& aLine) noexcept;
-    virtual void connect(const OnlineUser& aUser, const string&, bool reverseConnect = false) override;
+    virtual void connect(const OnlineUser& aUser, const string&, bool reverseConnect = false, int secureMode = -1) override;
 
     void hubMessage(const string& aMessage, bool /*thirdPerson*/ = false) override;
     void privateMessage(const OnlineUser& aUser, const string& aMessage, bool /*thirdPerson*/ = false) override;
@@ -116,7 +116,7 @@ private:
     void key(const string& aKey) { send("$Key " + aKey + "|"); }
     void version() { send("$Version 1,0091|"); }
     void getNickList() { send("$GetNickList|"); }
-    void connectToMe(const OnlineUser& aUser);
+    void connectToMe(const OnlineUser& aUser, int secureMode = -1);
     void revConnectToMe(const OnlineUser& aUser);
     void myInfo(bool alwaysSend);
     void supports(const StringList& feat);

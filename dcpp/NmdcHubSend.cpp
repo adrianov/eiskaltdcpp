@@ -16,6 +16,7 @@
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectTls.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
 #include "ThrottleManager.h"
@@ -36,12 +37,12 @@ string NmdcHub::checkNick(const string& aNick) {
     return tmp;
 }
 
-void NmdcHub::connectToMe(const OnlineUser& aUser) {
+void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     checkstate();
     dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
     string nick = fromUtf8(aUser.getIdentity().getNick());
     ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
-    bool secure = CryptoManager::getInstance()->TLSOk() && aUser.getUser()->isSet(User::TLS);
+    bool secure = PeerConnectTls::resolveSecure(secureMode, aUser.getUser());
     string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
     const string detail = getLocalIp() + ":" + port + (secure ? " TLS" : "");
     PeerConnectLog::nmdcSend(aUser, "$ConnectToMe", detail);

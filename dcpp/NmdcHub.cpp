@@ -39,11 +39,11 @@ NmdcHub::~NmdcHub() {
 
 #define checkstate() if(state != STATE_NORMAL) return
 
-void NmdcHub::connect(const OnlineUser& aUser, const string&, bool reverseConnect) {
+void NmdcHub::connect(const OnlineUser& aUser, const string&, bool reverseConnect, int secureMode) {
     checkstate();
-    dcdebug("NmdcHub::connect %s reverse=%d\n", aUser.getIdentity().getNick().c_str(), reverseConnect);
+    dcdebug("NmdcHub::connect %s reverse=%d secureMode=%d\n", aUser.getIdentity().getNick().c_str(), reverseConnect, secureMode);
     if(isActive() && !reverseConnect) {
-        connectToMe(aUser);
+        connectToMe(aUser, secureMode);
     } else {
         revConnectToMe(aUser);
     }
