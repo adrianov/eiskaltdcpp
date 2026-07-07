@@ -15,8 +15,11 @@
 #include "dcpp/stdinc.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/Socket.h"
+#include "dcpp/IncomingPortCheck.h"
+#include "dcpp/ClientManager.h"
 
 #include <QLineEdit>
+#include <QPushButton>
 #include <QRadioButton>
 #include <QList>
 #include <QMessageBox>
@@ -307,6 +310,7 @@ void SettingsConnection::init(){
 #endif
     connect(radioButton_DC, SIGNAL(toggled(bool)), this, SLOT(slotToggleOutgoing()));
     connect(radioButton_SOCKS, SIGNAL(toggled(bool)), this, SLOT(slotToggleOutgoing()));
+    connect(pushButton_TEST_PORTS, SIGNAL(clicked()), this, SLOT(slotTestPorts()));
 
     lineEdit_SIP->installEventFilter(this);
     lineEdit_SPORT->installEventFilter(this);
@@ -334,6 +338,18 @@ void SettingsConnection::slotToggleIncomming(){
     bool b = !radioButton_PASSIVE->isChecked();
 
     frame->setEnabled(b);
+    pushButton_TEST_PORTS->setEnabled(b);
+}
+
+void SettingsConnection::slotTestPorts(){
+    if(radioButton_PASSIVE->isChecked()) {
+        showMsg(tr("Incoming port check requires active mode."), pushButton_TEST_PORTS);
+        return;
+    }
+
+    MainWindow::getInstance()->startSocket(true);
+    IncomingPortCheck::getInstance()->start();
+    showMsg(tr("Port check started. See the System log for results."), nullptr);
 }
 
 void SettingsConnection::slotToggleOutgoing(){

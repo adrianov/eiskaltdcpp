@@ -34,6 +34,7 @@ protected:
 private slots:
     void slotToggleIncomming();
     void slotToggleOutgoing();
+    void slotTestPorts();
 
 private:
     void init();

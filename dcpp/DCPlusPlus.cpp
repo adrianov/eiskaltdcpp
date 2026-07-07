@@ -31,6 +31,7 @@
 #include "HashManager.h"
 #include "LogManager.h"
 #include "MappingManager.h"
+#include "IncomingPortCheck.h"
 #include "QueueManager.h"
 #include "ResourceManager.h"
 #include "SearchManager.h"
@@ -86,6 +87,7 @@ void startup(void (*f)(void*, const string&), void* p) {
     FinishedManager::newInstance();
     ADLSearchManager::newInstance();
     ConnectivityManager::newInstance();
+    IncomingPortCheck::newInstance();
     MappingManager::newInstance();
     DynDNS::newInstance();
     DebugManager::newInstance();
@@ -156,6 +158,7 @@ void shutdown() {
     SettingsManager::getInstance()->save();
 
     MappingManager::deleteInstance();
+    IncomingPortCheck::deleteInstance();
     ConnectivityManager::deleteInstance();
     ADLSearchManager::deleteInstance();
     FinishedManager::deleteInstance();

@@ -21,6 +21,7 @@
 
 #include "ClientManager.h"
 #include "ConnectionManager.h"
+#include "IncomingPortCheck.h"
 #include "debug.h"
 #include "format.h"
 #include "LogManager.h"
@@ -49,9 +50,10 @@ void ConnectivityManager::startSocket() {
     if(ClientManager::getInstance()->isActive()) {
         listen();
 
-        // must be done after listen calls; otherwise ports won't be set
         if(SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
             MappingManager::getInstance()->open();
+        else
+            IncomingPortCheck::getInstance()->start();
     }
 
     updateLast();
@@ -99,6 +101,7 @@ void ConnectivityManager::detectConnection() {
     if (!Util::isPrivateIp(Util::getLocalIp(AF_INET))) {
         SettingsManager::getInstance()->set(SettingsManager::INCOMING_CONNECTIONS, SettingsManager::INCOMING_DIRECT);
         log(_("Public IP address detected, selecting active mode with direct connection"));
+        IncomingPortCheck::getInstance()->start();
         fire(ConnectivityManagerListener::Finished());
         running = false;
         return;
@@ -138,6 +141,9 @@ void ConnectivityManager::mappingFinished(bool success) {
         fire(ConnectivityManagerListener::Finished());
     }
 
+    ConnectionManager::getInstance()->onUpnpReady();
+    if(success && ClientManager::getInstance()->isActive())
+        IncomingPortCheck::getInstance()->start();
     running = false;
 }
 
