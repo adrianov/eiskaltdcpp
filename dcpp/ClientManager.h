@@ -22,6 +22,7 @@
 #include "ClientListener.h"
 #include "ClientManagerListener.h"
 #include "HintedUser.h"
+#include "PeerConnectTls.h"
 #include "OnlineUser.h"
 #include "SettingsManager.h"
 #include "Singleton.h"
@@ -53,6 +54,7 @@ public:
     StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
 
     StringList getNicks(const HintedUser& user) { return getNicks(user.user->getCID(), user.hint); }
+    void cidsForNick(const string& nick, std::unordered_set<CID>& out) const;
     string getNickOrCid(const CID& cid, const string& hintUrl) {
         StringList nicks = getNicks(cid, hintUrl);
         return nicks.empty() ? cid.toBase32() : nicks[0];
@@ -142,7 +144,7 @@ public:
 
     void send(AdcCommand& c, const CID& to);
     bool wantRevConnect(const HintedUser& user, int attempt);
-    void connect(const HintedUser& user, const string& token, bool reverseConnect = false);
+    void connect(const HintedUser& user, const string& token, bool reverseConnect = false, int secureMode = PeerConnectTls::AUTO);
     void stopConnect(const HintedUser& user);
     void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
     void userCommand(const HintedUser& user, const UserCommand& uc, ParamMap& params, bool compatibility);

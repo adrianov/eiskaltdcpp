@@ -17,7 +17,10 @@
 #include "MappingManager.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectTls.h"
 #include "QueueManager.h"
+
+#include <unordered_set>
 
 namespace dcpp {
 
@@ -87,6 +90,18 @@ StringList ClientManager::getNicks(const CID& cid, const string& hintUrl, bool p
     return StringList(ret.begin(), ret.end());
 }
 
+void ClientManager::cidsForNick(const string& nick, std::unordered_set<CID>& out) const {
+    Lock l(cs);
+    for(auto& i : onlineUsers) {
+        if(Util::stricmp(i.second->getIdentity().getNick().c_str(), nick.c_str()) == 0)
+            out.insert(i.first);
+    }
+    for(auto& i : nicks) {
+        if(Util::stricmp(i.second.first.c_str(), nick.c_str()) == 0)
+            out.insert(i.first);
+    }
+}
+
 OnlineUser* ClientManager::findOnlineUserHint(const CID& cid, const string& hintUrl, OnlinePairC& p) const {
     Lock l(cs);
     p = onlineUsers.equal_range(cid);
@@ -125,7 +140,7 @@ OnlineUser* ClientManager::findOnlineUser(const CID& cid, const string& hintUrl,
     return p.first->second;
 }
 
-void ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect) {
+void ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode) {
     if(!MappingManager::getInstance()->readyForPeerConnect()) {
         dcdebug("ClientManager::connect deferred: waiting for UPnP port mapping\n");
         return;
@@ -141,8 +156,13 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool re
         return;
     }
 
+    if(u && PeerConnectTls::rejectPeer(u->getUser())) {
+        PeerConnectLog::skip(getNickOrCid(user), user.hint, _("TLS required but peer does not advertise TLS"));
+        return;
+    }
+
     if(u) {
-        u->getClient().connect(*u, token, reverseConnect);
+        u->getClient().connect(*u, token, reverseConnect, secureMode);
     } else {
         PeerConnectLog::userOffline(user);
     }
