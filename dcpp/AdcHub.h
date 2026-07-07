@@ -44,7 +44,7 @@ public:
     using Client::send;
     using Client::connect;
 
-    void connect(const OnlineUser& user, const string& token, bool reverseConnect = false) override;
+    void connect(const OnlineUser& user, const string& token, bool reverseConnect = false, int secureMode = -1) override;
     void connectSecure(const OnlineUser& user, string const& token, bool secure);
 
     void hubMessage(const string& aMessage, bool thirdPerson = false) override;

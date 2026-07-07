@@ -29,6 +29,7 @@
 #include "HubSearchDenied.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectTls.h"
 #include "ShareManager.h"
 #include "StringTokenizer.h"
 #include "ThrottleManager.h"
@@ -691,8 +692,8 @@ void AdcHub::handle(AdcCommand::ZOF, AdcCommand& c) noexcept {
     }
 }
 
-void AdcHub::connect(const OnlineUser& user, const string& token, bool /*reverseConnect*/) {
-    connectSecure(user, token, CryptoManager::getInstance()->TLSOk() && user.getUser()->isSet(User::TLS));
+void AdcHub::connect(const OnlineUser& user, const string& token, bool /*reverseConnect*/, int secureMode) {
+    connectSecure(user, token, PeerConnectTls::resolveSecure(secureMode, user.getUser()));
 }
 
 void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure) {
