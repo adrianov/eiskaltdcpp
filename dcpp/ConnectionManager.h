@@ -57,6 +57,7 @@ public:
     GETSET(string, token, Token);
     GETSET(uint64_t, lastAttempt, LastAttempt);
     GETSET(int, errors, Errors); // Number of connection errors, or -1 after a protocol error
+    GETSET(int, connectAttempts, ConnectAttempts);
     GETSET(State, state, State);
     GETSET(bool, download, Download);
 
@@ -113,6 +114,7 @@ public:
 
     void getDownloadConnection(const HintedUser& aUser);
     void force(const UserPtr& aUser);
+    void onUpnpReady();
 
     void disconnect(const UserPtr& user); // disconnect all transfers for the user
     void disconnect(const UserPtr& user, int isDownload);

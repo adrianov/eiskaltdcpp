@@ -6,7 +6,9 @@ file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
 set(DCPP_EXTRA_SOURCES
+    IncomingPortCheck.cpp
     ClientConnect.cpp
+    ClientManagerConnect.cpp
     ClientSearch.cpp
     HubSearchDenied.cpp
     ListCache.cpp
@@ -15,6 +17,12 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubLine.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
+    PeerConnectLog.cpp
+    PeerConnectFilter.cpp
+    DownloadManagerSlots.cpp
+    ConnectionManagerQueue.cpp
+    ConnectionManagerListen.cpp
+    ConnectionManagerFail.cpp
     UtilIp.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
