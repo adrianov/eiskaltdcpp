@@ -60,6 +60,7 @@ public:
     GETSET(int, connectAttempts, ConnectAttempts);
     GETSET(State, state, State);
     GETSET(bool, download, Download);
+    GETSET(int, secureMode, SecureMode);
 
     const HintedUser& getUser() const { return user; }
 
@@ -179,6 +180,8 @@ private:
 
     UserConnection* getConnection(bool aNmdc, bool secure) noexcept;
     void putConnection(UserConnection* aConn);
+
+    void rejectConnection(UserConnection* aConn, const string& reason);
 
     void addDownloadConnection(UserConnection* uc);
     void addUploadConnection(UserConnection* uc);

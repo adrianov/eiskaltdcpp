@@ -17,6 +17,8 @@
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
 
+#include <unordered_set>
+
 namespace dcpp {
 
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
@@ -24,16 +26,15 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     {
         Lock l(cs);
 
-        // NMDC assigns a different CID per hub for the same nick; drop parallel CQIs so
-        // only the hub from the current browse/queue item is attempted.
         StringList nicks = ClientManager::getInstance()->getNicks(aUser);
         if(!nicks.empty()) {
+            std::unordered_set<CID> sameNick;
+            ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
             ConnectionQueueItem::List stale;
             for(auto& cqi : downloads) {
                 if(cqi->getUser().user == aUser.user)
                     continue;
-                StringList other = ClientManager::getInstance()->getNicks(cqi->getUser());
-                if(!other.empty() && Util::stricmp(other[0].c_str(), nicks[0].c_str()) == 0)
+                if(sameNick.count(cqi->getUser().user->getCID()))
                     stale.push_back(cqi);
             }
             for(auto& cqi : stale)
@@ -137,7 +138,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
                             const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(cqi->getUser(), cqi->getConnectAttempts());
                             PeerConnectLog::queueStart(cqi->getUser());
-                            ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect);
+                            ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect, cqi->getSecureMode());
                             fire(ConnectionManagerListener::StatusChanged(), cqi);
                             attemptDone = true;
                         } else {

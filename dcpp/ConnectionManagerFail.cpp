@@ -14,11 +14,17 @@
 #include "Encoder.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectTls.h"
 #include "QueueManager.h"
 #include "UserConnection.h"
 #include "format.h"
 
 namespace dcpp {
+
+void ConnectionManager::rejectConnection(UserConnection* aConn, const string& reason) {
+    PeerConnectLog::connectionReject(aConn, reason);
+    putConnection(aConn);
+}
 
 bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
     auto kp = aSource->getKeyprint();
@@ -50,28 +56,35 @@ bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
 void ConnectionManager::failed(UserConnection* aSource, const string& aError, bool protocolError) {
     Lock l(cs);
 
-    if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
-        if(aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
-            auto i = find(downloads.begin(), downloads.end(), aSource->getUser());
-            dcassert(i != downloads.end());
+    ConnectionQueueItem::Ptr dlCqi = nullptr;
+    if(aSource->getUser()) {
+        auto i = find(downloads.begin(), downloads.end(), aSource->getUser());
+        if(i != downloads.end())
+            dlCqi = *i;
+    }
 
-            auto& cqi = *i;
-            cqi->setState(ConnectionQueueItem::WAITING);
-            cqi->setLastAttempt(GET_TICK());
-            cqi->setErrors(protocolError ? -1 : (cqi->getErrors() + 1));
-            if(aSource->getUser()) {
-                PeerConnectLog::skip(ClientManager::getInstance()->getNickOrCid(aSource->getHintedUser()),
-                    aSource->getHubUrl(), str(F_("handshake failed: %1%") % aError));
-            }
-            fire(ConnectionManagerListener::Failed(), cqi, aError);
-        } else {
-            if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
-                auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
-                dcassert(i != uploads.end());
-                ConnectionQueueItem* cqi = *i;
-                putCQI(cqi);
-            }
+    if(dlCqi && aSource->getUser())
+        PeerConnectLog::connectionFail(aSource, aError, protocolError);
+
+    if(dlCqi)
+        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState());
+
+    if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
+        if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {
+            dlCqi->setState(ConnectionQueueItem::WAITING);
+            dlCqi->setLastAttempt(GET_TICK());
+            dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
+            fire(ConnectionManagerListener::Failed(), dlCqi, aError);
+        } else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
+            auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
+            dcassert(i != uploads.end());
+            putCQI(*i);
         }
+    } else if(dlCqi && aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
+        dlCqi->setState(ConnectionQueueItem::WAITING);
+        dlCqi->setLastAttempt(GET_TICK());
+        dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
+        fire(ConnectionManagerListener::Failed(), dlCqi, aError);
     }
     putConnection(aSource);
 }
