@@ -106,22 +106,17 @@ void NmdcHub::onRevConnectToMe(const string& param) {
     if(isActive()) {
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, replying with $ConnectToMe");
         connectToMe(*u);
-    } else if(BOOLSETTING(ALLOW_NATT) && (u->getIdentity().getStatus() & Identity::NAT)) {
+    } else if(BOOLSETTING(ALLOW_NATT) && u->getUser()->isSet(User::NAT_TRAVERSAL)) {
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
         bool secure = PeerConnectTls::resolveSecure(PeerConnectTls::AUTO, u->getUser());
         ConnectionManager::getInstance()->nmdcExpect(fromUtf8(u->getIdentity().getNick()), getMyNick(), getHubUrl());
         send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
+    } else if(!u->getUser()->isSet(User::PASSIVE)) {
+        PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, asking active peer to connect");
+        revConnectToMe(*u);
     } else {
-        if(!u->getUser()->isSet(User::PASSIVE)) {
-            PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — asking them to connect");
-            u->getUser()->setFlag(User::PASSIVE);
-            revConnectToMe(*u);
-            updated(*u);
-
-            return;
-        }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — no connection possible");
     }
 }
