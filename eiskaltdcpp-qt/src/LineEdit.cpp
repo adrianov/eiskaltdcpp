@@ -8,21 +8,23 @@
 ***************************************************************************/
 
 #include "LineEdit.h"
+#include "AppTheme.h"
 #include "WulforUtil.h"
 
-#include <QMouseEvent>
 #include <QApplication>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QStyle>
-#include <QtDebug>
 
 static const int margin = 3;
 
 LineEdit::LineEdit(QWidget *parent) :
         QLineEdit(parent), menu(nullptr), role(LineEdit::InsertText)
 {
-    parentHeight = QLineEdit::sizeHint().height();//save parent height before setting up new stylesheet
-                                                  //because we losing top and bottom margins
     pxm = WICON_SIZE(WulforUtil::eiEDITCLEAR, 16);
+
+    setFrame(false);
+    setAutoFillBackground(true);
 
     label = new QLabel(this);
     label->setPixmap(pxm);
@@ -34,7 +36,6 @@ LineEdit::LineEdit(QWidget *parent) :
 
     updateGeometry();
     updateStyles();
-
     slotTextChanged();
 }
 
@@ -47,16 +48,34 @@ LineEdit::~LineEdit(){
 
 void LineEdit::resizeEvent(QResizeEvent *e){
     e->accept();
-
     updateGeometry();
+}
+
+void LineEdit::paintEvent(QPaintEvent *e){
+    QLineEdit::paintEvent(e);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    QColor border = AppTheme::isDark()
+        ? palette().color(QPalette::Mid)
+        : QColor(0xA0, 0xA0, 0xA4);
+    if (hasFocus())
+        border = palette().color(QPalette::Highlight);
+
+    painter.setPen(QPen(border, 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 5, 5);
 }
 
 void LineEdit::focusInEvent(QFocusEvent *e){
     QLineEdit::focusInEvent(e);
+    update();
 }
 
 void LineEdit::focusOutEvent(QFocusEvent *e){
     QLineEdit::focusOutEvent(e);
+    update();
 }
 
 bool LineEdit::eventFilter(QObject *obj, QEvent *e){
@@ -89,12 +108,10 @@ bool LineEdit::eventFilter(QObject *obj, QEvent *e){
 QSize LineEdit::sizeHint() const{
     ensurePolished();
 
-    int h = parentHeight;
-    int w = QLineEdit::sizeHint().width();
     QStyleOptionFrame opt;
-
     initStyleOption(&opt);
-    return (style()->sizeFromContents(QStyle::CT_LineEdit, &opt, QSize(w, h).expandedTo(QApplication::globalStrut()), this));
+    return style()->sizeFromContents(QStyle::CT_LineEdit, &opt,
+        QLineEdit::sizeHint().expandedTo(QApplication::globalStrut()), this);
 }
 
 QSizePolicy LineEdit::sizePolicy() const{
@@ -107,14 +124,20 @@ void LineEdit::updateGeometry(){
 
 void LineEdit::updateStyles(){
     label->setStyleSheet(QString("QLabel { margin-left: %1; }").arg(margin));
-    setStyleSheet(QString("QLineEdit{ padding-right: %1; }").arg(label->width()+margin));
+    const int right = label->isVisible() ? label->width() + margin : 0;
+    setTextMargins(0, 0, right, 0);
+}
+
+void LineEdit::changeEvent(QEvent *e){
+    if (e->type() == QEvent::PaletteChange)
+        update();
+
+    QLineEdit::changeEvent(e);
 }
 
 void LineEdit::setPixmap(const QPixmap &px){
     pxm = px;
-
     label->setPixmap(px);
-
     updateGeometry();
     updateStyles();
 }
@@ -127,7 +150,6 @@ void LineEdit::setMenu(QMenu *m){
 
     if (menu){
         menu->setParent(nullptr);
-
         slotTextChanged();
     }
 }
@@ -139,9 +161,10 @@ void LineEdit::setMenuRole(LineEdit::MenuRole r){
 void LineEdit::slotTextChanged(){
     if (menu || !text().isEmpty()){
         label->show();
-
         updateGeometry();
     }
     else
         label->hide();
+
+    updateStyles();
 }

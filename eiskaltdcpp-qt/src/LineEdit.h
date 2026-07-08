@@ -16,6 +16,7 @@
 #include <QPixmap>
 #include <QMenu>
 #include <QFocusEvent>
+#include <QPaintEvent>
 
 class LineEdit : public QLineEdit
 {
@@ -38,8 +39,10 @@ public:
 
 protected:
     virtual void resizeEvent(QResizeEvent *);
+    virtual void paintEvent(QPaintEvent *);
     virtual void focusInEvent(QFocusEvent *);
     virtual void focusOutEvent(QFocusEvent *);
+    virtual void changeEvent(QEvent *);
     virtual bool eventFilter(QObject *, QEvent *);
 
 signals:
@@ -58,6 +61,4 @@ private:
 
     QMenu *menu;
     MenuRole role;
-
-    int parentHeight;
 };
