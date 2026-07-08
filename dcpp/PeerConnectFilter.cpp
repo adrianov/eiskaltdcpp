@@ -48,12 +48,15 @@ bool isViablePeer(const OnlineUser& ou) {
     if(hasClientTag(clientTag(id)))
         return true;
 
+    // Some hubs (e.g. Flylink-based) omit client tags from broadcast MyINFO but still
+    // send connection speed and share size for real users.
+    if(!id.getConnection().empty() || id.getBytesShared() > 0)
+        return true;
+
     if(u->isSet(User::BOT))
         return false;
 
-    // Some hubs (e.g. Flylink-based) omit client tags from broadcast MyINFO but still
-    // send connection speed and share size for real users.
-    return !id.getConnection().empty() || id.getBytesShared() > 0;
+    return false;
 }
 
 bool prefersRevConnect(const OnlineUser& ou) {
