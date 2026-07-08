@@ -58,6 +58,7 @@ public:
 private:
 
     CriticalSection cs;
+    FastCriticalSection slotLogCs;
     DownloadList downloads;
     UserConnectionList idlers;
     unordered_map<CID, uint64_t> lastSlotLog;

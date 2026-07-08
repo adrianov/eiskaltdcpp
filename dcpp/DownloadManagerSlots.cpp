@@ -28,7 +28,7 @@ constexpr uint64_t kSlotLogInterval = 10 * 60 * 1000;
 } // namespace
 
 bool DownloadManager::shouldLogSlotMsg(const UserPtr& user) {
-    Lock l(cs);
+    FastLock l(slotLogCs);
     const uint64_t tick = GET_TICK();
     for(auto it = lastSlotLog.begin(); it != lastSlotLog.end(); ) {
         if(tick >= it->second + kSlotLogInterval)
