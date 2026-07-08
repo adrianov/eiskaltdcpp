@@ -27,6 +27,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
             auto& cqi = *i;
             if(cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING) {
                 cqi->setState(ConnectionQueueItem::ACTIVE);
+                cqi->setSlotWaits(0);
                 uc->setFlag(UserConnection::FLAG_ASSOCIATED);
 
                 fire(ConnectionManagerListener::Connected(), cqi);

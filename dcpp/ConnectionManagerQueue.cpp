@@ -118,15 +118,17 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                    PeerConnectLog::queueGiveUp(cqi->getUser(), cqi->getErrors());
-                    cqi->setErrors(-1);
+                    markQueueGiveUp(cqi, cqi->getErrors());
                     continue;
                 }
 
                 if(cqi->getLastAttempt() == 0 || (!attemptDone &&
-                                                  cqi->getLastAttempt() + PeerConnectFilter::connectBackoffMs(cqi->getErrors()) < aTick))
+                                                  cqi->getLastAttempt() + PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits()) < aTick))
                 {
                     if(!upnpReady)
+                        continue;
+
+                    if(DownloadManager::getInstance()->isWaitingUploadSlot(cqi->getUser().user))
                         continue;
 
                     cqi->setLastAttempt(aTick);
@@ -168,8 +170,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 } else if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50 * 1000 < aTick) {
                     cqi->setErrors(cqi->getErrors() + 1);
                     if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                        PeerConnectLog::queueGiveUp(cqi->getUser(), cqi->getErrors());
-                        cqi->setErrors(-1);
+                        markQueueGiveUp(cqi, cqi->getErrors());
                         cqi->setState(ConnectionQueueItem::WAITING);
                     } else {
                         PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());

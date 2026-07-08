@@ -24,10 +24,16 @@ bool isViablePeer(const OnlineUser& ou);
 bool prefersRevConnect(const OnlineUser& ou);
 
 constexpr int MAX_CONNECT_ERRORS = 6;
+constexpr int MAX_SLOT_WAITS = 12;
+constexpr int SLOT_WAIT_BASE_MS = 5 * 60 * 1000;
 
 bool shouldGiveUp(int errors);
+bool shouldGiveUpSlotWait(int slotWaits);
 int connectBackoffMs(int errors);
+int slotWaitBackoffMs(int slotWaits);
+int queueBackoffMs(int errors, int slotWaits);
 bool shouldLogTimeout(int errors);
+bool shouldLogSlotWait(int slotWaits);
 
 } // namespace PeerConnectFilter
 

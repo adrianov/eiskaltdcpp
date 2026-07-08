@@ -33,9 +33,7 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool re
     Lock l(cs);
     OnlineUser* u = findOnlineUser(user, priv);
 
-    if(u && !PeerConnectFilter::isViablePeer(*u))
-        u = findBestOnlineUser(user.user->getCID(), user.hint, priv);
-    else if(!u)
+    if(!u || !PeerConnectFilter::isViablePeer(*u))
         u = findBestOnlineUser(user.user->getCID(), user.hint, priv);
 
     if(u && !PeerConnectFilter::isViablePeer(*u)) {

@@ -66,14 +66,34 @@ bool shouldGiveUp(int errors) {
     return errors >= MAX_CONNECT_ERRORS;
 }
 
+bool shouldGiveUpSlotWait(int slotWaits) {
+    return slotWaits >= MAX_SLOT_WAITS;
+}
+
 int connectBackoffMs(int errors) {
     if(errors <= 0)
         return 60 * 1000;
     return 60 * 1000 * min(errors, MAX_CONNECT_ERRORS);
 }
 
+int slotWaitBackoffMs(int slotWaits) {
+    if(slotWaits <= 0)
+        return 0;
+    return min(SLOT_WAIT_BASE_MS * slotWaits, 30 * 60 * 1000);
+}
+
+int queueBackoffMs(int errors, int slotWaits) {
+    int ms = connectBackoffMs(errors);
+    const int slotMs = slotWaitBackoffMs(slotWaits);
+    return slotMs > ms ? slotMs : ms;
+}
+
 bool shouldLogTimeout(int errors) {
     return errors <= 1 || errors == 3 || errors >= MAX_CONNECT_ERRORS || (errors % 2) == 0;
+}
+
+bool shouldLogSlotWait(int slotWaits) {
+    return slotWaits <= 1 || slotWaits == 3 || slotWaits >= MAX_SLOT_WAITS || (slotWaits % 3) == 0;
 }
 
 } // namespace PeerConnectFilter
