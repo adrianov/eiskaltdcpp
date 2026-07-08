@@ -77,8 +77,6 @@ SocketException::SocketException(int aError) noexcept : Exception(errorToString(
 
 Socket::Stats Socket::stats = { 0, 0 };
 
-static const uint32_t SOCKS_TIMEOUT = 30000;
-
 string SocketException::errorToString(int aError) noexcept {
     string msg = Util::translateError(aError);
     if(msg.empty()) {
@@ -104,6 +102,12 @@ void Socket::create(int aType /* = TYPE_TCP */) {
     type = aType;
 
     setBlocking(false);
+
+#ifndef _WIN32
+#ifdef SO_NOSIGPIPE
+    setSocketOpt(SO_NOSIGPIPE, 1);
+#endif
+#endif
 
     if (SETTING(IP_TOS_VALUE) != -1)
         setSocketOpt(IP_TOS, IPTOS_TOS(SETTING(IP_TOS_VALUE)));
@@ -131,6 +135,12 @@ void Socket::accept(const Socket& listeningSocket) {
     setIp(inet_ntoa(sock_addr.sin_addr));
     connected = true;
     setBlocking(false);
+
+#ifndef _WIN32
+#ifdef SO_NOSIGPIPE
+    setSocketOpt(SO_NOSIGPIPE, 1);
+#endif
+#endif
 }
 
 
@@ -208,131 +218,6 @@ void Socket::connect(const string& aAddr, const string& aPort, const string&) {
 
     connected = true;
     setIp(addr);
-}
-
-namespace {
-inline uint64_t timeLeft(uint64_t start, uint64_t timeout) {
-    if(timeout == 0) {
-        return 0;
-    }
-    uint64_t now = GET_TICK();
-    if(start + timeout < now)
-        throw SocketException(_("Connection timeout"));
-    return start + timeout - now;
-}
-}
-
-void Socket::socksConnect(const string& aAddr, const string& aPort, uint32_t timeout) {
-
-    if(SETTING(SOCKS_SERVER).empty() || SETTING(SOCKS_PORT) == 0) {
-        throw SocketException(_("The socks server failed establish a connection"));
-    }
-
-    uint64_t start = GET_TICK();
-
-    connect(SETTING(SOCKS_SERVER), Util::toString(SETTING(SOCKS_PORT)));
-
-    if(wait(timeLeft(start, timeout), WAIT_CONNECT) != WAIT_CONNECT) {
-        throw SocketException(_("The socks server failed establish a connection"));
-    }
-
-    socksAuth(timeLeft(start, timeout));
-
-    ByteVector connStr;
-
-    // Authenticated, let's get on with it...
-    connStr.push_back(5);           // SOCKSv5
-    connStr.push_back(1);           // Connect
-    connStr.push_back(0);           // Reserved
-
-    if(BOOLSETTING(SOCKS_RESOLVE)) {
-        connStr.push_back(3);       // Address type: domain name
-        connStr.push_back((uint8_t)aAddr.size());
-        connStr.insert(connStr.end(), aAddr.begin(), aAddr.end());
-    } else {
-        connStr.push_back(1);       // Address type: IPv4;
-        unsigned long addr = inet_addr(resolve(aAddr).c_str());
-        uint8_t* paddr = (uint8_t*)&addr;
-        connStr.insert(connStr.end(), paddr, paddr+4);
-    }
-
-    uint16_t port = htons(static_cast<uint16_t>(Util::toInt(aPort)));
-    uint8_t* pport = (uint8_t*)&port;
-    connStr.push_back(pport[0]);
-    connStr.push_back(pport[1]);
-
-    writeAll(&connStr[0], connStr.size(), timeLeft(start, timeout));
-
-    // We assume we'll get a ipv4 address back...therefore, 10 bytes...
-    /// @todo add support for ipv6
-    if(readAll(&connStr[0], 10, timeLeft(start, timeout)) != 10) {
-        throw SocketException(_("The socks server failed establish a connection"));
-    }
-
-    if(connStr[0] != 5 || connStr[1] != 0) {
-        throw SocketException(_("The socks server failed establish a connection"));
-    }
-
-    in_addr sock_addr;
-
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.s_addr = *((unsigned long*)&connStr[4]);
-    setIp(inet_ntoa(sock_addr));
-}
-
-void Socket::socksAuth(uint32_t timeout) {
-    vector<uint8_t> connStr;
-
-    uint64_t start = GET_TICK();
-
-    if(SETTING(SOCKS_USER).empty() && SETTING(SOCKS_PASSWORD).empty()) {
-        // No username and pw, easier...=)
-        connStr.push_back(5);           // SOCKSv5
-        connStr.push_back(1);           // 1 method
-        connStr.push_back(0);           // Method 0: No auth...
-
-        writeAll(&connStr[0], 3, timeLeft(start, timeout));
-
-        if(readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2) {
-            throw SocketException(_("The socks server failed establish a connection"));
-        }
-
-        if(connStr[1] != 0) {
-            throw SocketException(_("The socks server requires authentication"));
-        }
-    } else {
-        // We try the username and password auth type (no, we don't support gssapi)
-
-        connStr.push_back(5);           // SOCKSv5
-        connStr.push_back(1);           // 1 method
-        connStr.push_back(2);           // Method 2: Name/Password...
-        writeAll(&connStr[0], 3, timeLeft(start, timeout));
-
-        if(readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2) {
-            throw SocketException(_("The socks server failed establish a connection"));
-        }
-        if(connStr[1] != 2) {
-            throw SocketException(_("The socks server doesn't support login / password authentication"));
-        }
-
-        connStr.clear();
-        // Now we send the username / pw...
-        connStr.push_back(1);
-        connStr.push_back((uint8_t)SETTING(SOCKS_USER).length());
-        connStr.insert(connStr.end(), SETTING(SOCKS_USER).begin(), SETTING(SOCKS_USER).end());
-        connStr.push_back((uint8_t)SETTING(SOCKS_PASSWORD).length());
-        connStr.insert(connStr.end(), SETTING(SOCKS_PASSWORD).begin(), SETTING(SOCKS_PASSWORD).end());
-
-        writeAll(&connStr[0], connStr.size(), timeLeft(start, timeout));
-
-        if(readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2) {
-            throw SocketException(_("Socks server authentication failed (bad login / password?)"));
-        }
-
-        if(connStr[1] != 0) {
-            throw SocketException(_("Socks server authentication failed (bad login / password?)"));
-        }
-    }
 }
 
 #ifdef _WIN32
@@ -738,50 +623,6 @@ string Socket::getLocalPort() noexcept {
 
 Socket::Protocol Socket::getNextProtocol() noexcept {
     return proto;
-}
-
-void Socket::socksUpdated() {
-    udpServer.clear();
-    udpPort.clear();
-
-    if(SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5) {
-        try {
-            Socket s;
-            s.setBlocking(false);
-            s.connect(SETTING(SOCKS_SERVER), Util::toString(SETTING(SOCKS_PORT)));
-            s.socksAuth(SOCKS_TIMEOUT);
-
-            char connStr[10];
-            connStr[0] = 5;         // SOCKSv5
-            connStr[1] = 3;         // UDP Associate
-            connStr[2] = 0;         // Reserved
-            connStr[3] = 1;         // Address type: IPv4;
-            *((uint32_t*)(&connStr[4])) = 0;    // No specific outgoing UDP address
-            *((uint16_t*)(&connStr[8])) = 0;    // No specific port...
-
-            s.writeAll(connStr, 10, SOCKS_TIMEOUT);
-
-            // We assume we'll get a ipv4 address back...therefore, 10 bytes...if not, things
-            // will break, but hey...noone's perfect (and I'm tired...)...
-            if(s.readAll(connStr, 10, SOCKS_TIMEOUT) != 10) {
-                return;
-            }
-
-            if(connStr[0] != 5 || connStr[1] != 0) {
-                return;
-            }
-
-            udpPort = Util::toString(ntohs(*((uint16_t*)(&connStr[8]))));
-
-            in_addr serv_addr;
-
-            memset(&serv_addr, 0, sizeof(serv_addr));
-            serv_addr.s_addr = *((long*)(&connStr[4]));
-            udpServer = inet_ntoa(serv_addr);
-        } catch(const SocketException&) {
-            dcdebug("Socket: Failed to register with socks server\n");
-        }
-    }
 }
 
 void Socket::shutdown() noexcept {

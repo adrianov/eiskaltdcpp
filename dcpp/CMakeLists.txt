@@ -30,6 +30,8 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerConnectOut.cpp
     ConnectionManagerLifecycle.cpp
     PeerConnectLogFail.cpp
+    ProcessExit.cpp
+    SocketSocks.cpp
     UserConnectionLine.cpp
     UserConnectionChunk.cpp
     UtilIp.cpp
