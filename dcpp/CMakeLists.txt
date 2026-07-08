@@ -15,6 +15,9 @@ set(DCPP_EXTRA_SOURCES
     HubSearchDenied.cpp
     ListCache.cpp
     QueueAutoSearch.cpp
+    SearchQuery.cpp
+    SearchManagerUdp.cpp
+    SearchManagerResponse.cpp
     QueueManagerList.cpp
     QueueManagerListMatch.cpp
     NmdcHubLine.cpp

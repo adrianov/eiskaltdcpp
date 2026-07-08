@@ -92,6 +92,13 @@ void QueueManager::setFile(Download* d) {
         f->setPos(d->getSegment().getStart());
         d->setFile(f);
     } else if(d->getType() == Transfer::TYPE_FULL_LIST) {
+        {
+            Lock l(cs);
+            if(QueueItem* qi = fileQueue.find(d->getPath())) {
+                if(qi->getSize() <= 0 && d->getSize() > 0)
+                    qi->setSize(d->getSize());
+            }
+        }
         string target = d->getPath();
         File::ensureDirectory(target);
 

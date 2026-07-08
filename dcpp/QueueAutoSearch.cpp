@@ -11,6 +11,7 @@
 
 #include "QueueAutoSearch.h"
 
+#include "SearchQuery.h"
 #include "SettingsManager.h"
 #include "Util.h"
 
@@ -76,7 +77,7 @@ static AutoSearchPick pick(QueueItem::StringMap& queue, const StringList& recent
         result.query = result.item->getTTH().toBase32();
         result.type = SearchManager::TYPE_TTH;
     } else {
-        result.query = result.item->getTargetFileName();
+        result.query = SearchQuery::filenameWords(result.item->getTargetFileName());
         result.type = SearchManager::TYPE_ANY;
     }
     return result;
@@ -104,7 +105,7 @@ AutoSearchPick QueueAutoSearch::pickAlternating(QueueItem::StringMap& queue, Str
         if(mode == TTH)
             recent.push_back(result.item->getTarget());
         else
-            recentNames.push_back(result.query);
+            recentNames.push_back(result.item->getTargetFileName());
     }
     return result;
 }
