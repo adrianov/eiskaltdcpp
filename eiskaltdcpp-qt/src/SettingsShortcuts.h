@@ -10,65 +10,16 @@
 #pragma once
 
 #include <QWidget>
-#include <QAbstractItemModel>
-#include <QStyledItemDelegate>
-#include <QStyleOptionViewItem>
-#include <QHash>
 
 #include "ui_UISettingsShortcuts.h"
-#include "ShortcutEdit.h"
-
-class ShortcutItem{
-
-public:
-    ShortcutItem(ShortcutItem* = nullptr);
-    virtual ~ShortcutItem();
-
-    void appendChild(ShortcutItem *child);
-
-    ShortcutItem *child(int row);
-    int childCount() const;
-    int columnCount() const;
-    int row() const;
-    ShortcutItem *parent();
-    QList<ShortcutItem*> childItems;
-
-    QString title;
-    QString shortcut;
-private:
-    ShortcutItem *parentItem;
-};
-
-class ShortcutsModel : public QAbstractItemModel {
-    Q_OBJECT
-
-public:
-    ShortcutsModel(QObject * parent = nullptr);
-    virtual ~ShortcutsModel();
-
-    virtual int rowCount(const QModelIndex & index = QModelIndex()) const;
-    virtual int columnCount(const QModelIndex & index = QModelIndex()) const;
-    virtual QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-    virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder);
-    virtual QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const;
-    virtual QModelIndex parent(const QModelIndex & parent) const;
-    Qt::ItemFlags flags(const QModelIndex &index) const;
-
-    void repaint() { emit layoutChanged(); }
-    void save();
-
-private:
-    ShortcutItem *rootItem;
-    QHash<ShortcutItem*, QString> items;
-};
+#include "ShortcutsModel.h"
 
 class SettingsShortcuts : public QWidget, private Ui::UISettingsShortcuts
 {
     Q_OBJECT
 public:
     explicit SettingsShortcuts(QWidget *parent = nullptr);
-    virtual ~SettingsShortcuts();
+    ~SettingsShortcuts() override;
 
 public Q_SLOTS:
     void ok();
