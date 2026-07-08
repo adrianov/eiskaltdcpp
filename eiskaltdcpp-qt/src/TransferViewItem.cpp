@@ -14,6 +14,7 @@ TransferViewItem::TransferViewItem(const QList<QVariant> &data, TransferViewItem
     fail(false),
     finished(false),
     dpos(0L),
+    queuePos(0),
     percent(0.0),
     smoothTleft(-1),
     itemData(data),

@@ -76,6 +76,16 @@ QString downloadProgressStat(int64_t downloaded, int64_t fileSize)
     return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(downloaded)).arg(percent, 0, 'f', 1);
 }
 
+QString slotWaitStat(qint64 queuePos, bool trailingSpace)
+{
+    QString stat = queuePos > 0
+        ? QObject::tr("Waiting for slot (#%1)").arg(queuePos)
+        : QObject::tr("Waiting for slot");
+    if (trailingSpace)
+        stat += ' ';
+    return stat;
+}
+
 void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat)
 {
     params["ESIZE"] = static_cast<qlonglong>(s.fileSize);

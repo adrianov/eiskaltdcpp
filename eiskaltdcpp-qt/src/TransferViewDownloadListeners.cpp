@@ -42,9 +42,8 @@ void TransferView::on(dcpp::DownloadManagerListener::Queued, dcpp::Download* dl,
 
     getParams(params, dl);
 
-    params["STAT"] = queuePos > 0 ?
-            tr("Queue position %1").arg(static_cast<qlonglong>(queuePos)) :
-            tr("Waiting in upload queue");
+    params["QUEUE_POS"] = static_cast<qlonglong>(queuePos);
+    params["STAT"] = slotWaitStat(static_cast<qint64>(queuePos));
     params["FAIL"] = false;
 
     emit coreDMQueued(params);
@@ -56,6 +55,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* d
     getParams(params, dl);
 
     params["FPOS"]  = (qlonglong)QueueManager::getInstance()->getPos(dl->getPath());
+    params["QUEUE_POS"] = static_cast<qlonglong>(0);
     const DownloadUiState s = downloadState(dl);
     const QString stat = s.continuing ? downloadProgressStat(s.downloaded, s.fileSize) : tr("Download starting...");
     applyDownloadMetrics(params, dl, s, stat);

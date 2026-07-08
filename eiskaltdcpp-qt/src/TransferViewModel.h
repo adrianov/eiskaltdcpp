@@ -52,6 +52,7 @@ public:
     QString tth;
     QString target;
     qlonglong dpos;
+    qint64 queuePos;
     double percent;
     qlonglong smoothTleft;
     QList<QVariant> itemData;

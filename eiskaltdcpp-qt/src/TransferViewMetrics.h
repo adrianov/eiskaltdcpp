@@ -41,6 +41,8 @@ DownloadUiState downloadState(const dcpp::Download *dl);
 
 QString uploadProgressStat(int64_t sent, int64_t fileSize);
 QString downloadProgressStat(int64_t downloaded, int64_t fileSize);
+/** 1-based remote upload queue position; 0 if unknown. trailingSpace for parent status suffix. */
+QString slotWaitStat(qint64 queuePos, bool trailingSpace = false);
 
 void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat);
 void applyDownloadMetrics(QVariantMap &params, const dcpp::Download *dl,
