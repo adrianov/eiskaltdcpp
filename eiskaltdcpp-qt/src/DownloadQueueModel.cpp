@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "DownloadQueueModel.h"
+#include "DownloadQueueModelSort.h"
 #include "WulforUtil.h"
 #include "AppTheme.h"
 
@@ -34,8 +35,6 @@
 #if _DEBUG_QT_UI
 #include <QtDebug>
 #endif
-
-#include <set>
 
 #if _DEBUG_QT_UI
 static inline void printRoot(DownloadQueueItem *i, const QString &dlmtr){
@@ -196,80 +195,6 @@ QVariant DownloadQueueModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-namespace {
-
-template <Qt::SortOrder order>
-struct Compare {
-    typedef bool (*AttrComp)(const DownloadQueueItem * l, const DownloadQueueItem * r);
-
-    void static sort(unsigned column, QList<DownloadQueueItem*>& items) {
-        if (column > COLUMN_DOWNLOADQUEUE_TTH)
-            return;
-
-        std::stable_sort(items.begin(), items.end(), attrs[column]);
-    }
-
-    void static insertSorted(unsigned column, QList<DownloadQueueItem*>& items, DownloadQueueItem* item) {
-        if (column > COLUMN_DOWNLOADQUEUE_TTH){
-            items.push_back(item);
-
-            return;
-        }
-
-        auto it = std::lower_bound(items.begin(),
-                                                             items.end(),
-                                                             item,
-                                                             attrs[column]
-                                                             );
-        items.insert(it, item);
-    }
-
-    private:
-        template <int i>
-        bool static AttrCmp(const DownloadQueueItem * l, const DownloadQueueItem * r) {
-            if (l->dir != r->dir){
-                return (l->dir);
-            }
-            return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
-        }
-        template <int column>
-        bool static NumCmp(const DownloadQueueItem * l, const DownloadQueueItem * r) {
-            if (l->dir != r->dir){
-                return (l->dir);
-            }
-            return Cmp(l->data(column).toULongLong(), r->data(column).toULongLong());
-       }
-        template <typename T>
-        bool static Cmp(const T& l, const T& r);
-
-        static AttrComp attrs[11];
-};
-
-template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[11] = { AttrCmp<COLUMN_DOWNLOADQUEUE_NAME>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_DOWN>,
-                                                                NumCmp<COLUMN_DOWNLOADQUEUE_ESIZE>,
-                                                                NumCmp<COLUMN_DOWNLOADQUEUE_DOWN>,
-                                                                NumCmp<COLUMN_DOWNLOADQUEUE_PRIO>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_USER>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_PATH>,
-                                                                NumCmp<COLUMN_DOWNLOADQUEUE_ESIZE>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_ERR>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_ADDED>,
-                                                                AttrCmp<COLUMN_DOWNLOADQUEUE_TTH>
-                                                              };
-
-template <> template <typename T>
-bool inline Compare<Qt::AscendingOrder>::Cmp(const T& l, const T& r) {
-    return l < r;
-}
-
-template <> template <typename T>
-bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
-    return l > r;
-}
-}
-
 QVariant DownloadQueueModel::headerData(int section, Qt::Orientation orientation,
                                int role) const
 {
@@ -337,22 +262,6 @@ int DownloadQueueModel::rowCount(const QModelIndex &parent) const
     return parentItem->childCount();
 }
 
-static void sortRecursive(int column, Qt::SortOrder order, DownloadQueueItem *i){
-    if (column == -1 || !i || !i->childCount())
-        return;
-
-    static Compare<Qt::AscendingOrder> acomp;
-    static Compare<Qt::DescendingOrder> dcomp;
-
-    if (order == Qt::AscendingOrder)
-        acomp.sort(column, i->childItems);
-    else if (order == Qt::DescendingOrder)
-        dcomp.sort(column, i->childItems);
-
-    for (const auto &ii : i->childItems)
-        sortRecursive(column, order, ii);
-}
-
 void DownloadQueueModel::sort(int column, Qt::SortOrder order) {
     Q_D(DownloadQueueModel);
 
@@ -364,7 +273,7 @@ void DownloadQueueModel::sort(int column, Qt::SortOrder order) {
 
     emit layoutAboutToBeChanged();
 
-    sortRecursive(column, order, d->rootItem);
+    sortDownloadQueueItems(column, order, d->rootItem);
 
     emit layoutChanged();
 }
@@ -437,7 +346,10 @@ void DownloadQueueModel::updItem(const QVariantMap &map){
     d->total_size += item->data(COLUMN_DOWNLOADQUEUE_ESIZE).toULongLong();
 
     emit updateStats(d->total_files, d->total_size);
-    emit layoutChanged();
+
+    const QModelIndex idx = createIndexForItem(item);
+    if (idx.isValid())
+        emit dataChanged(idx, index(idx.row(), columnCount() - 1, idx.parent()));
 }
 
 bool DownloadQueueModel::remItem(const QVariantMap &map){
@@ -625,139 +537,4 @@ DownloadQueueItem *DownloadQueueModel::findTarget(const DownloadQueueItem *item,
     }
 
     return target;
-}
-
-DownloadQueueItem::DownloadQueueItem(const QList<QVariant> &data, DownloadQueueItem *parent)
-    : dir(false)
-    , itemData(data)
-    , parentItem(parent)
-{
-}
-
-DownloadQueueItem::DownloadQueueItem(const DownloadQueueItem &in)
-    : dir(in.dir)
-    , itemData(in.itemData)
-    , parentItem(nullptr)
-{
-}
-
-void DownloadQueueItem::operator=(const DownloadQueueItem &in){
-    parentItem = in.parentItem;
-    childItems = in.childItems;
-    itemData = in.itemData;
-    dir = in.dir;
-}
-
-DownloadQueueItem::~DownloadQueueItem()
-{
-    qDeleteAll(childItems);
-    childItems.clear();
-}
-
-void DownloadQueueItem::appendChild(DownloadQueueItem *item) {
-    childItems.append(item);
-
-    item->parentItem = this;
-}
-
-DownloadQueueItem *DownloadQueueItem::child(int row) {
-    return childItems.value(row);
-}
-
-int DownloadQueueItem::childCount() const {
-    return childItems.count();
-}
-
-int DownloadQueueItem::columnCount() const {
-    return itemData.count();
-}
-
-const QVariant &DownloadQueueItem::data(int column) const {
-    return itemData.at(column);
-}
-
-DownloadQueueItem *DownloadQueueItem::parent() {
-    return parentItem;
-}
-
-int DownloadQueueItem::row() const {
-    if (parentItem)
-        return parentItem->childItems.indexOf(const_cast<DownloadQueueItem*>(this));
-
-    return 0;
-}
-
-void DownloadQueueItem::updateColumn(int column, QVariant var){
-    if (column > (itemData.size()-1))
-        return;
-
-    itemData[column] = var;
-}
-
-DownloadQueueItem *DownloadQueueItem::nextSibling(){
-    if (!parent())
-        return nullptr;
-
-    if (row() == (parent()->childCount()-1))
-        return nullptr;
-
-    return parent()->child(row()+1);
-}
-
-DownloadQueueDelegate::DownloadQueueDelegate(QObject *parent):
-        QStyledItemDelegate(parent)
-{
-}
-
-DownloadQueueDelegate::~DownloadQueueDelegate(){
-}
-
-void DownloadQueueDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const{
-    if (index.column() != COLUMN_DOWNLOADQUEUE_STATUS){
-        QStyledItemDelegate::paint(painter, option, index);
-
-        return;
-    }
-
-    DownloadQueueItem *item = reinterpret_cast<DownloadQueueItem*>(index.internalPointer());
-
-    if (!item || item->dir) {
-        QStyledItemDelegate::paint(painter, option, index);
-        return;
-    }
-
-#if defined(USE_PROGRESS_BARS)
-    const qulonglong esize = item->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong();
-    double percent = ((double)item->data(COLUMN_DOWNLOADQUEUE_DOWN).toLongLong() * 100.0);
-    percent = (esize > 0) ? (percent/(double)esize) : 0.0;
-    const QString status = QString("%1%").arg(percent, 0, 'f', 1);
-
-    QStyleOptionProgressBar progressBarOption;
-    progressBarOption.state = QStyle::State_Enabled;
-    progressBarOption.direction = QApplication::layoutDirection();
-    progressBarOption.rect = option.rect;
-    progressBarOption.fontMetrics = QApplication::fontMetrics();
-    progressBarOption.minimum = 0;
-    progressBarOption.maximum = 100;
-    progressBarOption.textAlignment = Qt::AlignCenter;
-    progressBarOption.textVisible = true;
-    progressBarOption.text = status;
-    progressBarOption.progress = static_cast<int>(percent);
-
-    if (option.state & QStyle::State_Selected)
-        painter->fillRect(option.rect, option.palette.highlight());
-
-    QApplication::style()->drawControl(QStyle::CE_ProgressBar, &progressBarOption, painter);
-#else
-    const qulonglong esize = item->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong();
-    double percent = ((double)item->data(COLUMN_DOWNLOADQUEUE_DOWN).toLongLong() * 100.0);
-    percent = (esize > 0) ? (percent/(double)esize) : 0.0;
-    const QString status = QString("%1%").arg(percent, 0, 'f', 1);
-
-    QStyleOptionViewItem plainTextOption = option;
-    plainTextOption.text = status;
-    plainTextOption.displayAlignment = Qt::AlignCenter;
-
-    QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &plainTextOption, painter);
-#endif
 }
