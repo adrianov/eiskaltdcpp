@@ -34,9 +34,6 @@ public:
     virtual void setMenu(QMenu*);
     virtual void setMenuRole(LineEdit::MenuRole);
 
-    virtual QSize sizeHint() const;
-    virtual QSizePolicy sizePolicy() const;
-
 protected:
     virtual void resizeEvent(QResizeEvent *);
     virtual void paintEvent(QPaintEvent *);

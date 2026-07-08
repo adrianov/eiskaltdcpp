@@ -11,10 +11,8 @@
 #include "AppTheme.h"
 #include "WulforUtil.h"
 
-#include <QApplication>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QStyle>
 
 static const int margin = 3;
 
@@ -103,19 +101,6 @@ bool LineEdit::eventFilter(QObject *obj, QEvent *e){
     }
 
     return QLineEdit::eventFilter(obj, e);
-}
-
-QSize LineEdit::sizeHint() const{
-    ensurePolished();
-
-    QStyleOptionFrame opt;
-    initStyleOption(&opt);
-    return style()->sizeFromContents(QStyle::CT_LineEdit, &opt,
-        QLineEdit::sizeHint().expandedTo(QApplication::globalStrut()), this);
-}
-
-QSizePolicy LineEdit::sizePolicy() const{
-    return QLineEdit::sizePolicy();
 }
 
 void LineEdit::updateGeometry(){
