@@ -19,6 +19,16 @@
 
 namespace dcpp {
 
+namespace {
+
+bool isFileNotAvailableError(const string& msg) {
+    if(Util::stricmp(msg.c_str(), UserConnection::FILE_NOT_AVAILABLE) == 0)
+        return true;
+    return msg.rfind(" no more exists") != string::npos;
+}
+
+} // namespace
+
 void DownloadManager::onFailed(UserConnection* aSource, const string& aError) {
     {
         Lock l(cs);
@@ -30,6 +40,11 @@ void DownloadManager::onFailed(UserConnection* aSource, const string& aError) {
 void DownloadManager::failDownload(UserConnection* aSource, const string& reason) {
 
     Download* d = aSource->getDownload();
+
+    if(d && isFileNotAvailableError(reason)) {
+        fileNotAvailable(aSource);
+        return;
+    }
 
     if(d) {
         if(Util::isNoSpaceMessage(reason) && d->getType() == Transfer::TYPE_FILE)
@@ -121,14 +136,13 @@ void DownloadManager::on(UserConnectionListener::Updated, UserConnection* aSourc
 }
 
 void DownloadManager::fileNotAvailable(UserConnection* aSource) {
-    if(aSource->getState() != UserConnection::STATE_SND) {
-        dcdebug("DM::fileNotAvailable Invalid state, disconnecting");
+    Download* d = aSource->getDownload();
+    if(!d) {
+        dcdebug("DM::fileNotAvailable no active download, disconnecting\n");
         aSource->disconnect();
         return;
     }
 
-    Download* d = aSource->getDownload();
-    dcassert(d != NULL);
     dcdebug("File Not Available: %s\n", d->getPath().c_str());
 
     removeDownload(d);
