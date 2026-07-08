@@ -48,8 +48,7 @@ bool isViablePeer(const OnlineUser& ou) {
     if(hasClientTag(clientTag(id)))
         return true;
 
-    // Some hubs (e.g. Flylink-based) omit client tags from broadcast MyINFO but still
-    // send connection speed and share size for real users.
+    // Tagless MyINFO (e.g. hmn.pp.ru) still carries connection type and share size.
     if(!id.getConnection().empty() || id.getBytesShared() > 0)
         return true;
 

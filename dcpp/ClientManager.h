@@ -145,7 +145,7 @@ public:
 
     void send(AdcCommand& c, const CID& to);
     bool wantRevConnect(const HintedUser& user, int attempt);
-    void connect(const HintedUser& user, const string& token, bool reverseConnect = false, int secureMode = PeerConnectTls::AUTO);
+    bool connect(const HintedUser& user, const string& token, bool reverseConnect = false, int secureMode = PeerConnectTls::AUTO);
     void stopConnect(const HintedUser& user);
     OnlineUser* findBestOnlineUser(const CID& cid, const string& hintUrl, bool priv);
     void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);

@@ -17,7 +17,7 @@ class OnlineUser;
 
 namespace PeerConnectFilter {
 
-/** Skip hub ghosts (bot flag, empty client tag, stale search entries). */
+/** Skip search ghosts (empty tag, connection, and share; or hub bots). */
 bool isViablePeer(const OnlineUser& ou);
 
 /** Passive StrgDC++/Flylink-style clients expect $RevConnectToMe first. */
