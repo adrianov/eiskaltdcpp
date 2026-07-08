@@ -25,9 +25,12 @@ enum SecureMode {
 
 bool tlsAvailable();
 bool peerSupportsTls(const UserPtr& user);
+bool learnedTlsRequired(const UserPtr& user);
+void rememberTlsRequired(const UserPtr& user);
 bool resolveSecure(int mode, const UserPtr& user);
 bool rejectPeer(const UserPtr& user);
-void scheduleRetry(ConnectionQueueItem* cqi, bool wasSecure, bool protocolError, int connectPhase);
+bool isTlsMismatch(const string& err);
+void scheduleRetry(ConnectionQueueItem* cqi, bool wasSecure, bool protocolError, int connectPhase, const string& err);
 
 } // namespace PeerConnectTls
 

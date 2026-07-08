@@ -23,6 +23,7 @@
 #include "ChatMessage.h"
 #include "BufferedSocket.h"
 #include "CryptoManager.h"
+#include "PeerConnectTls.h"
 #include "format.h"
 #include "HubSearchDenied.h"
 #include "SearchManager.h"
@@ -72,7 +73,6 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         }
 
         stopInfectedConnect(unescape(message), nick);
-        noteSearchDenied(*this, unescape(message));
 
         ChatMessage chatMessage = { unescape(message), findUser(nick), nullptr, nullptr, false, 0 };
 
@@ -257,7 +257,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 
         if(u.getIdentity().getStatus() & Identity::TLS) {
             u.getUser()->setFlag(User::TLS);
-        } else {
+        } else if(!PeerConnectTls::learnedTlsRequired(u.getUser())) {
             u.getUser()->unsetFlag(User::TLS);
         }
 

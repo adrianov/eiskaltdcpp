@@ -130,6 +130,7 @@ private:
     void putCQI(ConnectionQueueItem* cqi);
     ConnectionQueueItem* findDownloadCqi(const UserPtr& user);
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
+    bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
 
     bool checkKeyprint(UserConnection *aSource);
 

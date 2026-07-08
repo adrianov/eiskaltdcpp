@@ -50,6 +50,17 @@ bool ConnectionManager::slotWaitActive(const ConnectionQueueItem* cqi) const {
             PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits()));
 }
 
+bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const {
+    if(!cqi)
+        return false;
+    if(cqi->getErrors() == -1)
+        return true;
+    if(cqi->getLastAttempt() == 0)
+        return false;
+    return GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(
+            PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits()));
+}
+
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     dcassert((bool)aUser.user);
     {

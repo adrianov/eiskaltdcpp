@@ -72,6 +72,7 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
 }
 
 void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
+    const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
 
     if(slotWait) {
@@ -81,6 +82,12 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMin);
         if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
             markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
+    } else if(tlsMismatch) {
+        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
+        dlCqi->setErrors(dlCqi->getErrors() + 1);
+        dlCqi->setLastAttempt(GET_TICK());
+        if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
+            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     } else {
         dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
         dlCqi->setLastAttempt(GET_TICK());
@@ -99,13 +106,16 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
     if(aSource->getUser())
         dlCqi = findDownloadCqi(aSource->getUser());
 
+    const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
 
-    if(dlCqi && aSource->getUser() && !slotWait)
-        PeerConnectLog::connectionFail(aSource, aError, protocolError);
+    if(dlCqi && aSource->getUser() && !slotWait) {
+        if(!protocolError || (tlsMismatch && PeerConnectFilter::shouldLogTimeout(dlCqi->getErrors() + 1)))
+            PeerConnectLog::connectionFail(aSource, aError, protocolError);
+    }
 
-    if(dlCqi)
-        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState());
+    if(dlCqi && !tlsMismatch)
+        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
 
     if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
         if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {

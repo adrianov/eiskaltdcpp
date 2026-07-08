@@ -82,7 +82,11 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     continue;
                 }
 
-                if(cqi->getErrors() == -1 && cqi->getLastAttempt() != 0) {
+                if(cqi->getErrors() == -1) {
+                    continue;
+                }
+
+                if(queueBackoffActive(cqi)) {
                     continue;
                 }
 
@@ -91,8 +95,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     continue;
                 }
 
-                if(cqi->getLastAttempt() == 0 || (!attemptDone &&
-                                                  cqi->getLastAttempt() + PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits()) < aTick))
+                if(cqi->getLastAttempt() == 0 || !attemptDone)
                 {
                     if(!upnpReady)
                         continue;
