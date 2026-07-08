@@ -337,74 +337,6 @@ void AdcHub::handle(AdcCommand::QUI, AdcCommand& c) noexcept {
     }
 }
 
-void AdcHub::handle(AdcCommand::CTM, AdcCommand& c) noexcept {
-    if(c.getParameters().size() < 3)
-        return;
-
-    OnlineUser* u = findUser(c.getFrom());
-    if(!u || u->getUser() == ClientManager::getInstance()->getMe())
-        return;
-
-    const string& protocol = c.getParam(0);
-    const string& port = c.getParam(1);
-    const string& token = c.getParam(2);
-
-    bool secure = false;
-    if(protocol == CLIENT_PROTOCOL && !SETTING(REQUIRE_TLS)) {
-        // Nothing special
-    } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
-        secure = true;
-    } else {
-        unknownProtocol(c.getFrom(), protocol, token);
-        return;
-    }
-
-    if(!u->getIdentity().isTcpActive()) {
-        send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "IP unknown", AdcCommand::TYPE_DIRECT).setTo(c.getFrom()));
-        return;
-    }
-
-    ConnectionManager::getInstance()->adcConnect(*u, port, token, secure);
-}
-
-void AdcHub::handle(AdcCommand::RCM, AdcCommand& c) noexcept {
-    if(c.getParameters().size() < 2) {
-        return;
-    }
-
-    OnlineUser* u = findUser(c.getFrom());
-    if(!u || u->getUser() == ClientManager::getInstance()->getMe())
-        return;
-
-    const string& protocol = c.getParam(0);
-    const string& token = c.getParam(1);
-
-    bool secure;
-    if(protocol == CLIENT_PROTOCOL && !SETTING(REQUIRE_TLS)) {
-        secure = false;
-    } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
-        secure = true;
-    } else {
-        unknownProtocol(c.getFrom(), protocol, token);
-        return;
-    }
-
-    if(isActive()) {
-        connect(*u, token, secure);
-        return;
-    }
-
-    if (!u->getIdentity().supports(NAT0_FEATURE) && !BOOLSETTING(ALLOW_NATT))
-        return;
-
-    // Attempt to traverse NATs and/or firewalls with TCP.
-    // If they respond with their own, symmetric, RNT command, both
-    // clients call ConnectionManager::adcConnect.
-    send(AdcCommand(AdcCommand::CMD_NAT, u->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).
-         addParam(protocol).addParam(sock->getLocalPort()).addParam(token));
-    return;
-}
-
 void AdcHub::handle(AdcCommand::CMD, AdcCommand& c) noexcept {
     if(c.getParameters().empty())
         return;
@@ -605,72 +537,6 @@ void AdcHub::handle(AdcCommand::GET, AdcCommand& c) noexcept {
         }
     }
 }
-void AdcHub::handle(AdcCommand::NAT, AdcCommand& c) noexcept {
-    if (c.getParameters().size() < 3)
-        return;
-
-    if (!BOOLSETTING(ALLOW_NATT))
-        return;
-
-    OnlineUser* u = findUser(c.getFrom());
-    if(!u || u->getUser() == ClientManager::getInstance()->getMe())
-        return;
-
-    const string& protocol = c.getParam(0);
-    const string& port = c.getParam(1);
-    const string& token = c.getParam(2);
-
-    // bool secure = secureAvail(c.getFrom(), protocol, token);
-    bool secure = false;
-    if(protocol == CLIENT_PROTOCOL) {
-        // Nothing special
-    } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
-        secure = true;
-    } else {
-        unknownProtocol(c.getFrom(), protocol, token);
-        return;
-    }
-
-    // Trigger connection attempt sequence locally ...
-    dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %s\n", port.c_str(), sock->getLocalIp().c_str(), sock->getLocalPort().c_str());
-    ConnectionManager::getInstance()->adcConnect(*u, port, sock->getLocalPort(), BufferedSocket::NAT_CLIENT, token, secure);
-
-    // ... and signal other client to do likewise.
-    send(AdcCommand(AdcCommand::CMD_RNT, u->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(protocol).
-         addParam(sock->getLocalPort()).addParam(token));
-}
-
-void AdcHub::handle(AdcCommand::RNT, AdcCommand& c) noexcept {
-    if(c.getParameters().size() < 3)
-        return;
-
-    // Sent request for NAT traversal cooperation, which
-    // was acknowledged (with requisite local port information).
-    if(!BOOLSETTING(ALLOW_NATT))
-        return;
-
-    OnlineUser* u = findUser(c.getFrom());
-    if(!u || u->getUser() == ClientManager::getInstance()->getMe())
-        return;
-
-    const string& protocol = c.getParam(0);
-    const string& port = c.getParam(1);
-    const string& token = c.getParam(2);
-
-    bool secure = false;
-    if(protocol == CLIENT_PROTOCOL) {
-        // Nothing special
-    } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
-        secure = true;
-    } else {
-        unknownProtocol(c.getFrom(), protocol, token);
-        return;
-    }
-
-    // Trigger connection attempt sequence locally
-    dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %s\n", port.c_str(), sock->getLocalIp().c_str(), sock->getLocalPort().c_str());
-    ConnectionManager::getInstance()->adcConnect(*u, port, sock->getLocalPort(), BufferedSocket::NAT_SERVER, token, secure);
-}
 void AdcHub::handle(AdcCommand::ZON, AdcCommand& c) noexcept {
     if(c.getType() == AdcCommand::TYPE_INFO) {
         try {
@@ -688,48 +554,6 @@ void AdcHub::handle(AdcCommand::ZOF, AdcCommand& c) noexcept {
         } catch (const Exception& e) {
             dcdebug("AdcHub::handleZOF failed with error: %s\n", e.getError().c_str());
         }
-    }
-}
-
-void AdcHub::connect(const OnlineUser& user, const string& token, bool /*reverseConnect*/, int secureMode) {
-    connectSecure(user, token, PeerConnectTls::resolveSecure(secureMode, user.getUser()));
-}
-
-void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure) {
-    if(state != STATE_NORMAL)
-        return;
-
-    const string* proto;
-    if(secure) {
-        if(user.getUser()->isSet(User::NO_ADCS_0_10_PROTOCOL)) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("user does not support ADCS"));
-            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: user does not support ADCS") %
-                user.getIdentity().getNick()));
-            return;
-        }
-        proto = &SECURE_CLIENT_PROTOCOL_TEST;
-    } else {
-        if(user.getUser()->isSet(User::NO_ADC_1_0_PROTOCOL) || SETTING(REQUIRE_TLS)) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("TLS/ADC required but user does not support it"));
-            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: TLS/ADC required but user does not support it") %
-                user.getIdentity().getNick()));
-            return;
-        }
-        proto = &CLIENT_PROTOCOL;
-    }
-
-    if(isActive()) {
-        const string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
-        if(port.empty()) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("not listening for connections"));
-            LogManager::getInstance()->message(str(F_("Not listening for connections - please restart %1%") % APPNAME));
-            return;
-        }
-        PeerConnectLog::adcSend(user, "CTM", port + (secure ? " TLS" : ""));
-        send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token));
-    } else {
-        PeerConnectLog::adcSend(user, "RCM", secure ? "TLS" : "ADC");
-        send(AdcCommand(AdcCommand::CMD_RCM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(token));
     }
 }
 

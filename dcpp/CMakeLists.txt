@@ -17,6 +17,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerList.cpp
     NmdcHubLine.cpp
     NmdcHubConnect.cpp
+    AdcHubConnect.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
     PeerConnectLog.cpp
