@@ -9,6 +9,7 @@
 
 #include "TransferViewDelegate.h"
 
+#include "AppTheme.h"
 #include "ProgressBarPaint.h"
 #include "WulforSettings.h"
 
@@ -24,6 +25,18 @@ TransferViewDelegate::TransferViewDelegate(QObject *parent):
 TransferViewDelegate::~TransferViewDelegate(){
 }
 
+namespace {
+
+QColor transferBarColor(bool download, const QColor &customColor)
+{
+    if (customColor.isValid())
+        return customColor;
+
+    return download ? AppTheme::linkColor() : AppTheme::successColor();
+}
+
+}
+
 void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const{
     TransferViewItem *item = reinterpret_cast<TransferViewItem*>(index.internalPointer());
 
@@ -37,10 +50,9 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
 
 #if defined(USE_PROGRESS_BARS)
     QPalette pal = option.palette;
-    if (item->download && download_bar_color.isValid())
-        pal.setColor(QPalette::Highlight, download_bar_color);
-    else if (!item->download && upload_bar_color.isValid())
-        pal.setColor(QPalette::Highlight, upload_bar_color);
+    pal.setColor(QPalette::Highlight,
+                 transferBarColor(item->download,
+                                  item->download ? download_bar_color : upload_bar_color));
 
     paintProgressCell(painter, option, static_cast<int>(item->percent),
                       item->data(COLUMN_TRANSFER_STATS).toString(), &pal);

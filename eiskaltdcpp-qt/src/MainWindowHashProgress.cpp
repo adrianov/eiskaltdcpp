@@ -8,18 +8,56 @@
 ***************************************************************************/
 
 #include "MainWindowHashProgress.h"
+#include "AppTheme.h"
 #include "HashProgress.h"
 #include "WulforUtil.h"
 
 #include <QAction>
+#include <QApplication>
+#include <QPalette>
 #include <QProgressBar>
 
 #include "dcpp/Util.h"
 
 using namespace dcpp;
 
+namespace {
+
+QString statusProgressStyle()
+{
+    const QPalette palette = qApp->palette();
+    return QString(
+        "QProgressBar {"
+            "border: 1px solid %1;"
+            "border-radius: 4px;"
+            "background-color: %2;"
+            "color: %3;"
+            "text-align: center;"
+            "padding: 0px;"
+        "}"
+        "QProgressBar::chunk {"
+            "background-color: %4;"
+            "border-radius: 3px;"
+        "}"
+    ).arg(palette.color(QPalette::Mid).name(),
+          palette.color(QPalette::Base).name(),
+          palette.color(QPalette::Text).name(),
+          AppTheme::linkColor().name());
+}
+
+void applyStatusProgressStyle(QProgressBar *bar)
+{
+    const QString style = statusProgressStyle();
+    if (bar->styleSheet() != style)
+        bar->setStyleSheet(style);
+}
+
+}
+
 void MainWindowHashProgress::update(QProgressBar *bar, QAction *refreshAction, HashProgress *dialog)
 {
+    applyStatusProgressStyle(bar);
+
     switch (HashProgress::getHashStatus()) {
     case HashProgress::IDLE:
         WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiREFRLIST);

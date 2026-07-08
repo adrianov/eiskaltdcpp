@@ -35,6 +35,14 @@ inline QColor progressFillColor(const QStyleOptionViewItem &option, const QPalet
     return option.palette.color(QPalette::Highlight);
 }
 
+inline QColor progressTextColor(const QStyleOptionViewItem &option)
+{
+    if (option.state & QStyle::State_Selected)
+        return option.palette.color(QPalette::HighlightedText);
+
+    return option.palette.color(QPalette::Text);
+}
+
 inline QColor progressTrackColor(const QStyleOptionViewItem &option)
 {
     const bool selected = option.state & QStyle::State_Selected;
@@ -46,9 +54,49 @@ inline QColor progressTrackColor(const QStyleOptionViewItem &option)
     return dark ? QColor(255, 255, 255, 36) : QColor(0, 0, 0, 24);
 }
 
-#if defined(Q_OS_MAC)
-inline void paintMacProgressBar(QPainter *painter, const QStyleOptionViewItem &option,
-                                int percent, const QString &text, const QPalette *barPalette)
+inline QColor progressBorderColor()
+{
+    return AppTheme::isDark() ? QColor(255, 255, 255, 54) : QColor(0, 0, 0, 42);
+}
+
+inline QColor readableFillColor(const QColor &fill, const QColor &track)
+{
+    if (qAbs(fill.lightness() - track.lightness()) >= 45)
+        return fill;
+
+    return qAbs(AppTheme::linkColor().lightness() - track.lightness()) >= 45
+        ? AppTheme::linkColor()
+        : AppTheme::successColor();
+}
+
+inline void paintProgressText(QPainter *painter, const QRect &cell,
+                              const QStyleOptionViewItem &option, const QString &text)
+{
+    if (text.isEmpty())
+        return;
+
+    const QColor shadow = AppTheme::isDark() ? QColor(0, 0, 0, 110) : QColor(255, 255, 255, 140);
+    painter->setPen(shadow);
+    painter->drawText(cell.adjusted(0, 1, 0, 1), Qt::AlignCenter, text);
+    painter->setPen(progressTextColor(option));
+    painter->drawText(cell, Qt::AlignCenter, text);
+}
+
+inline void paintBarChunk(QPainter *painter, const QRect &barRect, int percent, const QColor &fill)
+{
+    const int bounded = qBound(0, percent, 100);
+    if (bounded <= 0)
+        return;
+
+    QRect chunk = barRect;
+    const qreal radius = qMin(barRect.height() / 2.0, 5.0);
+    chunk.setWidth(qMax(static_cast<int>(radius * 2), barRect.width() * bounded / 100));
+    painter->setBrush(fill);
+    painter->drawRoundedRect(chunk, radius, radius);
+}
+
+inline void paintStyledProgressBar(QPainter *painter, const QStyleOptionViewItem &option,
+                                   int percent, const QString &text, const QPalette *barPalette)
 {
     const QRect cell = option.rect;
 
@@ -57,69 +105,28 @@ inline void paintMacProgressBar(QPainter *painter, const QStyleOptionViewItem &o
 
     const QRect barRect = cell.adjusted(3, 4, -3, -4);
     const qreal radius = qMin(barRect.height() / 2.0, 5.0);
-    const QColor fill = progressFillColor(option, barPalette);
     const QColor track = progressTrackColor(option);
+    const QColor fill = readableFillColor(progressFillColor(option, barPalette), track);
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setPen(Qt::NoPen);
+    painter->setPen(progressBorderColor());
     painter->setBrush(track);
     painter->drawRoundedRect(barRect, radius, radius);
-
-    const int bounded = qBound(0, percent, 100);
-    if (bounded > 0) {
-        QRect chunk = barRect;
-        chunk.setWidth(qMax(static_cast<int>(radius * 2), barRect.width() * bounded / 100));
-        painter->setBrush(fill);
-        painter->drawRoundedRect(chunk, radius, radius);
-    }
-    painter->restore();
-
-    if (text.isEmpty())
-        return;
-
-    painter->save();
-    QColor textColor = option.palette.color(QPalette::Text);
-    if (option.state & QStyle::State_Selected)
-        textColor = option.palette.color(QPalette::HighlightedText);
-
-    const QColor shadow = AppTheme::isDark() ? QColor(0, 0, 0, 110) : QColor(255, 255, 255, 140);
-    painter->setPen(shadow);
-    painter->drawText(cell.adjusted(0, 1, 0, 1), Qt::AlignCenter, text);
-    painter->setPen(textColor);
-    painter->drawText(cell, Qt::AlignCenter, text);
+    painter->setPen(Qt::NoPen);
+    paintBarChunk(painter, barRect, percent, fill);
+    paintProgressText(painter, cell, option, text);
     painter->restore();
 }
-#endif
 
 } // namespace
 
-// macOS Qt styles omit progress bar chrome and overlay text in item delegates.
+// Native item-delegate progress bars can lose contrast in themed views.
 inline void paintProgressCell(QPainter *painter, const QStyleOptionViewItem &option,
                               int percent, const QString &text, const QPalette *barPalette = nullptr)
 {
 #if defined(USE_PROGRESS_BARS)
-#if defined(Q_OS_MAC)
-    paintMacProgressBar(painter, option, percent, text, barPalette);
-#else
-    QStyleOptionProgressBar bar;
-    bar.state = QStyle::State_Enabled;
-    bar.direction = QApplication::layoutDirection();
-    bar.rect = option.rect;
-    bar.fontMetrics = QApplication::fontMetrics();
-    bar.minimum = 0;
-    bar.maximum = 100;
-    bar.textAlignment = Qt::AlignCenter;
-    bar.textVisible = true;
-    bar.text = text;
-    bar.progress = qBound(0, percent, 100);
-    bar.palette = barPalette ? *barPalette : option.palette;
-
-    if (option.state & QStyle::State_Selected)
-        painter->fillRect(option.rect, option.palette.highlight());
-
-    QApplication::style()->drawControl(QStyle::CE_ProgressBar, &bar, painter);
-#endif
+    paintStyledProgressBar(painter, option, percent, text, barPalette);
 #else
     QStyleOptionViewItem plain = option;
     plain.text = text;
