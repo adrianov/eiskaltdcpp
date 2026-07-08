@@ -62,5 +62,19 @@ bool prefersRevConnect(const OnlineUser& ou) {
     return isRevConnectFamily(clientTag(ou.getIdentity()));
 }
 
+bool shouldGiveUp(int errors) {
+    return errors >= MAX_CONNECT_ERRORS;
+}
+
+int connectBackoffMs(int errors) {
+    if(errors <= 0)
+        return 60 * 1000;
+    return 60 * 1000 * min(errors, MAX_CONNECT_ERRORS);
+}
+
+bool shouldLogTimeout(int errors) {
+    return errors <= 1 || errors == 3 || errors >= MAX_CONNECT_ERRORS || (errors % 2) == 0;
+}
+
 } // namespace PeerConnectFilter
 } // namespace dcpp

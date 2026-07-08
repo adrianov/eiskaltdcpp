@@ -63,6 +63,7 @@ public:
     GETSET(int, secureMode, SecureMode);
 
     const HintedUser& getUser() const { return user; }
+    void setHubHint(const string& hub) { user.hint = hub; }
 
 private:
     HintedUser user;
@@ -72,25 +73,28 @@ class ExpectedMap {
 public:
     void add(const string& aNick, const string& aMyNick, const string& aHubUrl) {
         Lock l(cs);
-        expectedConnections.emplace(aNick, make_pair(aMyNick, aHubUrl));
+        expectedConnections[aNick].emplace_back(aMyNick, aHubUrl);
     }
 
     StringPair remove(const string& aNick) {
         Lock l(cs);
         auto i = expectedConnections.find(aNick);
 
-        if(i == expectedConnections.end())
+        if(i == expectedConnections.end() || i->second.empty())
             return make_pair(Util::emptyString, Util::emptyString);
 
-        StringPair tmp = i->second;
-        expectedConnections.erase(i);
+        StringPair tmp = i->second.front();
+        i->second.erase(i->second.begin());
+        if(i->second.empty())
+            expectedConnections.erase(i);
 
         return tmp;
     }
 
 private:
-    /** Nick -> myNick, hubUrl for expected NMDC incoming connections */
-    typedef unordered_map<string, StringPair> ExpectMap;
+    /** Nick -> pending (myNick, hubUrl) for expected NMDC incoming connections */
+    typedef vector<StringPair> ExpectList;
+    typedef unordered_map<string, ExpectList> ExpectMap;
     ExpectMap expectedConnections;
 
     CriticalSection cs;
@@ -194,6 +198,7 @@ private:
     void accept(const Socket& sock, bool secure) noexcept;
 
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
+    void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
 

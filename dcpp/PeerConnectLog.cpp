@@ -13,6 +13,7 @@
 #include "ClientManager.h"
 #include "LogManager.h"
 #include "OnlineUser.h"
+#include "PeerConnectFilter.h"
 #include "format.h"
 
 namespace dcpp {
@@ -91,7 +92,13 @@ void queueStart(const HintedUser& user) {
 }
 
 void queueTimeout(const HintedUser& user, int errors) {
+    if(!PeerConnectFilter::shouldLogTimeout(errors))
+        return;
     logMsg(withProfile(user, str(F_("Connection timeout for %1% (attempt %2%)") % userName(user) % errors)));
+}
+
+void queueGiveUp(const HintedUser& user, int errors) {
+    logMsg(withProfile(user, str(F_("Giving up connection to %1% after %2% failed attempts") % userName(user) % errors)));
 }
 
 void connected(const HintedUser& user, bool download) {

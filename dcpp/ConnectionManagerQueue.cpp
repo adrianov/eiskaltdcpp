@@ -13,7 +13,9 @@
 
 #include "ClientManager.h"
 #include "DownloadManager.h"
+#include "FavoriteManager.h"
 #include "MappingManager.h"
+#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
 
@@ -115,8 +117,14 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     continue;
                 }
 
+                if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                    PeerConnectLog::queueGiveUp(cqi->getUser(), cqi->getErrors());
+                    cqi->setErrors(-1);
+                    continue;
+                }
+
                 if(cqi->getLastAttempt() == 0 || (!attemptDone &&
-                                                  cqi->getLastAttempt() + 60 * 1000 * max(1, cqi->getErrors()) < aTick))
+                                                  cqi->getLastAttempt() + PeerConnectFilter::connectBackoffMs(cqi->getErrors()) < aTick))
                 {
                     if(!upnpReady)
                         continue;
@@ -136,6 +144,15 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                         if(startDown) {
                             cqi->setState(ConnectionQueueItem::CONNECTING);
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
+
+                            if(cqi->getConnectAttempts() >= 3) {
+                                OnlineUser* ou = ClientManager::getInstance()->findBestOnlineUser(
+                                        cqi->getUser().user->getCID(), cqi->getUser().hint,
+                                        FavoriteManager::getInstance()->isPrivate(cqi->getUser().hint));
+                                if(ou && ou->getClient().getHubUrl() != cqi->getUser().hint)
+                                    cqi->setHubHint(ou->getClient().getHubUrl());
+                            }
+
                             const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(cqi->getUser(), cqi->getConnectAttempts());
                             PeerConnectLog::queueStart(cqi->getUser());
                             ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect, cqi->getSecureMode());
@@ -150,9 +167,15 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     }
                 } else if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50 * 1000 < aTick) {
                     cqi->setErrors(cqi->getErrors() + 1);
-                    PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-                    fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
-                    cqi->setState(ConnectionQueueItem::WAITING);
+                    if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                        PeerConnectLog::queueGiveUp(cqi->getUser(), cqi->getErrors());
+                        cqi->setErrors(-1);
+                        cqi->setState(ConnectionQueueItem::WAITING);
+                    } else {
+                        PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
+                        fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
+                        cqi->setState(ConnectionQueueItem::WAITING);
+                    }
                 }
             }
         }

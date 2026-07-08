@@ -52,10 +52,10 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
     {
         Lock l(cs);
         for(auto& cqi: downloads) {
-            cqi->setErrors(0);
             if((cqi->getState() == ConnectionQueueItem::CONNECTING || cqi->getState() == ConnectionQueueItem::WAITING) &&
                     cqi->getUser().user->getCID() == cid)
             {
+                cqi->setErrors(0);
                 aSource->setUser(cqi->getUser());
                 aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
                 break;

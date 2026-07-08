@@ -14,6 +14,7 @@
 #include "Encoder.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectFilter.h"
 #include "PeerConnectTls.h"
 #include "QueueManager.h"
 #include "UserConnection.h"
@@ -53,6 +54,31 @@ bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
     return true;
 }
 
+namespace {
+
+bool isPostHandshakeClose(UserConnection::States s) {
+    return s == UserConnection::STATE_SND || s == UserConnection::STATE_IDLE ||
+           s == UserConnection::STATE_GET || s == UserConnection::STATE_SEND;
+}
+
+} // namespace
+
+void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
+    const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
+
+    if(!slotWait) {
+        dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
+        if(!protocolError && PeerConnectFilter::shouldGiveUp(dlCqi->getErrors())) {
+            PeerConnectLog::queueGiveUp(dlCqi->getUser(), dlCqi->getErrors());
+            dlCqi->setErrors(-1);
+        }
+    }
+
+    dlCqi->setState(ConnectionQueueItem::WAITING);
+    dlCqi->setLastAttempt(slotWait ? GET_TICK() - 120 * 1000 : GET_TICK());
+    fire(ConnectionManagerListener::Failed(), dlCqi, aError);
+}
+
 void ConnectionManager::failed(UserConnection* aSource, const string& aError, bool protocolError) {
     Lock l(cs);
 
@@ -63,7 +89,9 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
             dlCqi = *i;
     }
 
-    if(dlCqi && aSource->getUser())
+    const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
+
+    if(dlCqi && aSource->getUser() && !slotWait)
         PeerConnectLog::connectionFail(aSource, aError, protocolError);
 
     if(dlCqi)
@@ -71,20 +99,14 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 
     if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
         if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {
-            dlCqi->setState(ConnectionQueueItem::WAITING);
-            dlCqi->setLastAttempt(GET_TICK());
-            dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
-            fire(ConnectionManagerListener::Failed(), dlCqi, aError);
+            failDownloadQueue(dlCqi, aSource, aError, protocolError);
         } else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
             auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
             dcassert(i != uploads.end());
             putCQI(*i);
         }
     } else if(dlCqi && aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
-        dlCqi->setState(ConnectionQueueItem::WAITING);
-        dlCqi->setLastAttempt(GET_TICK());
-        dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
-        fire(ConnectionManagerListener::Failed(), dlCqi, aError);
+        failDownloadQueue(dlCqi, aSource, aError, protocolError);
     }
     putConnection(aSource);
 }

@@ -23,6 +23,12 @@ bool isViablePeer(const OnlineUser& ou);
 /** Passive StrgDC++/Flylink-style clients expect $RevConnectToMe first. */
 bool prefersRevConnect(const OnlineUser& ou);
 
+constexpr int MAX_CONNECT_ERRORS = 6;
+
+bool shouldGiveUp(int errors);
+int connectBackoffMs(int errors);
+bool shouldLogTimeout(int errors);
+
 } // namespace PeerConnectFilter
 
 } // namespace dcpp
