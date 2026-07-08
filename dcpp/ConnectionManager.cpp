@@ -76,6 +76,7 @@ ConnectionQueueItem::ConnectionQueueItem(const HintedUser &aUser, bool aDownload
     lastAttempt(0),
     errors(0),
     connectAttempts(0),
+    slotWaits(0),
     state(WAITING),
     download(aDownload),
     secureMode(PeerConnectTls::AUTO),
