@@ -104,12 +104,16 @@ void ConnectionManager::on(UserConnectionListener::CLock, UserConnection* aSourc
         aSource->supports(defFeatures);
     }
 
+    aSource->setPeerDirection(Util::emptyString);
+    aSource->setPeerDirectionNum(-1);
     aSource->setState(UserConnection::STATE_DIRECTION);
     aSource->direction(aSource->getDirectionString(), aSource->getNumber());
     aSource->key(CryptoManager::getInstance()->makeKey(aLock));
 }
 
 void ConnectionManager::on(UserConnectionListener::Direction, UserConnection* aSource, const string& dir, const string& num) noexcept {
+    aSource->setPeerDirection(dir);
+    aSource->setPeerDirectionNum(Util::toInt(num));
     if(aSource->getState() != UserConnection::STATE_DIRECTION) {
         dcdebug("CM::onDirection %p received direction twice, ignoring\n", (void*)aSource);
         return;

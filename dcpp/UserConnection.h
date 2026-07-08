@@ -117,7 +117,7 @@ public:
 
     };
 
-    short getNumber() { return (short)((((size_t)this)>>2) & 0x7fff); }
+    short getNumber() const { return (short)((((size_t)this)>>2) & 0x7fff); }
     BufferedSocket const* getSocket() { return socket; }
 
     // NMDC stuff
@@ -165,7 +165,7 @@ public:
     void disconnect(bool graceless = false) { if(socket) socket->disconnect(graceless); }
     void transmitFile(InputStream* f) { socket->transmitFile(f); }
 
-    const string& getDirectionString() {
+    const string& getDirectionString() const {
         dcassert(isSet(FLAG_UPLOAD) ^ isSet(FLAG_DOWNLOAD));
         return isSet(FLAG_UPLOAD) ? UPLOAD : DOWNLOAD;
     }
@@ -207,6 +207,8 @@ public:
     GETSET(States, state, State);
     GETSET(uint64_t, lastActivity, LastActivity);
     GETSET(double, speed, Speed);
+    GETSET(string, peerDirection, PeerDirection);
+    GETSET(int, peerDirectionNum, PeerDirectionNum);
 
 private:
     int64_t chunkSize;

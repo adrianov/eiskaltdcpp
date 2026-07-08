@@ -66,6 +66,17 @@ string linkInfo(const UserConnection* uc) {
     return ret;
 }
 
+string directionDetail(const UserConnection* uc) {
+    if(!uc || uc->getState() != UserConnection::STATE_DIRECTION)
+        return Util::emptyString;
+    string ret = str(F_("sent $Direction %1% %2%") % uc->getDirectionString() % uc->getNumber());
+    if(!uc->getPeerDirection().empty())
+        ret += str(F_(", peer $Direction %1% %2%") % uc->getPeerDirection() % uc->getPeerDirectionNum());
+    else
+        ret += _(", no peer $Direction received");
+    return ret;
+}
+
 string failHint(UserConnection::States phase, const string& err, bool protocolError, bool secure) {
     if(protocolError)
         return _("unexpected or invalid protocol message");
@@ -74,6 +85,12 @@ string failHint(UserConnection::States phase, const string& err, bool protocolEr
     const bool closed = errLower.find("closed") != string::npos;
     const bool disconnected = errLower.find("disconnect") != string::npos;
     const bool ssl = err.find("SSL") != string::npos;
+
+    if(phase == UserConnection::STATE_DIRECTION) {
+        if(ssl)
+            return _("TLS error during $Direction; try plain/TLS port or trust settings");
+        return _("peer closed during $Direction (conflicting roles, multi-hub race, or remote client gave up)");
+    }
 
     if(ssl)
         return _("TLS error; try the other port (plain vs TLS) or check TLS settings");
@@ -104,6 +121,9 @@ void connectionFail(const UserConnection* uc, const string& err, bool protocolEr
     const string what = isPostHandshake(phase) ?
             string(_("connection lost")) : string(_("handshake failed"));
     string msg = str(F_("%1% during %2% (%3%): %4%") % what % phaseName(phase) % linkInfo(uc) % err);
+    const string dirDetail = directionDetail(uc);
+    if(!dirDetail.empty())
+        msg += " [" + dirDetail + "]";
     const string hint = failHint(phase, err, protocolError, uc->isSecure());
     if(!hint.empty())
         msg += str(F_(" — %1%") % hint);
@@ -115,6 +135,9 @@ void connectionReject(const UserConnection* uc, const string& reason) {
         return;
 
     string msg = reason;
+    const string dirDetail = directionDetail(uc);
+    if(!dirDetail.empty())
+        msg += " [" + dirDetail + "]";
     if(!uc->getRemoteIp().empty())
         msg += " (" + linkInfo(uc) + ")";
 
