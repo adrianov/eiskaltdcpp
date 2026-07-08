@@ -19,6 +19,23 @@
 
 namespace dcpp {
 
+namespace {
+
+void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other) {
+    if(!keep || !other || keep == other)
+        return;
+    if(other->getErrors() > keep->getErrors())
+        keep->setErrors(other->getErrors());
+    if(other->getLastAttempt() > keep->getLastAttempt())
+        keep->setLastAttempt(other->getLastAttempt());
+    if(other->getSlotWaits() > keep->getSlotWaits())
+        keep->setSlotWaits(other->getSlotWaits());
+    if(other->getConnectAttempts() > keep->getConnectAttempts())
+        keep->setConnectAttempts(other->getConnectAttempts());
+}
+
+} // namespace
+
 ConnectionQueueItem* ConnectionManager::findDownloadCqi(const UserPtr& user) {
     auto i = find(downloads.begin(), downloads.end(), user);
     if(i != downloads.end())
@@ -66,27 +83,41 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     {
         Lock l(cs);
 
-        const CID& cid = aUser.user->getCID();
         StringList nicks = ClientManager::getInstance()->getNicks(aUser);
-        if(!nicks.empty()) {
-            std::unordered_set<CID> sameNick;
+        std::unordered_set<CID> sameNick;
+        if(!nicks.empty())
             ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
-            ConnectionQueueItem::List stale;
-            for(auto& cqi : downloads) {
-                if(cqi->getUser().user == aUser.user)
-                    continue;
-                if(cqi->getUser().user->getCID() == cid)
-                    continue;
-                if(sameNick.count(cqi->getUser().user->getCID()))
-                    stale.push_back(cqi);
+
+        ConnectionQueueItem* cqi = findDownloadCqi(aUser.user);
+        if(!cqi && !sameNick.empty()) {
+            for(auto& item : downloads) {
+                if(sameNick.count(item->getUser().user->getCID())) {
+                    cqi = item;
+                    break;
+                }
             }
-            for(auto& cqi : stale)
-                putCQI(cqi);
         }
 
-        auto* cqi = findDownloadCqi(aUser.user);
+        if(!sameNick.empty()) {
+            ConnectionQueueItem::List stale;
+            for(auto& item : downloads) {
+                if(item == cqi)
+                    continue;
+                if(item->getUser().user == aUser.user)
+                    continue;
+                if(item->getUser().user->getCID() == aUser.user->getCID())
+                    continue;
+                if(sameNick.count(item->getUser().user->getCID()))
+                    stale.push_back(item);
+            }
+            for(auto& item : stale) {
+                mergeQueueState(cqi, item);
+                putCQI(item);
+            }
+        }
+
         if(cqi) {
-            cqi->setHubHint(aUser.hint);
+            cqi->setUser(aUser);
             DownloadManager::getInstance()->checkIdle(aUser.user);
         } else {
             getCQI(aUser, true);

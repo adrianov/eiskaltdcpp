@@ -56,6 +56,7 @@ public:
 
     const HintedUser& getUser() const { return user; }
     void setHubHint(const string& hub) { user.hint = hub; }
+    void setUser(const HintedUser& aUser) { user = aUser; }
 
 private:
     HintedUser user;
