@@ -90,6 +90,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersMenu.cpp
     src/HubFrameMenu.cpp
     src/HubFrameMenuExec.cpp
+    src/TransferDisplay.cpp
     src/TransferViewDelegate.cpp
     src/TransferViewItem.cpp
     src/TransferViewMenu.cpp

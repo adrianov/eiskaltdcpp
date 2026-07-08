@@ -10,32 +10,22 @@
 #pragma once
 
 #include <cstdint>
-#include <cmath>
 
 namespace TransferDisplay {
 
 constexpr int SpeedSigFigs = 2;
-constexpr int64_t TimeLeftStep = 30;
+constexpr int64_t TimeLeftMinBump = 5 * 60;
 
-inline double roundSpeed(double speed)
-{
-    if (speed <= 0.0)
-        return speed;
-    const double decade = std::floor(std::log10(speed));
-    const double scale = std::pow(10.0, decade - (SpeedSigFigs - 1));
-    return std::round(speed / scale) * scale;
-}
+double roundSpeed(double speed);
 
 inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
 {
-    if (actual < 0)
-        return actual;
-    if (displayed < 0)
+    if (actual < 0 || displayed < 0)
         return actual;
     if (actual <= displayed)
         return actual;
-    if (actual > displayed + TimeLeftStep)
-        return displayed + TimeLeftStep;
+    if (!displayed || actual >= displayed + TimeLeftMinBump || actual * 2 >= displayed * 3)
+        return actual;
     return displayed;
 }
 
