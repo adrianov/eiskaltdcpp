@@ -223,8 +223,11 @@ void WulforSettings::load(){
         }
     }
 
-    if (settings.value(WI_STATUSBAR_HISTORY_SZ).toInt() == 5)
-        settings.setValue(WI_STATUSBAR_HISTORY_SZ, WI_STATUSBAR_HISTORY_DEFAULT);
+    if (!settings.value("app/statusbar-history-migrated", false).toBool()) {
+        if (settings.value(WI_STATUSBAR_HISTORY_SZ).toInt() == 5)
+            settings.setValue(WI_STATUSBAR_HISTORY_SZ, WI_STATUSBAR_HISTORY_DEFAULT);
+        settings.setValue("app/statusbar-history-migrated", true);
+    }
 }
 
 void WulforSettings::loadOldConfig(){
