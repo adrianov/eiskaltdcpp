@@ -104,9 +104,9 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
                                 return data(createIndex(0, index.column(), reinterpret_cast<void*>(item->childItems.first())), role);
 
             if (index.column() == COLUMN_TRANSFER_SPEED)
-                return WulforUtil::formatBytes(item->data(COLUMN_TRANSFER_SPEED).toDouble()) + tr("/s");
+                return WulforUtil::formatDisplayBytes(static_cast<int64_t>(item->data(COLUMN_TRANSFER_SPEED).toDouble())) + tr("/s");
             else if (index.column() == COLUMN_TRANSFER_SIZE)
-                return WulforUtil::formatBytes(item->data(COLUMN_TRANSFER_SIZE).toLongLong());
+                return WulforUtil::formatDisplayBytes(item->data(COLUMN_TRANSFER_SIZE).toLongLong());
             else if (index.column() == COLUMN_TRANSFER_TLEFT){
                 int time = item->data(COLUMN_TRANSFER_TLEFT).toInt();
 
@@ -432,43 +432,6 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     }
 }
 
-void TransferViewModel::removeTransfer(const VarMap &params){
-    if (params.empty() || vstr(params["CID"]).isEmpty())
-        return;
-
-    auto i = transfer_hash.find(vstr(params["CID"]));
-
-    while (i != transfer_hash.end() && i.key() == vstr(params["CID"])){
-        if (i.value()->download == vbol(params["DOWN"])){
-            TransferViewItem *item = i.value();
-            TransferViewItem *p = item->parent();
-
-            beginRemoveRows(createIndexForItem(p), item->row(), item->row());
-            {
-                p->childItems.removeAt(item->row());
-                delete item;
-            }
-            endRemoveRows();
-
-            transfer_hash.erase(i);
-
-            if (p != rootItem && !p->childCount()){
-                beginRemoveRows(QModelIndex(), p->row(), p->row());
-                {
-                    rootItem->childItems.removeAt(p->row());
-
-                    delete p;
-                }
-                endRemoveRows();
-            }
-
-            return;
-        }
-
-        ++i;
-    }
-}
-
 bool TransferViewModel::findTransfer(const QString &cid, bool download, TransferViewItem **item){
     if (!item)
         return false;
@@ -599,7 +562,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     else if (!p->finished)
         p->updateColumn(COLUMN_TRANSFER_STATS, tr("Waiting for slot "));
 
-    QString stat = vstr(p->data(COLUMN_TRANSFER_STATS)) + WulforUtil::formatBytes(p->dpos)
+    QString stat = vstr(p->data(COLUMN_TRANSFER_STATS)) + WulforUtil::formatDisplayBytes(p->dpos)
                    + QString(" (%1%)").arg(progress, 0, 'f', 1);
 
     QString hubs_str;
@@ -639,31 +602,6 @@ void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){
 
         emit layoutChanged();
     }
-}
-
-void TransferViewModel::finishParent(const VarMap &params){
-    if (params.empty() || !params.contains("TARGET"))
-        return;
-
-    QString target = vstr(params["TARGET"]);
-    TransferViewItem *p;
-
-    if (!findParent(target, &p))
-        return;
-
-    p->updateColumn(COLUMN_TRANSFER_STATS, tr("Finished"));
-    p->percent = 100.0;
-    p->finished = true;
-    p->updateColumn(COLUMN_TRANSFER_SPEED, qlonglong(0));
-
-    for (const auto &i : p->childItems){
-        i->updateColumn(COLUMN_TRANSFER_STATS, tr("Finished"));
-        i->percent = 100.0;
-        i->finished = true;
-        i->updateColumn(COLUMN_TRANSFER_SPEED, qlonglong(0));
-    }
-
-    emit layoutChanged();
 }
 
 int TransferViewModel::getSortColumn() const {

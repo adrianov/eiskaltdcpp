@@ -12,7 +12,7 @@
 
 #include <QCursor>
 
-TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled):
+TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool removeEnabled):
         menu(new QMenu(nullptr)), selectedColumn(0)
 {
     WulforUtil *WU = WulforUtil::getInstance();
@@ -61,6 +61,10 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled):
     QAction *rem_queue  = new QAction(TransferView::tr("Remove Source"), menu);
     rem_queue->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
 
+    QAction *remove     = new QAction(TransferView::tr("Remove"), menu);
+    remove->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
+    remove->setEnabled(removeEnabled);
+
     QAction *sep3       = new QAction(menu);
     sep3->setSeparator(true);
 
@@ -82,6 +86,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled):
     actions.insert(add_to_fav, AddToFav);
     actions.insert(grant, GrantExtraSlot);
     actions.insert(rem_queue, RemoveFromQueue);
+    actions.insert(remove, Remove);
     actions.insert(force, Force);
     actions.insert(close, Close);
     actions.insert(search, SearchAlternates);
@@ -98,6 +103,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled):
     menu->addMenu(copy_column);
     menu->addActions(QList<QAction*>() << sep1
                                        << rem_queue
+                                       << remove
                                        << sep3
                                        << force
                                        << close

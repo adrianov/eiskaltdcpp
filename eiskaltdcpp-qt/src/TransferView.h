@@ -59,13 +59,14 @@ public:
         GrantExtraSlot,
         Copy,
         RemoveFromQueue,
+        Remove,
         Force,
         Close,
         showTransferredFieldsOnly,
         None
     };
 
-    Menu(bool, bool openEnabled = true);
+    Menu(bool, bool openEnabled = true, bool removeEnabled = false);
     virtual ~Menu();
 
     Menu(const Menu&) = delete;
@@ -125,9 +126,11 @@ protected:
     void addFavorite(const QString&);
     void grantSlot(const QString&, const QString&);
     void removeFromQueue(const QString&);
+    void removeTransfer(const QString&);
     void forceAttempt(const QString&);
     void closeConection(const QString &, bool);
     void searchAlternates(const QString &tth);
+    void copyMenuSelection(const QList<TransferViewItem*>&, int col);
     void onFailed(dcpp::Download* dl, const std::string& reason);
     // DownloadManager
     virtual void on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept;

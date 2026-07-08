@@ -122,6 +122,8 @@ public Q_SLOTS:
     /** */
     void removeTransfer(const VarMap&);
     /** */
+    void removeQueueTarget(const VarMap&);
+    /** */
     void updateTransferPos(const VarMap&, qint64);
     /** */
     void finishParent(const VarMap&);

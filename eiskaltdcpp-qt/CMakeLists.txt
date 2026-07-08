@@ -91,11 +91,18 @@ set(QT_EXTRA_SOURCES
     src/HubFrameMenu.cpp
     src/HubFrameMenuExec.cpp
     src/TransferDisplay.cpp
+    src/TransferViewActions.cpp
+    src/TransferViewConnectionListeners.cpp
     src/TransferViewDelegate.cpp
+    src/TransferViewDownloadListeners.cpp
     src/TransferViewItem.cpp
     src/TransferViewMenu.cpp
     src/TransferViewMenuExec.cpp
+    src/TransferViewModelQueue.cpp
+    src/TransferViewParams.cpp
     src/TransferViewPath.cpp
+    src/TransferViewMetrics.cpp
+    src/TransferViewUploadListeners.cpp
 )
 foreach(_src ${QT_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})

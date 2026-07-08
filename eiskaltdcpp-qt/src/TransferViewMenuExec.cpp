@@ -14,12 +14,8 @@
 #include "WulforUtil.h"
 
 #include "dcpp/CID.h"
-#include "dcpp/HashManager.h"
 
-#include <QClipboard>
 #include <QDesktopServices>
-#include <QDir>
-#include <QFileInfo>
 #include <QItemSelectionModel>
 
 void TransferView::slotContextMenu(const QPoint &){
@@ -46,15 +42,18 @@ void TransferView::slotContextMenu(const QPoint &){
         return;
 
     bool openEnabled = false;
+    bool removeEnabled = false;
     for (const auto &i : items) {
-        if (!TransferViewPath::resolveTransferPath(i).isEmpty()) {
+        if (!openEnabled && !TransferViewPath::resolveTransferPath(i).isEmpty())
             openEnabled = true;
+        if (!removeEnabled && i->download && !i->target.isEmpty())
+            removeEnabled = true;
+        if (openEnabled && removeEnabled)
             break;
-        }
     }
 
     Menu::Action act;
-    Menu m(model->getShowTranferedFilesOnlyState(), openEnabled);
+    Menu m(model->getShowTranferedFilesOnlyState(), openEnabled, removeEnabled);
 
     act = m.exec();
 
@@ -134,41 +133,25 @@ void TransferView::slotContextMenu(const QPoint &){
     }
     case Menu::Copy:
     {
-        int col = m.copyColumn();
-        QString data = "";
-
-        if (col <= (model->columnCount()-1)){
-            for (const auto &i : items)
-                data += i->data(col).toString() + "\n";
-        }
-        else {
-            QString tth_str = "";
-            for (const auto &i : items){
-                QFileInfo fi(i->target);
-                tth_str = getTTHFromItem(i);
-
-                if (tth_str.isEmpty()) {
-                    QString str = QDir::toNativeSeparators(fi.canonicalFilePath() ); // try to follow symlinks
-                    const TTHValue *tth = HashManager::getInstance()->getFileTTHif(str.toStdString());
-
-                    if (tth)
-                        tth_str = _q(tth->toBase32());
-                }
-
-                if (!tth_str.isEmpty())
-                    data += WulforUtil::getInstance()->makeMagnet(fi.fileName(), fi.size(), tth_str) + "\n";
-            }
-        }
-
-        if (!data.isEmpty())
-            qApp->clipboard()->setText(data, QClipboard::Clipboard);
-
+        copyMenuSelection(items, m.copyColumn());
         break;
     }
     case Menu::RemoveFromQueue:
     {
         for (const auto &i : items)
             removeFromQueue(i->cid);
+
+        break;
+    }
+    case Menu::Remove:
+    {
+        QStringList targets;
+        for (const auto &i : items) {
+            if (i->download && !i->target.isEmpty() && !targets.contains(i->target))
+                targets.append(i->target);
+        }
+        for (const auto &target : targets)
+            removeTransfer(target);
 
         break;
     }
