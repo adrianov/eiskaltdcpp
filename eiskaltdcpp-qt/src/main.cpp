@@ -158,10 +158,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
-    installHandlers();
-#endif
-
 #if defined(FORCE_XDG) && !defined(Q_OS_WIN)
     migrateConfig();
 #endif
@@ -175,6 +171,10 @@ int main(int argc, char *argv[])
             dcpp::LogManager::getInstance()->message(prev);
         dcpp::markSessionRunning();
     }
+
+#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
+    installHandlers();
+#endif
 
     HashManager::getInstance()->setPriority(Thread::IDLE);
 #if QT_VERSION < 0x050000

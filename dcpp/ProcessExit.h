@@ -11,6 +11,7 @@ namespace dcpp {
 #ifndef _WIN32
 void installSigpipeIgnore();
 void blockSigpipeInThread();
+void prepareFatalSignalPath();
 void noteFatalSignal(int sig) noexcept;
 #endif
 

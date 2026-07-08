@@ -47,7 +47,6 @@ void writeState(const char* text) {
 }
 
 void writeStateFd(const char* text, size_t len) {
-    cacheFatalStatePath();
     if(!fatalStatePath[0])
         return;
     const int fd = ::open(fatalStatePath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -96,6 +95,10 @@ void blockSigpipeInThread() {
     pthread_sigmask(SIG_BLOCK, &set, nullptr);
 }
 
+void prepareFatalSignalPath() {
+    cacheFatalStatePath();
+}
+
 void noteFatalSignal(int sig) noexcept {
     char buf[32];
     const int n = snprintf(buf, sizeof(buf), "signal:%d", sig);
@@ -107,7 +110,7 @@ void noteFatalSignal(int sig) noexcept {
 
 void markSessionRunning() {
 #ifndef _WIN32
-    cacheFatalStatePath();
+    prepareFatalSignalPath();
 #endif
     writeState("running");
 }
