@@ -19,6 +19,9 @@
 #include "Thread.h"
 
 #include "format.h"
+#ifndef _WIN32
+#include "ProcessExit.h"
+#endif
 
 namespace dcpp {
 
@@ -40,3 +43,12 @@ void Thread::start() {
 #endif
 
 } // namespace dcpp
+
+#ifndef _WIN32
+void* dcpp::Thread::starter(void* p) {
+    blockSigpipeInThread();
+    Thread* t = (Thread*)p;
+    t->run();
+    return nullptr;
+}
+#endif

@@ -36,6 +36,8 @@ using namespace std;
 #include "dcpp/HashManager.h"
 #include "dcpp/Thread.h"
 #include "dcpp/Singleton.h"
+#include "dcpp/LogManager.h"
+#include "dcpp/ProcessExit.h"
 
 #include "WulforUtil.h"
 #include "WulforSettings.h"
@@ -94,7 +96,9 @@ void parseCmdLine(const QStringList &);
 #ifdef ENABLE_STACKTRACE
 #include "extra/stacktrace.h"
 #endif // ENABLE_STACKTRACE
+#endif
 
+#if !defined (Q_OS_HAIKU)
 void installHandlers();
 #endif
 
@@ -154,7 +158,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU) && defined (__GLIBC__)
+#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
     installHandlers();
 #endif
 
@@ -164,6 +168,13 @@ int main(int argc, char *argv[])
 
     dcpp::startup(callBack, nullptr);
     dcpp::TimerManager::getInstance()->start();
+
+    {
+        const string prev = dcpp::checkPreviousSession();
+        if(!prev.empty())
+            dcpp::LogManager::getInstance()->message(prev);
+        dcpp::markSessionRunning();
+    }
 
     HashManager::getInstance()->setPriority(Thread::IDLE);
 #if QT_VERSION < 0x050000
@@ -246,6 +257,8 @@ int main(int argc, char *argv[])
     ret = app.exec();
 
     std::cout << QObject::tr("Shutting down libeiskaltdcpp...").toStdString() << std::endl;
+    dcpp::LogManager::getInstance()->message(_("Application shutting down normally"));
+    dcpp::markSessionNormal();
 
     WulforSettings::getInstance()->save();
 
@@ -298,6 +311,7 @@ void parseCmdLine(const QStringList &args){
 #if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
 
 void catchSIG(int sigNum) {
+    dcpp::noteFatalSignal(sigNum);
     psignal(sigNum, "Catching signal ");
 
 #ifdef ENABLE_STACKTRACE
@@ -329,18 +343,7 @@ void catchSignals() {
 }
 
 void installHandlers(){
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = SIG_IGN;
-
-    if (sigaction(SIGPIPE, &sa, nullptr) == -1)
-        printf("Cannot handle SIGPIPE\n");
-    else {
-        sigset_t set;
-        sigemptyset (&set);
-        sigaddset (&set, SIGPIPE);
-        pthread_sigmask(SIG_BLOCK, &set, nullptr);
-    }
+    dcpp::installSigpipeIgnore();
 
     catchSignals<SIGSEGV, SIGABRT, SIGBUS, SIGTERM>();
 

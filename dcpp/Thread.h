@@ -114,11 +114,7 @@ protected:
     }
 #else
     pthread_t threadHandle;
-    static void* starter(void* p) {
-        Thread* t = (Thread*)p;
-        t->run();
-        return NULL;
-    }
+    static void* starter(void* p);
 #endif
 };
 
