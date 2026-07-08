@@ -24,16 +24,6 @@ struct Compare {
         std::stable_sort(items.begin(), items.end(), attrs[column]);
     }
 
-    void static insertSorted(unsigned column, QList<DownloadQueueItem*>& items, DownloadQueueItem* item) {
-        if (column > COLUMN_DOWNLOADQUEUE_TTH){
-            items.push_back(item);
-            return;
-        }
-
-        auto it = std::lower_bound(items.begin(), items.end(), item, attrs[column]);
-        items.insert(it, item);
-    }
-
     private:
         template <int i>
         bool static AttrCmp(const DownloadQueueItem * l, const DownloadQueueItem * r) {
