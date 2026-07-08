@@ -150,7 +150,7 @@ void DownloadManager::fileNotAvailable(UserConnection* aSource) {
     removeDownload(d);
     fire(DownloadManagerListener::Failed(), d, str(F_("%1%: File not available") % Util::addBrackets(d->getTargetFileName())));
 
-    QueueManager::getInstance()->removeSource(d->getPath(), aSource->getUser(), d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE, false);
+    QueueManager::getInstance()->removeSource(d->getPath(), aSource->getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE, false);
 
     QueueManager::getInstance()->putDownload(d, false);
 
