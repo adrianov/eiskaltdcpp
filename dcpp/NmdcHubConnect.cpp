@@ -114,8 +114,10 @@ void NmdcHub::onRevConnectToMe(const string& param) {
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
     } else if(!u->getUser()->isSet(User::PASSIVE)) {
-        PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, asking active peer to connect");
+        PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — asking them to connect");
+        u->getUser()->setFlag(User::PASSIVE);
         revConnectToMe(*u);
+        updated(*u);
     } else {
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — no connection possible");
     }
