@@ -223,6 +223,11 @@ private:
 
         if (state.isEmpty())
             treeView->sortByColumn(COLUMN_FINISHED_TIME, Qt::AscendingOrder);
+        else {
+            const int sortCol = treeView->header()->sortIndicatorSection();
+            if (sortCol >= 0)
+                treeView->sortByColumn(sortCol, treeView->header()->sortIndicatorOrder());
+        }
     }
 
     void slotClear() override {

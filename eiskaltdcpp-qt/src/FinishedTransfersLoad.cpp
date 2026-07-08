@@ -24,6 +24,8 @@ void FinishedTransfers<isUpload>::loadList()
         const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(isUpload);
         const FinishedManager::MapByUser &user = FinishedManager::getInstance()->getMapByUser(isUpload);
 
+        model->beginBulkLoad();
+
         for (auto it = list.begin(); it != list.end(); ++it) {
             if (!isUpload && isFileListPath(it->first)) {
                 removeFileLists.push_back(it->first);
@@ -47,6 +49,8 @@ void FinishedTransfers<isUpload>::loadList()
 
             model->addUser(params);
         }
+
+        model->endBulkLoad();
     }
 
     for (const auto &file : removeFileLists) {
@@ -80,6 +84,8 @@ void FinishedTransfers<isUpload>::loadListFromDB()
     q.exec("SELECT * FROM files LIMIT 0, 500;"); // temporary limitation
 
     VarMap params;
+
+    model->beginBulkLoad();
 
     while (q.next()){
         int i = 0;
@@ -127,6 +133,8 @@ void FinishedTransfers<isUpload>::loadListFromDB()
 
         emit coreAddedUser(params);
     }
+
+    model->endBulkLoad();
 
     db.close();
 #endif

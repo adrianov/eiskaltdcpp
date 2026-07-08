@@ -62,7 +62,7 @@ bool isDownloadFileList(const string& path) {
 
 FinishedTransfersModel::FinishedTransfersModel(QObject *parent):
         QAbstractItemModel(parent), sortColumn(COLUMN_FINISHED_TIME), sortOrder(Qt::AscendingOrder),
-        hideFileLists(false), requireFullFile(false)
+        hideFileLists(false), requireFullFile(false), bulkLoadDepth(0)
 {
     QList<QVariant> userData;
     userData << tr("User")<< tr("Files") << tr("Time") << tr("Transferred")
@@ -332,7 +332,10 @@ void FinishedTransfersModel::addFile(const QVariantMap &params){
             item->updateColumn(i, params[file_header_table[i]]);
     }
 
-    emit dataChanged(createIndex(item->row(), COLUMN_FINISHED_NAME, item), createIndex(item->row(), COLUMN_FINISHED_FULL, item));
+    if (bulkLoadDepth == 0 && rootItem == fileItem)
+        sort();
+    else
+        emit dataChanged(createIndex(item->row(), COLUMN_FINISHED_NAME, item), createIndex(item->row(), COLUMN_FINISHED_FULL, item));
 }
 
 void FinishedTransfersModel::addUser(const QVariantMap &params){
@@ -354,7 +357,10 @@ void FinishedTransfersModel::addUser(const QVariantMap &params){
             item->updateColumn(i, params[user_header_table[i]]);
     }
 
-    emit dataChanged(createIndex(item->row(), COLUMN_FINISHED_NAME, item), createIndex(item->row(), COLUMN_FINISHED_CRC32, item));
+    if (bulkLoadDepth == 0 && rootItem == userItem)
+        sort();
+    else
+        emit dataChanged(createIndex(item->row(), COLUMN_FINISHED_NAME, item), createIndex(item->row(), COLUMN_FINISHED_CRC32, item));
 }
 
 void FinishedTransfersModel::remFile(const QString &file){
@@ -430,9 +436,6 @@ FinishedTransfersItem *FinishedTransfersModel::findFile(const QString &fname){
 
     file_hash.insert(fname, item);
 
-    if (rootItem == fileItem)
-        sort();
-
     return item;
 }
 
@@ -460,9 +463,6 @@ FinishedTransfersItem *FinishedTransfersModel::findUser(const QString &cid){
         userItem->appendChild(item);;
 
     user_hash.insert(cid, item);
-
-    if (rootItem == userItem)
-        sort();
 
     return item;
 }
