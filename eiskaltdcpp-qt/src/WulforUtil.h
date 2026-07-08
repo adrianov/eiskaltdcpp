@@ -24,6 +24,8 @@
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
+
+class QAction;
 #include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
 #include "dcpp/CID.h"
@@ -179,6 +181,8 @@ public Q_SLOTS:
     Qt::SortOrder intToSortOrder(int);
 
     static QString formatBytes(int64_t bytes);
+
+    static void bindActionIcon(QAction *act, Icons icon);
 
     static qreal iconDeviceRatio();
     static QPixmap scalePixmap(const QPixmap &source, int logicalSide);

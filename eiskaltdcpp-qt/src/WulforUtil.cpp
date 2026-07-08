@@ -38,6 +38,7 @@
 #include <QAbstractItemModel>
 #include <QHostAddress>
 #include <QMenu>
+#include <QAction>
 #include <QTreeView>
 #include <QIcon>
 #include <QResource>
@@ -1074,6 +1075,12 @@ QStringList WulforUtil::getLocalIPs(){
 
 QString WulforUtil::formatBytes(int64_t aBytes){
     return _q(Util::formatBytes(aBytes));
+}
+
+void WulforUtil::bindActionIcon(QAction *act, Icons icon)
+{
+    act->setProperty("wulforIcon", icon);
+    act->setIcon(getInstance()->getIcon(icon));
 }
 
 QString WulforUtil::makeMagnet(const QString &path, const int64_t size, const QString &tth){

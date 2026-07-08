@@ -18,35 +18,25 @@
 
 using namespace dcpp;
 
-namespace {
-
-void bindActionIcon(QAction *act, WulforUtil::Icons icon)
-{
-    act->setProperty("wulforIcon", icon);
-    act->setIcon(WulforUtil::getInstance()->getIcon(icon));
-}
-
-}
-
 void MainWindowHashProgress::update(QProgressBar *bar, QAction *refreshAction, HashProgress *dialog)
 {
     switch (HashProgress::getHashStatus()) {
     case HashProgress::IDLE:
-        bindActionIcon(refreshAction, WulforUtil::eiREFRLIST);
+        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiREFRLIST);
         refreshAction->setText(QObject::tr("Refresh share"));
         if (dialog)
             dialog->resetProgress();
         bar->hide();
         break;
     case HashProgress::LISTUPDATE:
-        bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         bar->setValue(100);
         bar->setFormat(QObject::tr("List update"));
         bar->show();
         break;
     case HashProgress::DELAYED:
-        bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         if (SETTING(HASHING_START_DELAY) >= 0) {
             const int left = SETTING(HASHING_START_DELAY) - Util::getUpTime();
@@ -58,7 +48,7 @@ void MainWindowHashProgress::update(QProgressBar *bar, QAction *refreshAction, H
             bar->hide();
         break;
     case HashProgress::PAUSED:
-        bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         if (SETTING(HASHING_START_DELAY) >= 0) {
             bar->setValue(100);
@@ -69,7 +59,7 @@ void MainWindowHashProgress::update(QProgressBar *bar, QAction *refreshAction, H
             bar->hide();
         break;
     case HashProgress::RUNNING:
-        bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         if (dialog) {
             bar->setFormat(QObject::tr("%p%"));
