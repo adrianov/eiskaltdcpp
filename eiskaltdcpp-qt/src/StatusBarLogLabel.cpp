@@ -45,16 +45,10 @@ void StatusBarLogLabel::setLogMessage(QString msg, int historySize)
         history.clear();
 
     toolTipText = history.join("\n");
-
-    if (!hovered)
-        refreshDisplay();
-}
-
-void StatusBarLogLabel::refreshDisplay()
-{
     setText(pendingText);
-    setToolTip(toolTipText);
     syncHeight();
+    if (!hovered)
+        setToolTip(toolTipText);
 }
 
 void StatusBarLogLabel::syncHeight()
@@ -73,7 +67,7 @@ bool StatusBarLogLabel::event(QEvent *e)
         hovered = true;
     else if (e->type() == QEvent::Leave) {
         hovered = false;
-        refreshDisplay();
+        setToolTip(toolTipText);
     }
 
     return QLabel::event(e);

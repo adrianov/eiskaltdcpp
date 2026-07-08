@@ -25,7 +25,6 @@ protected:
     bool event(QEvent *e) override;
 
 private:
-    void refreshDisplay();
     void syncHeight();
 
     QStringList history;
