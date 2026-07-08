@@ -28,6 +28,9 @@ bool isOpenableTransfer(const string& filename) {
 }
 
 string resolveUploadPath(const string& target) {
+    if (!target.empty() && File::getSize(target) > -1)
+        return target;
+
     try {
         const StringList paths = ShareManager::getInstance()->getRealPaths(Util::toAdcFile(target));
         if (!paths.empty() && File::getSize(paths.front()) > -1)

@@ -27,8 +27,12 @@ bool isOpenableTransfer(const QString &filename) {
 }
 
 QString resolveUploadPath(const QString &target) {
+    const std::string pathStr = _tq(target);
+    if (!pathStr.empty() && dcpp::File::getSize(pathStr) > -1)
+        return target;
+
     try {
-        const auto paths = dcpp::ShareManager::getInstance()->getRealPaths(dcpp::Util::toAdcFile(_tq(target)));
+        const auto paths = dcpp::ShareManager::getInstance()->getRealPaths(dcpp::Util::toAdcFile(pathStr));
         if (!paths.empty() && dcpp::File::getSize(paths.front()) > -1)
             return _q(paths.front());
     } catch (...) {}
