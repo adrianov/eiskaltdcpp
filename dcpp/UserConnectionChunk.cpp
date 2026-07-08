@@ -14,11 +14,12 @@ namespace dcpp {
 
 static const int64_t SEGMENT_TIME = 120*1000;
 static const int64_t MIN_CHUNK_SIZE = 64*1024;
+static const int64_t INIT_CHUNK_SIZE = 64*1024*1024;
 
 void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks) {
 
     if(chunkSize == 0) {
-        chunkSize = std::max(MIN_CHUNK_SIZE, std::min(lastChunk, (int64_t)1024*1024));
+        chunkSize = std::max(MIN_CHUNK_SIZE, std::min(lastChunk, INIT_CHUNK_SIZE));
         return;
     }
 
