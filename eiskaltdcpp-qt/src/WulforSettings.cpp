@@ -204,7 +204,7 @@ void WulforSettings::load(){
             settings.setValue(WI_CHAT_FIND_COLOR_ALPHA, 127);
             settings.setValue(WI_CHAT_STATUS_HISTORY_SZ,5);
             settings.setValue(WI_CHAT_STATUS_MSG_MAX_LEN, 128);
-            settings.setValue(WI_STATUSBAR_HISTORY_SZ,  5);
+            settings.setValue(WI_STATUSBAR_HISTORY_SZ,  WI_STATUSBAR_HISTORY_DEFAULT);
             settings.setValue(WI_MAINWINDOW_HEIGHT,     -1);
             settings.setValue(WI_MAINWINDOW_WIDTH,      -1);
             settings.setValue(WI_MAINWINDOW_X,          -1);
@@ -222,6 +222,9 @@ void WulforSettings::load(){
             settings.setValue(WI_OUT_IN_HIST,           50);//number of output messages in history
         }
     }
+
+    if (settings.value(WI_STATUSBAR_HISTORY_SZ).toInt() == 5)
+        settings.setValue(WI_STATUSBAR_HISTORY_SZ, WI_STATUSBAR_HISTORY_DEFAULT);
 }
 
 void WulforSettings::loadOldConfig(){
@@ -340,7 +343,7 @@ void WulforSettings::loadOldConfig(){
         intmap.insert(WI_CHAT_FIND_COLOR_ALPHA, 127);
         intmap.insert(WI_CHAT_STATUS_HISTORY_SZ,5);
         intmap.insert(WI_CHAT_STATUS_MSG_MAX_LEN, 128);
-        intmap.insert(WI_STATUSBAR_HISTORY_SZ,  5);
+        intmap.insert(WI_STATUSBAR_HISTORY_SZ,  WI_STATUSBAR_HISTORY_DEFAULT);
         intmap.insert(WI_MAINWINDOW_HEIGHT,     -1);
         intmap.insert(WI_MAINWINDOW_WIDTH,      -1);
         intmap.insert(WI_MAINWINDOW_X,          -1);

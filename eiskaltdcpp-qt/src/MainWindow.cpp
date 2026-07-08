@@ -9,6 +9,8 @@
 
 #include "MainWindow.h"
 #include "Notification.h"
+#include "StatusBarLogLabel.h"
+#include "MainWindowHashProgress.h"
 
 #include <stdlib.h>
 #include <string>
@@ -129,14 +131,12 @@ public:
         ToolBar *fBar = nullptr; //for actions
         ToolBar *sBar = nullptr; //for fast search
 
-        QStringList core_msg_history;
-
         LineEdit *searchLineEdit = nullptr;
         QLabel *statusLabel = nullptr;
         QLabel *statusSPLabel = nullptr;
         QLabel *statusDLabel = nullptr;
         QLabel *statusTRLabel = nullptr;
-        QLabel *msgLabel = nullptr;
+        StatusBarLogLabel *msgLabel = nullptr;
 
 #if defined(USE_PROGRESS_BARS)
         QProgressBar *progressFreeSpace = nullptr;
@@ -1282,12 +1282,8 @@ void MainWindow::initStatusBar(){
     d->statusDLabel->setToolTip(tr("Downloaded/Uploaded"));
     d->statusDLabel->setContentsMargins(0, 0, 0, 0);
 
-    d->msgLabel = new QLabel(statusBar());
-    d->msgLabel->setFrameShadow(QFrame::Plain);
-    d->msgLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    d->msgLabel->setWordWrap(true);
-    d->msgLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-    d->msgLabel->setContentsMargins(0, 0, 0, 0);
+    d->msgLabel = new StatusBarLogLabel(statusBar());
+    d->msgLabel->setHeightRef(d->statusLabel);
 
 #if (defined FREE_SPACE_BAR_C)
 #if defined(USE_PROGRESS_BARS)
@@ -1792,102 +1788,15 @@ void MainWindow::updateStatus(const QMap<QString, QString> &map){
 }
 
 void MainWindow::updateHashProgressStatus() {
-    WulforUtil *WU = WulforUtil::getInstance();
     Q_D(MainWindow);
 
-    switch( HashProgress::getHashStatus() ) {
-    case HashProgress::IDLE:
-        bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiREFRLIST);
-        d->fileRefreshShareHashProgress->setText(tr("Refresh share"));
-        {
-            progress_dialog()->resetProgress(); // Here dialog will be actually created
-            d->progressHashing->hide();
-        }
-        //qDebug("idle");
-        break;
-    case HashProgress::LISTUPDATE:
-        bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiHASHING);
-        d->fileRefreshShareHashProgress->setText(tr("Hash progress"));
-        {
-            d->progressHashing->setValue( 100 );
-            d->progressHashing->setFormat(tr("List update"));
-            d->progressHashing->show();
-        }
-        //qDebug("listupdate");
-        break;
-    case HashProgress::DELAYED:
-        bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiHASHING);
-        d->fileRefreshShareHashProgress->setText(tr("Hash progress"));
-        {
-            if (SETTING(HASHING_START_DELAY) >= 0){
-                int left = SETTING(HASHING_START_DELAY) - Util::getUpTime();
-                d->progressHashing->setValue( 100 * left / SETTING(HASHING_START_DELAY) );
-                d->progressHashing->setFormat(tr("Delayed"));
-                d->progressHashing->show();
-            }
-            else {
-                d->progressHashing->hide();
-            }
-        }
-        //qDebug("delayed");
-        break;
-    case HashProgress::PAUSED:
-        bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiHASHING);
-        d->fileRefreshShareHashProgress->setText(tr("Hash progress"));
-        {
-            if (SETTING(HASHING_START_DELAY) >= 0){
-                d->progressHashing->setValue( 100 );
-                d->progressHashing->setFormat(tr("Paused"));
-                d->progressHashing->show();
-            }
-            else {
-                d->progressHashing->hide();
-            }
-        }
-        //qDebug("paused");
-        break;
-    case HashProgress::RUNNING:
-        bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiHASHING);
-        d->fileRefreshShareHashProgress->setText(tr("Hash progress"));
-        {
-            int progress = static_cast<int>( progress_dialog()->getProgress()*100 );
-            d->progressHashing->setFormat(tr("%p%"));
-            d->progressHashing->setValue( progress );
-            d->progressHashing->show();
-        }
-        //qDebug("running");
-        break;
-    default:
-        //qDebug("unknown");
-        break;
-    }
+    MainWindowHashProgress::update(d->progressHashing, d->fileRefreshShareHashProgress, progress_dialog());
 }
 
 void MainWindow::setStatusMessage(QString msg){
     Q_D(MainWindow);
 
-    QFontMetrics m(d->msgLabel->font());
-    QString pure_msg = msg;
-
-    if (m.horizontalAdvance(msg) > d->msgLabel->width())
-        pure_msg = m.elidedText(msg, Qt::ElideRight, d->msgLabel->width(), 0);
-
-    WulforUtil::getInstance()->textToHtml(pure_msg, true);
-    WulforUtil::getInstance()->textToHtml(msg, true);
-
-    d->msgLabel->setText(pure_msg);
-
-    d->core_msg_history.push_back(msg);
-
-    if (WIGET(WI_STATUSBAR_HISTORY_SZ) > 0){
-        while (d->core_msg_history.size() > WIGET(WI_STATUSBAR_HISTORY_SZ))
-            d->core_msg_history.removeFirst();
-    }
-    else
-        d->core_msg_history.clear();
-
-    d->msgLabel->setToolTip(d->core_msg_history.join("\n"));
-    d->msgLabel->setMaximumHeight(d->statusLabel->height());
+    d->msgLabel->setLogMessage(msg, WIGET(WI_STATUSBAR_HISTORY_SZ));
 }
 
 void MainWindow::autoconnect(){
