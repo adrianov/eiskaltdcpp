@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "FileBrowserModel.h"
+#include "FileBrowserModelSort.h"
 #include "WulforUtil.h"
 #include "AppTheme.h"
 
@@ -35,8 +36,6 @@ using namespace dcpp;
 
 #include <set>
 
-static void sortRecursive(int column, Qt::SortOrder order, FileBrowserItem *i);
-
 FileBrowserModel::FileBrowserModel(QObject *parent)
     : QAbstractItemModel(parent), listing(nullptr), restrictionsLoaded(false), ownList(false)
 {
@@ -47,7 +46,7 @@ FileBrowserModel::FileBrowserModel(QObject *parent)
     rootItem = new FileBrowserItem(rootItemCulumns, nullptr);
 
     sortColumn = COLUMN_FILEBROWSER_NAME;
-    sortOrder = Qt::DescendingOrder;
+    sortOrder = Qt::AscendingOrder;
 }
 
 FileBrowserModel::~FileBrowserModel()
@@ -235,77 +234,6 @@ QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-namespace {
-
-template <Qt::SortOrder order>
-struct Compare {
-    typedef bool (*AttrComp)(const FileBrowserItem * l, const FileBrowserItem * r);
-    
-    void static sort(unsigned  column, QList<FileBrowserItem*>& items) {
-        if (column > NUM_OF_COLUMNS-1)
-            return;
-        
-        std::stable_sort(items.begin(), items.end(), attrs[column] );
-    }
-
-    void static insertSorted(unsigned column, QList<FileBrowserItem*>& items, FileBrowserItem* item) {
-        if (column > NUM_OF_COLUMNS-1)
-            return;
-        
-        auto it = std::lower_bound(items.begin(), 
-                                                           items.end(), 
-                                                           item, 
-                                                           attrs[column]
-                                                          );
-        items.insert(it, item);
-    }
-
-    private:
-        
-        template <int i>
-        bool static AttrCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
-            if ((l->dir && !r->dir) || (!l->dir && r->dir)){
-                return (l->dir != nullptr);
-            }
-            return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
-        }
-        template <int column>
-        bool static NumCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
-            if ((l->dir && !r->dir) || (!l->dir && r->dir)){
-                return (l->dir != nullptr);
-            }
-            return Cmp(l->data(column).toULongLong(), r->data(column).toULongLong());
-       }
-        template <typename T>
-        bool static Cmp(const T& l, const T& r);
-        
-        static AttrComp attrs[NUM_OF_COLUMNS];
-};
-
-template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[NUM_OF_COLUMNS] = {  AttrCmp<COLUMN_FILEBROWSER_NAME>,
-                                                                NumCmp<COLUMN_FILEBROWSER_ESIZE>,
-                                                                NumCmp<COLUMN_FILEBROWSER_ESIZE>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_TTH>,
-                                                                NumCmp<COLUMN_FILEBROWSER_BR>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_WH>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_MVIDEO>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_MAUDIO>,
-                                                                NumCmp<COLUMN_FILEBROWSER_HIT>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_TS>
-                                                             };
-
-template <> template <typename T>
-bool inline Compare<Qt::AscendingOrder>::Cmp(const T& l, const T& r) {
-    return l < r;
-}
-
-template <> template <typename T>
-bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
-    return l > r;
-}
-}
-
 QVariant FileBrowserModel::headerData(int section, Qt::Orientation orientation,
                                int role) const
 {
@@ -425,24 +353,8 @@ void FileBrowserModel::fetchMore(const QModelIndex &parent){
         for (const auto &dir : item->dir->directories) //loading child directories
             fetchBranch(i, dir);
 
-        sortRecursive(sortColumn, sortOrder, item);
+        sortFileBrowserItems(sortColumn, sortOrder, item);
     }
-}
-
-static void sortRecursive(int column, Qt::SortOrder order, FileBrowserItem *i){
-    static Compare<Qt::AscendingOrder> acomp = Compare<Qt::AscendingOrder>();
-    static Compare<Qt::DescendingOrder> dcomp = Compare<Qt::DescendingOrder>();
-
-    if (column < 0 || !i || !i->childCount())
-        return;
-
-    if (order == Qt::AscendingOrder)
-        acomp.sort(column, i->childItems);
-    else if (order == Qt::DescendingOrder)
-        dcomp.sort(column, i->childItems);
-
-    for (const auto &ii : i->childItems)
-        sortRecursive(column, order, ii);
 }
 
 void FileBrowserModel::sort(int column, Qt::SortOrder order) {
@@ -454,7 +366,7 @@ void FileBrowserModel::sort(int column, Qt::SortOrder order) {
 
     emit layoutAboutToBeChanged();
 
-    sortRecursive(column, order, rootItem);
+    sortFileBrowserItems(column, order, rootItem);
 
     emit layoutChanged();
 }
@@ -650,86 +562,4 @@ void FileBrowserModel::clear(){
 
 void FileBrowserModel::repaint(){
     emit layoutChanged();
-}
-
-FileBrowserItem::FileBrowserItem(const QList<QVariant> &data, FileBrowserItem *parent)
-    : dir(nullptr)
-    , file(nullptr)
-    , isDuplicate(false)
-    , itemData(data)
-    , parentItem(parent)
-{
-}
-
-FileBrowserItem::FileBrowserItem(const FileBrowserItem &in)
-    : childItems(in.childItems)
-    , dir(in.dir)
-    , file(in.file)
-    , isDuplicate(in.isDuplicate)
-    , itemData(in.itemData)
-    , parentItem(in.parentItem)
-{
-}
-
-void FileBrowserItem::operator=(const FileBrowserItem &in){
-    itemData = in.itemData;
-    dir = in.dir;
-    file = in.file;
-    isDuplicate = in.isDuplicate;
-    childItems = in.childItems;
-    parentItem = in.parentItem;
-}
-
-FileBrowserItem::~FileBrowserItem()
-{
-    qDeleteAll(childItems);
-    childItems.clear();
-}
-
-void FileBrowserItem::appendChild(FileBrowserItem *item) {
-    childItems.append(item);
-}
-
-FileBrowserItem *FileBrowserItem::child(int row) {
-    return childItems.value(row);
-}
-
-int FileBrowserItem::childCount() const {
-    return childItems.count();
-}
-
-int FileBrowserItem::columnCount() const {
-    return itemData.count();
-}
-
-QVariant FileBrowserItem::data(int column) const {
-    return itemData.value(column);
-}
-
-FileBrowserItem *FileBrowserItem::parent() {
-    return parentItem;
-}
-
-int FileBrowserItem::row() const {
-    if (parentItem)
-        return parentItem->childItems.indexOf(const_cast<FileBrowserItem*>(this));
-
-    return 0;
-}
-
-void FileBrowserItem::updateColumn(int column, QVariant var){
-    if (column > (itemData.size()-1))
-        return;
-
-    itemData[column] = var;
-}
-
-FileBrowserItem *FileBrowserItem::nextSibling(){
-    if (!parent())
-        return nullptr;
-
-    if (row() == (parent()->childCount()-1))
-        return nullptr;
-
-    return parent()->child(row()+1);
 }
