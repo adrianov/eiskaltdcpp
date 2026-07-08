@@ -70,11 +70,18 @@ void LogManager::saveSetting(int area, int sel, const string& setting) {
 }
 
 void LogManager::log(const string& area, const string& msg) noexcept {
+    string aArea;
+    try {
+        aArea = Util::validateFileName(area);
+        File::ensureDirectory(aArea);
+    } catch (const FileException&) {
+        return;
+    }
+
+    trimLogFile(aArea);
+
     Lock l(cs);
     try {
-        string aArea = Util::validateFileName(area);
-        File::ensureDirectory(aArea);
-        trimLogFile(aArea);
         File f(aArea, File::WRITE, File::OPEN | File::CREATE);
         f.setEndPos(0);
         f.write(msg + "\r\n");

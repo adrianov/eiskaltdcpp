@@ -11,11 +11,17 @@
 
 #include "File.h"
 #include "SettingsManager.h"
+#include "TimerManager.h"
 #include "Util.h"
 
 namespace dcpp {
 
 namespace {
+
+constexpr uint64_t kTrimInterval = 60 * 1000;
+
+FastCriticalSection trimCs;
+unordered_map<string, uint64_t> lastTrim;
 
 void copyRest(File& in, File& out) {
     char buf[8192];
@@ -25,6 +31,18 @@ void copyRest(File& in, File& out) {
             break;
         out.write(buf, len);
     }
+}
+
+bool trimDue(const string& path) {
+    FastLock l(trimCs);
+    const uint64_t tick = GET_TICK();
+    auto it = lastTrim.find(path);
+    return it == lastTrim.end() || tick >= it->second + kTrimInterval;
+}
+
+void markTrimmed(const string& path) {
+    FastLock l(trimCs);
+    lastTrim[path] = GET_TICK();
 }
 
 } // namespace
@@ -37,7 +55,7 @@ void trimLogFile(const string& path) {
     try {
         const int64_t maxBytes = static_cast<int64_t>(maxMb) * 1024 * 1024;
         const int64_t size = File::getSize(path);
-        if(size <= 0 || size <= maxBytes)
+        if(size <= 0 || size <= maxBytes || !trimDue(path))
             return;
 
         const int64_t keepBytes = maxBytes * 9 / 10;
@@ -63,6 +81,7 @@ void trimLogFile(const string& path) {
         in.close();
         out.close();
         File::renameFile(tmp, path);
+        markTrimmed(path);
     } catch (const FileException&) {
     }
 }
