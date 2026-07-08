@@ -69,6 +69,8 @@ private:
     void removeAll_client();
     void pruneMissingFiles_client();
 
+    static void resortStore(GtkListStore *store);
+
     // Client callbacks
     virtual void on(dcpp::FinishedManagerListener::AddedFile, bool upload, const std::string &file, const dcpp::FinishedFileItemPtr &item) noexcept;
     virtual void on(dcpp::FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const dcpp::FinishedUserItemPtr &item) noexcept;

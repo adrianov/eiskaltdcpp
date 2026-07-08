@@ -50,6 +50,16 @@ bool isFileListPath(const string& path) {
 
 } // namespace
 
+void FinishedTransfers::resortStore(GtkListStore *store) {
+    gint sortColumn;
+    GtkSortType sortType;
+    if (!gtk_tree_sortable_get_sort_column_id(GTK_TREE_SORTABLE(store), &sortColumn, &sortType))
+        return;
+
+    gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), GTK_TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID, sortType);
+    gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(store), sortColumn, sortType);
+}
+
 FinishedTransfers* FinishedTransfers::createFinishedDownloads()
 {
     return new FinishedTransfers(Entry::FINISHED_DOWNLOADS, _("Finished Downloads"), false);
@@ -225,6 +235,7 @@ void FinishedTransfers::addUser_gui(StringMap params, bool update)
     if (update)
     {
         updateStatus_gui();
+        FinishedTransfers::resortStore(userStore);
 
         if ((!isUpload && WGETB("bold-finished-downloads")) ||
                 (isUpload && WGETB("bold-finished-uploads")))
@@ -270,6 +281,7 @@ void FinishedTransfers::addFile_gui(StringMap params, bool update)
     if (update)
     {
         updateStatus_gui();
+        FinishedTransfers::resortStore(fileStore);
 
         if ((!isUpload && WGETB("bold-finished-downloads")) ||
                 (isUpload && WGETB("bold-finished-uploads")))
@@ -639,190 +651,4 @@ void FinishedTransfers::onRemoveAll_gui(GtkMenuItem *item, gpointer data)
     typedef Func0<FinishedTransfers> F0;
     F0 *func = new F0(ft, &FinishedTransfers::removeAll_client);
     WulforManager::get()->dispatchClientFunc(func);
-}
-
-void FinishedTransfers::initializeList_client()
-{
-    StringMap params;
-    auto lock = FinishedManager::getInstance()->lock();
-    const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(isUpload);
-    const FinishedManager::MapByUser &user = FinishedManager::getInstance()->getMapByUser(isUpload);
-
-    for (auto it = list.begin(); it != list.end(); ++it)
-    {
-        params.clear();
-        getFinishedParams_client(it->second, it->first, params);
-        addFile_gui(params, false);
-    }
-
-    for (auto uit = user.begin(); uit != user.end(); ++uit)
-    {
-        params.clear();
-        getFinishedParams_client(uit->second, uit->first, params);
-        addUser_gui(params, false);
-    }
-
-    updateStatus_gui();
-}
-
-void FinishedTransfers::getFinishedParams_client(const FinishedFileItemPtr& item, const string& file, StringMap &params)
-{
-    string nicks;
-    params["Filename"] = Util::getFileName(file);
-    params["Time"] = Util::formatTime("%Y-%m-%d %H:%M:%S", item->getTime());
-    params["Path"] = Util::getFilePath(file);
-    for (auto &user : item->getUsers())
-    {
-        nicks += WulforUtil::getNicks(user.user->getCID(), user.hint) + ", ";
-    }
-    params["Nicks"] = nicks.substr(0, nicks.length() - 2);
-    // item->getFileSize() seems to return crap. I guess there's no way to get
-    // the real file size with this core version? Only the transferred part (I guess
-    // the size could be asked from QueueManager (if the file isn't complete)?)
-    params["Transferred"] = Util::toString(item->getTransferred());
-    params["Speed"] = Util::toString(item->getAverageSpeed());
-    params["CRC Checked"] = item->getCrc32Checked() ? _("Yes") : _("No");
-    params["Target"] = file;
-    params["Elapsed Time"] = Util::toString(item->getMilliSeconds());
-
-    if (item->isFull())
-        params["full"] = "1";
-    else
-        params["full"] = "0";
-}
-
-void FinishedTransfers::getFinishedParams_client(const FinishedUserItemPtr &item, const HintedUser &user, StringMap &params)
-{
-    string files;
-    params["Time"] = Util::formatTime("%Y-%m-%d %H:%M:%S", item->getTime());
-    params["Nick"] = WulforUtil::getNicks(user);
-    params["Hub"] = WulforUtil::getHubNames(user);
-    for (auto &file : item->getFiles())
-    {
-        files += file + ", ";
-    }
-    params["Files"] = files.substr(0, files.length() - 2);
-    params["Transferred"] = Util::toString(item->getTransferred());
-    params["Speed"] = Util::toString(item->getAverageSpeed());
-    params["CID"] = user.user->getCID().toBase32();
-    params["Elapsed Time"] = Util::toString(item->getMilliSeconds());
-}
-
-void FinishedTransfers::removeUser_client(string cid)
-{
-    UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-
-    if (user)
-        // ignore the hint url user...
-        FinishedManager::getInstance()->remove(isUpload, HintedUser(user, ""));
-
-}
-
-void FinishedTransfers::removeFile_client(string target)
-{
-
-    if (!target.empty())
-        FinishedManager::getInstance()->remove(isUpload, target);
-
-}
-
-void FinishedTransfers::removeAll_client()
-{
-    FinishedManager::getInstance()->removeAll(isUpload);
-}
-
-void FinishedTransfers::pruneMissingFiles_client()
-{
-    StringList missing;
-    {
-        auto lock = FinishedManager::getInstance()->lock();
-        const FinishedManager::MapByFile &list = FinishedManager::getInstance()->getMapByFile(false);
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            if (!Util::fileExists(it->first))
-                missing.push_back(it->first);
-        }
-    }
-
-    for (const auto &file : missing)
-        removeFile_client(file);
-}
-
-void FinishedTransfers::on(FinishedManagerListener::AddedFile, bool upload, const string& file, const FinishedFileItemPtr& item) noexcept
-{
-    if (isUpload == upload)
-    {
-        StringMap params;
-        getFinishedParams_client(item, file, params);
-
-        typedef Func2<FinishedTransfers, StringMap, bool> F2;
-        F2* func = new F2(this, &FinishedTransfers::addFile_gui, params, true);
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
-}
-
-
-void FinishedTransfers::on(FinishedManagerListener::AddedUser, bool upload, const HintedUser &user, const FinishedUserItemPtr &item) noexcept
-{
-    if (isUpload == upload)
-    {
-        StringMap params;
-        getFinishedParams_client(item, user, params);
-
-        typedef Func2<FinishedTransfers, StringMap, bool> F2;
-        F2 *func = new F2(this, &FinishedTransfers::addUser_gui, params, true);
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
-}
-
-void FinishedTransfers::on(FinishedManagerListener::UpdatedFile, bool upload, const string& file, const FinishedFileItemPtr& item) noexcept
-{
-    if (isUpload == upload)
-    {
-        StringMap params;
-        getFinishedParams_client(item, file, params);
-
-        typedef Func2<FinishedTransfers, StringMap, bool> F2;
-        F2 *func = new F2(this, &FinishedTransfers::addFile_gui, params, true);
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
-}
-
-void FinishedTransfers::on(FinishedManagerListener::UpdatedUser, bool upload, const HintedUser &user) noexcept
-{
-    if (isUpload == upload)
-    {
-        const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
-        auto userit = umap.find(user);
-        if (userit == umap.end())
-            return;
-
-        const FinishedUserItemPtr &item = userit->second;
-
-        StringMap params;
-        getFinishedParams_client(item, user, params);
-
-        typedef Func2<FinishedTransfers, StringMap, bool> F2;
-        F2 *func = new F2(this, &FinishedTransfers::addUser_gui, params, true);
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
-}
-
-void FinishedTransfers::on(FinishedManagerListener::RemovedFile, bool upload, const string& item) noexcept
-{
-    if (isUpload == upload)
-    {
-        typedef Func1<FinishedTransfers, string> F1;
-        F1 *func = new F1(this, &FinishedTransfers::removeFile_gui, item);
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
-}
-
-void FinishedTransfers::on(FinishedManagerListener::RemovedUser, bool upload, const HintedUser &user) noexcept
-{
-    if (isUpload == upload)
-    {
-        typedef Func1<FinishedTransfers, string> F1;
-        F1 *func = new F1(this, &FinishedTransfers::removeUser_gui, user.user->getCID().toBase32());
-        WulforManager::get()->dispatchGuiFunc(func);
-    }
 }
