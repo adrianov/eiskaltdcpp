@@ -35,6 +35,7 @@
 #include "dcpp/FavoriteManagerListener.h"
 
 #include "ArenaWidget.h"
+#include "HubFrameMenu.h"
 #include "WulforUtil.h"
 
 class ShellCommandRunner;
@@ -60,74 +61,7 @@ class HubFrame :
     Q_OBJECT
     Q_INTERFACES(ArenaWidget)
 
-    class Menu{
-
-    public:
-
-        enum Action{
-            /** Actions for userlist */
-            CopyText=0,
-            SearchText,
-            CopyNick,
-            FindInList,
-            BrowseFilelist,
-            MatchQueue,
-            PrivateMessage,
-            FavoriteAdd,
-            FavoriteRem,
-            GrantSlot,
-            RemoveQueue,
-            UserCommands,
-
-            /** Additional actions for chat */
-            ClearChat,
-            FindInChat,
-            DisableChat,
-            SelectAllChat,
-            ZoomInChat,
-            ZoomOutChat,
-
-            None,
-
-            /** Additional actions for userlist */
-            CopyComment,
-            CopyIP,
-            CopyShare,
-            CopyTag,
-            CopyEmail,
-
-            /** Additional actions for AntiSpam */
-            AntiSpamWhite,
-            AntiSpamBlack
-        };
-
-        Menu();
-        virtual ~Menu();
-
-        Menu(const Menu&) = delete;
-        Menu& operator=(const Menu&) = delete;
-
-        static void newInstance();
-        static void deleteInstance();
-        static Menu *getInstance();
-
-        Action execUserMenu(Client*, const QString&);
-        Action execChatMenu(Client*, const QString&, bool pmw);
-
-        QString getLastUserCmd() const;
-
-    private:
-        QMenu *menu;
-        QList<QAction*> actions;           // actions list for menu
-        QList<QAction*> pm_actions;        // actions list for menu in PMWindow
-        QList<QAction*> ul_actions;        // actions list for menu in user list
-        QList<QAction*> chat_actions;      // chat actions list for menu
-        QList<QAction*> pm_chat_actions;   // chat actions list for menu in PMWindow
-        QMap<QAction*, Action> chat_actions_map; //chat menu has separators and because of it all actions are mapped
-        QString last_user_cmd;
-        static Menu *instance;
-        static unsigned counter;
-    };
+    using Menu = HubFrameMenu;
 
 public:
     class LinkParser{
@@ -234,8 +168,8 @@ private Q_SLOTS:
     void slotShowWnd();
     void slotShellFinished(bool, QString);
     void slotFilterTextChanged();
-    void slotFindForward() { findText(QTextDocument::FindFlags()); }
-    void slotFindBackward(){ findText(QTextDocument::FindBackward); }
+    void slotFindForward();
+    void slotFindBackward();
     void slotFindTextEdited(const QString & text);
     void slotInputTextChanged();
     void slotInputContextMenu();
@@ -280,9 +214,8 @@ private:
     void pmUserOffline(const QString &);
     void pmUserEvent(const QString &, const QString &);
 
-    void findText(QTextDocument::FindFlags );
-
     void updateStyles();
+    void syncFieldHeights();
 
     /** Extracts data from user identity */
     void getParams(VarMap &, const Identity &);
