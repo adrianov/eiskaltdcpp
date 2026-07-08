@@ -118,6 +118,8 @@ private:
     void getNickList() { send("$GetNickList|"); }
     void connectToMe(const OnlineUser& aUser, int secureMode = -1);
     void revConnectToMe(const OnlineUser& aUser);
+    void onConnectToMe(const string& param);
+    void onRevConnectToMe(const string& param);
     void myInfo(bool alwaysSend);
     void supports(const StringList& feat);
     void clearFlooders(uint64_t tick);
