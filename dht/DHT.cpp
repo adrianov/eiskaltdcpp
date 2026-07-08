@@ -32,6 +32,7 @@
 #include "dcpp/CryptoManager.h"
 #include "dcpp/File.h"
 #include "dcpp/LogManager.h"
+#include "dcpp/PeerConnectTls.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/ShareManager.h"
 #include "dcpp/ThrottleManager.h"
@@ -338,10 +339,11 @@ namespace dht
     /*
      * Sends Connect To Me request to online node
      */
-    void DHT::connect(const OnlineUser& ou, const string& token, bool /*reverseConnect*/, int /*secureMode*/)
+    void DHT::connect(const OnlineUser& ou, const string& token, bool /*reverseConnect*/, int secureMode)
     {
-        // this is DHT's node, so we can cast ou to Node
-        ConnectionManager::getInstance()->connect((Node*)&ou, token);
+        auto* node = const_cast<Node*>(static_cast<const Node*>(&ou));
+        ConnectionManager::getInstance()->connect(node, token,
+            PeerConnectTls::resolveSecure(secureMode, node->getUser()));
     }
 
     /*

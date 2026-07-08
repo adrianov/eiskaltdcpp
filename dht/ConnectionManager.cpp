@@ -24,6 +24,7 @@
 #include "dcpp/ConnectionManager.h"
 #include "dcpp/CryptoManager.h"
 #include "dcpp/ClientManager.h"
+#include "dcpp/PeerConnectTls.h"
 
 namespace dht
 {
@@ -41,7 +42,7 @@ namespace dht
      */
     void ConnectionManager::connect(const Node::Ptr& node, const string& token)
     {
-        ConnectionManager::connect(node, token, CryptoManager::getInstance()->TLSOk() && node->getUser()->isSet(User::TLS));
+        connect(node, token, PeerConnectTls::resolveSecure(PeerConnectTls::AUTO, node->getUser()));
     }
 
     void ConnectionManager::connect(const Node::Ptr& node, const string& token, bool secure)
