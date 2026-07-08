@@ -30,6 +30,37 @@ namespace dcpp {
 using std::unordered_map;
 using std::vector;
 
+inline bool isCcTag(char a, char b) {
+    a = static_cast<char>(a | 0x20);
+    b = static_cast<char>(b | 0x20);
+    return a >= 'a' && a <= 'z' && b >= 'a' && b <= 'z';
+}
+
+/** Strip trailing [XX] some clients append in $MyNick (not hub disambiguation like fMad[BY]2). */
+inline string stripWireCountryTag(const string& nick) {
+    if(nick.size() >= 4 && nick[nick.size() - 4] == '[' && nick.back() == ']' &&
+            isCcTag(nick[nick.size() - 3], nick[nick.size() - 2]))
+        return nick.substr(0, nick.size() - 4);
+    if(nick.size() >= 4 && nick[0] == '[' && nick[3] == ']' && isCcTag(nick[1], nick[2]))
+        return nick.substr(4);
+    return nick;
+}
+
+/** Match $MyNick wire form to hub user list nick (digit suffix, optional country tag). */
+inline bool nickWireMatch(const string& wire, const string& hubNick) {
+    if(wire == hubNick)
+        return true;
+    // Digit suffix (fMad[BY]2 vs fMad[BY]) — not for all-digit nicks like 123 vs 12346.
+    if(wire.find_first_not_of("0123456789") != string::npos &&
+            hubNick.size() > wire.size() && hubNick.compare(0, wire.size(), wire) == 0) {
+        const string tail = hubNick.substr(wire.size());
+        if(tail.find_first_not_of("0123456789") == string::npos)
+            return true;
+    }
+    const string stripped = stripWireCountryTag(wire);
+    return stripped != wire && stripped == hubNick;
+}
+
 class ConnectionQueueItem : private NonCopyable {
 public:
     typedef ConnectionQueueItem* Ptr;
@@ -71,17 +102,36 @@ public:
 
     StringPair remove(const string& aNick) {
         Lock l(cs);
+        auto pop = [&](ExpectMap::iterator i) {
+            StringPair tmp = i->second.front();
+            i->second.erase(i->second.begin());
+            if(i->second.empty())
+                expectedConnections.erase(i);
+            return tmp;
+        };
+
         auto i = expectedConnections.find(aNick);
+        if(i != expectedConnections.end() && !i->second.empty())
+            return pop(i);
 
-        if(i == expectedConnections.end() || i->second.empty())
-            return make_pair(Util::emptyString, Util::emptyString);
-
-        StringPair tmp = i->second.front();
-        i->second.erase(i->second.begin());
-        if(i->second.empty())
-            expectedConnections.erase(i);
-
-        return tmp;
+        string bestKey;
+        size_t bestLen = 0;
+        for(auto j = expectedConnections.begin(); j != expectedConnections.end(); ++j) {
+            if(j->second.empty() || !nickWireMatch(aNick, j->first))
+                continue;
+            if(aNick == j->first)
+                return pop(j);
+            if(j->first.size() > bestLen) {
+                bestKey = j->first;
+                bestLen = j->first.size();
+            }
+        }
+        if(!bestKey.empty()) {
+            i = expectedConnections.find(bestKey);
+            if(i != expectedConnections.end() && !i->second.empty())
+                return pop(i);
+        }
+        return make_pair(Util::emptyString, Util::emptyString);
     }
 
 private:

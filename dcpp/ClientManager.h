@@ -91,6 +91,7 @@ public:
     UserPtr findUser(const string& aNick, const string& aHubUrl) const noexcept { return findUser(makeCid(aNick, aHubUrl)); }
     UserPtr findUser(const CID& cid) const noexcept;
     UserPtr findLegacyUser(const string& aNick) const noexcept;
+    UserPtr findNmdcUser(const string& utf8Nick, const string& hubUrl) const noexcept;
 
     bool isOnline(const UserPtr& aUser) const {
         Lock l(cs);

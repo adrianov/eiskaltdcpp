@@ -46,15 +46,27 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
         aSource->setEncoding(ClientManager::getInstance()->findHubEncoding(i.second));
     }
 
-    string nick = Text::toUtf8(aNick, aSource->getEncoding());
-    CID cid = ClientManager::getInstance()->makeCid(nick, aSource->getHubUrl());
+    // Hub user list / CID use UTF-8 (NmdcHubLine toUtf8); $MyNick on the wire uses hub encoding.
+    const string nick = Text::toUtf8(aNick, aSource->getEncoding());
 
     {
         Lock l(cs);
         for(auto& cqi: downloads) {
-            if((cqi->getState() == ConnectionQueueItem::CONNECTING || cqi->getState() == ConnectionQueueItem::WAITING) &&
-                    cqi->getUser().user->getCID() == cid)
-            {
+            if(cqi->getState() != ConnectionQueueItem::CONNECTING && cqi->getState() != ConnectionQueueItem::WAITING)
+                continue;
+
+            bool sameUser = cqi->getUser().user->getCID() ==
+                    ClientManager::getInstance()->makeCid(nick, aSource->getHubUrl());
+            if(!sameUser) {
+                for(const auto& hubNick : ClientManager::getInstance()->getNicks(
+                        cqi->getUser().user->getCID(), aSource->getHubUrl())) {
+                    if(nickWireMatch(nick, hubNick)) {
+                        sameUser = true;
+                        break;
+                    }
+                }
+            }
+            if(sameUser) {
                 cqi->setErrors(0);
                 aSource->setUser(cqi->getUser());
                 aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
@@ -64,13 +76,23 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
     }
 
     if(!aSource->getUser()) {
-        aSource->setUser(ClientManager::getInstance()->findUser(cid));
-        if(!aSource->getUser() || !ClientManager::getInstance()->isOnline(aSource->getUser())) {
-            dcdebug("CM::onMyNick Incoming connection from unknown user %s\n", nick.c_str());
+        UserPtr user = ClientManager::getInstance()->findNmdcUser(nick, aSource->getHubUrl());
+        if(!user && aSource->isSet(UserConnection::FLAG_INCOMING))
+            user = ClientManager::getInstance()->getUser(nick, aSource->getHubUrl());
+        if(!user) {
+            dcdebug("CM::onMyNick Outgoing connection from unknown user %s\n", nick.c_str());
             PeerConnectLog::incomingReject(nick, _("user not online on hub"));
             putConnection(aSource);
             return;
         }
+        if(!aSource->isSet(UserConnection::FLAG_INCOMING) &&
+                !ClientManager::getInstance()->isOnline(user)) {
+            dcdebug("CM::onMyNick Outgoing connection from offline user %s\n", nick.c_str());
+            PeerConnectLog::incomingReject(nick, _("user not online on hub"));
+            putConnection(aSource);
+            return;
+        }
+        aSource->setUser(user);
         aSource->setFlag(UserConnection::FLAG_UPLOAD);
     }
 
