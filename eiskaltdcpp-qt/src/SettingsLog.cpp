@@ -27,6 +27,7 @@ SettingsLog::SettingsLog(QWidget *parent) :
 
 void SettingsLog::init(){
     lineEdit_LOGDIR->setText(_q(SETTING(LOG_DIRECTORY)));
+    spinBox_LOG_MAX_SIZE->setValue(SETTING(LOG_MAX_FILE_SIZE));
 
     groupBox_MAINCHAT->setChecked(BOOLSETTING(LOG_MAIN_CHAT));
     lineEdit_CHATFMT->setText(_q(SETTING(LOG_FORMAT_MAIN_CHAT)));
@@ -74,6 +75,7 @@ void SettingsLog::ok(){
         path += QDir::separator();
 
     sm->set(SettingsManager::LOG_DIRECTORY, _tq(path));
+    sm->set(SettingsManager::LOG_MAX_FILE_SIZE, spinBox_LOG_MAX_SIZE->value());
     sm->set(SettingsManager::LOG_MAIN_CHAT, groupBox_MAINCHAT->isChecked());
     sm->set(SettingsManager::LOG_FORMAT_MAIN_CHAT, _tq(lineEdit_CHATFMT->text()));
     sm->set(SettingsManager::LOG_FILE_MAIN_CHAT, _tq(lineEdit_FILE_CHATFMT->text()));

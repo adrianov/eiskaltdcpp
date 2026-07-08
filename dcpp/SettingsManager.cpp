@@ -97,7 +97,7 @@ const string SettingsManager::settingTags[] =
     "BindIface", "MinimumSearchInterval", "EnableDynDNS", "AllowUploadOverMultiHubs",
     "UseADLOnlyOnOwnList", "AllowSimUploads", "CheckTargetsPathsOnStart", "NmdcDebug",
     "ShareSkipZeroByte", "RequireTLS", "LogSpy", "AppUnitBase",
-    "LogCmdDebug",
+    "LogCmdDebug", "LogMaxFileSize",
     "SENTRY",
     // Int64
     "TotalUpload", "TotalDownload",
@@ -223,6 +223,7 @@ SettingsManager::SettingsManager()
     setDefault(MAX_HASH_SPEED, 0);
     setDefault(GET_USER_COUNTRY, true);
     setDefault(LOG_STATUS_MESSAGES, false);
+    setDefault(LOG_MAX_FILE_SIZE, 10);
     setDefault(ADD_FINISHED_INSTANTLY, false);
     setDefault(DONT_DL_ALREADY_SHARED, false);
     setDefault(SHOW_LAST_LINES_LOG, 0);

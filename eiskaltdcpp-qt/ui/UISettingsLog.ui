@@ -456,6 +456,32 @@ p, li { white-space: pre-wrap; }
         </property>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_logMaxSize">
+        <property name="text">
+         <string>Max file size</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="spinBox_LOG_MAX_SIZE">
+        <property name="toolTip">
+         <string>When a log file exceeds this size, older lines at the beginning are removed. Set to 0 for unlimited size.</string>
+        </property>
+        <property name="suffix">
+         <string> MB</string>
+        </property>
+        <property name="specialValueText">
+         <string>Unlimited</string>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>4096</number>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

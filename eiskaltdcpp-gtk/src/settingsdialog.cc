@@ -488,6 +488,7 @@ void Settings::saveSettings_client()
         if (!path.empty() && path[path.length() - 1] != PATH_SEPARATOR)
             path += PATH_SEPARATOR;
         sm->set(SettingsManager::LOG_DIRECTORY, path);
+        sm->set(SettingsManager::LOG_MAX_FILE_SIZE, Util::toString(gtk_spin_button_get_value(GTK_SPIN_BUTTON(getWidget("logMaxSizeSpinButton")))));
         sm->set(SettingsManager::LOG_MAIN_CHAT, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(getWidget("logMainCheckButton"))));
         sm->set(SettingsManager::LOG_FORMAT_MAIN_CHAT, string(gtk_entry_get_text(GTK_ENTRY(getWidget("logMainEntry")))));
         sm->set(SettingsManager::LOG_FILE_MAIN_CHAT, string(gtk_entry_get_text(GTK_ENTRY(getWidget("logMainEntryFile")))));
@@ -1583,6 +1584,7 @@ void Settings::initLog_gui()
 {
     g_signal_connect(getWidget("logBrowseButton"), "clicked", G_CALLBACK(onLogBrowseClicked_gui), (gpointer)this);
     gtk_entry_set_text(GTK_ENTRY(getWidget("logDirectoryEntry")), SETTING(LOG_DIRECTORY).c_str());
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(getWidget("logMaxSizeSpinButton")), SETTING(LOG_MAX_FILE_SIZE));
 
     g_signal_connect(getWidget("logMainCheckButton"), "toggled", G_CALLBACK(onLogMainClicked_gui), (gpointer)this);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(getWidget("logMainCheckButton")), BOOLSETTING(LOG_MAIN_CHAT));

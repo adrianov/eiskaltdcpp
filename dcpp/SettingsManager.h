@@ -123,7 +123,7 @@ public:
                       USE_ADL_ONLY_OWN_LIST, ALLOW_SIM_UPLOADS, CHECK_TARGETS_PATHS_ON_START,
                       NMDC_DEBUG, SHARE_SKIP_ZERO_BYTE, REQUIRE_TLS, LOG_SPY,
                       APP_UNIT_BASE,
-                      LOG_CMD_DEBUG,
+                      LOG_CMD_DEBUG, LOG_MAX_FILE_SIZE,
                       INT_LAST };
 
     enum Int64Setting { INT64_FIRST = INT_LAST + 1,

@@ -21,6 +21,7 @@
 #include "LogManager.h"
 
 #include "File.h"
+#include "LogManagerTrim.h"
 #include "TimerManager.h"
 
 namespace dcpp {
@@ -73,6 +74,7 @@ void LogManager::log(const string& area, const string& msg) noexcept {
     try {
         string aArea = Util::validateFileName(area);
         File::ensureDirectory(aArea);
+        trimLogFile(aArea);
         File f(aArea, File::WRITE, File::OPEN | File::CREATE);
         f.setEndPos(0);
         f.write(msg + "\r\n");
