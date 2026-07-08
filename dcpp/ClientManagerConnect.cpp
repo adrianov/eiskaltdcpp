@@ -22,10 +22,10 @@
 
 namespace dcpp {
 
-void ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode) {
+bool ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode) {
     if(!MappingManager::getInstance()->readyForPeerConnect()) {
         dcdebug("ClientManager::connect deferred: waiting for UPnP port mapping\n");
-        return;
+        return false;
     }
 
     bool priv = FavoriteManager::getInstance()->isPrivate(user.hint);
@@ -38,19 +38,21 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool re
 
     if(u && !PeerConnectFilter::isViablePeer(*u)) {
         PeerConnectLog::skip(getNickOrCid(user), user.hint, _("stale or ghost hub user entry"));
-        return;
+        return false;
     }
 
     if(u && PeerConnectTls::rejectPeer(u->getUser())) {
         PeerConnectLog::skip(getNickOrCid(user), user.hint, _("TLS required but peer does not advertise TLS"));
-        return;
+        return false;
     }
 
     if(u) {
         u->getClient().connect(*u, token, reverseConnect, secureMode);
-    } else {
-        PeerConnectLog::userOffline(user);
+        return true;
     }
+
+    PeerConnectLog::userOffline(user);
+    return false;
 }
 
 bool ClientManager::wantRevConnect(const HintedUser& user, int attempt) {

@@ -95,6 +95,20 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     continue;
                 }
 
+                if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
+                    if(cqi->getLastAttempt() + 50 * 1000 < aTick) {
+                        cqi->setErrors(cqi->getErrors() + 1);
+                        if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                            markQueueGiveUp(cqi, cqi->getErrors(), false);
+                        } else {
+                            PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
+                            fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
+                        }
+                        cqi->setState(ConnectionQueueItem::WAITING);
+                    }
+                    continue;
+                }
+
                 if(cqi->getLastAttempt() == 0 || !attemptDone)
                 {
                     if(!upnpReady)
@@ -102,8 +116,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
                     if(DownloadManager::getInstance()->isWaitingUploadSlot(cqi->getUser().user))
                         continue;
-
-                    cqi->setLastAttempt(aTick);
 
                     QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
 
@@ -116,6 +128,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
                     if(cqi->getState() == ConnectionQueueItem::WAITING) {
                         if(startDown) {
+                            cqi->setLastAttempt(aTick);
                             cqi->setState(ConnectionQueueItem::CONNECTING);
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
 
@@ -129,24 +142,17 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
                             const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(cqi->getUser(), cqi->getConnectAttempts());
                             PeerConnectLog::queueStart(cqi->getUser());
-                            ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect, cqi->getSecureMode());
-                            fire(ConnectionManagerListener::StatusChanged(), cqi);
-                            attemptDone = true;
+                            if(ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect, cqi->getSecureMode())) {
+                                fire(ConnectionManagerListener::StatusChanged(), cqi);
+                                attemptDone = true;
+                            } else {
+                                cqi->setState(ConnectionQueueItem::WAITING);
+                            }
                         } else {
                             cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
                             fire(ConnectionManagerListener::Failed(), cqi, _("All download slots taken"));
                         }
                     } else if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && startDown) {
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    }
-                } else if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50 * 1000 < aTick) {
-                    cqi->setErrors(cqi->getErrors() + 1);
-                    if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                        markQueueGiveUp(cqi, cqi->getErrors(), false);
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    } else {
-                        PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-                        fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
                         cqi->setState(ConnectionQueueItem::WAITING);
                     }
                 }
