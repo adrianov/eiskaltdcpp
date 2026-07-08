@@ -9,9 +9,6 @@
 
 #include "DownloadQueue.h"
 
-#include <QCoreApplication>
-#include <QThread>
-
 #include "DownloadQueuePrivate.h"
 #include "WulforUtil.h"
 #include "dcpp/QueueManager.h"
@@ -20,12 +17,6 @@
 using namespace dcpp;
 
 namespace {
-
-bool onGuiThread()
-{
-    return QCoreApplication::instance()
-        && QThread::currentThread() == QCoreApplication::instance()->thread();
-}
 
 void fillUserSourceMaps(const QueueItem *item, QMap<QString, QString> &sources, QMap<QString, QString> &badSources)
 {
@@ -83,7 +74,6 @@ void DownloadQueue::syncSourceMaps(const QString &target)
 void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *item)
 {
     QString nick;
-    QMap<QString, QString> source;
     int online = 0;
 
     if (!item)
@@ -106,21 +96,14 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
 
         nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
 
-        if (!nick.isEmpty()) {
-            source[nick] = _q(usr.user->getCID().toBase32());
+        if (!nick.isEmpty())
             user_list.push_back(nick);
-        }
     }
 
     if (!user_list.isEmpty())
         params["USERS"] = user_list.join(", ");
     else
         params["USERS"] = tr("No users...");
-
-    if (onGuiThread()) {
-        Q_D(DownloadQueue);
-        d->sources[params["TARGET"].toString()] = source;
-    }
 
     if (item->isWaiting())
         params["STATUS"] = tr("%1 of %2 user(s) online").arg(online).arg(item->getSources().size());
@@ -131,7 +114,6 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
     params["DOWN"]  = (qlonglong)item->getDownloadedBytes();
     params["PRIO"]  = static_cast<int>(item->getPriority());
 
-    source.clear();
     params["ERRORS"] = QString("");
 
     for (const auto &src : item->getBadSources()) {
@@ -141,9 +123,6 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
 
         QString errors = params["ERRORS"].toString();
         nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
-
-        if (!nick.isEmpty())
-            source[nick] = _q(usr.user->getCID().toBase32());
 
         if (!src.isSet(QueueItem::Source::FLAG_REMOVED)) {
             if (!errors.isEmpty())
@@ -170,11 +149,6 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
 
     if (params["ERRORS"].toString().isEmpty())
         params["ERRORS"] = tr("No errors");
-
-    if (onGuiThread()) {
-        Q_D(DownloadQueue);
-        d->badSources[params["TARGET"].toString()] = source;
-    }
 
     params["ADDED"] = _q(Util::formatTime("%Y-%m-%d %H:%M", item->getAdded()));
     params["TTH"] = _q(item->getTTH().toBase32());
