@@ -14,14 +14,16 @@
 
 namespace TransferDisplay {
 
-constexpr double SpeedStep = 100.0 * 1024.0;
+constexpr int SpeedSigFigs = 2;
 constexpr int64_t TimeLeftStep = 30;
 
 inline double roundSpeed(double speed)
 {
     if (speed <= 0.0)
         return speed;
-    return std::round(speed / SpeedStep) * SpeedStep;
+    const double decade = std::floor(std::log10(speed));
+    const double scale = std::pow(10.0, decade - (SpeedSigFigs - 1));
+    return std::round(speed / scale) * scale;
 }
 
 inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)

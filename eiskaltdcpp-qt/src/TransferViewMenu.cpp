@@ -20,7 +20,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled):
     QAction *browse     = new QAction(TransferView::tr("Browse files"), menu);
     browse->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
 
-    QAction *open_file  = new QAction(TransferView::tr("Open file"), menu);
+    QAction *open_file  = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), TransferView::tr("Open file"), menu);
     QAction *open_dir   = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), TransferView::tr("Open directory"), menu);
     open_file->setEnabled(openEnabled);
     open_dir->setEnabled(openEnabled);

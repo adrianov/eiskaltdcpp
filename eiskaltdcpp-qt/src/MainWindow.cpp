@@ -43,6 +43,8 @@
 #include <QAction>
 #include <QStatusBar>
 #include <QDate>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "ArenaWidgetManager.h"
 #include "ArenaWidgetFactory.h"
