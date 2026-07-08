@@ -137,6 +137,12 @@ public:
 
     static string translateError(int aError);
 
+    static const char NO_SPACE_TAG[];
+    static string noSpaceError();
+    static bool isNoSpaceError(int aError);
+    static bool isNoSpaceMessage(const string& msg);
+    static bool getFreeBytes(const string& path, uint64_t& out);
+
     static string getFilePath(const string& path, char separator = PATH_SEPARATOR) {
         string::size_type i = path.rfind(separator);
         return (i != string::npos) ? path.substr(0, i + 1) : path;

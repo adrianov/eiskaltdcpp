@@ -32,6 +32,8 @@ void DownloadManager::failDownload(UserConnection* aSource, const string& reason
     Download* d = aSource->getDownload();
 
     if(d) {
+        if(Util::isNoSpaceMessage(reason) && d->getType() == Transfer::TYPE_FILE)
+            QueueManager::getInstance()->handleDiskFull(d->getPath());
         removeDownload(d);
         fire(DownloadManagerListener::Failed(), d, reason);
 

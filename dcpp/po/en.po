@@ -480,6 +480,14 @@ msgstr ""
 msgid "%1%: Matched %2% file"
 msgstr ""
 
+#: ../QueueManagerDisk.cpp:168
+msgid "Not enough disk space in %1% (%2% free); paused %3%."
+msgstr ""
+
+#: ../UtilDisk.cpp:23
+msgid "Not enough disk space"
+msgstr ""
+
 #: ../QueueManager.cpp:1794
 msgid "Target path for this item is not available: %1%; pause this queue item."
 msgstr ""

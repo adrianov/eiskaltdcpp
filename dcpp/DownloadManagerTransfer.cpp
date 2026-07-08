@@ -61,7 +61,7 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
     try {
         QueueManager::getInstance()->setFile(d);
     } catch(const FileException& e) {
-        failDownload(aSource, str(F_("Could not open target file: %1%") % e.getError()));
+        failDownload(aSource, Util::isNoSpaceMessage(e.getError()) ? e.getError() : str(F_("Could not open target file: %1%") % e.getError()));
         return;
     } catch(const Exception& e) {
         failDownload(aSource, e.getError());

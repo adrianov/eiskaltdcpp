@@ -21,6 +21,16 @@
 namespace dcpp {
 
 #ifdef _WIN32
+static void throwFileErr(DWORD err) {
+    throw FileException(Util::isNoSpaceError(static_cast<int>(err)) ? Util::noSpaceError() : Util::translateError(static_cast<int>(err)));
+}
+#else
+static void throwFileErr() {
+    throw FileException(Util::isNoSpaceError(errno) ? Util::noSpaceError() : Util::translateError(errno));
+}
+#endif
+
+#ifdef _WIN32
 File::File(const string& aFileName, int access, int mode) {
     dcassert(access == static_cast<int>(WRITE) || access == static_cast<int>(READ) || access == static_cast<int>((READ | WRITE)));
 
@@ -44,7 +54,7 @@ File::File(const string& aFileName, int access, int mode) {
                       FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 
     if(h == INVALID_HANDLE_VALUE) {
-        throw FileException(Util::translateError(GetLastError()));
+        throwFileErr(GetLastError());
     }
 }
 
@@ -118,7 +128,7 @@ void File::movePos(int64_t pos) noexcept {
 size_t File::read(void* buf, size_t& len) {
     DWORD x;
     if(!::ReadFile(h, buf, (DWORD)len, &x, NULL)) {
-        throw(FileException(Util::translateError(GetLastError())));
+        throwFileErr(GetLastError());
     }
     len = x;
     return x;
@@ -127,7 +137,7 @@ size_t File::read(void* buf, size_t& len) {
 size_t File::write(const void* buf, size_t len) {
     DWORD x;
     if(!::WriteFile(h, buf, (DWORD)len, &x, NULL)) {
-        throw FileException(Util::translateError(GetLastError()));
+        throwFileErr(GetLastError());
     }
     dcassert(x == len);
     return x;
@@ -135,13 +145,13 @@ size_t File::write(const void* buf, size_t len) {
 void File::setEOF() {
     dcassert(isOpen());
     if(!SetEndOfFile(h)) {
-        throw FileException(Util::translateError(GetLastError()));
+        throwFileErr(GetLastError());
     }
 }
 
 size_t File::flush() {
     if(isOpen() && !FlushFileBuffers(h))
-        throw FileException(Util::translateError(GetLastError()));
+        throwFileErr(GetLastError());
     return 0;
 }
 
@@ -155,7 +165,7 @@ void File::renameFile(const string& source, const string& target) {
 
 void File::copyFile(const string& src, const string& target) {
     if(!::CopyFileW(Text::utf8ToWide(src).c_str(), Text::utf8ToWide(target).c_str(), FALSE)) {
-        throw FileException(Util::translateError(GetLastError()));
+        throwFileErr(GetLastError());
     }
 }
 
@@ -224,7 +234,7 @@ File::File(const string& aFileName, int access, int mode) {
 
     h = open(filename.c_str(), m, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if(h == -1)
-        throw FileException(Util::translateError(errno));
+        throwFileErr();
 }
 
 uint32_t File::getLastModified() noexcept {
@@ -273,7 +283,7 @@ void File::movePos(int64_t pos) noexcept {
 size_t File::read(void* buf, size_t& len) {
     ssize_t result = ::read(h, buf, len);
     if (result == -1) {
-        throw FileException(Util::translateError(errno));
+        throwFileErr();
     }
     len = result;
     return (size_t)result;
@@ -288,7 +298,7 @@ size_t File::write(const void* buf, size_t len) {
         result = ::write(h, pointer, left);
         if (result == -1) {
             if (errno != EINTR) {
-                throw FileException(Util::translateError(errno));
+                throwFileErr();
             }
         } else {
             pointer += result;
@@ -324,7 +334,7 @@ void File::setEOF() {
         ret = ftruncate(h, (off_t)pos);
     lseek(h, (off_t)pos, SEEK_SET);
     if (ret == -1)
-        throw FileException(Util::translateError(errno));
+        throwFileErr();
 }
 
 void File::setSize(int64_t newSize) {
@@ -336,7 +346,7 @@ void File::setSize(int64_t newSize) {
 
 size_t File::flush() {
     if(isOpen() && fsync(h) == -1)
-        throw FileException(Util::translateError(errno));
+        throwFileErr();
     return 0;
 }
 
@@ -353,7 +363,7 @@ void File::renameFile(const string& source, const string& target) {
         copyFile(source, target);
         deleteFile(source);
     } else if(ret != 0)
-        throw FileException(source + Util::translateError(errno));
+        throw FileException(source + (Util::isNoSpaceError(errno) ? Util::noSpaceError() : Util::translateError(errno)));
 }
 
 // This doesn't assume all bytes are written in one write call, it is a bit safer

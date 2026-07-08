@@ -114,6 +114,7 @@ public:
     Download* getDownload(UserConnection& aSource, bool supportsTrees) noexcept;
     void putDownload(Download* aDownload, bool finished) noexcept;
     void setFile(Download* download);
+    void handleDiskFull(const string& target) noexcept;
 
     int64_t getQueued(const UserPtr& aUser) const;
 

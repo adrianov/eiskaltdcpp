@@ -42,6 +42,8 @@ set(DCPP_EXTRA_SOURCES
     UserConnectionLine.cpp
     UserConnectionChunk.cpp
     UtilIp.cpp
+    UtilDisk.cpp
+    QueueManagerDisk.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
