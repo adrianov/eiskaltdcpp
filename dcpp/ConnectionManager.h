@@ -128,6 +128,8 @@ private:
 
     ConnectionQueueItem* getCQI(const HintedUser& user, bool download);
     void putCQI(ConnectionQueueItem* cqi);
+    ConnectionQueueItem* findDownloadCqi(const UserPtr& user);
+    bool slotWaitActive(const ConnectionQueueItem* cqi) const;
 
     bool checkKeyprint(UserConnection *aSource);
 

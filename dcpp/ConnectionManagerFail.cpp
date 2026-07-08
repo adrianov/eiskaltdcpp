@@ -96,11 +96,8 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
     Lock l(cs);
 
     ConnectionQueueItem::Ptr dlCqi = nullptr;
-    if(aSource->getUser()) {
-        auto i = find(downloads.begin(), downloads.end(), aSource->getUser());
-        if(i != downloads.end())
-            dlCqi = *i;
-    }
+    if(aSource->getUser())
+        dlCqi = findDownloadCqi(aSource->getUser());
 
     const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
 

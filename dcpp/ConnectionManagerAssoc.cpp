@@ -22,9 +22,12 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
     {
         Lock l(cs);
 
-        auto i = find(downloads.begin(), downloads.end(), uc->getUser());
-        if(i != downloads.end()) {
-            auto& cqi = *i;
+        auto* cqi = findDownloadCqi(uc->getUser());
+        if(cqi) {
+            if(slotWaitActive(cqi)) {
+                putConnection(uc);
+                return;
+            }
             if(cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING) {
                 cqi->setState(ConnectionQueueItem::ACTIVE);
                 cqi->setSlotWaits(0);
