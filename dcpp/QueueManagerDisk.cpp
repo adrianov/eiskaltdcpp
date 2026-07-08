@@ -20,6 +20,10 @@ namespace dcpp {
 
 namespace {
 
+FastCriticalSection diskFullLogCs;
+string diskFullLogVol;
+uint64_t diskFullLogTick = 0;
+
 class TreeOutputStream : public OutputStream {
 public:
     TreeOutputStream(TigerTree& aTree) : tree(aTree), bufPos(0) {
@@ -155,12 +159,17 @@ void QueueManager::handleDiskFull(const string& target) noexcept {
     uint64_t free = 0;
     Util::getFreeBytes(volPath, free);
 
-    static string lastVol;
-    static uint64_t lastLog = 0;
-    const uint64_t now = GET_TICK();
-    if(volPath != lastVol || now - lastLog > 60000) {
-        lastLog = now;
-        lastVol = volPath;
+    bool log = false;
+    {
+        FastLock l(diskFullLogCs);
+        const uint64_t now = GET_TICK();
+        if(volPath != diskFullLogVol || now - diskFullLogTick > 60000) {
+            diskFullLogTick = now;
+            diskFullLogVol = volPath;
+            log = true;
+        }
+    }
+    if(log) {
         LogManager::getInstance()->message(str(F_("Not enough disk space in %1% (%2% free); paused %3%.") %
                                                Util::addBrackets(volPath) % Util::formatBytes(static_cast<int64_t>(free)) % Util::addBrackets(Util::getFileName(target))));
     }
