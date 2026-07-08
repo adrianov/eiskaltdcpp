@@ -22,6 +22,21 @@
 
 namespace dcpp {
 
+OnlineUser* ClientManager::findConnectUser(const HintedUser& user, bool priv) {
+    OnlineUser* ou = findOnlineUser(user, priv);
+    if(!ou || !PeerConnectFilter::isViablePeer(*ou))
+        ou = findBestOnlineUser(user.user->getCID(), user.hint, priv);
+    return ou;
+}
+
+void ClientManager::markFakeActive(OnlineUser& ou) {
+    if(ou.getUser()->isSet(User::PASSIVE))
+        return;
+    ou.getUser()->setFlag(User::PASSIVE);
+    updateUser(ou);
+    PeerConnectLog::fakeActiveRetry(ou);
+}
+
 bool ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode) {
     if(!MappingManager::getInstance()->readyForPeerConnect()) {
         dcdebug("ClientManager::connect deferred: waiting for UPnP port mapping\n");
@@ -58,16 +73,26 @@ bool ClientManager::connect(const HintedUser& user, const string& token, bool re
 bool ClientManager::wantRevConnect(const HintedUser& user, int attempt) {
     if(attempt < 1)
         return false;
-    if(attempt > 1)
-        return true;
-
-    if(isActive())
-        return false;
 
     bool priv = FavoriteManager::getInstance()->isPrivate(user.hint);
     Lock l(cs);
-    OnlineUser* ou = findOnlineUser(user, priv);
-    if(!ou || !ou->getUser()->isSet(User::PASSIVE))
+    OnlineUser* ou = findConnectUser(user, priv);
+    if(!ou)
+        return false;
+
+    if(attempt > 1) {
+        if(!isActive())
+            return true;
+        if(!ou->getUser()->isSet(User::PASSIVE)) {
+            markFakeActive(*ou);
+            return true;
+        }
+        return false;
+    }
+
+    if(isActive())
+        return false;
+    if(!ou->getUser()->isSet(User::PASSIVE))
         return false;
     if(ou->getUser()->isSet(User::NAT_TRAVERSAL))
         return true;

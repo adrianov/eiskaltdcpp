@@ -127,6 +127,10 @@ void passiveSkip(const HintedUser& user) {
     logMsg(withProfile(user, str(F_("%1%: skipped passive-to-passive source") % userName(user))));
 }
 
+void fakeActiveRetry(const HintedUser& user) {
+    logMsg(withProfile(user, str(F_("%1%: retrying as passive (active connect failed)") % userName(user))));
+}
+
 void cachedList(const HintedUser& user, const string& listFile) {
     logMsg(withProfile(user, str(F_("%1%: opened cached file list (%2%)") % userName(user) % listFile)));
 }

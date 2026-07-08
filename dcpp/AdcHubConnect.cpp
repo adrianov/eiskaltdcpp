@@ -146,11 +146,11 @@ void AdcHub::handle(AdcCommand::RNT, AdcCommand& c) noexcept {
     ConnectionManager::getInstance()->adcConnect(*u, port, sock->getLocalPort(), BufferedSocket::NAT_SERVER, token, secure);
 }
 
-void AdcHub::connect(const OnlineUser& user, const string& token, bool /*reverseConnect*/, int secureMode) {
-    connectSecure(user, token, PeerConnectTls::resolveSecure(secureMode, user.getUser()));
+void AdcHub::connect(const OnlineUser& user, const string& token, bool reverseConnect, int secureMode) {
+    connectSecure(user, token, PeerConnectTls::resolveSecure(secureMode, user.getUser()), reverseConnect);
 }
 
-void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure) {
+void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure, bool reverseConnect) {
     if(state != STATE_NORMAL)
         return;
 
@@ -173,7 +173,7 @@ void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool sec
         proto = &CLIENT_PROTOCOL;
     }
 
-    if(isActive()) {
+    if(isActive() && !reverseConnect) {
         const string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
         if(port.empty()) {
             PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("not listening for connections"));

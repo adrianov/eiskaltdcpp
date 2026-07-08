@@ -28,6 +28,7 @@ void connected(const HintedUser& user, bool download);
 void userOffline(const HintedUser& user);
 void passiveWait(const HintedUser& user);
 void passiveSkip(const HintedUser& user);
+void fakeActiveRetry(const HintedUser& user);
 void cachedList(const HintedUser& user, const string& listFile);
 void nmdcSend(const OnlineUser& target, const string& cmd, const string& detail);
 void nmdcRecv(const OnlineUser& sender, const string& summary);

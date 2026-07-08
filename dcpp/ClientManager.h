@@ -203,6 +203,7 @@ private:
     virtual ~ClientManager();
 
     void updateUser(const OnlineUser& user) noexcept;
+    void markFakeActive(OnlineUser& ou);
 
     /// @return OnlineUser* found by CID and hint; discard any user that doesn't match the hint.
     OnlineUser* findOnlineUserHint(const CID& cid, const string& hintUrl) const {
@@ -214,6 +215,8 @@ private:
     * @return OnlineUser* found by CID and hint; discard any user that doesn't match the hint.
     */
     OnlineUser* findOnlineUserHint(const CID& cid, const string& hintUrl, OnlinePairC& p) const;
+
+    OnlineUser* findConnectUser(const HintedUser& user, bool priv);
 
     string getUsersFile() const { return Util::getPath(Util::PATH_USER_LOCAL) + "Users.xml"; }
 
