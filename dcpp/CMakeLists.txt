@@ -17,6 +17,9 @@ set(DCPP_EXTRA_SOURCES
     QueueAutoSearch.cpp
     QueueManagerList.cpp
     NmdcHubLine.cpp
+    NmdcHubLineProfile.cpp
+    NmdcHubLineHub.cpp
+    NmdcHubLineLists.cpp
     NmdcHubConnect.cpp
     AdcHubConnect.cpp
     NmdcHubSend.cpp

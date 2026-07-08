@@ -128,6 +128,12 @@ private:
     void updateFromTag(Identity& id, const string& tag);
     void findTagInMyINFO(Identity& id, const string& param, size_t start);
 
+    void onLineSearch(const string& param);
+    void onLineMyInfo(const string& param);
+    void onLineHubSetup(const string& cmd, const string& param, const string& aLine);
+    void onLineUserLists(const string& cmd, const string& param);
+    void onLineTo(const string& param);
+
     string checkNick(const string& aNick) override;
 
     // TimerManagerListener
