@@ -9,6 +9,7 @@
 
 #include "DownloadQueueModel.h"
 
+#include "ProgressBarPaint.h"
 #include "WulforUtil.h"
 
 #if QT_VERSION >= 0x050000
@@ -43,28 +44,5 @@ void DownloadQueueDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     percent = (esize > 0) ? (percent/(double)esize) : 0.0;
     const QString status = QString("%1%").arg(percent, 0, 'f', 1);
 
-#if defined(USE_PROGRESS_BARS)
-    QStyleOptionProgressBar progressBarOption;
-    progressBarOption.state = QStyle::State_Enabled;
-    progressBarOption.direction = QApplication::layoutDirection();
-    progressBarOption.rect = option.rect;
-    progressBarOption.fontMetrics = QApplication::fontMetrics();
-    progressBarOption.minimum = 0;
-    progressBarOption.maximum = 100;
-    progressBarOption.textAlignment = Qt::AlignCenter;
-    progressBarOption.textVisible = true;
-    progressBarOption.text = status;
-    progressBarOption.progress = static_cast<int>(percent);
-
-    if (option.state & QStyle::State_Selected)
-        painter->fillRect(option.rect, option.palette.highlight());
-
-    QApplication::style()->drawControl(QStyle::CE_ProgressBar, &progressBarOption, painter);
-#else
-    QStyleOptionViewItem plainTextOption = option;
-    plainTextOption.text = status;
-    plainTextOption.displayAlignment = Qt::AlignCenter;
-
-    QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &plainTextOption, painter);
-#endif
+    paintProgressCell(painter, option, static_cast<int>(percent), status);
 }

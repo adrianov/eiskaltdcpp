@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferView.h"
+#include "TransferViewDelegate.h"
 #include "TransferViewModel.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"

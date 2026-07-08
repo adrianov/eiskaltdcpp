@@ -81,6 +81,20 @@ endif (USE_QT_SQLITE)
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 
+# Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob is stale.
+set(QT_EXTRA_SOURCES
+    src/TransferViewDelegate.cpp
+    src/TransferViewItem.cpp
+)
+foreach(_src ${QT_EXTRA_SOURCES})
+    set(_path ${PROJECT_SOURCE_DIR}/${_src})
+    if(NOT EXISTS ${_path})
+        message(FATAL_ERROR "eiskaltdcpp-qt source missing: ${_src}")
+    elseif(NOT "${_path}" IN_LIST SRCS)
+        list(APPEND SRCS ${_path})
+    endif()
+endforeach()
+
 if (NOT HAIKU)
     list (APPEND SRCS src/qtsingleapp/qtsinglecoreapplication.cpp)
 endif (NOT HAIKU)

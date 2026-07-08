@@ -10,9 +10,6 @@
 #pragma once
 
 #include <QAbstractItemModel>
-#include <QStyledItemDelegate>
-#include <QStyleOptionViewItem>
-#include <QPainter>
 #include <QMultiHash>
 #include <QSize>
 
@@ -26,25 +23,6 @@ static const int COLUMN_TRANSFER_FNAME       = 6;
 static const int COLUMN_TRANSFER_HOST        = 7;
 static const int COLUMN_TRANSFER_IP          = 8;
 static const int COLUMN_TRANSFER_ENCRYPTION  = 9;
-
-class TransferViewDelegate:
-        public QStyledItemDelegate
-{
-    Q_OBJECT
-
-public:
-    TransferViewDelegate(QObject* = nullptr);
-    virtual ~TransferViewDelegate();
-
-    virtual void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex&) const;
-
-private Q_SLOTS:
-    void wsVarValueChanged(const QString&, const QVariant &);
-
-private:
-    QColor download_bar_color;
-    QColor upload_bar_color;
-};
 
 class TransferViewItem
 {
