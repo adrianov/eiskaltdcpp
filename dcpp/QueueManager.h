@@ -265,13 +265,13 @@ private:
     DirectoryItem::DirectoryMap directories;
     /** Recent TTH auto-searches by target, to avoid duplicate searches */
     StringList recent;
-    /** Recent keyword auto-searches by longest filename word */
-    StringList recentKeywords;
+    /** Recent filename auto-searches by target basename */
+    StringList recentNames;
     /** The queue needs to be saved */
     bool dirty;
     /** Next auto-search tick */
     uint64_t nextSearch;
-    /** Alternate TTH and keyword background searches */
+    /** Alternate TTH and filename background searches */
     bool nextAutoSearchTTH;
     /** File lists not to delete */
     StringList protectedFileLists;

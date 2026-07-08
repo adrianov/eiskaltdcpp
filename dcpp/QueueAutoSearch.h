@@ -20,15 +20,14 @@ struct AutoSearchPick {
     SearchManager::TypeModes type = SearchManager::TYPE_TTH;
 };
 
-/** Background queue search: alternates TTH and filename keyword picks,
+/** Background queue search: alternates TTH and full-filename picks,
  *  falling back to the other kind when the preferred one has no candidate. */
 class QueueAutoSearch {
 public:
-    enum Mode { TTH, KEYWORD };
+    enum Mode { TTH, FILENAME };
 
-    static string longestWord(const string& fileName);
     static AutoSearchPick pickAlternating(QueueItem::StringMap& queue, StringList& recent,
-                                          StringList& recentKeywords, bool preferTTH);
+                                          StringList& recentNames, bool preferTTH);
 };
 
 } // namespace dcpp
