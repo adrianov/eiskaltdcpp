@@ -117,6 +117,10 @@ void Settings::init(){
     stackedWidget->insertWidget((int)Page::History, prepareWidget(shist));
     stackedWidget->insertWidget((int)Page::Advanced, prepareWidget(sadv));
 
+    const int emptyIdx = stackedWidget->indexOf(findChild<QWidget*>("emptyPage"));
+    if (emptyIdx >= 0)
+        stackedWidget->removeWidget(stackedWidget->widget(emptyIdx));
+
     stackedWidget->setCurrentIndex(0);
 
     if (WVGET("settings/dialog-size").isValid())
@@ -157,7 +161,7 @@ QWidget *Settings::prepareWidget(QWidget *w)
     if (containsTabs) {
         for (auto *tw : w->findChildren<QTabWidget*>()) {
             // Content of each page should placed to independent QScrollArea
-            for (int k = 0; k < tw->count(); ++k) {
+            for (int k = tw->count() - 1; k >= 0; --k) {
                 const QString &&title = tw->tabText(k);
                 QWidget *page = tw->widget(k);
                 QScrollArea *scrollArea = new QScrollArea(this);
