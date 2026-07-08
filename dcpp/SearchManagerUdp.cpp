@@ -150,7 +150,7 @@ int SearchManager::UdpQueue::run() {
 
             SearchManager::getInstance()->onRES(c, user, remoteIp);
 
-        } if(x.compare(1, 4, "PSR ") == 0 && x[x.length() - 1] == 0x0a) {
+        } else if(x.compare(1, 4, "PSR ") == 0 && x[x.length() - 1] == 0x0a) {
             AdcCommand c(x.substr(0, x.length()-1));
             if(c.getParameters().empty())
                 continue;

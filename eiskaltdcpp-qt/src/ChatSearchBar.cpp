@@ -81,7 +81,9 @@ void ChatSearchBar::findText(QTextDocument::FindFlags flag){
 void ChatSearchBar::textChanged(const QString &text){
     if (text.isEmpty()){
         chat->verticalScrollBar()->setValue(chat->verticalScrollBar()->maximum());
-        chat->textCursor().movePosition(QTextCursor::End, QTextCursor::MoveAnchor, 1);
+        QTextCursor c = chat->textCursor();
+        c.movePosition(QTextCursor::End, QTextCursor::MoveAnchor, 1);
+        chat->setTextCursor(c);
 
         return;
     }

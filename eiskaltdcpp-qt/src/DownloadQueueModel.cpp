@@ -78,7 +78,7 @@ DownloadQueueModel::DownloadQueueModel(QObject *parent)
     d->rootItem = new DownloadQueueItem(rootData, nullptr);
 
     d->sortColumn = COLUMN_DOWNLOADQUEUE_NAME;
-    d->sortOrder = Qt::DescendingOrder;
+    d->sortOrder = Qt::AscendingOrder;
 }
 
 DownloadQueueModel::~DownloadQueueModel()
