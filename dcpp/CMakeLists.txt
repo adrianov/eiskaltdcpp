@@ -47,6 +47,7 @@ set(DCPP_EXTRA_SOURCES
     SocketSocks.cpp
     UserConnectionLine.cpp
     UserConnectionChunk.cpp
+    UserConnectionSpeed.cpp
     UtilIp.cpp
     UtilDisk.cpp
     QueueManagerDisk.cpp

@@ -43,6 +43,9 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
     Download* d = aSource->getDownload();
     dcassert(d != NULL);
 
+    if(start == 0 && d->getType() == Transfer::TYPE_FILE)
+        aSource->resetTransferSpeed();
+
     dcdebug("Preparing " I64_FMT ":" I64_FMT ", " I64_FMT ":" I64_FMT"\n",
             static_cast<long long int>(d->getStartPos()), static_cast<long long int>(start),
             static_cast<long long int>(d->getSize()), static_cast<long long int>(bytes));
@@ -110,6 +113,7 @@ void DownloadManager::on(UserConnectionListener::Data, UserConnection* aSource, 
     try {
         d->addPos(d->getFile()->write(aData, aLen), aLen);
         d->tick();
+        aSource->updateTransferSpeed(d->getStartPos() + d->getPos());
 
         if(d->getFile()->eof()) {
             endData(aSource);

@@ -379,6 +379,8 @@ void UploadManager::on(UserConnectionListener::Get, UserConnection* aSource, con
     }
 
     if(prepareFile(*aSource, Transfer::names[Transfer::TYPE_FILE], Util::toAdcFile(aFile), aResume, -1)) {
+        if(aResume == 0)
+            aSource->resetTransferSpeed();
         aSource->setState(UserConnection::STATE_SEND);
         aSource->fileLength(Util::toString(aSource->getUpload()->getSize()));
     }
@@ -412,6 +414,9 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
     int64_t aBytes = Util::toInt64(c.getParam(3));
 
     if(prepareFile(*aSource, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4))) {
+        if(aStartPos == 0)
+            aSource->resetTransferSpeed();
+
         Upload* u = aSource->getUpload();
         dcassert(u != NULL);
 
@@ -442,6 +447,7 @@ void UploadManager::on(UserConnectionListener::BytesSent, UserConnection* aSourc
     dcassert(u != NULL);
     u->addPos(aBytes, aActual);
     u->tick();
+    aSource->updateTransferSpeed(u->getStartPos() + u->getPos());
 }
 
 void UploadManager::on(UserConnectionListener::Failed, UserConnection* aSource, const string& aError) noexcept {
@@ -665,6 +671,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t) noexcept {
         if(u->getPos() > 0) {
             ticks.push_back(u);
             u->tick();
+            u->getUserConnection().updateTransferSpeed(u->getStartPos() + u->getPos());
         }
     }
 

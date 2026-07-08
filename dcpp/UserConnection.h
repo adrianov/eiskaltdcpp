@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <deque>
+
 #include "forward.h"
 #include "TimerManager.h"
 #include "UserConnectionListener.h"
@@ -199,6 +201,9 @@ public:
 
     int64_t getChunkSize() const { return chunkSize; }
     void updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks);
+    void updateTransferSpeed(int64_t cumulativeBytes) noexcept;
+    double getDisplaySpeed() const noexcept;
+    void resetTransferSpeed() noexcept;
     void sendRaw(const string& raw) { send(raw); } // libeiskaltdcpp
     GETSET(string, hubUrl, HubUrl);
     GETSET(string, token, Token);
@@ -212,6 +217,10 @@ public:
 
 private:
     int64_t chunkSize;
+    mutable CriticalSection speedCs;
+    deque<pair<uint64_t, int64_t>> speedSamples;
+    double displaySpeed;
+    uint64_t lastSpeedTick;
     BufferedSocket* socket;
     bool secure;
     UserPtr user;
@@ -225,7 +234,7 @@ private:
 
     // We only want ConnectionManager to create this...
     UserConnection(bool secure_) noexcept : encoding(Text::systemCharset), state(STATE_UNCONNECTED),
-        lastActivity(0), speed(0), chunkSize(0), socket(0), secure(secure_), download(NULL) {
+        lastActivity(0), speed(0), chunkSize(0), displaySpeed(0), lastSpeedTick(0), socket(0), secure(secure_), download(NULL) {
         if (secure_)
             setFlag(FLAG_SECURE);
     }
