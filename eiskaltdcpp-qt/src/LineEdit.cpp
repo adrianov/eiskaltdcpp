@@ -32,6 +32,7 @@ LineEdit::LineEdit(QWidget *parent) :
 
     connect(this, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged()));
 
+    AppTheme::applyInputPalette(this);
     updateGeometry();
     updateStyles();
     slotTextChanged();
@@ -55,11 +56,7 @@ void LineEdit::paintEvent(QPaintEvent *e){
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    QColor border = AppTheme::isDark()
-        ? palette().color(QPalette::Mid)
-        : QColor(0xA0, 0xA0, 0xA4);
-    if (hasFocus())
-        border = palette().color(QPalette::Highlight);
+    QColor border = AppTheme::inputBorder(hasFocus());
 
     painter.setPen(QPen(border, 1));
     painter.setBrush(Qt::NoBrush);
@@ -114,8 +111,10 @@ void LineEdit::updateStyles(){
 }
 
 void LineEdit::changeEvent(QEvent *e){
-    if (e->type() == QEvent::PaletteChange)
+    if (e->type() == QEvent::PaletteChange || e->type() == QEvent::ThemeChange) {
+        AppTheme::applyInputPalette(this);
         update();
+    }
 
     QLineEdit::changeEvent(e);
 }

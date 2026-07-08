@@ -66,6 +66,9 @@ protected:
     void keyPressEvent(QKeyEvent *);
     void keyReleaseEvent(QKeyEvent *);
     void focusInEvent(QFocusEvent *);
+    void focusOutEvent(QFocusEvent *);
+    void paintEvent(QPaintEvent *);
+    void changeEvent(QEvent *);
     void dropEvent(QDropEvent *);
     void dragEnterEvent(QDragEnterEvent *e);
     void dragMoveEvent(QDragMoveEvent *event); // Required to accept drops on win32

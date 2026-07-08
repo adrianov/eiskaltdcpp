@@ -2086,6 +2086,8 @@ void MainWindow::showShareBrowser(dcpp::UserPtr usr, const QString &file, const 
 void MainWindow::reloadSomeSettings(){
     Q_D(MainWindow);
 
+    AppTheme::apply();
+
     for (const auto &awgt : d->menuWidgetsHash.values()){
         HubFrame *fr = qobject_cast<HubFrame *>(awgt->getWidget());
 

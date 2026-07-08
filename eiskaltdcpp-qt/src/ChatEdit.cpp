@@ -12,10 +12,18 @@
 #include <QAbstractItemView>
 #include <QCompleter>
 #include <QKeyEvent>
+#include <QEvent>
+#include <QPaintEvent>
+#include <QPainter>
+
+#include "AppTheme.h"
 
 ChatEdit::ChatEdit(QWidget *parent) : QTextEdit(parent)
 {
     setMinimumHeight(10);
+    setFrameShape(QFrame::NoFrame);
+    setAutoFillBackground(true);
+    AppTheme::applyInputPalette(this);
 
     setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -39,6 +47,33 @@ QSize ChatEdit::sizeHint() const{
     sh.setHeight(int(document()->documentLayout()->documentSize().height()));
     sh += QSize(0, QFrame::lineWidth() * 2);
     return sh.expandedTo(minimumSizeHint());
+}
+
+void ChatEdit::paintEvent(QPaintEvent *e)
+{
+    QTextEdit::paintEvent(e);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(AppTheme::inputBorder(hasFocus()), 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 5, 5);
+}
+
+void ChatEdit::focusOutEvent(QFocusEvent *e)
+{
+    QTextEdit::focusOutEvent(e);
+    update();
+}
+
+void ChatEdit::changeEvent(QEvent *e)
+{
+    if (e->type() == QEvent::PaletteChange || e->type() == QEvent::ThemeChange) {
+        AppTheme::applyInputPalette(this);
+        update();
+    }
+
+    QTextEdit::changeEvent(e);
 }
 
 void ChatEdit::keyPressEvent(QKeyEvent *e)

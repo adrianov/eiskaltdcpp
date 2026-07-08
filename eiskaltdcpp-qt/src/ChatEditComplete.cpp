@@ -88,6 +88,7 @@ void ChatEdit::focusInEvent(QFocusEvent *e)
         cc->setWidget(this);
 
     QTextEdit::focusInEvent(e);
+    update();
 }
 
 void ChatEdit::complete()

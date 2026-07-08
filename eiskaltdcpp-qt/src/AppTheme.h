@@ -12,10 +12,16 @@
 #include <QColor>
 #include <QString>
 
+class QWidget;
+
 class AppTheme {
 public:
     static bool isDark();
     static void apply();
+
+    static QColor inputBackground();
+    static QColor inputBorder(bool focused);
+    static void applyInputPalette(QWidget *widget);
 
     static QString chatColor(const QString &settingKey);
     static QColor errorColor();
