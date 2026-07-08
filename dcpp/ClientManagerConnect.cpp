@@ -46,10 +46,7 @@ bool ClientManager::connect(const HintedUser& user, const string& token, bool re
     bool priv = FavoriteManager::getInstance()->isPrivate(user.hint);
 
     Lock l(cs);
-    OnlineUser* u = findOnlineUser(user, priv);
-
-    if(!u || !PeerConnectFilter::isViablePeer(*u))
-        u = findBestOnlineUser(user.user->getCID(), user.hint, priv);
+    OnlineUser* u = findConnectUser(user, priv);
 
     if(u && !PeerConnectFilter::isViablePeer(*u)) {
         PeerConnectLog::skip(getNickOrCid(user), user.hint, _("stale or ghost hub user entry"));
