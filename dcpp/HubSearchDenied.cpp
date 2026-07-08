@@ -25,7 +25,13 @@ bool isSearchDeniedHubText(const string& message) {
     if(Util::findSubString(message, "can not search") != string::npos)
         return true;
     if(Util::findSubString(message, "search") != string::npos &&
-            Util::findSubString(message, "registered with class") != string::npos)
+            Util::findSubString(message, "registered with class") != string::npos &&
+            (Util::findSubString(message, "must") != string::npos ||
+             Util::findSubString(message, "need") != string::npos ||
+             Util::findSubString(message, "require") != string::npos ||
+             Util::findSubString(message, "denied") != string::npos ||
+             Util::findSubString(message, "not allowed") != string::npos ||
+             Util::findSubString(message, "unable") != string::npos))
         return true;
     return false;
 }
