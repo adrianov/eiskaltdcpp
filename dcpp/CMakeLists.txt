@@ -27,6 +27,7 @@ set(DCPP_EXTRA_SOURCES
     DownloadManagerTimer.cpp
     DownloadManagerTransfer.cpp
     ConnectionManagerQueue.cpp
+    ConnectionManagerGetDownload.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
     ConnectionManagerNmdcHandshake.cpp
@@ -35,6 +36,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerConnectOut.cpp
     ConnectionManagerLifecycle.cpp
     PeerConnectLogFail.cpp
+    LogManagerTrim.cpp
     ProcessExit.cpp
     SocketSocks.cpp
     UserConnectionLine.cpp

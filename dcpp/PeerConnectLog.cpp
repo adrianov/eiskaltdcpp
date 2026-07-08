@@ -101,6 +101,10 @@ void queueGiveUp(const HintedUser& user, int errors) {
     logMsg(withProfile(user, str(F_("Giving up connection to %1% after %2% failed attempts") % userName(user) % errors)));
 }
 
+void queueSlotWaitGiveUp(const HintedUser& user, int slotWaits) {
+    logMsg(withProfile(user, str(F_("Giving up connection to %1% after %2% upload-slot waits") % userName(user) % slotWaits)));
+}
+
 void queueSlotWait(const HintedUser& user, int slotWaits, int backoffMin) {
     if(!PeerConnectFilter::shouldLogSlotWait(slotWaits))
         return;

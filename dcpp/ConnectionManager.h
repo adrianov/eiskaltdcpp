@@ -135,7 +135,7 @@ private:
 
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
     void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
-    void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts);
+    void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
 

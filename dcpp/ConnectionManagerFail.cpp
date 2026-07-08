@@ -63,8 +63,11 @@ bool isPostHandshakeClose(UserConnection::States s) {
 
 } // namespace
 
-void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts) {
-    PeerConnectLog::queueGiveUp(cqi->getUser(), attempts);
+void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait) {
+    if(slotWait)
+        PeerConnectLog::queueSlotWaitGiveUp(cqi->getUser(), attempts);
+    else
+        PeerConnectLog::queueGiveUp(cqi->getUser(), attempts);
     cqi->setErrors(-1);
 }
 
@@ -77,12 +80,12 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         const int backoffMin = PeerConnectFilter::slotWaitBackoffMs(dlCqi->getSlotWaits()) / (60 * 1000);
         PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMin);
         if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
-            markQueueGiveUp(dlCqi, dlCqi->getSlotWaits());
+            markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
     } else {
         dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
         dlCqi->setLastAttempt(GET_TICK());
         if(!protocolError && PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-            markQueueGiveUp(dlCqi, dlCqi->getErrors());
+            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);

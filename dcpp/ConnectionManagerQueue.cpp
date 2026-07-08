@@ -19,38 +19,7 @@
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
 
-#include <unordered_set>
-
 namespace dcpp {
-
-void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
-    dcassert((bool)aUser.user);
-    {
-        Lock l(cs);
-
-        StringList nicks = ClientManager::getInstance()->getNicks(aUser);
-        if(!nicks.empty()) {
-            std::unordered_set<CID> sameNick;
-            ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
-            ConnectionQueueItem::List stale;
-            for(auto& cqi : downloads) {
-                if(cqi->getUser().user == aUser.user)
-                    continue;
-                if(sameNick.count(cqi->getUser().user->getCID()))
-                    stale.push_back(cqi);
-            }
-            for(auto& cqi : stale)
-                putCQI(cqi);
-        }
-
-        auto i = find(downloads.begin(), downloads.end(), aUser.user);
-        if(i == downloads.end()) {
-            getCQI(aUser, true);
-        } else {
-            DownloadManager::getInstance()->checkIdle(aUser.user);
-        }
-    }
-}
 
 ConnectionQueueItem* ConnectionManager::getCQI(const HintedUser& user, bool download) {
     ConnectionQueueItem* cqi = new ConnectionQueueItem(user, download);
@@ -118,7 +87,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                    markQueueGiveUp(cqi, cqi->getErrors());
+                    markQueueGiveUp(cqi, cqi->getErrors(), false);
                     continue;
                 }
 
@@ -170,7 +139,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 } else if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50 * 1000 < aTick) {
                     cqi->setErrors(cqi->getErrors() + 1);
                     if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                        markQueueGiveUp(cqi, cqi->getErrors());
+                        markQueueGiveUp(cqi, cqi->getErrors(), false);
                         cqi->setState(ConnectionQueueItem::WAITING);
                     } else {
                         PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());

@@ -22,6 +22,7 @@ void queueAdded(const HintedUser& user);
 void queueStart(const HintedUser& user);
 void queueTimeout(const HintedUser& user, int errors);
 void queueGiveUp(const HintedUser& user, int errors);
+void queueSlotWaitGiveUp(const HintedUser& user, int slotWaits);
 void queueSlotWait(const HintedUser& user, int slotWaits, int backoffMin);
 void connected(const HintedUser& user, bool download);
 void userOffline(const HintedUser& user);
