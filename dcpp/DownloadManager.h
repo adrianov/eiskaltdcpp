@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "forward.h"
 #include "DownloadManagerListener.h"
 #include "UserConnectionListener.h"
@@ -58,11 +60,13 @@ private:
     CriticalSection cs;
     DownloadList downloads;
     UserConnectionList idlers;
+    unordered_map<CID, uint64_t> lastSlotLog;
 
     void removeConnection(UserConnectionPtr aConn);
     void removeDownload(Download* aDown);
     void fileNotAvailable(UserConnection* aSource);
     void noSlots(UserConnection* aSource, size_t queuePos);
+    bool shouldLogSlotMsg(const UserPtr& user);
 
     void logDownload(UserConnection* aSource, Download* d);
     int64_t getResumePos(const string& file, const TigerTree& tt, int64_t startPos);

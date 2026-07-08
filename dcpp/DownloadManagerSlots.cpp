@@ -22,18 +22,28 @@ namespace dcpp {
 
 namespace {
 
-unordered_map<CID, uint64_t> lastSlotLog;
+constexpr size_t kMaxSlotLogEntries = 1024;
+constexpr uint64_t kSlotLogInterval = 10 * 60 * 1000;
 
-bool shouldLogSlotMsg(const UserPtr& user) {
+} // namespace
+
+bool DownloadManager::shouldLogSlotMsg(const UserPtr& user) {
+    Lock l(cs);
     const uint64_t tick = GET_TICK();
+    for(auto it = lastSlotLog.begin(); it != lastSlotLog.end(); ) {
+        if(tick >= it->second + kSlotLogInterval)
+            it = lastSlotLog.erase(it);
+        else
+            ++it;
+    }
+    while(lastSlotLog.size() > kMaxSlotLogEntries)
+        lastSlotLog.erase(lastSlotLog.begin());
     auto& last = lastSlotLog[user->getCID()];
-    if(tick < last + 10 * 60 * 1000)
+    if(tick < last + kSlotLogInterval)
         return false;
     last = tick;
     return true;
 }
-
-} // namespace
 
 void DownloadManager::checkIdle(const UserPtr& user) {
     Lock l(cs);
