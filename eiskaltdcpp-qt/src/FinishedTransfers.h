@@ -15,10 +15,7 @@
 #include <QShowEvent>
 #include <QDir>
 #include <QComboBox>
-#include <QItemSelectionModel>
-#include <QDesktopServices>
 #include <QHeaderView>
-#include <QUrl>
 
 #ifdef USE_QT_SQLITE
 #include <QtSql>
@@ -252,122 +249,10 @@ private:
 #endif
     }
 
-    void openFile(QString file){
-        if (!file.startsWith(QChar('/')))
-            file.prepend("/");
+    void openFile(QString file);
 
-        int sep = file.lastIndexOf(QDir::separator());
-        QString name = file.right(sep);
-        QString path = file.left(sep);
-
-        QDir test(path);
-        if (!test.exists(file)){
-            QStringList files = test.entryList(QStringList("*"+name+"*"), QDir::Files, QDir::Name);
-
-            if (files.size() > 0)
-                file = path + QDir::separator() + files.first();
-        }
-
-        QDesktopServices::openUrl(QUrl::fromLocalFile(file));
-    }
-
-    void slotItemDoubleClicked(const QModelIndex &proxyIndex) override {
-        Q_UNUSED(proxyIndex);
-
-        if (comboBox->currentIndex())
-            return;
-
-        QItemSelectionModel *s_model = treeView->selectionModel();
-        QModelIndexList p_indexes = s_model->selectedRows(0);
-        QModelIndexList indexes;
-
-        for (const auto &i : p_indexes)
-            indexes.push_back(proxy->mapToSource(i));
-
-        if (indexes.size() < 1)
-            return;
-
-        QStringList files;
-        FinishedTransfersItem *item = nullptr;
-        QString file;
-        bool full;
-
-        for (const auto &i : indexes){
-            item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            file = item->data(COLUMN_FINISHED_TARGET).toString();
-            full = item->data(COLUMN_FINISHED_FULL).toBool();
-
-            if (!file.isEmpty() && full)
-                files.push_back(file);
-        }
-
-        for (const auto &f : files)
-            openFile(f);
-    }
-
-    void slotContextMenu() override {
-        static WulforUtil *WU = WulforUtil::getInstance();
-
-        QItemSelectionModel *s_model = treeView->selectionModel();
-        QModelIndexList p_indexes = s_model->selectedRows(0);
-        QModelIndexList indexes;
-
-        for (const auto &i : p_indexes)
-            indexes.push_back(proxy->mapToSource(i));
-
-        if (indexes.size() < 1)
-            return;
-
-        QStringList files;
-
-        if (comboBox->currentIndex() == 0){
-            FinishedTransfersItem *item = nullptr;
-            QString file;
-
-            for (const auto &i : indexes){
-                item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-                file = item->data(COLUMN_FINISHED_TARGET).toString();
-
-                if (!file.isEmpty())
-                    files.push_back(file);
-            }
-        }
-        else {
-            FinishedTransfersItem *item = nullptr;
-            QString file_list;
-
-            for (const auto &i : indexes){
-                item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-                file_list = item->data(COLUMN_FINISHED_PATH).toString();
-
-                if (!file_list.isEmpty()){
-                    files.append(file_list.split("; ", WULFOR_SKIP_EMPTY));
-                }
-
-            }
-        }
-
-        QMenu *m = new QMenu();
-        QAction *open_f   = new QAction(tr("Open file"), m);
-        QAction *open_dir = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), m);
-
-        m->addAction(open_f);
-        m->addAction(open_dir);
-
-        QAction *ret = m->exec(QCursor::pos());
-
-        delete m;
-
-        if (ret == open_f){
-            for (const auto &f : files)
-                openFile(f);
-        }
-        else if (ret == open_dir){
-            for (const auto &f : files)
-                WulforUtil::revealPath(f);
-        }
-
-    }
+    void slotItemDoubleClicked(const QModelIndex &proxyIndex) override;
+    void slotContextMenu() override;
 
     void slotHeaderMenu() override {
         WulforUtil::headerMenu(treeView);
@@ -382,75 +267,12 @@ private:
             retranslateUi(this);
     }
 
-    void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override {
-        if (isUpload != upload)
-            return;
-
-        if (!showDownload(file, item)) {
-            if (!isUpload && isFileListPath(file)) {
-                try {
-                    FinishedManager::getInstance()->remove(false, file);
-                } catch (const std::exception&) {}
-            }
-            return;
-        }
-
-        VarMap params;
-
-        getParams(item, file, params);
-
-        emit coreAddedFile(params);
-    }
-
-    void on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept override {
-        if (isUpload == upload){
-            VarMap params;
-
-            getParams(item, user, params);
-
-            emit coreAddedUser(params);
-        }
-    }
-
-    void on(FinishedManagerListener::UpdatedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override {
-        if (isUpload == upload && showDownload(file, item)){
-            VarMap params;
-
-            getParams(item, file, params);
-
-            emit coreUpdatedFile(params);
-        }
-    }
-
-    void on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept override {
-        if (isUpload == upload){
-            removeFileFromDB(_q(file));
-            emit coreRemovedFile(_q(file));
-        }
-    }
-
-    void on(FinishedManagerListener::UpdatedUser, bool upload, const dcpp::HintedUser &user) noexcept override {
-        if (isUpload == upload){
-            const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
-            auto userit = umap.find(user);
-            if (userit == umap.end())
-                return;
-
-            const FinishedUserItemPtr &item = userit->second;
-
-            VarMap params;
-
-            getParams(item, user, params);
-
-            emit coreUpdatedUser(params);
-        }
-    }
-
-    void on(FinishedManagerListener::RemovedUser, bool upload, const dcpp::HintedUser &user) noexcept override {
-        if (isUpload == upload){
-            emit coreRemovedUser(_q(user.user->getCID().toBase32()));
-        }
-    }
+    void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override;
+    void on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept override;
+    void on(FinishedManagerListener::UpdatedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override;
+    void on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept override;
+    void on(FinishedManagerListener::UpdatedUser, bool upload, const dcpp::HintedUser &user) noexcept override;
+    void on(FinishedManagerListener::RemovedUser, bool upload, const dcpp::HintedUser &user) noexcept override;
 
     FinishedTransferProxyModel *proxy;
     FinishedTransfersModel *model;
