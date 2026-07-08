@@ -33,16 +33,24 @@ void copyRest(File& in, File& out) {
     }
 }
 
-bool trimDue(const string& path) {
+bool claimTrim(const string& path) {
     FastLock l(trimCs);
     const uint64_t tick = GET_TICK();
     auto it = lastTrim.find(path);
-    return it == lastTrim.end() || tick >= it->second + kTrimInterval;
+    if(it != lastTrim.end() && tick < it->second + kTrimInterval)
+        return false;
+    lastTrim[path] = tick;
+    return true;
 }
 
 void markTrimmed(const string& path) {
     FastLock l(trimCs);
     lastTrim[path] = GET_TICK();
+}
+
+void clearTrimClaim(const string& path) {
+    FastLock l(trimCs);
+    lastTrim.erase(path);
 }
 
 } // namespace
@@ -55,7 +63,7 @@ void trimLogFile(const string& path) {
     try {
         const int64_t maxBytes = static_cast<int64_t>(maxMb) * 1024 * 1024;
         const int64_t size = File::getSize(path);
-        if(size <= 0 || size <= maxBytes || !trimDue(path))
+        if(size <= 0 || size <= maxBytes || !claimTrim(path))
             return;
 
         const int64_t keepBytes = maxBytes * 9 / 10;
@@ -83,6 +91,7 @@ void trimLogFile(const string& path) {
         File::renameFile(tmp, path);
         markTrimmed(path);
     } catch (const FileException&) {
+        clearTrimClaim(path);
     }
 }
 
