@@ -45,8 +45,6 @@ UserPtr ClientManager::findNmdcUser(const string& utf8Nick, const string& hubUrl
             const string& hubNick = ou->getIdentity().getNick();
             if(!nickWireMatch(utf8Nick, hubNick))
                 continue;
-            if(utf8Nick == hubNick)
-                return ou->getUser();
             if(hubNick.size() > matchedNick.size())
                 matchedNick = hubNick;
         }

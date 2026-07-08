@@ -48,31 +48,45 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 
     // Hub user list / CID use UTF-8 (NmdcHubLine toUtf8); $MyNick on the wire uses hub encoding.
     const string nick = Text::toUtf8(aNick, aSource->getEncoding());
+    const CID wireCid = ClientManager::getInstance()->makeCid(nick, aSource->getHubUrl());
 
+    ConnectionQueueItem::Ptr matchedCqi;
+    ConnectionQueueItem::List pending;
     {
         Lock l(cs);
         for(auto& cqi: downloads) {
-            if(cqi->getState() != ConnectionQueueItem::CONNECTING && cqi->getState() != ConnectionQueueItem::WAITING)
-                continue;
+            if(cqi->getState() == ConnectionQueueItem::CONNECTING ||
+                    cqi->getState() == ConnectionQueueItem::WAITING)
+                pending.push_back(cqi);
+        }
+    }
 
-            bool sameUser = cqi->getUser().user->getCID() ==
-                    ClientManager::getInstance()->makeCid(nick, aSource->getHubUrl());
-            if(!sameUser) {
-                for(const auto& hubNick : ClientManager::getInstance()->getNicks(
-                        cqi->getUser().user->getCID(), aSource->getHubUrl())) {
-                    if(nickWireMatch(nick, hubNick)) {
-                        sameUser = true;
-                        break;
-                    }
+    for(auto& cqi: pending) {
+        if(cqi->getUser().user->getCID() == wireCid) {
+            matchedCqi = cqi;
+            break;
+        }
+    }
+
+    if(!matchedCqi) {
+        for(auto& cqi: pending) {
+            for(const auto& hubNick : ClientManager::getInstance()->getNicks(
+                    cqi->getUser().user->getCID(), aSource->getHubUrl())) {
+                if(nickWireMatch(nick, hubNick)) {
+                    matchedCqi = cqi;
+                    break;
                 }
             }
-            if(sameUser) {
-                cqi->setErrors(0);
-                aSource->setUser(cqi->getUser());
-                aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
+            if(matchedCqi)
                 break;
-            }
         }
+    }
+
+    if(matchedCqi) {
+        Lock l(cs);
+        matchedCqi->setErrors(0);
+        aSource->setUser(matchedCqi->getUser());
+        aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
     }
 
     if(!aSource->getUser()) {
