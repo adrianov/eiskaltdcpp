@@ -38,6 +38,24 @@
       </object>
     </child>
     <child>
+      <object class="GtkMenuItem" id="openFileItem">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="use_action_appearance">False</property>
+        <property name="label" translatable="yes">Open _file</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="openDirItem">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="use_action_appearance">False</property>
+        <property name="label" translatable="yes">Open _directory</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+    <child>
       <object class="GtkMenuItem" id="matchQueueItem">
         <property name="visible">True</property>
         <property name="can_focus">False</property>

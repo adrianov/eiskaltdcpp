@@ -22,7 +22,10 @@
 #include <iostream>
 #include <iomanip>
 #include <iterator>
+#include <set>
 #include "transfers.hh"
+#include "TransfersOpen.hh"
+#include "TransfersUpload.hh"
 #include "WulforUtil.hh"
 #include "wulformanager.hh"
 #include "settingsmanager.hh"
@@ -34,6 +37,8 @@
 #include <dcpp/ClientManager.h>
 #include <dcpp/TimerManager.h>
 #include <dcpp/FavoriteManager.h>
+#include <dcpp/File.h>
+#include <dcpp/TimerManager.h>
 
 using namespace std;
 using namespace dcpp;
@@ -92,6 +97,8 @@ Transfers::Transfers() :
     g_signal_connect(transferView.get(), "button-press-event", G_CALLBACK(onTransferButtonPressed_gui), (gpointer)this);
     g_signal_connect(transferView.get(), "button-release-event", G_CALLBACK(onTransferButtonReleased_gui), (gpointer)this);
     g_signal_connect(getWidget("getFileListItem"), "activate", G_CALLBACK(onGetFileListClicked_gui), (gpointer)this);
+    g_signal_connect(getWidget("openFileItem"), "activate", G_CALLBACK(onOpenFileClicked_gui), (gpointer)this);
+    g_signal_connect(getWidget("openDirItem"), "activate", G_CALLBACK(onOpenDirClicked_gui), (gpointer)this);
     g_signal_connect(getWidget("matchQueueItem"), "activate", G_CALLBACK(onMatchQueueClicked_gui), (gpointer)this);
     g_signal_connect(getWidget("sendPrivateMessageItem"), "activate", G_CALLBACK(onPrivateMessageClicked_gui), (gpointer)this);
     g_signal_connect(getWidget("addToFavoritesItem"), "activate", G_CALLBACK(onAddFavoriteUserClicked_gui), (gpointer)this);
@@ -130,6 +137,7 @@ void Transfers::popupTransferMenu_gui()
     GtkTreeIter iter;
     GList *list = gtk_tree_selection_get_selected_rows(transferSelection, NULL);
     string target = string();
+    bool openEnabled = false;
 
     for (GList *i = list; i; i = i->next)
     {
@@ -143,6 +151,13 @@ void Transfers::popupTransferMenu_gui()
                 if (target.empty())
                     target = transferView.getString(&iter, "tmpTarget");
 
+                const bool download = transferView.getValue<gboolean>(&iter, "Download");
+                const string filename = transferView.getString(&iter, _("Filename"));
+                const string rowTarget = transferView.getString(&iter, "Target");
+                const string tmpTarget = transferView.getString(&iter, "tmpTarget");
+                if (!TransfersOpen::resolveTransferPath(download, rowTarget, tmpTarget, filename).empty())
+                    openEnabled = true;
+
                 string cid = transferView.getString(&iter, "CID");
                 string hubUrl = transferView.getString(&iter, "Hub URL");
                 userCommandMenu->addUser(cid);
@@ -155,6 +170,9 @@ void Transfers::popupTransferMenu_gui()
     g_list_free(list);
 
     userCommandMenu->buildMenu_gui();
+
+    gtk_widget_set_sensitive(getWidget("openFileItem"), openEnabled);
+    gtk_widget_set_sensitive(getWidget("openDirItem"), openEnabled);
 
     if (appsPreviewMenu->buildMenu_gui(target))
         gtk_widget_set_sensitive(getWidget("appsPreviewItem"), true);
@@ -191,6 +209,75 @@ void Transfers::onGetFileListClicked_gui(GtkMenuItem*, gpointer data)
                 {
                     F2 *func = new F2(tr, &Transfers::getFileList_client, cid, hubUrl);
                     WulforManager::get()->dispatchClientFunc(func);
+                }
+            }
+            while (parent && WulforUtil::getNextIter_gui(GTK_TREE_MODEL(tr->transferStore), &iter, true, false));
+        }
+        gtk_tree_path_free(path);
+    }
+    g_list_free(list);
+}
+
+void Transfers::onOpenFileClicked_gui(GtkMenuItem*, gpointer data)
+{
+    Transfers *tr = (Transfers *)data;
+    GtkTreeIter iter;
+    GtkTreePath *path;
+    GList *list = gtk_tree_selection_get_selected_rows(tr->transferSelection, NULL);
+    set<string> opened;
+
+    for (GList *i = list; i; i = i->next)
+    {
+        path = (GtkTreePath *)i->data;
+        if (gtk_tree_model_get_iter(GTK_TREE_MODEL(tr->transferStore), &iter, path))
+        {
+            bool parent = gtk_tree_model_iter_has_child(GTK_TREE_MODEL(tr->transferStore), &iter);
+
+            do
+            {
+                const bool download = tr->transferView.getValue<gboolean>(&iter, "Download");
+                const string filename = tr->transferView.getString(&iter, _("Filename"));
+                const string rowTarget = tr->transferView.getString(&iter, "Target");
+                const string tmpTarget = tr->transferView.getString(&iter, "tmpTarget");
+                const string localPath = TransfersOpen::resolveTransferPath(download, rowTarget, tmpTarget, filename);
+
+                if (!localPath.empty() && opened.insert(localPath).second)
+                    WulforUtil::openURI(localPath);
+            }
+            while (parent && WulforUtil::getNextIter_gui(GTK_TREE_MODEL(tr->transferStore), &iter, true, false));
+        }
+        gtk_tree_path_free(path);
+    }
+    g_list_free(list);
+}
+
+void Transfers::onOpenDirClicked_gui(GtkMenuItem*, gpointer data)
+{
+    Transfers *tr = (Transfers *)data;
+    GtkTreeIter iter;
+    GtkTreePath *path;
+    GList *list = gtk_tree_selection_get_selected_rows(tr->transferSelection, NULL);
+    set<string> opened;
+
+    for (GList *i = list; i; i = i->next)
+    {
+        path = (GtkTreePath *)i->data;
+        if (gtk_tree_model_get_iter(GTK_TREE_MODEL(tr->transferStore), &iter, path))
+        {
+            bool parent = gtk_tree_model_iter_has_child(GTK_TREE_MODEL(tr->transferStore), &iter);
+
+            do
+            {
+                const bool download = tr->transferView.getValue<gboolean>(&iter, "Download");
+                const string filename = tr->transferView.getString(&iter, _("Filename"));
+                const string rowTarget = tr->transferView.getString(&iter, "Target");
+                const string tmpTarget = tr->transferView.getString(&iter, "tmpTarget");
+                const string localPath = TransfersOpen::resolveTransferPath(download, rowTarget, tmpTarget, filename);
+
+                if (!localPath.empty()) {
+                    const string dir = Util::getFilePath(localPath);
+                    if (!dir.empty() && opened.insert(dir).second)
+                        WulforUtil::openURI(dir);
                 }
             }
             while (parent && WulforUtil::getNextIter_gui(GTK_TREE_MODEL(tr->transferStore), &iter, true, false));
@@ -627,6 +714,21 @@ void Transfers::updateTransfer_gui(StringMap params, bool download, Sound::TypeS
 
     if (failed) // Transfer had failed already. We won't update the transfer before the fail status changes.
         return;
+
+    if (download) {
+        int64_t newPos = params.find("Download Position") != params.end() ? Util::toInt64(params["Download Position"]) : 0;
+        int64_t oldPos = transferView.getValue<int64_t>(&iter, "Download Position");
+        if (newPos < oldPos)
+            params.erase("Download Position");
+
+        int newProgress = params.find("Progress Hidden") != params.end() ? Util::toInt(params["Progress Hidden"]) : 0;
+        int oldProgress = transferView.getValue<int>(&iter, "Progress Hidden");
+        if (newProgress < oldProgress) {
+            params.erase("Progress Hidden");
+            params.erase("Progress");
+        }
+    }
+
     for (auto it = params.begin(); it != params.end(); ++it)
     {
         if (it->first == "Size" || it->first ==  "Speed" || it->first == "Download Position" || it->first ==  "Time Left")
@@ -883,9 +985,11 @@ void Transfers::getParams_client(StringMap& params, Transfer* tr)
     params["User"] = WulforUtil::getNicks(user);
     params["Hub Name"] = WulforUtil::getHubNames(user);
     params["Path"] = Util::getFilePath(tr->getPath());
-    params["Size"] = Util::toString(tr->getSize());
+    double speed = tr->getUserConnection().getDisplaySpeed();
+    if(speed <= 0)
+        speed = tr->getAverageSpeed();
+    params["Speed"] = Util::toString(speed);
     params["Download Position"] = Util::toString(tr->getPos());
-    params["Speed"] = Util::toString(tr->getAverageSpeed());
     if (tr->getSize() > 0)
         percent = static_cast<double>(tr->getPos() * 100.0)/ tr->getSize();
     params["Progress Hidden"] = Util::toString(static_cast<int>(percent));
@@ -1013,7 +1117,7 @@ void Transfers::on(QueueManagerListener::CRCFailed, Download* dl, const string& 
 void Transfers::onFailed(Download* dl, const string& reason) {
     StringMap params;
     getParams_client(params, dl);
-    params["Status"] = reason;
+    params["Status"] = TransfersOpen::stripBracketedStatusPrefix(reason);
     params["Sort Order"] = "w" + params["User"];
     params["Failed"] = "1";
     params["Speed"] = "-1";
@@ -1064,7 +1168,7 @@ void Transfers::on(ConnectionManagerListener::Failed, ConnectionQueueItem* cqi, 
 {
     StringMap params;
     getParams_client(params, cqi);
-    params["Status"] = reason;
+    params["Status"] = TransfersOpen::stripBracketedStatusPrefix(reason);
     params["Failed"] = "1";
     params["Sort Order"] = "w" + params["User"];
     params["Speed"] = "-1";
@@ -1125,9 +1229,11 @@ void Transfers::on(QueueManagerListener::Removed, QueueItem* qi) noexcept
 void Transfers::on(UploadManagerListener::Starting, Upload* ul) noexcept
 {
     StringMap params;
+    const TransfersUpload::UploadUiState s = TransfersUpload::uploadState(ul);
 
     getParams_client(params, ul);
-    params["Status"] = _("Upload starting...");
+    TransfersUpload::setUploadParams(params, ul, s);
+    params["Status"] = s.continuing ? TransfersUpload::uploadProgressStatus(s.sent, s.fileSize) : _("Upload starting...");
     params["Sort Order"] = "u" + params["User"];
     params["Failed"] = "0";
     params["tmpTarget"] = _("none"); //fix open 'tmp' file
@@ -1142,10 +1248,16 @@ void Transfers::on(UploadManagerListener::Tick, const UploadList& uls) noexcept
     for (auto& it : uls)
     {
         Upload* ul = it;
+        const string tickKey = TransfersUpload::uploadTickKey(ul);
+        if (!TransfersUpload::shouldRefreshUploadUi(tickKey))
+            continue;
+
         StringMap params;
         string flags;
+        const TransfersUpload::UploadUiState s = TransfersUpload::uploadState(ul);
 
         getParams_client(params, ul);
+        TransfersUpload::setUploadParams(params, ul, s);
 
         if (ul->getUserConnection().isSecure())
         {
@@ -1158,10 +1270,8 @@ void Transfers::on(UploadManagerListener::Tick, const UploadList& uls) noexcept
             flags += _("[Z]");
 
         params["Flags"] = flags;
-        params["Transferred"] = Util::formatBytes(ul->getPos());
         params["Time"] = Util::formatSeconds((GET_TICK() - ul->getStart()) / 1000);
-        params["Progress"] = params["Progress Hidden"] + "%";
-        params["Status"] = _("Uploading");
+        params["Status"] = TransfersUpload::uploadProgressStatus(s.sent, s.fileSize);
 
         typedef Func3<Transfers, StringMap, bool, Sound::TypeSound> F3;
         F3* f3 = new F3(this, &Transfers::updateTransfer_gui, params, false, Sound::NONE);
@@ -1172,13 +1282,27 @@ void Transfers::on(UploadManagerListener::Tick, const UploadList& uls) noexcept
 void Transfers::on(UploadManagerListener::Complete, Upload* ul) noexcept
 {
     StringMap params;
+    const TransfersUpload::UploadUiState s = TransfersUpload::uploadState(ul);
+    const string tickKey = TransfersUpload::uploadTickKey(ul);
 
     getParams_client(params, ul);
+    TransfersUpload::setUploadParams(params, ul, s);
+
+    if (!s.fileDone) {
+        params["Status"] = TransfersUpload::uploadProgressStatus(s.sent, s.fileSize);
+        params["Sort Order"] = "u" + params["User"];
+
+        typedef Func3<Transfers, StringMap, bool, Sound::TypeSound> F3;
+        F3* f3 = new F3(this, &Transfers::updateTransfer_gui, params, false, Sound::NONE);
+        WulforManager::get()->dispatchGuiFunc(f3);
+        return;
+    }
+
+    TransfersUpload::clearUploadUiThrottle(tickKey);
     params["Status"] = _("Upload complete...");
-    params["Progress Hidden"] = "100";
-    params["Progress"] = "100%";
     params["Sort Order"] = "w" + params["User"];
     params["Speed"] = "-1";
+    params["Time Left"] = "-1";
 
     typedef Func3<Transfers, StringMap, bool, Sound::TypeSound> F3;
     F3* f3 = new F3(this, &Transfers::updateTransfer_gui, params, false, Sound::UPLOAD_FINISHED);
@@ -1187,9 +1311,14 @@ void Transfers::on(UploadManagerListener::Complete, Upload* ul) noexcept
 
 void Transfers::on(UploadManagerListener::Failed, Upload* ul, const string& reason) noexcept
 {
+    TransfersUpload::clearUploadUiThrottle(TransfersUpload::uploadTickKey(ul));
+
     StringMap params;
+    const TransfersUpload::UploadUiState s = TransfersUpload::uploadState(ul);
+
     getParams_client(params, ul);
-    params["Status"] = reason;
+    TransfersUpload::setUploadParams(params, ul, s);
+    params["Status"] = TransfersOpen::stripBracketedStatusPrefix(reason);
     params["Sort Order"] = "w" + params["User"];
     params["Failed"] = "1";
     params["Speed"] = "-1";

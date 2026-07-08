@@ -72,6 +72,8 @@ private:
     static gboolean onTransferButtonPressed_gui(GtkWidget *widget, GdkEventButton *event, gpointer data);
     static gboolean onTransferButtonReleased_gui(GtkWidget *widget, GdkEventButton *event, gpointer data);
     static void onGetFileListClicked_gui(GtkMenuItem *item, gpointer data);
+    static void onOpenFileClicked_gui(GtkMenuItem *item, gpointer data);
+    static void onOpenDirClicked_gui(GtkMenuItem *item, gpointer data);
     static void onMatchQueueClicked_gui(GtkMenuItem *item, gpointer data);
     static void onPrivateMessageClicked_gui(GtkMenuItem *item, gpointer data);
     static void onAddFavoriteUserClicked_gui(GtkMenuItem *item, gpointer data);
