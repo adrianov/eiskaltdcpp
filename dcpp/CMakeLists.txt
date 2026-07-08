@@ -9,12 +9,14 @@ set(DCPP_EXTRA_SOURCES
     IncomingPortCheck.cpp
     ClientConnect.cpp
     ClientManagerConnect.cpp
+    ClientManagerConnectHub.cpp
     ClientSearch.cpp
     HubSearchDenied.cpp
     ListCache.cpp
     QueueAutoSearch.cpp
     QueueManagerList.cpp
     NmdcHubLine.cpp
+    NmdcHubConnect.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
     PeerConnectLog.cpp
