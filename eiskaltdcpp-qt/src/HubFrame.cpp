@@ -574,7 +574,7 @@ bool HubFrame::eventFilter(QObject *obj, QEvent *e){
             const bool ret = QWidget::eventFilter(obj, e);
 
             if (keyEnter) {
-                slotFindForward();
+                d->chatSearch->findForward();
             }
 
             return ret;
@@ -2392,16 +2392,6 @@ void HubFrame::follow(QString redirect){
     }
 }
 
-void HubFrame::slotFindForward(){
-    Q_D(HubFrame);
-    d->chatSearch->findForward();
-}
-
-void HubFrame::slotFindBackward(){
-    Q_D(HubFrame);
-    d->chatSearch->findBackward();
-}
-
 void HubFrame::syncFieldHeights(){
     const int h = qMax(lineEdit_FILTER->sizeHint().height(),
                        comboBox_COLUMNS->sizeHint().height());
@@ -3088,16 +3078,6 @@ void HubFrame::slotFilterTextChanged(){
 
     if (comboBox_COLUMNS->hasFocus())
         lineEdit_FILTER->setFocus();
-}
-
-void HubFrame::slotFindTextEdited(const QString & text){
-    Q_D(HubFrame);
-    d->chatSearch->textChanged(text);
-}
-
-void HubFrame::slotFindAll(){
-    Q_D(HubFrame);
-    d->chatSearch->findAll();
 }
 
 void HubFrame::slotSmile(){

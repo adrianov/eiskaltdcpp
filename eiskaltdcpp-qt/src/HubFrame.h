@@ -168,12 +168,8 @@ private Q_SLOTS:
     void slotShowWnd();
     void slotShellFinished(bool, QString);
     void slotFilterTextChanged();
-    void slotFindForward();
-    void slotFindBackward();
-    void slotFindTextEdited(const QString & text);
     void slotInputTextChanged();
     void slotInputContextMenu();
-    void slotFindAll();
     void slotStatusLinkOpen(const QString &url);
     void slotHubMenu(QAction*);
     void slotSmile();

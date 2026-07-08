@@ -76,6 +76,9 @@ public:
     Action execChatMenu(dcpp::Client*, const QString&, bool pmw);
 
 private:
+    QMenu *buildAntispamMenu(bool showIcon);
+    Action resolveSelection(QAction *res, QMenu *antispam_menu, dcpp::Client *client, const QString &cid);
+
     QMenu *menu;
     QList<QAction*> actions;           // actions list for menu
     QList<QAction*> pm_actions;        // actions list for menu in PMWindow
