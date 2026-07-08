@@ -127,10 +127,15 @@ protected:
     void grantSlot(const QString&, const QString&);
     void removeFromQueue(const QString&);
     void removeTransfer(const QString&);
+    void removeDownloadSource(const QString&);
+    void removeUploadItem(const QString&);
+    QString resolveDownloadTarget(TransferViewItem*) const;
+    bool canRemoveItem(TransferViewItem*) const;
     void forceAttempt(const QString&);
     void closeConection(const QString &, bool);
     void searchAlternates(const QString &tth);
     void copyMenuSelection(const QList<TransferViewItem*>&, int col);
+    void removeMenuSelection(const QList<TransferViewItem*>&);
     void onFailed(dcpp::Download* dl, const std::string& reason);
     // DownloadManager
     virtual void on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept;

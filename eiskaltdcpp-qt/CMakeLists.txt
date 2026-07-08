@@ -97,9 +97,11 @@ set(QT_EXTRA_SOURCES
     src/TransferViewDownloadListeners.cpp
     src/TransferViewItem.cpp
     src/TransferViewMenu.cpp
+    src/TransferViewMenuCopy.cpp
     src/TransferViewMenuExec.cpp
     src/TransferViewModelQueue.cpp
     src/TransferViewParams.cpp
+    src/TransferViewRemove.cpp
     src/TransferViewPath.cpp
     src/TransferViewMetrics.cpp
     src/TransferViewUploadListeners.cpp

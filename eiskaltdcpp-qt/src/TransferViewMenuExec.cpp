@@ -46,7 +46,7 @@ void TransferView::slotContextMenu(const QPoint &){
     for (const auto &i : items) {
         if (!openEnabled && !TransferViewPath::resolveTransferPath(i).isEmpty())
             openEnabled = true;
-        if (!removeEnabled && i->download && !i->target.isEmpty())
+        if (!removeEnabled && canRemoveItem(i))
             removeEnabled = true;
         if (openEnabled && removeEnabled)
             break;
@@ -145,14 +145,7 @@ void TransferView::slotContextMenu(const QPoint &){
     }
     case Menu::Remove:
     {
-        QStringList targets;
-        for (const auto &i : items) {
-            if (i->download && !i->target.isEmpty() && !targets.contains(i->target))
-                targets.append(i->target);
-        }
-        for (const auto &target : targets)
-            removeTransfer(target);
-
+        removeMenuSelection(items);
         break;
     }
     case Menu::Force:
