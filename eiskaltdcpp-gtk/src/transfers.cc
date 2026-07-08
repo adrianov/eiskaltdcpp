@@ -26,6 +26,7 @@
 #include "transfers.hh"
 #include "TransfersOpen.hh"
 #include "TransfersUpload.hh"
+#include "TransfersDisplay.hh"
 #include "WulforUtil.hh"
 #include "wulformanager.hh"
 #include "settingsmanager.hh"
@@ -42,6 +43,25 @@
 
 using namespace std;
 using namespace dcpp;
+
+namespace {
+
+void applyDisplayMetrics(StringMap& params, TreeView& view, GtkTreeStore* store, GtkTreeIter* iter)
+{
+    auto speedIt = params.find("Speed");
+    if (speedIt != params.end())
+        speedIt->second = Util::toString(TransfersDisplay::roundSpeed(Util::toDouble(speedIt->second)));
+
+    auto timeIt = params.find("Time Left");
+    if (timeIt != params.end()) {
+        int64_t displayed = view.getValue<int64_t>(iter, "Display Time Left");
+        displayed = TransfersDisplay::smoothTimeLeft(displayed, Util::toInt64(timeIt->second));
+        timeIt->second = Util::toString(displayed);
+        gtk_tree_store_set(store, iter, view.col("Display Time Left"), displayed, -1);
+    }
+}
+
+} // namespace
 
 Transfers::Transfers() :
     Entry(Entry::TRANSFERS, "transfers.ui")
@@ -82,6 +102,7 @@ Transfers::Transfers() :
     transferView.insertHiddenColumn("tmpTarget", G_TYPE_STRING);
     transferView.insertHiddenColumn("Download", G_TYPE_BOOLEAN);
     transferView.insertHiddenColumn("Hub URL", G_TYPE_STRING);
+    transferView.insertHiddenColumn("Display Time Left", G_TYPE_INT64);
     transferView.finalize();
 
     transferStore = gtk_tree_store_newv(transferView.getColCount(), transferView.getGTypes());
@@ -593,6 +614,7 @@ void Transfers::addConnection_gui(StringMap params, bool download)
             transferView.col("Icon"), download ? "icon-download" : "icon-upload",
             transferView.col("Download"), download,
             transferView.col("Hub URL"), params["Hub URL"].c_str(),
+            transferView.col("Display Time Left"), static_cast<gint64>(-1),
             -1);
 }
 
@@ -662,6 +684,11 @@ void Transfers::updateParent_gui(GtkTreeIter* iter)
     if (speed > 0)
         timeLeft = (totalSize - position) / speed;
 
+    speed = TransfersDisplay::roundSpeed(static_cast<double>(speed));
+    int64_t displayed = transferView.getValue<int64_t>(iter, "Display Time Left");
+    displayed = TransfersDisplay::smoothTimeLeft(displayed, timeLeft);
+    timeLeft = displayed;
+
     susers << setiosflags(ios::fixed) << setprecision(1);
     susers << active << "/" << gtk_tree_model_iter_n_children(GTK_TREE_MODEL(transferStore), iter);
 
@@ -687,6 +714,7 @@ void Transfers::updateParent_gui(GtkTreeIter* iter)
                        transferView.col(_("Speed")), speed,
                        transferView.col(_("Transferred")), Util::formatBytes(position).c_str(),
                        transferView.col(_("Time Left")), timeLeft,
+                       transferView.col("Display Time Left"), displayed,
                        transferView.col(_("Progress")), sprogress.c_str(),
                        transferView.col(_("Status")), status.c_str(),
                        transferView.col("Progress Hidden"), static_cast<int>(progress),
@@ -728,6 +756,8 @@ void Transfers::updateTransfer_gui(StringMap params, bool download, Sound::TypeS
             params.erase("Progress");
         }
     }
+
+    applyDisplayMetrics(params, transferView, transferStore, &iter);
 
     for (auto it = params.begin(); it != params.end(); ++it)
     {
@@ -823,6 +853,7 @@ void Transfers::initTransfer_gui(StringMap params)
                     transferView.col("Icon"), "icon-download",
                     transferView.col("Download"), true,
                     transferView.col("Target"), params["Target"].c_str(),
+                    transferView.col("Display Time Left"), static_cast<gint64>(-1),
                     -1);
 
             newIter = WulforUtil::copyRow_gui(transferStore, &iter, &newParent);

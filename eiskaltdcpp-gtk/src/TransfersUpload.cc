@@ -16,6 +16,8 @@
 #include <dcpp/TimerManager.h>
 #include <dcpp/Util.h>
 
+#include "TransfersDisplay.hh"
+
 using namespace std;
 using namespace dcpp;
 
@@ -71,6 +73,7 @@ void setUploadParams(StringMap& params, Upload* ul, const UploadUiState& s) {
     double speed = ul->getUserConnection().getDisplaySpeed();
     if(speed <= 0)
         speed = ul->getAverageSpeed();
+    speed = TransfersDisplay::roundSpeed(speed);
     params["Speed"] = Util::toString(speed);
     int64_t timeLeft = -1;
     if (speed > 0 && s.fileSize > s.sent)
