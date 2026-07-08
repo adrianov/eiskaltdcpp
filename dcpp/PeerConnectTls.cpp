@@ -70,7 +70,7 @@ bool isTlsMismatch(const string& err) {
     if(err.empty())
         return false;
     const string lower = Text::toLower(err);
-    return lower.find("secure connection") != string::npos || err.find("SSL") != string::npos;
+    return lower.find("secure connection") != string::npos || lower.find("ssl") != string::npos;
 }
 
 void scheduleRetry(ConnectionQueueItem* cqi, bool wasSecure, bool protocolError, int connectPhase, const string& err) {
@@ -81,7 +81,8 @@ void scheduleRetry(ConnectionQueueItem* cqi, bool wasSecure, bool protocolError,
         if(!wasSecure) {
             rememberTlsRequired(cqi->getUser().user);
             cqi->setSecureMode(TLS);
-        } else if(!learnedTlsRequired(cqi->getUser().user) && !BOOLSETTING(REQUIRE_TLS)) {
+        } else if(!learnedTlsRequired(cqi->getUser().user) && !BOOLSETTING(REQUIRE_TLS) &&
+                  cqi->getErrors() + 1 >= 2) {
             cqi->setSecureMode(PLAIN);
         }
         return;
