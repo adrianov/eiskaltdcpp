@@ -24,14 +24,13 @@
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
-
-class QAction;
 #include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
 #include "dcpp/CID.h"
 
 #include "WulforSettings.h"
 
+class QAction;
 class QHeaderView;
 class QAbstractItemView;
 
