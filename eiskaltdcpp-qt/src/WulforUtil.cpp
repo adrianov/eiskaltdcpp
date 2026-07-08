@@ -20,6 +20,8 @@
 #include <ifaddrs.h>
 #include <fcntl.h>
 #endif
+#include "TransferDisplay.h"
+
 #include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/Util.h"
@@ -1075,6 +1077,10 @@ QStringList WulforUtil::getLocalIPs(){
 
 QString WulforUtil::formatBytes(int64_t aBytes){
     return _q(Util::formatBytes(aBytes));
+}
+
+QString WulforUtil::formatDisplayBytes(int64_t aBytes){
+    return formatBytes(static_cast<int64_t>(TransferDisplay::roundBytes(aBytes)));
 }
 
 void WulforUtil::bindActionIcon(QAction *act, Icons icon)

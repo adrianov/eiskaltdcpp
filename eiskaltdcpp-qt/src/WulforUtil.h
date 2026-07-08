@@ -180,6 +180,7 @@ public Q_SLOTS:
     Qt::SortOrder intToSortOrder(int);
 
     static QString formatBytes(int64_t bytes);
+    static QString formatDisplayBytes(int64_t bytes);
 
     static void bindActionIcon(QAction *act, Icons icon);
 

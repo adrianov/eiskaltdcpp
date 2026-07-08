@@ -13,10 +13,10 @@
 
 namespace TransferDisplay {
 
-constexpr int SpeedSigFigs = 2;
-constexpr int64_t TimeLeftMinBump = 5 * 60;
+constexpr int ByteSigFigs = 2;
 
-double roundSpeed(double speed);
+double roundBytes(double bytes);
+inline double roundSpeed(double speed) { return roundBytes(speed); }
 
 inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
 {
@@ -24,7 +24,7 @@ inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
         return actual;
     if (actual <= displayed)
         return actual;
-    if (!displayed || actual >= displayed + TimeLeftMinBump || actual * 2 >= displayed * 3)
+    if (!displayed || actual * 2 >= displayed * 3)
         return actual;
     return displayed;
 }
