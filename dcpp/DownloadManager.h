@@ -41,6 +41,7 @@ public:
     /** @internal */
     void addConnection(UserConnectionPtr conn);
     void checkIdle(const UserPtr& user);
+    bool isWaitingUploadSlot(const UserPtr& user);
 
     /** @return Running average download speed in Bytes/s */
     int64_t getRunningAverage();

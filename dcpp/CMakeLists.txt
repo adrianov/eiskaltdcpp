@@ -23,6 +23,9 @@ set(DCPP_EXTRA_SOURCES
     PeerConnectFilter.cpp
     PeerConnectTls.cpp
     DownloadManagerSlots.cpp
+    DownloadManagerSlotFail.cpp
+    DownloadManagerTimer.cpp
+    DownloadManagerTransfer.cpp
     ConnectionManagerQueue.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
