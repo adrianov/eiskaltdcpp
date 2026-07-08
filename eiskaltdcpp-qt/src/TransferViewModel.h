@@ -53,6 +53,7 @@ public:
     QString target;
     qlonglong dpos;
     double percent;
+    qlonglong smoothTleft;
     QList<QVariant> itemData;
 
 private:

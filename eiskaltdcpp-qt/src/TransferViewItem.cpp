@@ -15,6 +15,7 @@ TransferViewItem::TransferViewItem(const QList<QVariant> &data, TransferViewItem
     finished(false),
     dpos(0L),
     percent(0.0),
+    smoothTleft(-1),
     itemData(data),
     parentItem(parent)
 {

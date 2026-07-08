@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
+#include "TransferDisplay.h"
 
 #include "WulforUtil.h"
 
@@ -377,34 +378,42 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
         return;
 
+    VarMap p = params;
+    if (p.contains("SPEED"))
+        p["SPEED"] = TransferDisplay::roundSpeed(vdbl(p["SPEED"]));
+    if (p.contains("TLEFT")) {
+        item->smoothTleft = TransferDisplay::smoothTimeLeft(item->smoothTleft, vlng(p["TLEFT"]));
+        p["TLEFT"] = item->smoothTleft;
+    }
+
     for (auto i = column_map.constBegin(); i != column_map.constEnd(); ++i) {
-        if (params.contains(i.key())) {
-            item->updateColumn(i.value(), params[i.key()]);
+        if (p.contains(i.key())) {
+            item->updateColumn(i.value(), p[i.key()]);
         }
     }
 
-    qlonglong dpos = vlng(params["DPOS"]);
-    const double newPercent = vdbl(params["PERC"]);
+    qlonglong dpos = vlng(p["DPOS"]);
+    const double newPercent = vdbl(p["PERC"]);
 
-    if (!vbol(params["DOWN"])) {
+    if (!vbol(p["DOWN"])) {
         item->dpos = dpos;
-        if (params.contains("PERC"))
+        if (p.contains("PERC"))
             item->percent = newPercent;
     } else {
         item->dpos = dpos;
         item->percent = newPercent;
     }
 
-    item->target = vstr(params["TARGET"]);
-    item->fail = vbol(params["FAIL"]);
-    item->tth = vstr(params["TTH"]);
+    item->target = vstr(p["TARGET"]);
+    item->fail = vbol(p["FAIL"]);
+    item->tth = vstr(p["TTH"]);
 
 
 
-    if (!vbol(params["DOWN"])){
+    if (!vbol(p["DOWN"])){
 
         if (showTranferedFilesOnly){
-            if (vstr(params["FNAME"]).isEmpty() || (tr("File list") == params["FNAME"]) ){
+            if (vstr(p["FNAME"]).isEmpty() || (tr("File list") == p["FNAME"]) ){
                 return;
             };
         };
@@ -413,8 +422,8 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             rootItem->appendChild(item);
     }
 
-    if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && params.contains("FPOS"))
-        item->parent()->dpos = vlng(params["FPOS"]);
+    if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
+        item->parent()->dpos = vlng(p["FPOS"]);
 
     const QModelIndex idx = createIndexForItem(item);
     if (idx.isValid()) {
@@ -580,6 +589,10 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         progress = (double)(p->dpos * 100.0) / totalSize;
     if (speed > 0)
         timeLeft = (totalSize - p->dpos) / speed;
+
+    speed = TransferDisplay::roundSpeed(speed);
+    p->smoothTleft = TransferDisplay::smoothTimeLeft(p->smoothTleft, timeLeft);
+    timeLeft = p->smoothTleft;
 
     if (active && !p->finished)
         p->updateColumn(COLUMN_TRANSFER_STATS, tr("Downloaded "));
