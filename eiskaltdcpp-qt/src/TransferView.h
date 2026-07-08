@@ -50,6 +50,8 @@ class Menu{
 public:
     enum Action {
         Browse=0,
+        OpenFile,
+        OpenDirectory,
         SearchAlternates,
         MatchQueue,
         SendPM,
@@ -63,7 +65,7 @@ public:
         None
     };
 
-    Menu(bool);
+    Menu(bool, bool openEnabled = true);
     virtual ~Menu();
 
     Menu(const Menu&) = delete;

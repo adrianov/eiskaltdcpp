@@ -383,9 +383,18 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         }
     }
 
-    qlonglong dpos = vdbl(params["DPOS"]);
-    item->dpos = dpos;
-    item->percent = vdbl(params["PERC"]);
+    qlonglong dpos = vlng(params["DPOS"]);
+    const double newPercent = vdbl(params["PERC"]);
+
+    if (!vbol(params["DOWN"])) {
+        item->dpos = dpos;
+        if (params.contains("PERC"))
+            item->percent = newPercent;
+    } else {
+        item->dpos = dpos;
+        item->percent = newPercent;
+    }
+
     item->target = vstr(params["TARGET"]);
     item->fail = vbol(params["FAIL"]);
     item->tth = vstr(params["TTH"]);

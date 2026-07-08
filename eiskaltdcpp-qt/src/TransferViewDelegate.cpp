@@ -48,17 +48,17 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
     if (item->download && item->childCount() == 1)
         item = item->child(0);
 
+    const QString status = stripBracketedStatusPrefix(item->data(COLUMN_TRANSFER_STATS).toString());
+
 #if defined(USE_PROGRESS_BARS)
     QPalette pal = option.palette;
     pal.setColor(QPalette::Highlight,
                  transferBarColor(item->download,
                                   item->download ? download_bar_color : upload_bar_color));
 
-    paintProgressCell(painter, option, static_cast<int>(item->percent),
-                      item->data(COLUMN_TRANSFER_STATS).toString(), &pal);
+    paintProgressCell(painter, option, item->percent, status, &pal);
 #else
-    paintProgressCell(painter, option, static_cast<int>(item->percent),
-                      item->data(COLUMN_TRANSFER_STATS).toString());
+    paintProgressCell(painter, option, item->percent, status);
 #endif
 }
 

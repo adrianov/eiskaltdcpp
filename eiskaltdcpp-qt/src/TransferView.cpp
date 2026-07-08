@@ -10,6 +10,7 @@
 #include "TransferView.h"
 #include "TransferViewDelegate.h"
 #include "TransferViewModel.h"
+#include "TransferViewPath.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "HubFrame.h"
@@ -30,118 +31,88 @@
 #include "dcpp/QueueManager.h"
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/HashManager.h"
+#include "dcpp/File.h"
 
 #include "extra/ipfilter.h"
 
+#include <QDesktopServices>
 #include <QItemSelectionModel>
+#include <QHash>
 #include <QModelIndex>
 #include <QClipboard>
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QDir>
 
-TransferView::Menu::Menu(bool showTransferredFilesOnly):
-        menu(new QMenu(nullptr)), selectedColumn(0)
-{
-    WulforUtil *WU = WulforUtil::getInstance();
+namespace {
 
-    QAction *browse     = new QAction(tr("Browse files"), menu);
-    browse->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+static const quint64 UPLOAD_UI_INTERVAL_MS = 250;
+static QHash<QString, quint64> uploadTickTimes;
 
-    QAction *search     = new QAction(tr("Search Alternates"), menu);
-    search->setIcon(WU->getPixmap(WulforUtil::eiFIND));
-
-    QAction *match      = new QAction(tr("Match Queue"), menu);
-    match->setIcon(WU->getPixmap(WulforUtil::eiDOWN));
-
-    QAction *send_pm    = new QAction(tr("Send Private Message"), menu);
-    send_pm->setIcon(WU->getPixmap(WulforUtil::eiMESSAGE));
-
-    QAction *add_to_fav = new QAction(tr("Add to favorites"), menu);
-    add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-
-    QAction *grant      = new QAction(tr("Grant extra slot"), menu);
-    grant->setIcon(WU->getPixmap(WulforUtil::eiEDITADD));
-
-    copy_column = new QMenu(tr("Copy"), menu);
-    copy_column->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-
-    copy_column->addAction(tr("Users"));
-    copy_column->addAction(tr("Speed"));
-    copy_column->addAction(tr("Status"));
-    copy_column->addAction(tr("Flags"));
-    copy_column->addAction(tr("Size"));
-    copy_column->addAction(tr("Time left"));
-    copy_column->addAction(tr("Filename"));
-    copy_column->addAction(tr("Hub"));
-    copy_column->addAction(tr("IP"));
-    copy_column->addAction(tr("Encryption"));
-    copy_column->addAction(tr("Magnet"));
-
-    QAction *sep1        = new QAction(menu);
-    sep1->setSeparator(true);
-
-    QAction *rem_queue  = new QAction(tr("Remove Source"), menu);
-    rem_queue->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
-
-    QAction *sep3       = new QAction(menu);
-    sep3->setSeparator(true);
-
-    QAction *force    = new QAction(tr("Force attempt"), menu);
-    force->setIcon(WU->getPixmap(WulforUtil::eiCONNECT));
-
-    QAction *close = new QAction(tr("Close connection(s)"), menu);
-    close->setIcon(WU->getPixmap(WulforUtil::eiCONNECT_NO));
-
-    QAction *show_only_transferred_files = new QAction(tr("Show only transferred files"), menu);
-    show_only_transferred_files->setCheckable(true);
-    show_only_transferred_files->setChecked(showTransferredFilesOnly);
-
-    actions.insert(browse, Browse);
-    actions.insert(match, MatchQueue);
-    actions.insert(send_pm, SendPM);
-    actions.insert(add_to_fav, AddToFav);
-    actions.insert(grant, GrantExtraSlot);
-    actions.insert(rem_queue, RemoveFromQueue);
-    actions.insert(force, Force);
-    actions.insert(close, Close);
-    actions.insert(search, SearchAlternates);
-    actions.insert(show_only_transferred_files, showTransferredFieldsOnly);
-
-    menu->addActions(QList<QAction*>() << browse
-                                       << search
-                                       << match
-                                       << send_pm
-                                       << add_to_fav
-                                       << grant);
-    menu->addMenu(copy_column);
-    menu->addActions(QList<QAction*>() << sep1
-                                       << rem_queue
-                                       << sep3
-                                       << force
-                                       << close
-                                       << show_only_transferred_files
-                                       );
+int64_t uploadFileSize(const dcpp::Upload *ul) {
+    if (ul->getType() != dcpp::Transfer::TYPE_FILE)
+        return ul->getSize();
+    int64_t size = dcpp::File::getSize(ul->getPath());
+    return size > 0 ? size : ul->getSize();
 }
 
-TransferView::Menu::~Menu(){
-    menu->deleteLater();
-    copy_column->deleteLater();
+struct UploadUiState {
+    int64_t fileSize = 0;
+    int64_t sent = 0;
+    bool continuing = false;
+    bool fileDone = false;
+};
+
+UploadUiState uploadState(const dcpp::Upload *ul) {
+    UploadUiState s;
+    s.fileSize = uploadFileSize(ul);
+    s.sent = ul->getStartPos() + ul->getPos();
+    s.continuing = ul->getStartPos() > 0;
+    s.fileDone = s.fileSize > 0 && ul->getStartPos() + ul->getSize() >= s.fileSize;
+    return s;
 }
 
-TransferView::Menu::Action TransferView::Menu::exec(){
-    QAction *ret = menu->exec(QCursor::pos());
-
-    if (actions.contains(ret))
-        return actions.value(ret);
-    else if (ret){
-        selectedColumn = copy_column->actions().indexOf(ret);
-
-        return Copy;
-    }
-
-    return None;
+QString uploadProgressStat(int64_t sent, int64_t fileSize) {
+    const double percent = fileSize > 0 ? sent * 100.0 / fileSize : 0.0;
+    return QObject::tr("Uploaded %1 (%2%) ").arg(WulforUtil::formatBytes(sent)).arg(percent, 0, 'f', 1);
 }
+
+void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat) {
+    params["ESIZE"] = (qlonglong)s.fileSize;
+    params["DPOS"] = (qlonglong)s.sent;
+    params["PERC"] = s.fileSize > 0 ? s.sent * 100.0 / s.fileSize : 0.0;
+    params["STAT"] = stat;
+    params["DOWN"] = false;
+    params["FAIL"] = false;
+}
+
+void applyUploadSpeed(QVariantMap &params, const dcpp::Upload *ul, const UploadUiState &s) {
+    double speed = ul->getUserConnection().getDisplaySpeed();
+    if(speed <= 0)
+        speed = ul->getAverageSpeed();
+    params["SPEED"] = speed;
+    params["TLEFT"] = (speed > 0 && s.fileSize > s.sent)
+        ? qlonglong((s.fileSize - s.sent) / speed) : qlonglong(-1);
+}
+
+QString uploadTickKey(const dcpp::Upload *ul) {
+    return _q(ul->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(ul->getPath());
+}
+
+bool shouldRefreshUploadUi(const QString &key) {
+    const quint64 now = GET_TICK();
+    const auto it = uploadTickTimes.constFind(key);
+    if (it != uploadTickTimes.constEnd() && now - *it < UPLOAD_UI_INTERVAL_MS)
+        return false;
+    uploadTickTimes[key] = now;
+    return true;
+}
+
+void clearUploadUiThrottle(const QString &key) {
+    uploadTickTimes.remove(key);
+}
+
+} // namespace
 
 TransferView::TransferView(QWidget *parent):
         QWidget(parent),
@@ -398,9 +369,11 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
 
     params["HUB"]   = WU->getHubNames(user);
     params["PATH"]  = _q(Util::getFilePath(trf->getPath()));
-    params["ESIZE"] = (qlonglong)trf->getSize();
+    double speed = trf->getUserConnection().getDisplaySpeed();
+    if(speed <= 0)
+        speed = trf->getAverageSpeed();
+    params["SPEED"] = speed;
     params["DPOS"]  = (qlonglong)trf->getPos();
-    params["SPEED"] = trf->getAverageSpeed();
 
     if (trf->getSize() > 0)
         percent = static_cast<double>(trf->getPos() * 100.0)/ trf->getSize();
@@ -429,17 +402,6 @@ void TransferView::slotContextMenu(const QPoint &){
     if (list.size() < 1)
         return;
 
-    Menu::Action act;
-    Menu m(model->getShowTranferedFilesOnlyState());
-
-    act = m.exec();
-
-
-    list = selection_model->selectedRows(0);
-
-    if (list.size() < 1)
-        return;
-
     QList<TransferViewItem*> items;
 
     for (const auto &index : list){
@@ -456,6 +418,19 @@ void TransferView::slotContextMenu(const QPoint &){
     if (items.size() < 1)
         return;
 
+    bool openEnabled = false;
+    for (const auto &i : items) {
+        if (!TransferViewPath::resolveTransferPath(i).isEmpty()) {
+            openEnabled = true;
+            break;
+        }
+    }
+
+    Menu::Action act;
+    Menu m(model->getShowTranferedFilesOnlyState(), openEnabled);
+
+    act = m.exec();
+
     switch (act){
 
     case Menu::None:
@@ -466,6 +441,32 @@ void TransferView::slotContextMenu(const QPoint &){
     {
         for (const auto &i : items)
             getFileList(i->cid, vstr(i->data(COLUMN_TRANSFER_HOST)));
+
+        break;
+    }
+    case Menu::OpenFile:
+    {
+        QStringList paths;
+        for (const auto &i : items) {
+            const QString path = TransferViewPath::resolveTransferPath(i);
+            if (!path.isEmpty() && !paths.contains(path))
+                paths.append(path);
+        }
+        for (const auto &path : paths)
+            QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+
+        break;
+    }
+    case Menu::OpenDirectory:
+    {
+        QStringList paths;
+        for (const auto &i : items) {
+            const QString path = TransferViewPath::resolveTransferPath(i);
+            if (!path.isEmpty() && !paths.contains(path))
+                paths.append(path);
+        }
+        for (const auto &path : paths)
+            WulforUtil::revealPath(path);
 
         break;
     }
@@ -794,8 +795,11 @@ void TransferView::on(dcpp::QueueManagerListener::Removed, dcpp::QueueItem* qi) 
 
 void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) noexcept{
     VarMap params;
-
     getParams(params, ul);
+    const UploadUiState s = uploadState(ul);
+    const QString stat = s.continuing ? uploadProgressStat(s.sent, s.fileSize) : tr("Upload starting...");
+    applyUploadMetrics(params, s, stat);
+    applyUploadSpeed(params, ul, s);
 
     if (IPFilter::getInstance()){
         if (!IPFilter::getInstance()->OK(vstr(params["IP"]).toStdString(), eDIRECTION_OUT)){
@@ -804,20 +808,23 @@ void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) n
         }
     }
 
-    params["STAT"] = tr("Upload starting...");
-    params["DOWN"] = false;
-    params["FAIL"] = false;
-
     emit coreUMStarting(params);
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList& uls) noexcept{
     for (const auto &it : uls){
         Upload* ul = it;
-        VarMap params;
-        QString stat = "";
+        const QString tickKey = uploadTickKey(ul);
+        if (!shouldRefreshUploadUi(tickKey))
+            continue;
 
+        VarMap params;
         getParams(params, ul);
+        const UploadUiState s = uploadState(ul);
+        QString stat;
+
+        applyUploadMetrics(params, s, QString());
+        applyUploadSpeed(params, ul, s);
 
         if (ul->getUserConnection().isSecure())
         {
@@ -830,25 +837,30 @@ void TransferView::on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList&
             stat += QString("[Z]");
         
         params["FLAGS"] = stat;
-
-        stat = QString(tr("Uploaded %1 (%2%) ")).arg(WulforUtil::formatBytes(ul->getPos())).arg(vdbl(params["PERC"]), 0, 'f', 1);
-
-        params["STAT"] = stat;
-        params["DOWN"] = false;
-        params["FAIL"] = false;
+        params["STAT"] = uploadProgressStat(s.sent, s.fileSize);
 
         emit coreUMTick(params);
     }
-
-    emit coreUpdateParents();
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) noexcept{
     VarMap params;
-
     getParams(params, ul);
+    const UploadUiState s = uploadState(ul);
+    const QString tickKey = uploadTickKey(ul);
 
-    params["STAT"] = tr("Upload complete");
+    if (!s.fileDone) {
+        applyUploadMetrics(params, s, uploadProgressStat(s.sent, s.fileSize));
+        applyUploadSpeed(params, ul, s);
+        emit coreUMTick(params);
+        return;
+    }
+
+    clearUploadUiThrottle(tickKey);
+    applyUploadMetrics(params, s, tr("Upload complete"));
+    applyUploadSpeed(params, ul, s);
+    params["SPEED"] = 0.0;
+    params["TLEFT"] = qlonglong(-1);
     params["DOWN"] = false;
     params["FAIL"] = false;
 
@@ -858,13 +870,17 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
 void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept{
     Q_UNUSED(reason)
 
+    clearUploadUiThrottle(uploadTickKey(ul));
+
     VarMap params;
-
     getParams(params, ul);
-
-    params["STAT"] = tr("Upload failed");
+    const UploadUiState s = uploadState(ul);
+    applyUploadMetrics(params, s, tr("Upload failed"));
+    applyUploadSpeed(params, ul, s);
     params["DOWN"] = false;
     params["FAIL"] = false;
+    params["SPEED"] = 0.0;
+    params["TLEFT"] = qlonglong(-1);
 
     emit coreUMFailed(params);
 }

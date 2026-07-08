@@ -85,6 +85,8 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 set(QT_EXTRA_SOURCES
     src/TransferViewDelegate.cpp
     src/TransferViewItem.cpp
+    src/TransferViewMenu.cpp
+    src/TransferViewPath.cpp
 )
 foreach(_src ${QT_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})

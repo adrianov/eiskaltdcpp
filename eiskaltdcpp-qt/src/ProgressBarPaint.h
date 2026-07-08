@@ -82,21 +82,22 @@ inline void paintProgressText(QPainter *painter, const QRect &cell,
     painter->drawText(cell, Qt::AlignCenter, text);
 }
 
-inline void paintBarChunk(QPainter *painter, const QRect &barRect, int percent, const QColor &fill)
+inline void paintBarChunk(QPainter *painter, const QRect &barRect, double percent, const QColor &fill)
 {
-    const int bounded = qBound(0, percent, 100);
-    if (bounded <= 0)
+    const double bounded = qBound(0.0, percent, 100.0);
+    if (bounded <= 0.0)
         return;
 
     QRect chunk = barRect;
     const qreal radius = qMin(barRect.height() / 2.0, 5.0);
-    chunk.setWidth(qMax(static_cast<int>(radius * 2), barRect.width() * bounded / 100));
+    chunk.setWidth(qMax(static_cast<int>(radius * 2),
+                          static_cast<int>(barRect.width() * bounded / 100.0 + 0.5)));
     painter->setBrush(fill);
     painter->drawRoundedRect(chunk, radius, radius);
 }
 
 inline void paintStyledProgressBar(QPainter *painter, const QStyleOptionViewItem &option,
-                                   int percent, const QString &text, const QPalette *barPalette)
+                                   double percent, const QString &text, const QPalette *barPalette)
 {
     const QRect cell = option.rect;
 
@@ -121,9 +122,19 @@ inline void paintStyledProgressBar(QPainter *painter, const QStyleOptionViewItem
 
 } // namespace
 
+// Core failure messages use "<filename>: …"; filename is already in its own column.
+inline QString stripBracketedStatusPrefix(const QString &text)
+{
+    if (text.size() < 4 || text.at(0) != QLatin1Char('<'))
+        return text;
+
+    const int sep = text.indexOf(QStringLiteral(">: "));
+    return sep > 0 ? text.mid(sep + 3) : text;
+}
+
 // Native item-delegate progress bars can lose contrast in themed views.
 inline void paintProgressCell(QPainter *painter, const QStyleOptionViewItem &option,
-                              int percent, const QString &text, const QPalette *barPalette = nullptr)
+                              double percent, const QString &text, const QPalette *barPalette = nullptr)
 {
 #if defined(USE_PROGRESS_BARS)
     paintStyledProgressBar(painter, option, percent, text, barPalette);
