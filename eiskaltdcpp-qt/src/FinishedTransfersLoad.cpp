@@ -85,7 +85,7 @@ void FinishedTransfers<isUpload>::loadListFromDB()
 
     VarMap params;
 
-    model->beginBulkLoad();
+    emit coreBeginBulkLoad();
 
     while (q.next()){
         int i = 0;
@@ -134,7 +134,7 @@ void FinishedTransfers<isUpload>::loadListFromDB()
         emit coreAddedUser(params);
     }
 
-    model->endBulkLoad();
+    emit coreEndBulkLoad();
 
     db.close();
 #endif

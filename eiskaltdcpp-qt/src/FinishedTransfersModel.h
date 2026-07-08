@@ -114,15 +114,14 @@ public:
     void setHideFileLists(bool hide) { hideFileLists = hide; }
     void setRequireFullFile(bool require) { requireFullFile = require; }
 
+    QStringList fileTargets() const { return file_hash.keys(); }
+
+public Q_SLOTS:
     void beginBulkLoad() { ++bulkLoadDepth; }
     void endBulkLoad() {
         if (bulkLoadDepth > 0 && --bulkLoadDepth == 0)
             sort();
     }
-
-    QStringList fileTargets() const { return file_hash.keys(); }
-
-public Q_SLOTS:
     /** */
     void addFile(const VarMap &params);
     /** */

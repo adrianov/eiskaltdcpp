@@ -56,6 +56,8 @@ Q_SIGNALS:
     void coreUpdatedUser(const VarMap&);
     void coreRemovedFile(const QString&);
     void coreRemovedUser(const QString&);
+    void coreBeginBulkLoad();
+    void coreEndBulkLoad();
 
 public Q_SLOTS:
     virtual void slotTypeChanged(int) = 0;
@@ -159,6 +161,8 @@ private:
         QObject::connect(this, SIGNAL(coreUpdatedUser(VarMap)), model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
         QObject::connect(this, SIGNAL(coreRemovedFile(QString)), model, SLOT(remFile(QString)), Qt::QueuedConnection);
         QObject::connect(this, SIGNAL(coreRemovedUser(QString)), model, SLOT(remUser(QString)), Qt::QueuedConnection);
+        QObject::connect(this, SIGNAL(coreBeginBulkLoad()), model, SLOT(beginBulkLoad()), Qt::QueuedConnection);
+        QObject::connect(this, SIGNAL(coreEndBulkLoad()), model, SLOT(endBulkLoad()), Qt::QueuedConnection);
 
         QObject::connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
         QObject::connect(comboBox, SIGNAL(activated(int)), this, SLOT(slotTypeChanged(int)));
