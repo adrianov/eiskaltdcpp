@@ -24,7 +24,9 @@ namespace {
 bool isFileNotAvailableError(const string& msg) {
     if(Util::stricmp(msg.c_str(), UserConnection::FILE_NOT_AVAILABLE) == 0)
         return true;
-    return msg.rfind(" no more exists") != string::npos;
+    static const char suffix[] = " no more exists";
+    const size_t suffixLen = sizeof(suffix) - 1;
+    return msg.length() >= suffixLen && msg.compare(msg.length() - suffixLen, suffixLen, suffix) == 0;
 }
 
 } // namespace
