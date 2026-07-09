@@ -48,6 +48,7 @@ class Menu{
 public:
     enum Action{
         Alternates=0,
+        CopyFileName,
         Magnet,
         MagnetWeb,
         MagnetInfo,
@@ -147,6 +148,8 @@ private:
 
     void getChilds(DownloadQueueItem *i, QList<DownloadQueueItem*>&);
     void getItems(const QModelIndexList &list, QList<DownloadQueueItem*> &items);
+    void contextMoreActions(Menu::Action act, const QList<DownloadQueueItem*> &items,
+                            const QString &target, const QVariant &arg);
 
     QString getCID(const VarMap&);
 
