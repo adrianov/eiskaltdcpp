@@ -71,8 +71,8 @@ void ShareIndex::open()
     if (!db.isOpen())
         return;
 
-    // auto_vacuum + page_size must be set before any tables exist. Existing
-    // none-mode / small-page DBs are deleted and recreated (no 2× VACUUM).
+    // Prefer incremental auto_vacuum + 16 KiB pages on empty DBs only.
+    // Existing indexes keep their layout (no wipe / no full VACUUM).
     if (!ensureAutoVacuum(db)) {
         if (!recreateForVacuum())
             return;

@@ -50,8 +50,9 @@ bool ShareIndex::ensureAutoVacuum(QSqlDatabase &db)
         return true;
 
     // page_size / auto_vacuum need an empty DB (else full VACUUM = 2× disk).
+    // Keep existing indexes; do not delete user data to force the setting.
     if (dbHasUserTables(db))
-        return false;
+        return true;
 
     if (pageSize < kPageSize
             && !q.exec(QStringLiteral("PRAGMA page_size=%1").arg(kPageSize)))
@@ -66,6 +67,12 @@ bool ShareIndex::recreateForVacuum()
 {
     if (dbFile.isEmpty())
         return false;
+
+    {
+        QSqlDatabase db = threadDb();
+        if (db.isOpen() && dbHasUserTables(db))
+            return ensureAutoVacuum(db);
+    }
 
     disconnectThreadDb();
     QFile::remove(dbFile);
