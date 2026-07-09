@@ -17,7 +17,9 @@
 #include "dcpp/Transfer.h"
 #include "dcpp/Upload.h"
 #include "dcpp/UserConnection.h"
+#include "dcpp/Util.h"
 
+#include <QHash>
 #include <QObject>
 
 using namespace dcpp;
@@ -25,6 +27,9 @@ using namespace dcpp;
 namespace TransferViewMetrics {
 
 namespace {
+
+static const quint64 DOWNLOAD_UI_INTERVAL_MS = 250;
+static QHash<QString, quint64> downloadTickTimes;
 
 int64_t uploadFileSize(const Upload *ul)
 {
@@ -35,6 +40,39 @@ int64_t uploadFileSize(const Upload *ul)
 }
 
 } // namespace
+
+QString downloadTickKey(const Download *dl)
+{
+    return _q(dl->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(dl->getPath());
+}
+
+bool shouldRefreshDownloadUi(const QString &key)
+{
+    const quint64 now = GET_TICK();
+    const auto it = downloadTickTimes.constFind(key);
+    if (it != downloadTickTimes.constEnd() && now - *it < DOWNLOAD_UI_INTERVAL_MS)
+        return false;
+    downloadTickTimes[key] = now;
+    return true;
+}
+
+void clearDownloadUiThrottle(const QString &key)
+{
+    downloadTickTimes.remove(key);
+}
+
+void clearDownloadUiThrottleByCid(const QString &cid)
+{
+    if (cid.isEmpty() || downloadTickTimes.isEmpty())
+        return;
+    const QString prefix = cid + QLatin1Char('|');
+    for (auto it = downloadTickTimes.begin(); it != downloadTickTimes.end(); ) {
+        if (it.key().startsWith(prefix))
+            it = downloadTickTimes.erase(it);
+        else
+            ++it;
+    }
+}
 
 int64_t downloadFileSize(const Transfer *trf)
 {

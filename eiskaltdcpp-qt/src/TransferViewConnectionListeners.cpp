@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferView.h"
+#include "TransferViewMetrics.h"
 #include "WulforUtil.h"
 
 #include "dcpp/Util.h"
@@ -55,6 +56,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Removed, dcpp::Connection
     VarMap params;
 
     getParams(params, cqi);
+    if (cqi->getDownload())
+        TransferViewMetrics::clearDownloadUiThrottleByCid(vstr(params["CID"]));
 
     emit coreCMRemoved(params);
 }

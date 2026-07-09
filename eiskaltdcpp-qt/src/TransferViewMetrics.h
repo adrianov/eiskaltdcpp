@@ -50,4 +50,9 @@ void applyDownloadMetrics(QVariantMap &params, const dcpp::Download *dl,
 void applyUploadSpeed(QVariantMap &params, const dcpp::Upload *ul, const UploadUiState &s);
 void applyDownloadSpeed(QVariantMap &params, const dcpp::Download *dl, const DownloadUiState &s);
 
+QString downloadTickKey(const dcpp::Download *dl);
+bool shouldRefreshDownloadUi(const QString &key);
+void clearDownloadUiThrottle(const QString &key);
+void clearDownloadUiThrottleByCid(const QString &cid);
+
 } // namespace TransferViewMetrics

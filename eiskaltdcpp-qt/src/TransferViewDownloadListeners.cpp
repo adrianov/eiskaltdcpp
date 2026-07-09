@@ -15,33 +15,7 @@
 #include "dcpp/QueueManager.h"
 #include "extra/ipfilter.h"
 
-#include <QHash>
-
 using namespace TransferViewMetrics;
-
-namespace {
-
-static const quint64 DOWNLOAD_UI_INTERVAL_MS = 250;
-static QHash<QString, quint64> downloadTickTimes;
-
-QString downloadTickKey(const dcpp::Download *dl) {
-    return _q(dl->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(dl->getPath());
-}
-
-bool shouldRefreshDownloadUi(const QString &key) {
-    const quint64 now = GET_TICK();
-    const auto it = downloadTickTimes.constFind(key);
-    if (it != downloadTickTimes.constEnd() && now - *it < DOWNLOAD_UI_INTERVAL_MS)
-        return false;
-    downloadTickTimes[key] = now;
-    return true;
-}
-
-void clearDownloadUiThrottle(const QString &key) {
-    downloadTickTimes.remove(key);
-}
-
-} // namespace
 
 void TransferView::on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept{
     VarMap params;
