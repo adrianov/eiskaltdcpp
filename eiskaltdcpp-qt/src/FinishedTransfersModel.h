@@ -10,9 +10,11 @@
 #pragma once
 
 #include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
 #include <QHash>
 #include <QMap>
+
+#include "FinishedTransfersItem.h"
+#include "FinishedTransfersProxy.h"
 
 #define COLUMN_FINISHED_NAME    0
 #define COLUMN_FINISHED_PATH    1
@@ -24,50 +26,6 @@
 #define COLUMN_FINISHED_TARGET  7
 #define COLUMN_FINISHED_ELAPS   8
 #define COLUMN_FINISHED_FULL    9
-
-class FinishedTransfersItem
-{
-
-public:
-    FinishedTransfersItem(const QList<QVariant> &data, FinishedTransfersItem *parent = nullptr);
-    ~FinishedTransfersItem();
-
-    void appendChild(FinishedTransfersItem *child);
-
-    FinishedTransfersItem *child(int row);
-    int childCount() const;
-    int columnCount() const;
-    QVariant data(int column) const;
-    int row() const;
-    FinishedTransfersItem *parent() const;
-    void updateColumn(int column, QVariant var);
-
-    QList<FinishedTransfersItem*> childItems;
-
-private:
-    QList<QVariant> itemData;
-    FinishedTransfersItem *parentItem;
-};
-
-class FinishedTransferProxyModel: public QSortFilterProxyModel {
-    Q_OBJECT
-
-public:
-    FinishedTransferProxyModel(bool hideFileLists = false, bool requireFullFile = false) :
-        hideFileLists_(hideFileLists), requireFullFile_(requireFullFile) {}
-
-    void sort(int column, Qt::SortOrder order) override {
-        if (sourceModel())
-            sourceModel()->sort(column, order);
-    }
-
-protected:
-    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
-
-private:
-    bool hideFileLists_;
-    bool requireFullFile_;
-};
 
 class FinishedTransfersModel : public QAbstractItemModel
 {

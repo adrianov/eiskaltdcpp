@@ -89,8 +89,15 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserItem.cpp
     src/FileBrowserModelSort.cpp
     src/FavoriteUsersActions.cpp
+    src/FinishedTransfersInit.cpp
+    src/FinishedTransfersItem.cpp
     src/FinishedTransfersListener.cpp
+    src/FinishedTransfersLoad.cpp
     src/FinishedTransfersMenu.cpp
+    src/FinishedTransfersModelMut.cpp
+    src/FinishedTransfersModelView.cpp
+    src/FinishedTransfersParams.cpp
+    src/FinishedTransfersProxy.cpp
     src/HubFrameLinkMagnet.cpp
     src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
