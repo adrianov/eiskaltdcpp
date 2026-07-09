@@ -61,7 +61,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     QAction *rem_queue  = new QAction(TransferView::tr("Remove Source"), menu);
     rem_queue->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
 
-    QAction *remove     = new QAction(TransferView::tr("Remove"), menu);
+    QAction *remove     = new QAction(TransferView::tr("Delete File"), menu);
     remove->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
     remove->setEnabled(removeEnabled);
 
