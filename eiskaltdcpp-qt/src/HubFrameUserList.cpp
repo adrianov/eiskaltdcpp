@@ -80,17 +80,21 @@ void HubFrame::clearUsers(){
 void HubFrame::slotUsersUpdated(){
     Q_D(HubFrame);
 
+    QString text;
     if (d->proxy && treeView_USERS->model() == d->proxy){
-        label_USERSTATE->setText(QString(tr("Users count: %3/%1 | Total share: %2"))
+        text = QString(tr("Users count: %3/%1 | Total share: %2"))
                                  .arg(d->model->rowCount())
                                  .arg(WulforUtil::formatBytes(d->total_shared))
-                                 .arg(d->proxy->rowCount()));
+                                 .arg(d->proxy->rowCount());
     }
     else {
-        label_USERSTATE->setText(QString(tr("Users count: %1 | Total share: %2"))
+        text = QString(tr("Users count: %1 | Total share: %2"))
                                  .arg(d->model->rowCount())
-                                 .arg(WulforUtil::formatBytes(d->total_shared)));
+                                 .arg(WulforUtil::formatBytes(d->total_shared));
     }
+
+    if (label_USERSTATE->text() != text)
+        label_USERSTATE->setText(text);
 
     label_LAST_STATUS->setMaximumHeight(label_USERSTATE->height());
 }

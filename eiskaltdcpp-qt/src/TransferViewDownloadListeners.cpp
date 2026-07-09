@@ -15,7 +15,33 @@
 #include "dcpp/QueueManager.h"
 #include "extra/ipfilter.h"
 
+#include <QHash>
+
 using namespace TransferViewMetrics;
+
+namespace {
+
+static const quint64 DOWNLOAD_UI_INTERVAL_MS = 250;
+static QHash<QString, quint64> downloadTickTimes;
+
+QString downloadTickKey(const dcpp::Download *dl) {
+    return _q(dl->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(dl->getPath());
+}
+
+bool shouldRefreshDownloadUi(const QString &key) {
+    const quint64 now = GET_TICK();
+    const auto it = downloadTickTimes.constFind(key);
+    if (it != downloadTickTimes.constEnd() && now - *it < DOWNLOAD_UI_INTERVAL_MS)
+        return false;
+    downloadTickTimes[key] = now;
+    return true;
+}
+
+void clearDownloadUiThrottle(const QString &key) {
+    downloadTickTimes.remove(key);
+}
+
+} // namespace
 
 void TransferView::on(dcpp::DownloadManagerListener::Requesting, dcpp::Download* dl) noexcept{
     VarMap params;
@@ -65,8 +91,13 @@ void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* d
 }
 
 void TransferView::on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadList& dls) noexcept{
+    bool any = false;
     for (const auto &it : dls){
         Download* dl = it;
+        const QString tickKey = downloadTickKey(dl);
+        if (!shouldRefreshDownloadUi(tickKey))
+            continue;
+
         VarMap params;
         QString str;
 
@@ -94,12 +125,16 @@ void TransferView::on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadL
         params["STAT"] = downloadProgressStat(s.downloaded, s.fileSize);
 
         emit coreDMTick(params);
+        any = true;
     }
 
-    emit coreUpdateParents();
+    if (any)
+        emit coreUpdateParents();
 }
 
 void TransferView::on(dcpp::DownloadManagerListener::Complete, dcpp::Download* dl) noexcept{
+    clearDownloadUiThrottle(downloadTickKey(dl));
+
     VarMap params;
 
     getParams(params, dl);
@@ -123,6 +158,8 @@ void TransferView::on(dcpp::QueueManagerListener::CRCFailed, dcpp::Download* dl,
 }
 
 void TransferView::onFailed(dcpp::Download* dl, const std::string& reason) {
+    clearDownloadUiThrottle(downloadTickKey(dl));
+
     VarMap params;
 
     getParams(params, dl);
