@@ -34,7 +34,6 @@ struct PartsInfoReqParam{
 };
 
 void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
-    string fn;
     string searchString;
     SearchManager::TypeModes searchType = SearchManager::TYPE_TTH;
     vector<const PartsInfoReqParam*> params;

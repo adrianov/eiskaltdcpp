@@ -6,17 +6,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
+
 #include "User.h"
 #include "FastAlloc.h"
 #include "MerkleTree.h"
@@ -26,8 +19,10 @@
 #include "Util.h"
 #include "GetSet.h"
 #include "HintedUser.h"
+#include "QueueItemSource.h"
 
 namespace dcpp {
+
 class QueueManager;
 
 class QueueItem : public Flags, public FastAlloc<QueueItem> {
@@ -54,25 +49,18 @@ public:
     };
 
     enum FileFlags {
-        /** Normal download, no flags set */
         FLAG_NORMAL = 0x00,
-        /** This is a user file listing download */
         FLAG_USER_LIST = 0x02,
-        /** The file list is downloaded to use for directory download (used with USER_LIST) */
         FLAG_DIRECTORY_DOWNLOAD = 0x04,
-        /** The file is downloaded to be viewed in the gui */
         FLAG_CLIENT_VIEW = 0x08,
-        /** Flag to indicate that file should be viewed as a text file */
         FLAG_TEXT = 0x20,
-        /** Match the queue against this list */
         FLAG_MATCH_QUEUE = 0x80,
-        /** The file list downloaded was actually an .xml.bz2 list */
         FLAG_XML_BZLIST = 0x100,
-        /** Only download a part of the file list */
         FLAG_PARTIAL_LIST = 0x200
     };
 
-#include "QueueItemSource.h"
+    typedef QueuePartialSource PartialSource;
+    typedef QueueSource Source;
 
     typedef std::vector<Source> SourceList;
     typedef SourceList::iterator SourceIter;
@@ -93,7 +81,6 @@ public:
         size(rhs.size), priority(rhs.priority), added(rhs.added), tthRoot(rhs.tthRoot),
         nextPublishingTime(rhs.nextPublishingTime), sources(rhs.sources), badSources(rhs.badSources),
         tempTarget(rhs.tempTarget)
-
     { }
 
     virtual ~QueueItem() { }
@@ -144,15 +131,8 @@ public:
         return false;
     }
 
-    /** Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found */
     Segment getNextSegment(int64_t blockSize, int64_t wantedSize, int64_t lastSpeed, const PartialSource::Ptr partialSource) const;
-    /**
-     * Is specified parts needed by this download?
-     */
     bool isNeededPart(const PartsInfo& partsInfo, int64_t blockSize) const;
-    /**
-     * Get shared parts info, max 255 parts range pairs
-     */
     void getPartialInfo(PartsInfo& partialInfo, int64_t blockSize) const;
 
     void addSegment(const Segment& segment);

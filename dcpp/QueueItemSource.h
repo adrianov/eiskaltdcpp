@@ -1,15 +1,34 @@
-/**
- * Source parts info.
- * Meaningful only when Source::FLAG_PARTIAL is set.
+/*
+ * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2009-2019 EiskaltDC++ developers
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  */
-class PartialSource : public FastAlloc<PartialSource>, public intrusive_ptr_base<PartialSource> {
+
+#pragma once
+
+#include "FastAlloc.h"
+#include "Flags.h"
+#include "GetSet.h"
+#include "HintedUser.h"
+#include "intrusive_ptr.h"
+#include "typedefs.h"
+#include "Util.h"
+
+namespace dcpp {
+
+/** Partial-file-sharing source metadata for a queue item. */
+class QueuePartialSource : public FastAlloc<QueuePartialSource>, public intrusive_ptr_base<QueuePartialSource> {
 public:
-    PartialSource(const string& aMyNick, const string& aHubIpPort, const string& aIp, const string& udp) :
+    QueuePartialSource(const string& aMyNick, const string& aHubIpPort, const string& aIp, const string& udp) :
         myNick(aMyNick), hubIpPort(aHubIpPort), ip(aIp), udpPort(udp), nextQueryTime(0), pendingQueryCount(0) { }
 
-    ~PartialSource() { }
+    ~QueuePartialSource() { }
 
-    typedef dcpp::intrusive_ptr<PartialSource> Ptr;
+    typedef dcpp::intrusive_ptr<QueuePartialSource> Ptr;
 
     GETSET(PartsInfo, partialInfo, PartialInfo);
     GETSET(string, myNick, MyNick);                 // for NMDC support only
@@ -20,7 +39,8 @@ public:
     GETSET(uint8_t, pendingQueryCount, PendingQueryCount);
 };
 
-class Source : public Flags {
+/** One download source for a queue item. */
+class QueueSource : public Flags {
 public:
     enum {
         FLAG_NONE = 0x00,
@@ -43,12 +63,14 @@ public:
         | FLAG_BAD_TREE | FLAG_NO_TREE | FLAG_SLOW_SOURCE | FLAG_TTH_INCONSISTENCY | FLAG_UNTRUSTED | FLAG_UNENCRYPTED
     };
 
-    Source(const HintedUser& aUser) : user(aUser), partialSource(NULL) { }
-    Source(const Source& aSource) : Flags(aSource), user(aSource.user), partialSource(aSource.partialSource) { }
+    QueueSource(const HintedUser& aUser) : user(aUser), partialSource(NULL) { }
+    QueueSource(const QueueSource& aSource) : Flags(aSource), user(aSource.user), partialSource(aSource.partialSource) { }
 
     bool operator==(const UserPtr& aUser) const { return user == aUser; }
-    PartialSource::Ptr& getPartialSource() { return partialSource; }
+    QueuePartialSource::Ptr& getPartialSource() { return partialSource; }
 
     GETSET(HintedUser, user, User);
-    GETSET(PartialSource::Ptr, partialSource, PartialSource);
+    GETSET(QueuePartialSource::Ptr, partialSource, PartialSource);
 };
+
+} // namespace dcpp
