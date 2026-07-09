@@ -66,6 +66,7 @@ class ShareBrowser : public  QWidget,
             Download=0,
             DownloadTo,
             Alternates,
+            CopyFileName,
             Magnet,
             MagnetWeb,
             MagnetInfo,
@@ -141,6 +142,8 @@ private:
 
     void download(dcpp::DirectoryListing::Directory*, const QString &);
     void download(dcpp::DirectoryListing::File*, const QString &);
+    void contextMoreActions(Menu::Action act, const QModelIndexList &list);
+    void contextUserActions(Menu::Action act, const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
 
