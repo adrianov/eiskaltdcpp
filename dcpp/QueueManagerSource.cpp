@@ -1,0 +1,148 @@
+/*
+ * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2018 Boris Pek <tehnick-8@yandex.ru>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+
+#include "stdinc.h"
+#include "QueueManager.h"
+
+#include "ClientManager.h"
+#include "ConnectionManager.h"
+#include "PeerConnectLog.h"
+
+namespace dcpp {
+
+namespace {
+const int64_t MAX_SIZE_WO_TREE = 20 * 1024 * 1024;
+}
+
+/** Add a source to an existing queue item */
+bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad) {
+    bool wantConnection = (qi->getPriority() != QueueItem::PAUSED) && !userQueue.getRunning(aUser);
+
+    if(qi->isSource(aUser)) {
+        if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
+            return wantConnection;
+        }
+        throw QueueException(str(F_("Duplicate source: %1%") % Util::getFileName(qi->getTarget())));
+    }
+
+    if(qi->isBadSourceExcept(aUser, addBad)) {
+        throw QueueException(str(F_("Duplicate source: %1%") % Util::getFileName(qi->getTarget())));
+    }
+
+    qi->addSource(aUser);
+
+    if(aUser.user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive() ) {
+        PeerConnectLog::passiveSkip(aUser);
+        qi->removeSource(aUser, QueueItem::Source::FLAG_PASSIVE);
+        wantConnection = false;
+    } else if(qi->isFinished()) {
+        wantConnection = false;
+        fire(QueueManagerListener::SourceAdded(), qi, aUser);
+    } else {
+        userQueue.add(qi, aUser);
+        fire(QueueManagerListener::SourceAdded(), qi, aUser);
+    }
+
+    fire(QueueManagerListener::SourcesUpdated(), qi);
+    setDirty();
+
+    return wantConnection;
+}
+
+void QueueManager::removeSource(const string& aTarget, const UserPtr& aUser, int reason, bool removeConn /* = true */) noexcept {
+    bool isRunning = false;
+    bool removeCompletely = false;
+    {
+        Lock l(cs);
+        QueueItem* q = fileQueue.find(aTarget);
+        if(!q)
+            return;
+
+        if(!q->isSource(aUser))
+            return;
+
+        if(q->isSet(QueueItem::FLAG_USER_LIST)) {
+            removeCompletely = true;
+            goto endCheck;
+        }
+
+        if(reason == QueueItem::Source::FLAG_NO_TREE) {
+            q->getSource(aUser)->setFlag(reason);
+            if (q->getSize() < MAX_SIZE_WO_TREE) {
+                return;
+            }
+        }
+
+        if(q->isRunning() && userQueue.getRunning(aUser) == q) {
+            isRunning = true;
+            userQueue.removeDownload(q, aUser);
+            fire(QueueManagerListener::StatusUpdated(), q);
+        }
+
+        if(!q->isFinished()) {
+            userQueue.remove(q, aUser);
+        }
+        q->removeSource(aUser, reason);
+
+        fire(QueueManagerListener::SourcesUpdated(), q);
+        setDirty();
+    }
+endCheck:
+    if(isRunning && removeConn) {
+        ConnectionManager::getInstance()->disconnect(aUser, true);
+    }
+    if(removeCompletely) {
+        remove(aTarget);
+    }
+}
+
+void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
+    // @todo remove from finished items
+    bool isRunning = false;
+    string removeRunning;
+    {
+        Lock l(cs);
+        QueueItem* qi = NULL;
+        while( (qi = userQueue.getNext(aUser, QueueItem::PAUSED)) != NULL) {
+            if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
+                remove(qi->getTarget());
+            } else {
+                userQueue.remove(qi, aUser);
+                qi->removeSource(aUser, reason);
+                fire(QueueManagerListener::SourcesUpdated(), qi);
+                setDirty();
+            }
+        }
+
+        qi = userQueue.getRunning(aUser);
+        if(qi) {
+            if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
+                removeRunning = qi->getTarget();
+            } else {
+                userQueue.removeDownload(qi, aUser);
+                userQueue.remove(qi, aUser);
+                isRunning = true;
+                qi->removeSource(aUser, reason);
+                fire(QueueManagerListener::StatusUpdated(), qi);
+                fire(QueueManagerListener::SourcesUpdated(), qi);
+                setDirty();
+            }
+        }
+    }
+
+    if(isRunning) {
+        ConnectionManager::getInstance()->disconnect(aUser, true);
+    }
+    if(!removeRunning.empty()) {
+        remove(removeRunning);
+    }
+}
+
+} // namespace dcpp

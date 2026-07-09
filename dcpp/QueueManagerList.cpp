@@ -62,8 +62,17 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
         throw QueueException(_("User is not online on this hub"));
     }
 
-    if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST) && hasListQueued(aUser))
-        return;
+    // Merge browse / match / directory flags onto an in-flight silent list.
+    if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST)) {
+        Lock l(cs);
+        QueueItem* qi = fileQueue.find(getListPath(aUser));
+        if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished()) {
+            qi->setFlag(aFlags);
+            if(!aInitialDir.empty())
+                qi->setTempTarget(aInitialDir);
+            return;
+        }
+    }
 
     purgeOtherListQueues(aUser);
 

@@ -54,6 +54,8 @@ public:
     typedef X<18> ListFromCache;
     /** Cached list reused for silent ingest (no ShareBrowser). */
     typedef X<19> ListCached;
+    /** Fired only when a source was added (not on remove / passive drop). */
+    typedef X<20> SourceAdded;
 
     virtual void on(Added, QueueItem*) noexcept { }
     virtual void on(Finished, QueueItem*, const string&, int64_t) noexcept { }
@@ -63,6 +65,7 @@ public:
     virtual void on(StatusUpdated, QueueItem*) noexcept { }
     virtual void on(SearchStringUpdated, QueueItem*) noexcept { }
     virtual void on(PartialList, const HintedUser&, const string&) noexcept { }
+    virtual void on(SourceAdded, QueueItem*, const HintedUser&) noexcept { }
 
     virtual void on(RecheckStarted, const string&) noexcept { }
     virtual void on(RecheckNoFile, const string&) noexcept { }
