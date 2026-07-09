@@ -98,6 +98,9 @@ set(DCPP_EXTRA_SOURCES
     SettingsManagerSave.cpp
     SettingsManagerSearch.cpp
     SettingsManagerAccess.cpp
+    ScriptManagerLua.cpp
+    ScriptManagerLuaQuery.cpp
+    ScriptManagerEval.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
@@ -115,7 +118,11 @@ set (DCPP_SRCS ${dcpp_srcs} PARENT_SCOPE)
 set (DCPP_HDRS ${dcpp_hdrs} PARENT_SCOPE)
 
 if (NOT LUA_SCRIPT)
-    list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/ScriptManager.cpp)
+    list (REMOVE_ITEM dcpp_srcs
+        ${PROJECT_SOURCE_DIR}/ScriptManager.cpp
+        ${PROJECT_SOURCE_DIR}/ScriptManagerLua.cpp
+        ${PROJECT_SOURCE_DIR}/ScriptManagerLuaQuery.cpp
+        ${PROJECT_SOURCE_DIR}/ScriptManagerEval.cpp)
 endif (NOT LUA_SCRIPT)
 
 include_directories (${PROJECT_BINARY_DIR}

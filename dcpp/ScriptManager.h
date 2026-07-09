@@ -25,6 +25,11 @@
 #include "CriticalSection.h"
 #include "extra/lunar.h"
 
+/** Compat helpers used by ScriptManager (defined in ScriptManager.cpp). */
+LUALIB_API int lua_dofile(lua_State *L, const char *filename);
+LUALIB_API int lua_dobuffer(lua_State *L, const char *buff, size_t size, const char *name);
+LUALIB_API int lua_dostring(lua_State *L, const char *str);
+
 namespace dcpp {
 
 class ScriptManagerListener {
@@ -82,6 +87,8 @@ protected:
     template <typename T> bool MakeCall(const string& table, const string& method,
                                         int ret, const T& t) noexcept {
         Lock l(cs);
+        if (!L)
+            return false;
         dcassert(lua_gettop(L) == 0);
         LuaPush(t);
         return MakeCallRaw(table, method, 1 , ret);
@@ -89,12 +96,17 @@ protected:
     template <typename T, typename T2> bool MakeCall(const string& table, const string& method,
                                                      int ret, const T& t, const T2& t2) noexcept {
         Lock l(cs);
+        if (!L)
+            return false;
         dcassert(lua_gettop(L) == 0);
         LuaPush(t);
         LuaPush(t2);
         return MakeCallRaw(table, method, 2, ret);
     }
-    template <typename T> void LuaPush(T* p) { lua_pushlightuserdata(L, p); }
+    template <typename T> void LuaPush(T* p) {
+        if (L)
+            lua_pushlightuserdata(L, p);
+    }
 
     void LuaPush(int i);
     void LuaPush(const string& s);
@@ -111,7 +123,7 @@ class ScriptManager: public ScriptInstance, public Singleton<ScriptManager>, pub
 
     friend class Singleton<ScriptManager>;
     ScriptManager();
-    virtual ~ScriptManager() throw () { if (L) lua_close(L); if(timerEnabled) TimerManager::getInstance()->removeListener(this); }
+    ~ScriptManager() override;
 public:
     void load();
     void  SendDebugMessage(const string& s);

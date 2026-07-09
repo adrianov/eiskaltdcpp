@@ -142,9 +142,6 @@ void shutdown() {
     dht::DHT::deleteInstance();
 #endif
     ThrottleManager::getInstance()->shutdown();
-#ifdef LUA_SCRIPT
-    ScriptManager::deleteInstance();
-#endif
     TimerManager::getInstance()->shutdown();
     HashManager::getInstance()->shutdown();
 
@@ -152,6 +149,10 @@ void shutdown() {
     MappingManager::getInstance()->close();
 
     BufferedSocket::waitShutdown();
+#ifdef LUA_SCRIPT
+    // After sockets stop: UserConnection::send still calls into Lua until then.
+    ScriptManager::deleteInstance();
+#endif
     QueueManager::getInstance()->removeUserLists();
     QueueManager::getInstance()->saveQueue(true);
     ClientManager::getInstance()->saveUsers();
