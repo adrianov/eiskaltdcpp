@@ -12,6 +12,7 @@
 #include <QFrame>
 #include <QResizeEvent>
 #include <QMap>
+#include <QHash>
 #include <QList>
 #include <QShortcut>
 
@@ -65,4 +66,5 @@ private:
     QList<QShortcut*> shortcuts;
     QMap<ArenaWidget*, TabButton*> awgt_map;
     QMap<TabButton*, ArenaWidget*> tbtn_map;
+    QHash<ArenaWidget*, quint64> tabIconKeys;
 };

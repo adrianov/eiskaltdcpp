@@ -15,6 +15,7 @@
 #include <QShowEvent>
 #include <QShortcut>
 #include <QList>
+#include <QHash>
 
 #include "ArenaWidget.h"
 
@@ -67,4 +68,5 @@ private:
     QTabBar *tabbar;
     QList<QShortcut*> shortcuts;
     WidgetMap map;
+    QHash<ArenaWidget*, quint64> tabIconKeys;
 };

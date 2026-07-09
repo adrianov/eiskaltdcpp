@@ -45,6 +45,7 @@ void ToolBar::removeWidget(ArenaWidget *awgt){
 
     if (index >= 0){
         map.erase(map.find(awgt));
+        tabIconKeys.remove(awgt);
 
         rebuildIndexes(index);
 
