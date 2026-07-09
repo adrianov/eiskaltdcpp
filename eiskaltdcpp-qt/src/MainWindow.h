@@ -71,7 +71,8 @@ public:
                         "\n"
                         "Keys:\n"
                         "  -h, --help\t Show this message\n"
-                        "  -V, --version\t Show version string"
+                        "  -V, --version\t Show version string\n"
+                        "  --share-index-smoke\t Run ShareIndex SQLite self-check and exit"
                         );
 
         printf("%s\n", msg.toUtf8().constData());

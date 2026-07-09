@@ -38,6 +38,7 @@ Currently supported features (not full list):
 * Indicator of free space on disk where main downloads directory is located.
 * Support of IP filter and basic antispam.
 * Search spy (allows one to see search phrases which send other users, but without identifying users of course).
+* Share index (Qt + SQLite): indexes files and directories from downloaded user file lists and hub search hits; local matches appear immediately when starting a search, then hub results enrich the same table.
 * ADL search with support for Perl-style regular expressions (using PCRE library).
 * Flexible filter (with regular expressions support) in users list, search results, public hubs lists, file lists, etc.. (Use ##&lt;regexp&gt; string and read about Qt QRegExp syntax.)
 * Full-featured chat (different fonts, nick coloring, parsing of magnet links and other links, emoticons, chat search, chat commands, BBCode support, disable/enable/clear chat, spell check (Aspell is used), keywords highlighting in the chat, separator for unread messages, saving of chat logs, the ability to display IP addresses and countries of users in the chat (depends on hub settings: some of them hide this data for usual users).
