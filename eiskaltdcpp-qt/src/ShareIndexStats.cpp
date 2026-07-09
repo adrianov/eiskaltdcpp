@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "ShareIndex.h"
+#include "ShareIndexQueueCore.h"
 
 #ifdef USE_QT_SQLITE
 
@@ -94,6 +95,8 @@ bool ShareIndex::needsListIngest(const QString &cid, const QString &listPath)
 void ShareIndex::rememberListMeta(const QString &cid, const QString &listPath, int rowCount)
 {
     if (cid.isEmpty() || listPath.isEmpty())
+        return;
+    if (ShareIndexWriteQueue::isStopping())
         return;
 
     const QFileInfo fi(listPath);

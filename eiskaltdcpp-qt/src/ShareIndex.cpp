@@ -19,6 +19,9 @@ using namespace dcpp;
 
 ShareIndex::ShareIndex() : opened(0)
 {
+#ifdef USE_QT_SQLITE
+    ShareIndexWriteQueue::writeStopping.storeRelease(0);
+#endif
 }
 
 ShareIndex::~ShareIndex()

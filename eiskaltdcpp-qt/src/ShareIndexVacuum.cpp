@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "ShareIndex.h"
+#include "ShareIndexQueueCore.h"
 
 #ifdef USE_QT_SQLITE
 
@@ -87,9 +88,14 @@ bool ShareIndex::recreateForVacuum()
 
 void ShareIndex::reclaimFreePages(QSqlDatabase &db)
 {
+    if (ShareIndexWriteQueue::isStopping())
+        return;
+
     QSqlQuery q(db);
     int left = kVacuumMaxPages;
     while (left > 0) {
+        if (ShareIndexWriteQueue::isStopping())
+            return;
         if (!q.exec(QStringLiteral("PRAGMA freelist_count")) || !q.next())
             return;
         const qint64 free = q.value(0).toLongLong();
@@ -101,6 +107,8 @@ void ShareIndex::reclaimFreePages(QSqlDatabase &db)
         q.exec(QStringLiteral("PRAGMA incremental_vacuum(%1)").arg(n));
         left -= n;
     }
+    if (ShareIndexWriteQueue::isStopping())
+        return;
     // PASSIVE never blocks readers; skip if another connection holds a lock.
     q.exec(QStringLiteral("PRAGMA wal_checkpoint(PASSIVE)"));
 }

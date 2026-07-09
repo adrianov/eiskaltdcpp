@@ -33,7 +33,10 @@ QList<QVariantMap> takeHubUpserts()
 
 void shareIndexRunWriteWorker()
 {
-    ShareIndex::getInstance()->drainWriteQueue();
+    ShareIndex *idx = ShareIndex::getInstance();
+    if (!idx)
+        return;
+    idx->drainWriteQueue();
 }
 
 void ShareIndex::drainWriteQueue()

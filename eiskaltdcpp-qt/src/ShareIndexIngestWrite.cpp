@@ -82,13 +82,13 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
 
     armDb = threadDb();
     if (armDb.isOpen()) {
-        if (loaded)
+        if (loaded && !isStopping())
             pruneExcess(armDb);
         setCapArmed(armDb, true);
-        if (loaded)
+        if (loaded && !isStopping())
             reclaimFreePages(armDb);
     }
-    return loaded;
+    return loaded && !isStopping();
 }
 
 #endif

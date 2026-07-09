@@ -135,8 +135,8 @@ void ShareIndex::stopWrites()
         QMutexLocker lock(&writeMutex);
         writeQueue.clear();
     }
-    // Finish the in-flight job (checks isStopping between chunks); do not hang forever.
-    for (int i = 0; i < 200; ++i) {
+    // Must wait until the worker exits: returning early UAF's ShareIndex under AsyncRunner.
+    for (;;) {
         {
             QMutexLocker lock(&writeMutex);
             if (!writeWorkerRunning)

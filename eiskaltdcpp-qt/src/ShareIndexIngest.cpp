@@ -145,6 +145,8 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
 
     if (!writeListRows(cid, rows))
         return;
+    if (isStopping())
+        return;
     rememberListMeta(cid, listPath, rows.size());
     setLastError(QString());
 }
