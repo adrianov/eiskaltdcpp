@@ -20,7 +20,6 @@
 
 #include "WulforUtil.h"
 #include "WulforSettings.h"
-#include "ShareIndex.h"
 #include "HubManager.h"
 #include "Notification.h"
 #include "VersionGlobal.h"
@@ -90,8 +89,7 @@ int runApplication(EiskaltApp &app)
     WulforSettings::getInstance()->loadTheme();
 
     WulforUtil::newInstance();
-    ShareIndex::newInstance();
-    ShareIndex::getInstance()->open();
+    startShareIndex();
     WulforSettings::getInstance()->loadTranslation();
 #if defined(Q_OS_MAC)
     WBSET(WB_TRAY_ENABLED, false);
@@ -183,7 +181,7 @@ int runApplication(EiskaltApp &app)
 
     MainWindow::deleteInstance();
 
-    ShareIndex::deleteInstance();
+    stopShareIndex();
 
     WulforUtil::deleteInstance();
 

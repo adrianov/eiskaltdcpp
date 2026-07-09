@@ -62,13 +62,18 @@ void ShareBrowser::init(){
 
     arena_menu = new QMenu(tr("Filebrowser"));
 
+    QAction *add_fav = new QAction(WICON(WulforUtil::eiFAVADD), tr("Add User to Favorites"), arena_menu);
+    add_fav->setEnabled(user && user != ClientManager::getInstance()->getMe());
     QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), arena_menu);
+    arena_menu->addAction(add_fav);
+    arena_menu->addSeparator();
     arena_menu->addAction(close_wnd);
 
     connect(treeView_LPANE, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotCustomContextMenu(QPoint)));
     connect(treeView_LPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
 
+    connect(add_fav, SIGNAL(triggered()), this, SLOT(slotAddToFavorites()));
     connect(close_wnd, SIGNAL(triggered()), this, SLOT(slotClose()));
     connect(toolButton_CLOSEFILTER, SIGNAL(clicked()), this, SLOT(slotFilter()));
 

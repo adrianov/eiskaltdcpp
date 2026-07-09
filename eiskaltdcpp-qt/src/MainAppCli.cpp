@@ -9,6 +9,7 @@
 
 #include "MainAppCli.h"
 
+#include "AboutDialog.h"
 #include "MainWindow.h"
 #include "ShareIndex.h"
 #include "WulforUtil.h"
@@ -48,7 +49,6 @@ static int runShareIndexReingest(const QString &listPath)
     }
 
     QString nick;
-    const QString base = QFileInfo(listPath).completeBaseName(); // strips .bz2; still has .xml
     QString stem = QFileInfo(listPath).fileName();
     if (stem.endsWith(QLatin1String(".xml.bz2"), Qt::CaseInsensitive))
         stem.chop(8);
@@ -74,7 +74,6 @@ static int runShareIndexReingest(const QString &listPath)
               << (ms / 1000.0) << " s)" << std::endl;
 
     ShareIndex::deleteInstance();
-    Q_UNUSED(base);
     return 0;
 }
 

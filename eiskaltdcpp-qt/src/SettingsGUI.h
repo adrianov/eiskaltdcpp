@@ -23,6 +23,8 @@ public:
 
 private:
     void init();
+    void initBasic();
+    void initColors();
 
 private Q_SLOTS:
     void slotChatColorItemClicked(QListWidgetItem *);

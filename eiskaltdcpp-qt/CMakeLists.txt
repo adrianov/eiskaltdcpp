@@ -101,7 +101,6 @@ set(QT_EXTRA_SOURCES
     src/MainAppUnix.cpp
     src/MainAppXdg.cpp
     src/MainWindowArena.cpp
-    src/MainWindowShareIndex.cpp
     src/MainWindowStatus.cpp
     src/SearchFrameContext.cpp
     src/SearchFrameContextDl.cpp
@@ -124,6 +123,14 @@ set(QT_EXTRA_SOURCES
     src/SearchModelData.cpp
     src/SearchModelMutate.cpp
     src/SearchItem.cpp
+    src/ReciprocalList.cpp
+    src/ShareIndexListListener.cpp
+    src/SettingsGUIColor.cpp
+    src/SettingsGUIInit.cpp
+    src/SettingsGUIInitBasic.cpp
+    src/SettingsGUIInitColor.cpp
+    src/SettingsGUISave.cpp
+    src/ToolBarTabs.cpp
     src/ShareIndex.cpp
     src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp

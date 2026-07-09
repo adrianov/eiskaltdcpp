@@ -15,6 +15,8 @@
 #include "ArenaWidgetManager.h"
 
 #include "dcpp/QueueManager.h"
+#include "dcpp/FavoriteManager.h"
+#include "dcpp/ClientManager.h"
 
 #include <QMessageBox>
 #include <QSortFilterProxyModel>
@@ -173,6 +175,11 @@ void ShareBrowser::slotSettingsChanged(const QString &key, const QString&){
 
 void ShareBrowser::slotClose() {
     ArenaWidgetManager::getInstance()->rem(this);
+}
+
+void ShareBrowser::slotAddToFavorites() {
+    if (user && user != ClientManager::getInstance()->getMe())
+        FavoriteManager::getInstance()->addFavoriteUser(user);
 }
 
 void ShareBrowser::slotDie(const QString &msg){
