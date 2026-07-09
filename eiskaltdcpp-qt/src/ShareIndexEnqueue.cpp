@@ -93,6 +93,17 @@ void ShareIndex::upsertFromSearch(const QVariantMap &map)
     enqueueWrite(job);
 }
 
+void ShareIndex::recordSearchShows(const QList<qint64> &ids)
+{
+    if (ids.isEmpty())
+        return;
+
+    WriteJob job;
+    job.kind = BumpShowHits;
+    job.ids = ids;
+    enqueueWrite(job);
+}
+
 void ShareIndex::waitWritesIdle()
 {
     for (;;) {
@@ -125,6 +136,7 @@ void ShareIndex::stopWrites()
 
 #else
 
+void ShareIndex::recordSearchShows(const QList<qint64> &) {}
 void ShareIndex::stopWrites() {}
 
 #endif

@@ -18,7 +18,7 @@
 /** Shared write-queue state for ShareIndexQueue / ShareIndexEnqueue. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { IngestList, IngestCached, UpsertSearch };
+enum WriteKind { IngestList, IngestCached, UpsertSearch, BumpShowHits };
 
 struct WriteJob {
     WriteKind kind = IngestList;
@@ -27,6 +27,7 @@ struct WriteJob {
     QString hubUrl;
     QString nick;
     QVariantMap map;
+    QList<qint64> ids;
 };
 
 extern QMutex writeMutex;

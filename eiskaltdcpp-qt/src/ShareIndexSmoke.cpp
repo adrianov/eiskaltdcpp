@@ -35,10 +35,15 @@ bool ShareIndex::smokeCheck(QString *error)
             QSqlDatabase::removeDatabase(conn);
             return false;
         }
+        {
+            QSqlQuery pragma(db);
+            pragma.exec(QStringLiteral("PRAGMA recursive_triggers=ON"));
+        }
 
         ShareIndex idx;
         idx.dbFile = db.databaseName();
-        if (!idx.ensureSchema(db) || !idx.ensureFts(db)) {
+        if (!idx.ensureAutoVacuum(db) || !idx.ensureSchema(db)
+                || !idx.ensureCap(db) || !idx.ensureFts(db)) {
             if (error)
                 *error = "schema";
             db.close();

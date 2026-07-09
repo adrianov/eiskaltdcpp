@@ -18,7 +18,7 @@ using namespace dcpp;
 namespace {
 
 static const char *kSelectCols =
-    "SELECT e.name, e.size, e.tth, e.path, e.nick, e.free_slots, e.all_slots, "
+    "SELECT e.id, e.name, e.size, e.tth, e.path, e.nick, e.free_slots, e.all_slots, "
     "e.ip, e.hub_name, e.hub_url, e.cid, e.is_dir, e.ext FROM share_entries e ";
 
 /** Quote a term for FTS5 MATCH; trigram needs ≥3 chars for substring hits. */
@@ -72,19 +72,20 @@ QList<QVariantMap> ShareIndex::rowsFromQuery(QSqlQuery &q)
     QList<QVariantMap> out;
     while (q.next()) {
         QVariantMap map;
-        map["FILE"] = q.value(0);
-        map["SIZE"] = q.value(1).toULongLong();
-        map["TTH"] = q.value(2);
-        map["PATH"] = q.value(3);
-        map["NICK"] = q.value(4);
-        map["FSLS"] = q.value(5).isNull() ? 0 : q.value(5).toULongLong();
-        map["ASLS"] = q.value(6).isNull() ? 0 : q.value(6).toULongLong();
-        map["IP"] = q.value(7).toString();
-        map["HUB"] = q.value(8);
-        map["HOST"] = q.value(9);
-        map["CID"] = q.value(10);
-        map["ISDIR"] = q.value(11).toInt() != 0;
-        map["EXT"] = q.value(12).toString();
+        map["ID"] = q.value(0).toLongLong();
+        map["FILE"] = q.value(1);
+        map["SIZE"] = q.value(2).toULongLong();
+        map["TTH"] = q.value(3);
+        map["PATH"] = q.value(4);
+        map["NICK"] = q.value(5);
+        map["FSLS"] = q.value(6).isNull() ? 0 : q.value(6).toULongLong();
+        map["ASLS"] = q.value(7).isNull() ? 0 : q.value(7).toULongLong();
+        map["IP"] = q.value(8).toString();
+        map["HUB"] = q.value(9);
+        map["HOST"] = q.value(10);
+        map["CID"] = q.value(11);
+        map["ISDIR"] = q.value(12).toInt() != 0;
+        map["EXT"] = q.value(13).toString();
         out.append(map);
     }
     return out;

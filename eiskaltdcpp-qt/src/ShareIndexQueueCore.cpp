@@ -26,6 +26,7 @@ bool isStopping()
 
 bool takeNextJob(WriteJob &job)
 {
+    // Prefer list ingest / show-hit bumps over hub upserts.
     for (int i = 0; i < writeQueue.size(); ++i) {
         if (writeQueue.at(i).kind != UpsertSearch) {
             job = writeQueue.takeAt(i);

@@ -74,6 +74,9 @@ public:
 
     QList<QVariantMap> search(const SearchFilter &filter);
 
+    /** +1 show_hits for rows displayed from local Search (queued write). */
+    void recordSearchShows(const QList<qint64> &ids);
+
     struct IndexStats {
         qint64 files = 0;
         qint64 dbBytes = 0;
@@ -98,7 +101,12 @@ private:
     ~ShareIndex() override;
 
 #ifdef USE_QT_SQLITE
+    /** Empty DB: page_size=16KiB + auto_vacuum=INCREMENTAL; else false → recreate. */
+    bool ensureAutoVacuum(QSqlDatabase &db);
+    /** Drop DB (+WAL/SHM) and reopen so page_size / auto_vacuum can be set. */
+    bool recreateForVacuum();
     bool ensureSchema(QSqlDatabase &db);
+    bool ensureCap(QSqlDatabase &db);
     bool ensureFts(QSqlDatabase &db);
     /** Per-thread connection; Qt forbids sharing QSqlDatabase across threads. */
     QSqlDatabase threadDb();
@@ -117,14 +125,20 @@ private:
                      dcpp::DirectoryListing::Directory *dir,
                      const QString &cid, const QString &hubUrl,
                      const QString &nick, const QString &hubName,
-                     QList<QVariantMap> &out);
+                     const QString &ip, QList<QVariantMap> &out);
 
     void ingestListSync(const dcpp::UserPtr &user, const QString &listPath,
                         const QString &hubUrl, const QString &nick,
                         bool force = false);
+    /** Chunked DELETE+INSERT for one file list; returns false on abort/error. */
+    bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void ingestCachedListsSync();
     void upsertFromSearchSync(const QVariantMap &map);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
+    void recordSearchShowsSync(const QList<qint64> &ids);
+    void setCapArmed(QSqlDatabase &db, bool armed);
+    void pruneExcess(QSqlDatabase &db);
+    void reclaimFreePages(QSqlDatabase &db);
     void drainWriteQueue();
     bool pendingListIngest() const;
     void requeueCachedIngest();

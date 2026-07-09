@@ -180,6 +180,8 @@ void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
     }
     if (!db.commit())
         setLastError(db.lastError().text());
+    else
+        reclaimFreePages(db);
 }
 
 #endif

@@ -35,6 +35,7 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
             "video_info TEXT,"
             "audio_info TEXT,"
             "hit INTEGER,"
+            "show_hits INTEGER NOT NULL DEFAULT 0,"
             "shared_ts INTEGER,"
             "source INTEGER NOT NULL,"
             "created_at TEXT NOT NULL,"
@@ -47,6 +48,8 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
     // Unicode case-fold copies for FTS trigram (and any LIKE tooling).
     q.exec("ALTER TABLE share_entries ADD COLUMN name_cf TEXT NOT NULL DEFAULT ''");
     q.exec("ALTER TABLE share_entries ADD COLUMN path_cf TEXT NOT NULL DEFAULT ''");
+    /** Times this row was shown from local Search (not remote file-list HIT). */
+    q.exec("ALTER TABLE share_entries ADD COLUMN show_hits INTEGER NOT NULL DEFAULT 0");
 
     q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_file_tth "
            "ON share_entries(cid, tth) WHERE is_dir = 0 AND tth != ''");
@@ -55,6 +58,9 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
     q.exec("CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
     q.exec("CREATE INDEX IF NOT EXISTS share_entries_updated ON share_entries(updated_at)");
     q.exec("CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
+    // Cap eviction: lowest show_hits, then oldest updated_at / created_at.
+    q.exec("CREATE INDEX IF NOT EXISTS share_entries_evict "
+           "ON share_entries(show_hits, updated_at, created_at)");
 
     // Skip re-indexing a file list when path/mtime/size are unchanged.
     q.exec("CREATE TABLE IF NOT EXISTS share_list_meta ("

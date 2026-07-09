@@ -23,7 +23,7 @@ using namespace dcpp;
 void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Directory *dir,
                              const QString &cid, const QString &hubUrl,
                              const QString &nick, const QString &hubName,
-                             QList<QVariantMap> &out)
+                             const QString &ip, QList<QVariantMap> &out)
 {
     if (!dir)
         return;
@@ -41,6 +41,7 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         row["size"] = qint64(dir->getSize());
         row["nick"] = nick;
         row["hub_name"] = hubName;
+        row["ip"] = ip;
         out.append(row);
     }
 
@@ -61,6 +62,7 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         row["size"] = qint64(f->getSize());
         row["nick"] = nick;
         row["hub_name"] = hubName;
+        row["ip"] = ip;
         row["bitrate"] = int(f->mediaInfo.bitrate);
         row["resolution"] = _q(f->mediaInfo.resolution);
         row["video_info"] = _q(f->mediaInfo.video_info);
@@ -73,7 +75,7 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
     for (auto &sub : dir->directories) {
         if (ShareIndexWriteQueue::isStopping())
             return;
-        walkListing(listing, sub, cid, hubUrl, nick, hubName, out);
+        walkListing(listing, sub, cid, hubUrl, nick, hubName, ip, out);
     }
 }
 

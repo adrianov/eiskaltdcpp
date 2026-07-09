@@ -72,6 +72,9 @@ void ShareIndex::drainWriteQueue()
             upsertFromSearchBatchSync(maps);
             break;
         }
+        case BumpShowHits:
+            recordSearchShowsSync(job.ids);
+            break;
         }
     }
 }

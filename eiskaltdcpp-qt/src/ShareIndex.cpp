@@ -71,7 +71,17 @@ void ShareIndex::open()
     if (!db.isOpen())
         return;
 
-    if (!ensureSchema(db) || !ensureFts(db))
+    // auto_vacuum + page_size must be set before any tables exist. Existing
+    // none-mode / small-page DBs are deleted and recreated (no 2× VACUUM).
+    if (!ensureAutoVacuum(db)) {
+        if (!recreateForVacuum())
+            return;
+        db = threadDb();
+        if (!db.isOpen() || !ensureAutoVacuum(db))
+            return;
+    }
+
+    if (!ensureSchema(db) || !ensureCap(db) || !ensureFts(db))
         return;
 
     opened.storeRelease(1);
@@ -111,6 +121,10 @@ QSqlDatabase ShareIndex::threadDb()
     pragma.exec("PRAGMA journal_mode=WAL");
     pragma.exec("PRAGMA busy_timeout=30000");
     pragma.exec("PRAGMA synchronous=NORMAL");
+    // Cap trigger DELETE must fire FTS/count AFTER DELETE triggers.
+    pragma.exec("PRAGMA recursive_triggers=ON");
+    // ~64 MiB page cache (negative = KiB); helps multi-GB ShareIndex reads.
+    pragma.exec("PRAGMA cache_size=-65536");
     return db;
 }
 

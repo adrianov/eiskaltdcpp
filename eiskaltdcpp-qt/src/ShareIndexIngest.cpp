@@ -13,11 +13,45 @@
 
 #include "ShareIndexQueueCore.h"
 #include "WulforUtil.h"
+#include "dcpp/ClientManager.h"
+#include "dcpp/Util.h"
 
 #include <QElapsedTimer>
 
 using namespace dcpp;
 using namespace ShareIndexWriteQueue;
+
+namespace {
+
+QString joinHubField(const StringList &parts)
+{
+    if (parts.empty())
+        return QString();
+    return _q(Util::toString(parts));
+}
+
+/** Hub URL / name / IP from ClientManager when the user is online. */
+void fillUserHubFields(const UserPtr &user, QString &hubUrl, QString &hubName, QString &ip)
+{
+    if (!user)
+        return;
+
+    ClientManager *cm = ClientManager::getInstance();
+    if (!cm)
+        return;
+
+    const string hint = _tq(hubUrl);
+    if (hubUrl.isEmpty()) {
+        const StringList hubs = cm->getHubs(user->getCID(), hint);
+        if (!hubs.empty())
+            hubUrl = _q(hubs.front());
+    }
+
+    hubName = joinHubField(cm->getHubNames(user->getCID(), _tq(hubUrl)));
+    ip = _q(cm->getOnlineUserIdentity(user).getIp());
+}
+
+} // namespace
 
 qint64 ShareIndex::forceIngestListMs(const UserPtr &user, const QString &listPath,
                                      const QString &hubUrl, const QString &nick)
@@ -51,14 +85,40 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
     }
 
+    QString useHubUrl = hubUrl;
+    QString useHubName;
+    QString useIp;
+    fillUserHubFields(user, useHubUrl, useHubName, useIp);
+
+    // Keep last known IP/Hub when the user is offline during re-index.
+    if (useHubUrl.isEmpty() || useHubName.isEmpty() || useIp.isEmpty()) {
+        QSqlDatabase db = threadDb();
+        if (db.isOpen()) {
+            QSqlQuery prev(db);
+            prev.prepare(
+                "SELECT ip, hub_name, hub_url FROM share_entries WHERE cid = ?"
+                " AND (ip != '' OR hub_name != '' OR hub_url != '')"
+                " ORDER BY updated_at DESC LIMIT 1");
+            prev.addBindValue(cid);
+            if (prev.exec() && prev.next()) {
+                if (useIp.isEmpty())
+                    useIp = prev.value(0).toString();
+                if (useHubName.isEmpty())
+                    useHubName = prev.value(1).toString();
+                if (useHubUrl.isEmpty())
+                    useHubUrl = prev.value(2).toString();
+            }
+        }
+    }
+
     QString useNick = nick;
     if (useNick.isEmpty()) {
         WulforUtil *wu = WulforUtil::getInstance();
         if (wu)
-            useNick = wu->getNicks(user->getCID(), hubUrl);
+            useNick = wu->getNicks(user->getCID(), useHubUrl);
     }
 
-    DirectoryListing listing(HintedUser(user, _tq(hubUrl)));
+    DirectoryListing listing(HintedUser(user, _tq(useHubUrl)));
     try {
         listing.loadFile(_tq(listPath));
     } catch (const Exception &e) {
@@ -76,62 +136,15 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
 
     QList<QVariantMap> rows;
-    walkListing(listing, listing.getRoot(), cid, hubUrl, useNick, QString(), rows);
+    walkListing(listing, listing.getRoot(), cid, useHubUrl, useNick, useHubName, useIp, rows);
     if (isStopping() || rows.isEmpty()) {
         if (rows.isEmpty() && !isStopping())
             setLastError(QStringLiteral("walkListing empty"));
         return;
     }
 
-    // Large commits (~10s on M1 SQLite+FTS trigram). Write queue is single-threaded;
-    // WAL lets searches continue while this transaction runs.
-    const int chunk = 100000;
-    for (int offset = 0; offset < rows.size(); ) {
-        QSqlDatabase db = threadDb();
-        if (!db.isOpen()) {
-            setLastError(QStringLiteral("threadDb not open"));
-            return;
-        }
-
-        db.transaction();
-
-        if (offset == 0) {
-            QSqlQuery del(db);
-            del.prepare("DELETE FROM share_entries WHERE cid = ? AND source = ?");
-            del.addBindValue(cid);
-            del.addBindValue(int(SourceFileList));
-            if (!del.exec()) {
-                setLastError(del.lastError().text());
-                db.rollback();
-                return;
-            }
-        }
-
-        QSqlQuery ins(db);
-        if (!prepareInsert(ins)) {
-            setLastError(ins.lastError().text());
-            db.rollback();
-            return;
-        }
-
-        const int end = qMin(offset + chunk, rows.size());
-        for (; offset < end; ++offset) {
-            if (isStopping()) {
-                db.rollback();
-                return;
-            }
-            if (!bindInsert(ins, rows.at(offset), SourceFileList) || !ins.exec()) {
-                setLastError(ins.lastError().text());
-                db.rollback();
-                return;
-            }
-        }
-
-        if (!db.commit()) {
-            setLastError(db.lastError().text());
-            return;
-        }
-    }
+    if (!writeListRows(cid, rows))
+        return;
     rememberListMeta(cid, listPath, rows.size());
     setLastError(QString());
 }
