@@ -118,7 +118,8 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
     QModelIndexList selected  = selection_model->selectedRows(0);
 
-    if (selected.size() > 1 || selected.empty())
+    // Multi-select (Shift/Ctrl) keeps the current listing; browse only on a single selection.
+    if (selected.size() != 1)
         return;
 
     QModelIndex index = selected.at(0);
