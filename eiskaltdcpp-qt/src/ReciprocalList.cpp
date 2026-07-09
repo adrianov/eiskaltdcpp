@@ -26,10 +26,13 @@ ReciprocalList::~ReciprocalList()
 void ReciprocalList::start()
 {
     UploadManager::getInstance()->addListener(this);
+    QueueManager::getInstance()->addListener(this);
 }
 
 void ReciprocalList::stop()
 {
+    if (QueueManager::getInstance())
+        QueueManager::getInstance()->removeListener(this);
     if (UploadManager::getInstance())
         UploadManager::getInstance()->removeListener(this);
 }
@@ -39,6 +42,14 @@ void ReciprocalList::on(UploadManagerListener::Complete, Upload *ul) noexcept
     if (!ul || ul->getType() != Transfer::TYPE_FULL_LIST)
         return;
     maybeFetch(ul->getHintedUser());
+}
+
+void ReciprocalList::on(QueueManagerListener::SourceAdded, QueueItem *item,
+                        const HintedUser &user) noexcept
+{
+    if (!item || item->isSet(QueueItem::FLAG_USER_LIST))
+        return;
+    maybeFetch(user);
 }
 
 void ReciprocalList::maybeFetch(const HintedUser &peer)
@@ -60,6 +71,7 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
         return;
 
     try {
+        // flags 0: silent list (ShareIndex ingest, no ShareBrowser / Listings).
         qm->addList(peer, 0);
     } catch (const Exception &) {
     }
@@ -71,6 +83,8 @@ ReciprocalList::~ReciprocalList() {}
 void ReciprocalList::start() {}
 void ReciprocalList::stop() {}
 void ReciprocalList::on(dcpp::UploadManagerListener::Complete, dcpp::Upload *) noexcept {}
+void ReciprocalList::on(dcpp::QueueManagerListener::SourceAdded, dcpp::QueueItem *,
+                        const dcpp::HintedUser &) noexcept {}
 void ReciprocalList::maybeFetch(const dcpp::HintedUser &) {}
 
 #endif

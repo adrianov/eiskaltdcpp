@@ -10,13 +10,15 @@
 #pragma once
 
 #include "dcpp/stdinc.h"
+#include "dcpp/QueueManager.h"
 #include "dcpp/UploadManager.h"
 #include "dcpp/Singleton.h"
 
-/** When a peer finishes downloading our file list, queue theirs for ShareIndex. */
+/** Queue peer file lists for ShareIndex (reciprocal upload + download-from-user). */
 class ReciprocalList :
         public dcpp::Singleton<ReciprocalList>,
-        private dcpp::UploadManagerListener
+        private dcpp::UploadManagerListener,
+        private dcpp::QueueManagerListener
 {
     friend class dcpp::Singleton<ReciprocalList>;
 
@@ -29,5 +31,7 @@ private:
     ~ReciprocalList() override;
 
     void on(dcpp::UploadManagerListener::Complete, dcpp::Upload *ul) noexcept override;
+    void on(dcpp::QueueManagerListener::SourceAdded, dcpp::QueueItem *item,
+            const dcpp::HintedUser &user) noexcept override;
     void maybeFetch(const dcpp::HintedUser &peer);
 };
