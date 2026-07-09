@@ -9,6 +9,7 @@
 
 #include "UserListModelSort.h"
 
+#include <QHash>
 #include <QtAlgorithms>
 #include <QtGlobal>
 
@@ -135,6 +136,24 @@ void UserListModel::sort(int column, Qt::SortOrder order) {
         return;
 
     emit layoutAboutToBeChanged();
+
+    const QModelIndexList oldIndexes = persistentIndexList();
+
     userListSort(rootItem->childItems, column, order);
+
+    QHash<UserListItem*, int> rows;
+    rows.reserve(rootItem->childItems.size());
+    for (int i = 0; i < rootItem->childItems.size(); ++i)
+        rows.insert(rootItem->childItems.at(i), i);
+
+    QModelIndexList newIndexes;
+    newIndexes.reserve(oldIndexes.size());
+    for (const QModelIndex &idx : oldIndexes) {
+        auto *item = static_cast<UserListItem*>(idx.internalPointer());
+        const auto it = rows.constFind(item);
+        newIndexes << (it != rows.cend() ? createIndex(it.value(), idx.column(), item) : QModelIndex());
+    }
+
+    changePersistentIndexList(oldIndexes, newIndexes);
     emit layoutChanged();
 }

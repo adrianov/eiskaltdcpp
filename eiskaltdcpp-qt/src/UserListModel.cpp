@@ -13,8 +13,16 @@
 #include <algorithm>
 
 void UserListProxyModel::sort(int column, Qt::SortOrder order){
-    if (sourceModel())
-        sourceModel()->sort(column, order);
+    auto *model = qobject_cast<UserListModel*>(sourceModel());
+    if (!model)
+        return;
+
+    // Source already keeps rows ordered. Skip a full resort when the key is
+    // unchanged so dynamicSortFilter cannot reenter sort() from endInsertRows.
+    if (model->getSortColumn() == column && model->getSortOrder() == order)
+        return;
+
+    model->sort(column, order);
 }
 
 UserListModel::UserListModel(QObject * parent)
