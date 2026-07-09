@@ -82,7 +82,6 @@ void SideBarModel::slotSettingsChanged(const QString &key, const QString &value)
         RETRANSLATE_ROOT_EL(tr("Other Widgets"),    roots,  CustomWidget);
         RETRANSLATE_ROOT_EL(tr("Queued Users"),     roots,  QueuedUsers);
         RETRANSLATE_ROOT_EL(tr("Debug Console"),    roots,  CmdDebug);
-        RETRANSLATE_ROOT_EL(tr("Secretary"),    roots,  Secretary);
     }
 }
 

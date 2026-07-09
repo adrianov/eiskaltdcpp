@@ -51,17 +51,14 @@ void WulforUtil::initFileTypes(){
     m_FileTypeMap["MDL"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MED"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MIDI"] = eiFILETYPE_MP3;
-    m_FileTypeMap["MOD"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MOL"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MPA"]  = eiFILETYPE_MP3;
-    m_FileTypeMap["MPC"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MPP"]  = eiFILETYPE_MP3;
     m_FileTypeMap["MTM"]  = eiFILETYPE_MP3;
     m_FileTypeMap["NST"]  = eiFILETYPE_MP3;
     m_FileTypeMap["OKT"]  = eiFILETYPE_MP3;
     m_FileTypeMap["PSM"]  = eiFILETYPE_MP3;
     m_FileTypeMap["PTM"]  = eiFILETYPE_MP3;
-    m_FileTypeMap["RA"]   = eiFILETYPE_MP3;
     m_FileTypeMap["RMI"]  = eiFILETYPE_MP3;
     m_FileTypeMap["S3M"]  = eiFILETYPE_MP3;
     m_FileTypeMap["STM"]  = eiFILETYPE_MP3;
