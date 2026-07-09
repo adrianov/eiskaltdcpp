@@ -56,7 +56,10 @@ bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelInd
     const QModelIndex pathIndex = model->index(sourceRow, COLUMN_FINISHED_PATH, sourceParent);
     const QModelIndex userIndex = model->index(sourceRow, COLUMN_FINISHED_USER, sourceParent);
     const QModelIndex targetIndex = model->index(sourceRow, COLUMN_FINISHED_TARGET, sourceParent);
-    const QModelIndex fullIndex = model->index(sourceRow, COLUMN_FINISHED_FULL, sourceParent);
+    // File view: FULL at col 9; user view: FULL remapped to CRC32 (col 6).
+    const int fullCol = model->index(sourceRow, COLUMN_FINISHED_FULL, sourceParent).isValid()
+            ? COLUMN_FINISHED_FULL : COLUMN_FINISHED_CRC32;
+    const QModelIndex fullIndex = model->index(sourceRow, fullCol, sourceParent);
 
     if (hideFileLists_ || requireFullFile_) {
         const string target = _tq(model->data(targetIndex, Qt::DisplayRole).toString());
