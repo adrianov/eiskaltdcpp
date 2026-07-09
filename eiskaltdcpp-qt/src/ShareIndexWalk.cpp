@@ -74,7 +74,7 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
 void ShareIndex::ingestCachedListsSync()
 {
     open();
-    if (!opened)
+    if (!isOpen())
         return;
 
     const QString listDir = _q(Util::getListPath());
@@ -84,6 +84,12 @@ void ShareIndex::ingestCachedListsSync()
 
     const QStringList names = dir.entryList(QStringList() << "*.xml.bz2" << "*.xml", QDir::Files);
     for (const QString &fn : names) {
+        // Let an interactive list ingest run before the rest of backfill.
+        if (pendingListIngest()) {
+            requeueCachedIngest();
+            return;
+        }
+
         const QString fullPath = dir.absoluteFilePath(fn);
         const UserPtr user = DirectoryListing::getUserFromFilename(_tq(fullPath));
         if (!user)
@@ -100,7 +106,7 @@ void ShareIndex::ingestCachedListsSync()
         if (dot > 0)
             nick = base.left(dot);
 
-        lastSqlError.clear();
+        setLastError(QString());
         ingestListSync(user, fullPath, QString(), nick);
     }
 }

@@ -17,17 +17,17 @@
 
 using namespace dcpp;
 
-ShareIndex::ShareIndex() : opened(false)
+ShareIndex::ShareIndex() : opened(0)
 {
 }
 
 ShareIndex::~ShareIndex()
 {
 #ifdef USE_QT_SQLITE
-    QMutexLocker lock(&mutex);
+    waitWritesIdle();
     disconnectThreadDb();
 #endif
-    opened = false;
+    opened.storeRelease(0);
 }
 
 QString ShareIndex::nowStamp()
@@ -48,11 +48,20 @@ QString ShareIndex::fileExt(const QString &name, bool isDir)
     return name.mid(dot + 1).toUpper();
 }
 
+QString ShareIndex::lastError() const
+{
+    QMutexLocker lock(&errorMutex);
+    return lastSqlError;
+}
+
 void ShareIndex::open()
 {
 #ifdef USE_QT_SQLITE
-    QMutexLocker lock(&mutex);
-    if (opened)
+    if (opened.loadAcquire())
+        return;
+
+    QMutexLocker lock(&openMutex);
+    if (opened.loadAcquire())
         return;
 
     if (dbFile.isEmpty())
@@ -65,11 +74,17 @@ void ShareIndex::open()
     if (!ensureSchema(db) || !ensureFts(db))
         return;
 
-    opened = true;
+    opened.storeRelease(1);
 #endif
 }
 
 #ifdef USE_QT_SQLITE
+
+void ShareIndex::setLastError(const QString &err)
+{
+    QMutexLocker lock(&errorMutex);
+    lastSqlError = err;
+}
 
 QSqlDatabase ShareIndex::threadDb()
 {
@@ -78,6 +93,8 @@ QSqlDatabase ShareIndex::threadDb()
 
     const QString name = QStringLiteral("ShareIndex_%1")
             .arg(quintptr(QThread::currentThreadId()));
+
+    QMutexLocker lock(&connMutex);
     if (QSqlDatabase::contains(name)) {
         QSqlDatabase db = QSqlDatabase::database(name);
         if (!db.isOpen())
@@ -89,7 +106,7 @@ QSqlDatabase ShareIndex::threadDb()
     db.setDatabaseName(dbFile);
     if (!db.open())
         return QSqlDatabase();
-    // Allow readers during long file-list ingest.
+    // WAL: concurrent readers while one writer runs (write queue is single-threaded).
     QSqlQuery pragma(db);
     pragma.exec("PRAGMA journal_mode=WAL");
     pragma.exec("PRAGMA busy_timeout=30000");
@@ -101,6 +118,7 @@ void ShareIndex::disconnectThreadDb()
 {
     const QString name = QStringLiteral("ShareIndex_%1")
             .arg(quintptr(QThread::currentThreadId()));
+    QMutexLocker lock(&connMutex);
     if (!QSqlDatabase::contains(name))
         return;
     {
@@ -113,56 +131,7 @@ void ShareIndex::disconnectThreadDb()
 
 void ShareIndex::releaseThreadDb()
 {
-#ifdef USE_QT_SQLITE
     disconnectThreadDb();
-#endif
-}
-
-bool ShareIndex::ensureSchema(QSqlDatabase &db)
-{
-    QSqlQuery q(db);
-    if (!q.exec(
-            "CREATE TABLE IF NOT EXISTS share_entries ("
-            "id INTEGER PRIMARY KEY,"
-            "cid TEXT NOT NULL,"
-            "hub_url TEXT NOT NULL DEFAULT '',"
-            "tth TEXT NOT NULL DEFAULT '',"
-            "path TEXT NOT NULL,"
-            "name TEXT NOT NULL,"
-            "ext TEXT NOT NULL DEFAULT '',"
-            "is_dir INTEGER NOT NULL DEFAULT 0,"
-            "size INTEGER NOT NULL DEFAULT 0,"
-            "nick TEXT NOT NULL DEFAULT '',"
-            "hub_name TEXT NOT NULL DEFAULT '',"
-            "free_slots INTEGER,"
-            "all_slots INTEGER,"
-            "ip TEXT,"
-            "bitrate INTEGER,"
-            "resolution TEXT,"
-            "video_info TEXT,"
-            "audio_info TEXT,"
-            "hit INTEGER,"
-            "shared_ts INTEGER,"
-            "source INTEGER NOT NULL,"
-            "created_at TEXT NOT NULL,"
-            "updated_at TEXT NOT NULL"
-            ")"))
-        return false;
-
-    // Migrate DBs created before ext existed.
-    q.exec("ALTER TABLE share_entries ADD COLUMN ext TEXT NOT NULL DEFAULT ''");
-    // Unicode case-fold copies for FTS trigram (and any LIKE tooling).
-    q.exec("ALTER TABLE share_entries ADD COLUMN name_cf TEXT NOT NULL DEFAULT ''");
-    q.exec("ALTER TABLE share_entries ADD COLUMN path_cf TEXT NOT NULL DEFAULT ''");
-
-    q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_file_tth "
-           "ON share_entries(cid, tth) WHERE is_dir = 0 AND tth != ''");
-    q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_path_name "
-           "ON share_entries(cid, path, name, is_dir) WHERE is_dir = 1 OR tth = ''");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_updated ON share_entries(updated_at)");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
-    return true;
 }
 
 #else
@@ -170,6 +139,11 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
 void ShareIndex::upsertFromSearch(const QVariantMap &) {}
 
 void ShareIndex::ingestList(const UserPtr &, const QString &, const QString &, const QString &) {}
+
+qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QString &, const QString &)
+{
+    return 0;
+}
 
 void ShareIndex::ingestCachedLists() {}
 
@@ -179,7 +153,7 @@ QList<QVariantMap> ShareIndex::search(const SearchFilter &) { return {}; }
 
 ShareIndex::IndexStats ShareIndex::indexStats() { return {}; }
 
-bool ShareIndex::needsListIngest(const QString &) { return false; }
+bool ShareIndex::needsListIngest(const QString &, const QString &) { return false; }
 
 void ShareIndex::releaseThreadDb() {}
 

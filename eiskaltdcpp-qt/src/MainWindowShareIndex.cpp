@@ -45,6 +45,10 @@ void enqueueIngest(const UserPtr &user, const QString &listPath, const QString &
     if (!user || listPath.isEmpty())
         return;
 
+    const QString cid = _q(user->getCID().toBase32());
+    if (!ShareIndex::getInstance()->needsListIngest(cid, listPath))
+        return;
+
     QString nick;
     if (WulforUtil::getInstance())
         nick = WulforUtil::getInstance()->getNicks(user->getCID(), hubUrl);
@@ -59,9 +63,6 @@ void maybeIngestUserList(const HintedUser &hinted)
         return;
 
     const QString cid = _q(hinted.user->getCID().toBase32());
-    if (!ShareIndex::getInstance()->needsListIngest(cid))
-        return;
-
     QString listPath;
     const QDir listDir(_q(Util::getListPath()));
     const QString pattern = QLatin1Char('.') + cid + QLatin1String(".xml.bz2");
@@ -81,6 +82,9 @@ void maybeIngestUserList(const HintedUser &hinted)
         }
     }
     if (listPath.isEmpty())
+        return;
+
+    if (!ShareIndex::getInstance()->needsListIngest(cid, listPath))
         return;
 
     enqueueIngest(hinted.user, listPath, _q(hinted.hint));

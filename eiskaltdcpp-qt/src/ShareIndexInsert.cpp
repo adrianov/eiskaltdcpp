@@ -81,10 +81,10 @@ bool ShareIndex::insertRow(QSqlDatabase &db, const QVariantMap &row, int source)
     if (!prepareInsert(ins) || !bindInsert(ins, row, source))
         return false;
     if (!ins.exec()) {
-        lastSqlError = ins.lastError().text();
+        setLastError(ins.lastError().text());
         return false;
     }
-    lastSqlError.clear();
+    setLastError(QString());
     return true;
 }
 

@@ -7,62 +7,9 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "ShareIndex.h"
-#include "ShareBrowser.h"
+#include "ShareIndexQueueCore.h"
 
 #ifdef USE_QT_SQLITE
-
-#include <QMutex>
-#include <QQueue>
-#include <QThread>
-
-using namespace dcpp;
-
-namespace {
-
-enum WriteKind { IngestList, IngestCached, UpsertSearch };
-
-struct WriteJob {
-    WriteKind kind = IngestList;
-    UserPtr user;
-    QString listPath;
-    QString hubUrl;
-    QString nick;
-    QVariantMap map;
-};
-
-QMutex writeMutex;
-QQueue<WriteJob> writeQueue;
-bool writeWorkerRunning = false;
-const int kHubQueueCap = 2000;
-
-bool takeNextJob(WriteJob &job)
-{
-    for (int i = 0; i < writeQueue.size(); ++i) {
-        if (writeQueue.at(i).kind != UpsertSearch) {
-            job = writeQueue.takeAt(i);
-            return true;
-        }
-    }
-    if (writeQueue.isEmpty())
-        return false;
-    job = writeQueue.dequeue();
-    return true;
-}
-
-void dropOldestHubJob()
-{
-    for (int i = 0; i < writeQueue.size(); ++i) {
-        if (writeQueue.at(i).kind == UpsertSearch) {
-            writeQueue.removeAt(i);
-            return;
-        }
-    }
-}
-
-void startWriteWorker();
-
-} // namespace
 
 void shareIndexRunWriteWorker()
 {
@@ -71,6 +18,7 @@ void shareIndexRunWriteWorker()
 
 void ShareIndex::drainWriteQueue()
 {
+    using namespace ShareIndexWriteQueue;
     for (;;) {
         WriteJob job;
         {
@@ -97,83 +45,29 @@ void ShareIndex::drainWriteQueue()
     }
 }
 
-namespace {
-
-void startWriteWorker()
+bool ShareIndex::pendingListIngest() const
 {
-    AsyncRunner *runner = new AsyncRunner();
-    runner->setRunFunction([]() { shareIndexRunWriteWorker(); });
-    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
-    runner->start();
-}
-
-void enqueueWrite(WriteJob job)
-{
+    using namespace ShareIndexWriteQueue;
     QMutexLocker lock(&writeMutex);
-    if (job.kind == IngestList) {
-        for (const WriteJob &pending : writeQueue) {
-            if (pending.kind == IngestList && pending.listPath == job.listPath)
-                return;
-        }
-    } else if (job.kind == UpsertSearch) {
-        int hubJobs = 0;
-        for (const WriteJob &pending : writeQueue) {
-            if (pending.kind == UpsertSearch)
-                ++hubJobs;
-        }
-        if (hubJobs >= kHubQueueCap)
-            dropOldestHubJob();
+    for (const WriteJob &job : writeQueue) {
+        if (job.kind == IngestList)
+            return true;
     }
-    writeQueue.enqueue(job);
-    if (!writeWorkerRunning) {
-        writeWorkerRunning = true;
-        lock.unlock();
-        startWriteWorker();
-    }
+    return false;
 }
 
-} // namespace
-
-void ShareIndex::ingestList(const UserPtr &user, const QString &listPath,
-                            const QString &hubUrl, const QString &nick)
+void ShareIndex::requeueCachedIngest()
 {
-    if (!user || listPath.isEmpty())
-        return;
-
-    WriteJob job;
-    job.kind = IngestList;
-    job.user = user;
-    job.listPath = listPath;
-    job.hubUrl = hubUrl;
-    job.nick = nick;
-    enqueueWrite(job);
-}
-
-void ShareIndex::ingestCachedLists()
-{
+    using namespace ShareIndexWriteQueue;
+    QMutexLocker lock(&writeMutex);
+    for (int i = writeQueue.size() - 1; i >= 0; --i) {
+        if (writeQueue.at(i).kind == IngestCached)
+            writeQueue.removeAt(i);
+    }
+    // Current IngestCached is running (not queued); put a fresh one at the end.
     WriteJob job;
     job.kind = IngestCached;
-    enqueueWrite(job);
-}
-
-void ShareIndex::upsertFromSearch(const QVariantMap &map)
-{
-    WriteJob job;
-    job.kind = UpsertSearch;
-    job.map = map;
-    enqueueWrite(job);
-}
-
-void ShareIndex::waitWritesIdle()
-{
-    for (;;) {
-        {
-            QMutexLocker lock(&writeMutex);
-            if (!writeWorkerRunning && writeQueue.isEmpty())
-                return;
-        }
-        QThread::msleep(50);
-    }
+    writeQueue.enqueue(job);
 }
 
 #endif

@@ -1,0 +1,106 @@
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
+#include "ShareIndexQueueCore.h"
+#include "ShareBrowser.h"
+
+#ifdef USE_QT_SQLITE
+
+#include <QThread>
+
+using namespace ShareIndexWriteQueue;
+
+namespace {
+
+void startWriteWorker()
+{
+    AsyncRunner *runner = new AsyncRunner();
+    runner->setRunFunction([]() { shareIndexRunWriteWorker(); });
+    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
+    runner->start();
+}
+
+} // namespace
+
+namespace ShareIndexWriteQueue {
+
+void enqueueWrite(WriteJob job)
+{
+    QMutexLocker lock(&writeMutex);
+    if (job.kind == IngestList) {
+        for (const WriteJob &pending : writeQueue) {
+            if (pending.kind == IngestList && pending.listPath == job.listPath)
+                return;
+        }
+        // Prefer interactive list ingest over hub upserts and startup backfill.
+        writeQueue.prepend(job);
+    } else if (job.kind == UpsertSearch) {
+        int hubJobs = 0;
+        for (const WriteJob &pending : writeQueue) {
+            if (pending.kind == UpsertSearch)
+                ++hubJobs;
+        }
+        if (hubJobs >= kHubQueueCap)
+            dropOldestHubJob();
+        writeQueue.enqueue(job);
+    } else {
+        writeQueue.enqueue(job);
+    }
+    if (!writeWorkerRunning) {
+        writeWorkerRunning = true;
+        lock.unlock();
+        startWriteWorker();
+    }
+}
+
+} // namespace ShareIndexWriteQueue
+
+void ShareIndex::ingestList(const UserPtr &user, const QString &listPath,
+                            const QString &hubUrl, const QString &nick)
+{
+    if (!user || listPath.isEmpty())
+        return;
+
+    WriteJob job;
+    job.kind = IngestList;
+    job.user = user;
+    job.listPath = listPath;
+    job.hubUrl = hubUrl;
+    job.nick = nick;
+    enqueueWrite(job);
+}
+
+void ShareIndex::ingestCachedLists()
+{
+    WriteJob job;
+    job.kind = IngestCached;
+    enqueueWrite(job);
+}
+
+void ShareIndex::upsertFromSearch(const QVariantMap &map)
+{
+    WriteJob job;
+    job.kind = UpsertSearch;
+    job.map = map;
+    enqueueWrite(job);
+}
+
+void ShareIndex::waitWritesIdle()
+{
+    for (;;) {
+        {
+            QMutexLocker lock(&writeMutex);
+            if (!writeWorkerRunning && writeQueue.isEmpty())
+                return;
+        }
+        QThread::msleep(50);
+    }
+}
+
+#endif

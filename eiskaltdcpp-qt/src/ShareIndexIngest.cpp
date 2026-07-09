@@ -13,21 +13,41 @@
 
 #include "WulforUtil.h"
 
+#include <QElapsedTimer>
+
 using namespace dcpp;
 
+qint64 ShareIndex::forceIngestListMs(const UserPtr &user, const QString &listPath,
+                                     const QString &hubUrl, const QString &nick)
+{
+    QElapsedTimer timer;
+    timer.start();
+    waitWritesIdle();
+    ingestListSync(user, listPath, hubUrl, nick, true);
+    releaseThreadDb();
+    return timer.elapsed();
+}
+
 void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
-                                const QString &hubUrl, const QString &nick)
+                                const QString &hubUrl, const QString &nick,
+                                bool force)
 {
     if (!user || listPath.isEmpty())
         return;
 
     open();
-    if (!opened)
+    if (!isOpen())
         return;
 
     const QString cid = _q(user->getCID().toBase32());
     if (cid.isEmpty())
         return;
+
+    // Unchanged list: skip full walk + FTS rebuild (can be minutes for large shares).
+    if (!force && !needsListIngest(cid, listPath)) {
+        setLastError(QString());
+        return;
+    }
 
     QString useNick = nick;
     if (useNick.isEmpty()) {
@@ -40,30 +60,30 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
     try {
         listing.loadFile(_tq(listPath));
     } catch (const Exception &e) {
-        lastSqlError = QString("loadFile: %1").arg(_q(e.getError()));
+        setLastError(QString("loadFile: %1").arg(_q(e.getError())));
         return;
     } catch (const std::exception &e) {
-        lastSqlError = QString("loadFile std: %1").arg(e.what());
+        setLastError(QString("loadFile std: %1").arg(e.what()));
         return;
     } catch (...) {
-        lastSqlError = QStringLiteral("loadFile unknown");
+        setLastError(QStringLiteral("loadFile unknown"));
         return;
     }
 
     QList<QVariantMap> rows;
     walkListing(listing, listing.getRoot(), cid, hubUrl, useNick, QString(), rows);
     if (rows.isEmpty()) {
-        lastSqlError = QStringLiteral("walkListing empty");
+        setLastError(QStringLiteral("walkListing empty"));
         return;
     }
 
-    // Large commits (~10s on M1 SQLite+FTS trigram); release mutex between chunks.
+    // Large commits (~10s on M1 SQLite+FTS trigram). Write queue is single-threaded;
+    // WAL lets searches continue while this transaction runs.
     const int chunk = 100000;
     for (int offset = 0; offset < rows.size(); ) {
-        QMutexLocker lock(&mutex);
         QSqlDatabase db = threadDb();
         if (!db.isOpen()) {
-            lastSqlError = QStringLiteral("threadDb not open");
+            setLastError(QStringLiteral("threadDb not open"));
             return;
         }
 
@@ -75,7 +95,7 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
             del.addBindValue(cid);
             del.addBindValue(int(SourceFileList));
             if (!del.exec()) {
-                lastSqlError = del.lastError().text();
+                setLastError(del.lastError().text());
                 db.rollback();
                 return;
             }
@@ -83,7 +103,7 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
 
         QSqlQuery ins(db);
         if (!prepareInsert(ins)) {
-            lastSqlError = ins.lastError().text();
+            setLastError(ins.lastError().text());
             db.rollback();
             return;
         }
@@ -91,18 +111,19 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         const int end = qMin(offset + chunk, rows.size());
         for (; offset < end; ++offset) {
             if (!bindInsert(ins, rows.at(offset), SourceFileList) || !ins.exec()) {
-                lastSqlError = ins.lastError().text();
+                setLastError(ins.lastError().text());
                 db.rollback();
                 return;
             }
         }
 
         if (!db.commit()) {
-            lastSqlError = db.lastError().text();
+            setLastError(db.lastError().text());
             return;
         }
     }
-    lastSqlError.clear();
+    rememberListMeta(cid, listPath, rows.size());
+    setLastError(QString());
 }
 
 #endif

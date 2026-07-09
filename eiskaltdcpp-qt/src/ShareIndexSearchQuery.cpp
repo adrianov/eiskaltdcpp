@@ -102,10 +102,10 @@ QList<QVariantMap> ShareIndex::searchFts(QSqlDatabase &db, const SearchFilter &f
             q.addBindValue(b);
         q.addBindValue(filter.limit);
         if (!q.exec()) {
-            lastSqlError = q.lastError().text();
+            setLastError(q.lastError().text());
             return {};
         }
-        lastSqlError.clear();
+        setLastError(QString());
         return rowsFromQuery(q);
     }
 
@@ -132,10 +132,10 @@ QList<QVariantMap> ShareIndex::searchFts(QSqlDatabase &db, const SearchFilter &f
         q.addBindValue(b);
     q.addBindValue(filter.limit);
     if (!q.exec()) {
-        lastSqlError = q.lastError().text();
+        setLastError(q.lastError().text());
         return {};
     }
-    lastSqlError.clear();
+    setLastError(QString());
     return rowsFromQuery(q);
 }
 

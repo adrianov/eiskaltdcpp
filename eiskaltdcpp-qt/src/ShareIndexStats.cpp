@@ -18,10 +18,9 @@ ShareIndex::IndexStats ShareIndex::indexStats()
 {
     IndexStats stats;
     open();
-    if (!opened)
+    if (!isOpen())
         return stats;
 
-    QMutexLocker lock(&mutex);
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return stats;
@@ -45,26 +44,82 @@ ShareIndex::IndexStats ShareIndex::indexStats()
     return stats;
 }
 
-bool ShareIndex::needsListIngest(const QString &cid)
+bool ShareIndex::needsListIngest(const QString &cid, const QString &listPath)
 {
     if (cid.isEmpty())
         return false;
 
     open();
-    if (!opened)
+    if (!isOpen())
         return false;
 
-    QMutexLocker lock(&mutex);
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return false;
 
-    QSqlQuery q(db);
-    q.prepare("SELECT 1 FROM share_entries WHERE cid = ? LIMIT 1");
-    q.addBindValue(cid);
-    if (!q.exec())
+    if (listPath.isEmpty()) {
+        QSqlQuery q(db);
+        q.prepare("SELECT 1 FROM share_entries WHERE cid = ? LIMIT 1");
+        q.addBindValue(cid);
+        if (!q.exec())
+            return false;
+        return !q.next();
+    }
+
+    const QFileInfo fi(listPath);
+    if (!fi.exists())
         return false;
-    return !q.next();
+
+    QSqlQuery q(db);
+    q.prepare("SELECT list_path, list_mtime, list_size FROM share_list_meta WHERE cid = ?");
+    q.addBindValue(cid);
+    if (!q.exec() || !q.next()) {
+        // Pre-meta DB: keep existing rows searchable; record current file stamp.
+        QSqlQuery has(db);
+        has.prepare("SELECT 1 FROM share_entries WHERE cid = ? AND source = ? LIMIT 1");
+        has.addBindValue(cid);
+        has.addBindValue(int(SourceFileList));
+        if (has.exec() && has.next()) {
+            rememberListMeta(cid, listPath, 0);
+            return false;
+        }
+        return true;
+    }
+
+    return q.value(0).toString() != listPath
+            || q.value(1).toLongLong() != fi.lastModified().toSecsSinceEpoch()
+            || q.value(2).toLongLong() != fi.size();
+}
+
+void ShareIndex::rememberListMeta(const QString &cid, const QString &listPath, int rowCount)
+{
+    if (cid.isEmpty() || listPath.isEmpty())
+        return;
+
+    const QFileInfo fi(listPath);
+    if (!fi.exists())
+        return;
+
+    QSqlDatabase db = threadDb();
+    if (!db.isOpen())
+        return;
+
+    QSqlQuery q(db);
+    q.prepare(
+        "INSERT INTO share_list_meta(cid, list_path, list_mtime, list_size, row_count, indexed_at) "
+        "VALUES(?,?,?,?,?,?) "
+        "ON CONFLICT(cid) DO UPDATE SET "
+        "list_path=excluded.list_path, list_mtime=excluded.list_mtime, "
+        "list_size=excluded.list_size, row_count=excluded.row_count, "
+        "indexed_at=excluded.indexed_at");
+    q.addBindValue(cid);
+    q.addBindValue(listPath);
+    q.addBindValue(fi.lastModified().toSecsSinceEpoch());
+    q.addBindValue(fi.size());
+    q.addBindValue(rowCount);
+    q.addBindValue(nowStamp());
+    if (!q.exec())
+        setLastError(q.lastError().text());
 }
 
 #endif

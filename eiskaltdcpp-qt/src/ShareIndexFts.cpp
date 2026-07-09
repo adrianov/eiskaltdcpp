@@ -81,7 +81,7 @@ bool ShareIndex::ensureFts(QSqlDatabase &db)
             "CREATE VIRTUAL TABLE IF NOT EXISTS share_entries_fts USING fts5("
             "name_cf, path_cf, content='share_entries', content_rowid='id', "
             "tokenize='trigram')")) {
-        lastSqlError = q.lastError().text();
+        setLastError(q.lastError().text());
         return false;
     }
 

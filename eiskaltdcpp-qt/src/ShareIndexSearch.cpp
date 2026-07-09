@@ -14,10 +14,10 @@
 QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
 {
     open();
-    if (!opened || filter.terms.isEmpty())
+    if (!isOpen() || filter.terms.isEmpty())
         return {};
 
-    QMutexLocker lock(&mutex);
+    // No app-level lock: WAL + per-thread connections allow parallel searches.
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return {};

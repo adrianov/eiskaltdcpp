@@ -50,7 +50,7 @@ bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
     }
 
     if (!find.exec()) {
-        lastSqlError = find.lastError().text();
+        setLastError(find.lastError().text());
         return false;
     }
 
@@ -115,17 +115,17 @@ bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
     }
 
     if (!upd.exec()) {
-        lastSqlError = upd.lastError().text();
+        setLastError(upd.lastError().text());
         return false;
     }
-    lastSqlError.clear();
+    setLastError(QString());
     return true;
 }
 
 void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
 {
     open();
-    if (!opened)
+    if (!isOpen())
         return;
 
     const bool isDir = map.value("ISDIR").toBool();
@@ -146,7 +146,6 @@ void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
     row["all_slots"] = map.value("ASLS");
     row["ip"] = map.value("IP");
 
-    QMutexLocker lock(&mutex);
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return;
