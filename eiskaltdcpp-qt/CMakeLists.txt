@@ -133,6 +133,30 @@ set(QT_EXTRA_SOURCES
     src/SettingsGUIInitColor.cpp
     src/SettingsGUISave.cpp
     src/ToolBarTabs.cpp
+    src/ToolBarRedraw.cpp
+    src/TabFrameNav.cpp
+    src/TabFrameActions.cpp
+    src/TabFrameWidgets.cpp
+    src/SideBarDelegate.cpp
+    src/SideBarView.cpp
+    src/SideBarViewActions.cpp
+    src/SideBarModelMutate.cpp
+    src/SideBarModelHistory.cpp
+    src/SideBarModelData.cpp
+    src/TransferViewModelParents.cpp
+    src/WulforUtilFileTypes.cpp
+    src/WulforUtilFileTypesExtra.cpp
+    src/WulforUtilFilePixmap.cpp
+    src/WulforUtilIcons.cpp
+    src/WulforUtilLoadIcons.cpp
+    src/WulforUtilPaths.cpp
+    src/WulforUtilUserIcon.cpp
+    src/WulforUtilUrl.cpp
+    src/WulforUtilUserCmd.cpp
+    src/WulforUtilNet.cpp
+    src/WulforUtilHeader.cpp
+    src/WulforUtilMagnet.cpp
+    src/WulforUtilText.cpp
     src/ShareIndex.cpp
     src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp
