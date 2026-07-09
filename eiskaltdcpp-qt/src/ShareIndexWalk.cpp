@@ -11,6 +11,7 @@
 
 #ifdef USE_QT_SQLITE
 
+#include "ShareIndexQueueCore.h"
 #include "dcpp/ClientManager.h"
 #include "dcpp/DirectoryListing.h"
 #include "WulforUtil.h"
@@ -44,6 +45,8 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
     }
 
     for (auto &f : dir->files) {
+        if (ShareIndexWriteQueue::isStopping())
+            return;
         if (!f || f->getName().empty())
             continue;
 
@@ -67,8 +70,11 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         out.append(row);
     }
 
-    for (auto &sub : dir->directories)
+    for (auto &sub : dir->directories) {
+        if (ShareIndexWriteQueue::isStopping())
+            return;
         walkListing(listing, sub, cid, hubUrl, nick, hubName, out);
+    }
 }
 
 void ShareIndex::ingestCachedListsSync()
@@ -84,6 +90,8 @@ void ShareIndex::ingestCachedListsSync()
 
     const QStringList names = dir.entryList(QStringList() << "*.xml.bz2" << "*.xml", QDir::Files);
     for (const QString &fn : names) {
+        if (ShareIndexWriteQueue::isStopping())
+            return;
         // Let an interactive list ingest run before the rest of backfill.
         if (pendingListIngest()) {
             requeueCachedIngest();

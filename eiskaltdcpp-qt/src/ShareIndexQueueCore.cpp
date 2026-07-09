@@ -16,7 +16,13 @@ namespace ShareIndexWriteQueue {
 QMutex writeMutex;
 QQueue<WriteJob> writeQueue;
 bool writeWorkerRunning = false;
+QAtomicInt writeStopping(0);
 const int kHubQueueCap = 2000;
+
+bool isStopping()
+{
+    return writeStopping.loadAcquire() != 0;
+}
 
 bool takeNextJob(WriteJob &job)
 {

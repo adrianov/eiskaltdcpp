@@ -33,6 +33,8 @@ namespace ShareIndexWriteQueue {
 void enqueueWrite(WriteJob job)
 {
     QMutexLocker lock(&writeMutex);
+    if (isStopping())
+        return;
     if (job.kind == IngestList) {
         for (const WriteJob &pending : writeQueue) {
             if (pending.kind == IngestList && pending.listPath == job.listPath)
@@ -102,5 +104,27 @@ void ShareIndex::waitWritesIdle()
         QThread::msleep(50);
     }
 }
+
+void ShareIndex::stopWrites()
+{
+    writeStopping.storeRelease(1);
+    {
+        QMutexLocker lock(&writeMutex);
+        writeQueue.clear();
+    }
+    // Finish the in-flight job (checks isStopping between chunks); do not hang forever.
+    for (int i = 0; i < 200; ++i) {
+        {
+            QMutexLocker lock(&writeMutex);
+            if (!writeWorkerRunning)
+                return;
+        }
+        QThread::msleep(50);
+    }
+}
+
+#else
+
+void ShareIndex::stopWrites() {}
 
 #endif

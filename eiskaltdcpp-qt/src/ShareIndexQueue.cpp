@@ -20,6 +20,14 @@ void ShareIndex::drainWriteQueue()
 {
     using namespace ShareIndexWriteQueue;
     for (;;) {
+        if (isStopping()) {
+            QMutexLocker lock(&writeMutex);
+            writeQueue.clear();
+            writeWorkerRunning = false;
+            disconnectThreadDb();
+            return;
+        }
+
         WriteJob job;
         {
             QMutexLocker lock(&writeMutex);
