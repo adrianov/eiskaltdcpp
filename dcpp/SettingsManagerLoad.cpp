@@ -131,6 +131,19 @@ void SettingsManager::load(string const& aFileName)
             unset(LOG_FILE_SYSTEM);
         }
 
+        if(v <= 2.0402) {
+            // Merge newly introduced default hublist servers into stored lists.
+            // Bump the version when a new default hublist entry is added.
+            string lists = get(HUBLIST_SERVERS);
+            StringTokenizer<string> t(getDefault(HUBLIST_SERVERS), ';');
+
+            for(auto& i: t.getTokens()) {
+                if(lists.find(i) == string::npos)
+                    lists += ";" + i;
+            }
+            set(HUBLIST_SERVERS, lists);
+        }
+
         if(SETTING(SET_MINISLOT_SIZE) < 64)
             set(SET_MINISLOT_SIZE, 64);
         if(SETTING(AUTODROP_INTERVAL) < 1)

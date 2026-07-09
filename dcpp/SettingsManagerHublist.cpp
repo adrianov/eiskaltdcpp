@@ -23,10 +23,10 @@
 namespace dcpp {
 
 string SettingsManager::defaultHubListServers() {
-    return "https://dchublist.ru/hublist.xml.bz2;"
+    return "https://www.te-home.net/?do=hublist&get=hublist.xml.bz2;"
            "https://dchublist.org/hublist.xml.bz2;"
-           "https://www.te-home.net/?do=hublist&get=hublist.xml.bz2;"
            "https://dchublist.biz/hublist.xml.bz2;"
+           "https://dchublist.ru/hublist.xml.bz2;"
            "https://dcnf.github.io/Hublist/hublist.xml.bz2;"
            "https://dchublist.org/adchublist.xml.bz2;";
 }
