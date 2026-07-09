@@ -87,7 +87,7 @@ private:
     void handleBrowseShare(const QString &);
 
     void getParams(VarMap &map, const dcpp::FavoriteUser &user);
-    void getFileList(const VarMap &params);
+    void getFileList(const QString &cid);
 
     FavoriteUsersModel *model;
 };
