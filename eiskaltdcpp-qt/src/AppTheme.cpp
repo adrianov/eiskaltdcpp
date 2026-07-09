@@ -18,14 +18,24 @@ static QColor paletteText(){
     return qApp->palette().color(QPalette::Text);
 }
 
+static bool hasChatContrast(const QColor &fg){
+    if (!fg.isValid())
+        return false;
+    // PlaceholderText is often near-white on light macOS themes.
+    return qAbs(fg.lightness() - AppTheme::chatBackground().lightness()) >= 90;
+}
+
 static QColor paletteSecondary(){
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     const QColor placeholder = qApp->palette().color(QPalette::PlaceholderText);
-    if (placeholder.isValid())
+    if (hasChatContrast(placeholder))
         return placeholder;
 #endif
-    QColor text = paletteText();
-    return AppTheme::isDark() ? text.darker(130) : text.lighter(130);
+    if (AppTheme::isDark())
+        return paletteText().darker(130);
+
+    // Readable muted gray on light chat backgrounds (not washed-out PlaceholderText).
+    return QColor(0x6C, 0x6C, 0x70);
 }
 
 bool AppTheme::isLegacyDefault(const QString &colorName){
