@@ -157,9 +157,13 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilHeader.cpp
     src/WulforUtilMagnet.cpp
     src/WulforUtilText.cpp
+    src/WulforSettingsDefaults.cpp
+    src/WulforSettingsOldMaps.cpp
+    src/WulforSettingsI18n.cpp
     src/ShareIndex.cpp
     src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp
+    src/ShareIndexIngestWrite.cpp
     src/ShareIndexInsert.cpp
     src/ShareIndexQueue.cpp
     src/ShareIndexQueueCore.cpp
@@ -167,6 +171,9 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
+    src/ShareIndexShowHits.cpp
+    src/ShareIndexCap.cpp
+    src/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
     src/ShareIndexSmokeSearch.cpp
