@@ -81,6 +81,9 @@ public:
              int aFlags = 0, bool addBad = true);
     /** Add a user's filelist to the queue. */
     void addList(const HintedUser& HintedUser, int aFlags, const string& aInitialDir = Util::emptyString);
+    /** True when this user's full file list is already queued. */
+    bool hasListQueued(const HintedUser& user) noexcept;
+    string getListPath(const HintedUser& user);
     /** Readd a source that was removed */
     void readd(const string& target, const HintedUser& aUser);
     /** Add a directory to the queue (downloads filelist and matches the directory). */
@@ -291,8 +294,6 @@ private:
     void rechecked(QueueItem* qi);
 
     void setDirty();
-
-    string getListPath(const HintedUser& user);
 
     bool checkSfv(QueueItem* qi, Download* d);
     uint32_t calcCrc32(const string& file);

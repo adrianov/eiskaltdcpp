@@ -52,6 +52,8 @@ public:
     typedef X<16> CRCFailed;
     typedef X<17> CRCChecked;
     typedef X<18> ListFromCache;
+    /** Cached list reused for silent ingest (no ShareBrowser). */
+    typedef X<19> ListCached;
 
     virtual void on(Added, QueueItem*) noexcept { }
     virtual void on(Finished, QueueItem*, const string&, int64_t) noexcept { }
@@ -74,6 +76,7 @@ public:
     virtual void on(CRCFailed, Download*, const string&) noexcept { }
     virtual void on(CRCChecked, Download*) noexcept { }
     virtual void on(ListFromCache, const HintedUser&, const string& listPath, const string& initialDir) noexcept { }
+    virtual void on(ListCached, const HintedUser&, const string& listPath) noexcept { }
 };
 
 } // namespace dcpp

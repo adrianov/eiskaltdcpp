@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ctime>
 #include <string>
 
 #include "HintedUser.h"
@@ -25,6 +26,12 @@ public:
     static int64_t readShareSize(const string& listBase);
     static void saveShareSize(const string& listBase, int64_t shareSize);
     static bool matchesUserShare(const HintedUser& user, const string& listBase);
+
+    /** Unix time of last successful full-list download; -1 if unknown. */
+    static time_t readFetchTime(const string& listBase);
+    static void saveFetchTime(const string& listBase, time_t when = time(nullptr));
+    /** True when a fetch was recorded less than 24 hours ago. */
+    static bool fetchedWithinDay(const string& listBase);
 };
 
 } // namespace dcpp

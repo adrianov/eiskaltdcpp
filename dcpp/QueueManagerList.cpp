@@ -62,11 +62,22 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
         throw QueueException(_("User is not online on this hub"));
     }
 
+    if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST) && hasListQueued(aUser))
+        return;
+
     purgeOtherListQueues(aUser);
 
     if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST) && tryUseCachedList(aUser, aFlags, aInitialDir))
         return;
     add(aInitialDir, -1, TTHValue(), aUser, QueueItem::FLAG_USER_LIST | aFlags);
+}
+
+bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
+    if(!user.user)
+        return false;
+    Lock l(cs);
+    QueueItem* qi = fileQueue.find(getListPath(user));
+    return qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished();
 }
 
 bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const string& aInitialDir) {
@@ -85,7 +96,11 @@ bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const s
         return true;
     }
 
-    return processFlags != 0;
+    if(processFlags == 0) {
+        PeerConnectLog::cachedList(aUser, listFile);
+        fire(QueueManagerListener::ListCached(), aUser, listFile);
+    }
+    return true;
 }
 
 string QueueManager::getListPath(const HintedUser& user) {
