@@ -11,6 +11,7 @@
 
 #include <QAbstractItemModel>
 #include <QMap>
+#include <QHash>
 #include <QTreeView>
 #include <QStack>
 #include <QStyledItemDelegate>
@@ -112,7 +113,7 @@ public:
 
 public Q_SLOTS:
     void slotIndexClicked(const QModelIndex&);
-    void redraw() { emit layoutChanged(); }
+    void redraw();
     void mapped(ArenaWidget *awgt);
     void toggled(ArenaWidget *awgt);
     void updated(ArenaWidget *awgt);
@@ -135,6 +136,8 @@ private:
     SideBarItem *rootItem;
 
     QStack<ArenaWidget*> historyStack;
+    /** Last short title + pixmap cacheKey for 1 Hz redraw skip. */
+    QHash<ArenaWidget*, QPair<QString, quint64> > redrawCache;
 };
 
 class SideBarView: public QTreeView {
