@@ -29,7 +29,7 @@ void SettingsManager::setDefaults() {
     setDefault(DOWNLOAD_DIRECTORY, Util::getPath(Util::PATH_DOWNLOADS));
     setDefault(TEMP_DOWNLOAD_DIRECTORY, Util::getPath(Util::PATH_DOWNLOADS) + "Incomplete" PATH_SEPARATOR_STR);
     setDefault(BIND_ADDRESS, "0.0.0.0");
-    setDefault(SLOTS, 5);
+    setDefault(SLOTS, 50);
     setDefault(TCP_PORT, 30000);
     setDefault(UDP_PORT, 30000);
     setDefault(TLS_PORT, 30001);
