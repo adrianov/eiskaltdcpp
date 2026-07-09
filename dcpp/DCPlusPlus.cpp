@@ -128,6 +128,8 @@ void startup(void (*f)(void*, const string&), void* p) {
     if(f != NULL)
         (*f)(p, _("Download Queue"));
     QueueManager::getInstance()->loadQueue();
+    // Drop stale FileLists/ entries left from older builds that saved them without flags.
+    QueueManager::getInstance()->removeUserLists();
     if(f != NULL)
         (*f)(p, _("Users"));
     ClientManager::getInstance()->loadUsers();

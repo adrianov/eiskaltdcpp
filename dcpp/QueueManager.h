@@ -73,7 +73,7 @@ public:
     void move(const string& aSource, const string& aTarget) noexcept;
 
     void remove(const string& aTarget) noexcept;
-    /** Remove all file-list items from the download queue (disk cache unchanged). */
+    /** Remove file-list queue items (by FLAG_USER_LIST or FileLists/ path). Disk cache unchanged. */
     void removeUserLists() noexcept;
     void removeSource(const string& aTarget, const UserPtr& aUser, int reason, bool removeConn = true) noexcept;
     void removeSource(const UserPtr& aUser, int reason) noexcept;

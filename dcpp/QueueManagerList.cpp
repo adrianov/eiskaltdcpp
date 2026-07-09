@@ -90,12 +90,17 @@ bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
 }
 
 void QueueManager::removeUserLists() noexcept {
+    // Match by flag or FileLists/ path: Queue.xml does not persist FLAG_USER_LIST,
+    // so reloaded list downloads look like normal files under that directory.
+    const string listPath = Util::getListPath();
     StringList targets;
     {
         Lock l(cs);
         for(const auto& i: fileQueue.getQueue()) {
-            if(i.second->isSet(QueueItem::FLAG_USER_LIST))
-                targets.push_back(*i.first);
+            const string& target = *i.first;
+            if(i.second->isSet(QueueItem::FLAG_USER_LIST)
+                    || Util::strnicmp(target.c_str(), listPath.c_str(), listPath.size()) == 0)
+                targets.push_back(target);
         }
     }
     for(const auto& t: targets)
