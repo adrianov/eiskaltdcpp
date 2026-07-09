@@ -30,6 +30,7 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubUsers.cpp
     PeerConnectLog.cpp
     PeerConnectFilter.cpp
+    HubReconnectFilter.cpp
     PeerConnectTls.cpp
     DownloadManagerSlots.cpp
     DownloadManagerSlotFail.cpp

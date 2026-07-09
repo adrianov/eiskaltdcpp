@@ -134,6 +134,7 @@ public:
     void reconnect();
     void shutdown();
     bool isActive() const;
+    void resetReconnBackoff();
     void send(const string& aMessage) { send(aMessage.c_str(), aMessage.length()); }
     void send(const char* aMessage, size_t aLen);
 
@@ -150,6 +151,7 @@ public:
     GETSET(uint32_t, uniqueId, UniqueId);
     GETSET(string, defpassword, Password);
     GETSET(uint32_t, reconnDelay, ReconnDelay);
+    GETSET(uint32_t, reconnAttempts, ReconnAttempts);
     GETSET(uint64_t, lastActivity, LastActivity);
     GETSET(bool, registered, Registered);
     GETSET(bool, autoReconnect, AutoReconnect);
@@ -203,6 +205,8 @@ protected:
 
     /** Try next nick with numeric suffix after a nick conflict. */
     bool tryAlternateNick();
+    void scheduleReconnectBackoff();
+    void onConnectFailed(const string& aLine);
     void storeHubNick();
 
     // TimerManagerListener

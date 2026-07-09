@@ -24,7 +24,9 @@
 #include "DebugManager.h"
 #include "FavoriteManager.h"
 #include "format.h"
+#include "HubReconnectFilter.h"
 #include "TimerManager.h"
+#include "Util.h"
 #include "Text.h"
 
 namespace dcpp {
@@ -35,7 +37,7 @@ uint32_t idCounter = 0;
 
 Client::Client(const string& hubURL, char separator_, bool secure_, Socket::Protocol proto_) :
     myIdentity(ClientManager::getInstance()->getMe(), 0), uniqueId(++idCounter),
-    reconnDelay(120), lastActivity(GET_TICK()), registered(false), autoReconnect(false), searchBlocked(false),
+    reconnDelay(120), reconnAttempts(0), lastActivity(GET_TICK()), registered(false), autoReconnect(false), searchBlocked(false),
     encoding(Text::hubDefaultCharset), state(STATE_DISCONNECTED), sock(0),
     hubUrl(hubURL), separator(separator_), proto(proto_),
     secure(secure_), countType(COUNT_UNCOUNTED)
@@ -58,8 +60,44 @@ Client::~Client() {
 
 void Client::reconnect() {
     disconnect(true);
+    setReconnAttempts(0);
     setAutoReconnect(true);
     setReconnDelay(0);
+}
+
+void Client::resetReconnBackoff() {
+    setReconnAttempts(0);
+    setReconnDelay(HubReconnectFilter::delaySec(1));
+}
+
+void Client::scheduleReconnectBackoff() {
+    const uint32_t attempts = getReconnAttempts() + 1;
+    setReconnAttempts(attempts);
+    const int delay = HubReconnectFilter::delaySec(attempts);
+    setReconnDelay(delay);
+
+    const time_t nextAt = GET_TIME() + delay;
+    const string& timeStr = delay >= 3600
+        ? Util::getTimeString(nextAt, "%Y-%m-%d %H:%M")
+        : Util::getTimeString(nextAt);
+    fire(ClientListener::StatusMessage(), this,
+         str(F_("Reconnect planned at %1% (in %2%)") % timeStr % HubReconnectFilter::delayLabel(attempts)),
+         ClientListener::FLAG_NORMAL);
+}
+
+void Client::onConnectFailed(const string& aLine) {
+    state = STATE_DISCONNECTED;
+    FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
+    if(sock)
+        sock->removeListener(this);
+    if(getAutoReconnect())
+        scheduleReconnectBackoff();
+    updateActivity();
+    fire(ClientListener::Failed(), this, aLine);
+}
+
+void Client::on(Failed, const string& aLine) noexcept {
+    onConnectFailed(aLine);
 }
 
 void Client::shutdown() {
@@ -127,8 +165,7 @@ bool Client::tryAlternateNick() {
 
     disconnect(true);
     setAutoReconnect(true);
-    const int delay = SETTING(RECONNECT_DELAY);
-    setReconnDelay(delay < 5 ? 5 : delay);
+    resetReconnBackoff();
     return true;
 }
 

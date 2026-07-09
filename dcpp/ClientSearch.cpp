@@ -11,6 +11,9 @@
 #include "stdinc.h"
 #include "Client.h"
 
+#include "format.h"
+#include "HubReconnectFilter.h"
+
 namespace dcpp {
 
 uint64_t Client::search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList, void* owner){
@@ -40,6 +43,13 @@ uint64_t Client::search(int aSizeMode, int64_t aSize, int aFileType, const strin
 
 void Client::on(Second, uint64_t aTick) noexcept {
     if(state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)) ) {
+        if(HubReconnectFilter::shouldGiveUp(getReconnAttempts())) {
+            setAutoReconnect(false);
+            fire(ClientListener::StatusMessage(), this,
+                 str(F_("Giving up hub reconnect after %1% failed attempts") % getReconnAttempts()),
+                 ClientListener::FLAG_NORMAL);
+            return;
+        }
         connect();
     }
     if(!searchQueue.interval) return;

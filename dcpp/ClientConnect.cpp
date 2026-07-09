@@ -17,6 +17,7 @@
 #include "Encoder.h"
 #include "FavoriteManager.h"
 #include "format.h"
+#include "HubReconnectFilter.h"
 #include "SettingsManager.h"
 #include "Socket.h"
 #include "Text.h"
@@ -82,7 +83,8 @@ void Client::connect() {
     }
 
     setAutoReconnect(true);
-    setReconnDelay(SETTING(RECONNECT_DELAY));
+    if(getReconnAttempts() == 0)
+        setReconnDelay(HubReconnectFilter::delaySec(1));
     reloadSettings(true);
     setRegistered(false);
     setMyIdentity(Identity(ClientManager::getInstance()->getMe(), 0));
@@ -96,8 +98,8 @@ void Client::connect() {
         sock->connect(address, port, secure, BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, proto);
     } catch(const Exception& e) {
         shutdown();
-        /// @todo at this point, this hub instance is completely useless
-        fire(ClientListener::Failed(), this, e.getError());
+        onConnectFailed(e.getError());
+        return;
     }
     updateActivity();
 }
@@ -123,22 +125,14 @@ void Client::on(Connected) noexcept {
             vector<uint8_t> kp2v(kp.size());
             Encoder::fromBase32(keyprint.c_str() + 7, &kp2v[0], kp2v.size());
             if(!std::equal(kp.begin(), kp.end(), kp2v.begin())) {
-                state = STATE_DISCONNECTED;
                 sock->removeListener(this);
-                fire(ClientListener::Failed(), this, "Keyprint mismatch");
+                onConnectFailed("Keyprint mismatch");
                 return;
             }
         }
     }
     fire(ClientListener::Connected(), this);
     state = STATE_PROTOCOL;
-}
-
-void Client::on(Failed, const string& aLine) noexcept {
-    state = STATE_DISCONNECTED;
-    FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
-    sock->removeListener(this);
-    fire(ClientListener::Failed(), this, aLine);
 }
 
 void Client::disconnect(bool graceLess) {

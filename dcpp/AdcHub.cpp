@@ -197,6 +197,7 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
 
     if(u->getUser() == getMyIdentity().getUser()) {
         state = STATE_NORMAL;
+        resetReconnBackoff();
         setAutoReconnect(true);
         setMyIdentity(u->getIdentity());
         storeHubNick();
@@ -325,6 +326,7 @@ void AdcHub::handle(AdcCommand::QUI, AdcCommand& c) noexcept {
                 setAutoReconnect(false);
             } else {
                 setAutoReconnect(true);
+                setReconnAttempts(0);
                 setReconnDelay(Util::toUInt32(tmp));
             }
         }
