@@ -9,6 +9,8 @@
 
 #include "FinishedTransfers.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QCursor>
 #include <QDesktopServices>
 #include <QDir>
@@ -120,9 +122,15 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     QMenu *m = new QMenu();
     QAction *open_f   = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open file"), m);
     QAction *open_dir = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), m);
+    QAction *copy_name = nullptr;
 
     m->addAction(open_f);
     m->addAction(open_dir);
+
+    if (comboBox->currentIndex() == 0){
+        copy_name = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy file name"), m);
+        m->addAction(copy_name);
+    }
 
     QAction *ret = m->exec(QCursor::pos());
 
@@ -135,6 +143,22 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     else if (ret == open_dir){
         for (const auto &f : files)
             WulforUtil::revealPath(f);
+    }
+    else if (copy_name && ret == copy_name){
+        QString names;
+
+        for (const auto &i : indexes){
+            FinishedTransfersItem *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+            const QString name = item->data(COLUMN_FINISHED_NAME).toString().trimmed();
+
+            if (!name.isEmpty())
+                names += name + "\n";
+        }
+
+        names = names.trimmed();
+
+        if (!names.isEmpty())
+            qApp->clipboard()->setText(names, QClipboard::Clipboard);
     }
 }
 

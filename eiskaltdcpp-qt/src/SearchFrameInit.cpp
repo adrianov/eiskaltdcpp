@@ -9,6 +9,7 @@
 
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
+#include "SearchFrameLocal.h"
 #include "SearchModel.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
@@ -131,20 +132,11 @@ void SearchFrame::init(){
     d->left_pane_old_size = panes[0];
 
     lineEdit_SEARCHSTR->setFocus();
-}
 
-void SearchFrame::initSecond(){
-    /*Q_D(SearchFrame);
-
-    if (!d->timer){
-        d->timer = new QTimer(this);
-        d->timer->setInterval(1000);
-        d->timer->setSingleShot(true);
-
-        connect(d->timer, SIGNAL(timeout()), this, SLOT(timerTick()));
-    }
-
-    d->timer->start();*/
+#ifdef USE_QT_SQLITE
+    label_INDEX_STATS->setWordWrap(true);
+    SearchFrameLocal::refreshIndexStats(this);
+#endif
 }
 
 QWidget *SearchFrame::getWidget(){

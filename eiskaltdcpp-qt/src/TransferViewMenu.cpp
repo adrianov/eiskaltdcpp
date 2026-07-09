@@ -40,6 +40,9 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     QAction *grant      = new QAction(TransferView::tr("Grant extra slot"), menu);
     grant->setIcon(WU->getPixmap(WulforUtil::eiEDITADD));
 
+    QAction *copy_name  = new QAction(TransferView::tr("Copy file name"), menu);
+    copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+
     copy_column = new QMenu(TransferView::tr("Copy"), menu);
     copy_column->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
 
@@ -85,6 +88,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     actions.insert(send_pm, SendPM);
     actions.insert(add_to_fav, AddToFav);
     actions.insert(grant, GrantExtraSlot);
+    actions.insert(copy_name, CopyFileName);
     actions.insert(rem_queue, RemoveFromQueue);
     actions.insert(remove, Remove);
     actions.insert(force, Force);
@@ -99,7 +103,8 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
                                        << match
                                        << send_pm
                                        << add_to_fav
-                                       << grant);
+                                       << grant
+                                       << copy_name);
     menu->addMenu(copy_column);
     menu->addActions(QList<QAction*>() << sep1
                                        << rem_queue

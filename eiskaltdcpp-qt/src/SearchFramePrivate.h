@@ -12,7 +12,6 @@
 #include <QString>
 #include <QStringList>
 #include <QList>
-#include <QTimer>
 #include <QCompleter>
 #include <QMenu>
 #include <QShortcut>
@@ -41,8 +40,6 @@ public:
 
     QList<dcpp::Client*> client_list;
 
-    QTimer *timer = nullptr;
-
     QCompleter *completer = nullptr;
 
     QMenu *arena_menu = nullptr;
@@ -63,4 +60,5 @@ public:
     uint64_t searchStartTime = 0;
     uint64_t searchEndTime = 0;
     bool waitingResults = false;
+    int indexStatsTick = 0;
 };

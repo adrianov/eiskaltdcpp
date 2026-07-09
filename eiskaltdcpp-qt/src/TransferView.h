@@ -57,6 +57,7 @@ public:
         SendPM,
         AddToFav,
         GrantExtraSlot,
+        CopyFileName,
         Copy,
         RemoveFromQueue,
         Remove,

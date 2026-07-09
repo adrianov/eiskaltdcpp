@@ -68,6 +68,7 @@ class SearchFrame : public QWidget,
             DownloadWholeDir,
             DownloadWholeDirTo,
             SearchTTH,
+            CopyFileName,
             Magnet,
             MagnetWeb,
             MagnetInfo,
@@ -138,17 +139,13 @@ protected:
     virtual bool eventFilter(QObject *, QEvent *);
 
 Q_SIGNALS:
-    /** SearchManager signals */
     void coreSR(const VarMap&);
-
-    /** ClienManager signals */
     void coreClientConnected(const QString &info);
     void coreClientUpdated(const QString &info);
     void coreClientDisconnected(const QString &info);
 
 private Q_SLOTS:
     void slotFilter();
-    void timerTick();
     void slotClear();
     void slotTimer();
     void slotResultDoubleClicked(const QModelIndex&);
@@ -159,26 +156,20 @@ private Q_SLOTS:
     void slotStopSearch();
     void slotChangeProxyColumn(int);
     void slotClose();
-
     void slotSettingsChanged(const QString &key, const QString &value);
-
     void onHubAdded(const QString &info);
     void onHubChanged(const QString &info);
     void onHubRemoved(const QString &info);
-
     void addResult(const VarMap &map);
+    void setIndexStats(const QString &text);
 
 private:
     void init();
-    void initSecond();
-
     void load();
     void save();
-
     void getParams(VarMap&, const dcpp::SearchResultPtr&);
     bool getDownloadParams(VarMap&, SearchItem*);
     bool getWholeDirParams(VarMap&, SearchItem*);
-
     void rememberSearch(const QString &s);
     void download(const VarMap&);
     bool contextDownloads(Menu::Action act, const QModelIndexList &list);
@@ -188,11 +179,7 @@ private:
     void addToFav(const QString&);
     void grant(const VarMap&);
     void removeSource(const VarMap&);
-
-    // SearchManagerListener
     virtual void on(SearchManagerListener::SR, const SearchResultPtr& aResult) noexcept;
-
-    // ClientManagerListener
     virtual void on(ClientConnected, Client* c) noexcept;
     virtual void on(ClientUpdated, Client* c) noexcept;
     virtual void on(ClientDisconnected, Client* c) noexcept;

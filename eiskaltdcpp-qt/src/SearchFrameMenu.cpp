@@ -36,6 +36,9 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     QAction *find_tth   = new QAction(tr("Search TTH"), nullptr);
     find_tth->setIcon(WU->getPixmap(WulforUtil::eiFILEFIND));
 
+    QAction *copy_name  = new QAction(tr("Copy file name"), nullptr);
+    copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+
     QAction *magnet     = new QAction(tr("Copy magnet"), nullptr);
     magnet->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
 
@@ -90,6 +93,7 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(down, Download);
     actions.insert(down_wh, DownloadWholeDir);
     actions.insert(find_tth, SearchTTH);
+    actions.insert(copy_name, CopyFileName);
     actions.insert(magnet, Magnet);
     actions.insert(magnet_web, MagnetWeb);
     actions.insert(magnet_info, MagnetInfo);
@@ -103,7 +107,7 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(blacklist, Blacklist);
     actions.insert(add_to_blacklist, AddToBlacklist);
 
-    action_list << down << down_wh << sep << find_tth << browse << match
+    action_list << down << down_wh << sep << find_tth << copy_name << browse << match
                 << send_pm << add_to_fav << grant << sep1 << rem_queue << rem << sep2;
 }
 

@@ -21,7 +21,6 @@
 
 #include <QHeaderView>
 #include <QShortcut>
-#include <QTimer>
 #include <QCompleter>
 #include <QMenu>
 #include <QKeyEvent>
@@ -37,7 +36,6 @@ SearchFrame::SearchFrame(QWidget *parent): QWidget(parent), d_ptr(new SearchFram
 
     d->isHash = false;
     d->arena_menu = nullptr;
-    d->timer = nullptr;
     d->dropped = 0L;
     d->results = 0L;
     d->filterShared = SearchFrame::None;
@@ -102,7 +100,6 @@ SearchFrame::~SearchFrame(){
     d->arena_menu->deleteLater();
 
     delete d->model;
-    delete d->timer;
 
     delete d_ptr;
 }
@@ -110,11 +107,6 @@ SearchFrame::~SearchFrame(){
 void SearchFrame::closeEvent(QCloseEvent *e){
     SearchManager::getInstance()->removeListener(this);
     ClientManager::getInstance()->removeListener(this);
-
-    Q_D(SearchFrame);
-
-    if (d->timer)
-        d->timer->stop();
 
     save();
 

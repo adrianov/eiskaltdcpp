@@ -131,6 +131,11 @@ void TransferView::slotContextMenu(const QPoint &){
 
         break;
     }
+    case Menu::CopyFileName:
+    {
+        copyMenuSelection(items, COLUMN_TRANSFER_FNAME);
+        break;
+    }
     case Menu::Copy:
     {
         copyMenuSelection(items, m.copyColumn());

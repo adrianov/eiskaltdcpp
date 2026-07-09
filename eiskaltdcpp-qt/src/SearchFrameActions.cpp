@@ -113,10 +113,6 @@ void SearchFrame::removeSource(const VarMap &params){
 
 }
 
-void SearchFrame::timerTick() {
-
-}
-
 void SearchFrame::onHubAdded(const QString &info){
     Q_D(SearchFrame);
 

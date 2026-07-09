@@ -23,4 +23,6 @@ void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
 
 void upsertHubResult(const QVariantMap &map);
 
+void refreshIndexStats(SearchFrame *frame);
+
 } // namespace SearchFrameLocal

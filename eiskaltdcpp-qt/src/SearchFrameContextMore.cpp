@@ -47,6 +47,25 @@ bool SearchFrame::contextMoreActions(Menu::Action act, const QModelIndexList &li
 
             break;
         }
+        case Menu::CopyFileName:
+        {
+            QString names;
+
+            for (const auto &i : list){
+                SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+                const QString name = item->data(COLUMN_SF_FILENAME).toString().trimmed();
+
+                if (!name.isEmpty())
+                    names += name + "\n";
+            }
+
+            names = names.trimmed();
+
+            if (!names.isEmpty())
+                qApp->clipboard()->setText(names, QClipboard::Clipboard);
+
+            break;
+        }
         case Menu::Magnet:
         {
             QString magnets = "";
@@ -110,9 +129,9 @@ bool SearchFrame::contextMoreActions(Menu::Action act, const QModelIndexList &li
 
                 if (!item->isDir){//only files
                     const qlonglong size = item->data(COLUMN_SF_ESIZE).toLongLong();
-                    const QString &&tth = item->data(COLUMN_SF_TTH).toString();
-                    const QString &&name = item->data(COLUMN_SF_FILENAME).toString().trimmed();
-                    const QString &&magnet = WU->makeMagnet(name, size, tth);
+                    const auto tth = item->data(COLUMN_SF_TTH).toString();
+                    const auto name = item->data(COLUMN_SF_FILENAME).toString().trimmed();
+                    const auto magnet = WU->makeMagnet(name, size, tth);
 
                     if (!magnet.isEmpty()){
                         Magnet m(this);

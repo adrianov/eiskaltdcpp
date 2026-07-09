@@ -69,6 +69,7 @@ void SearchFrame::slotContextMenu(const QPoint &){
             contextDownloads(act, list);
             break;
         case Menu::SearchTTH:
+        case Menu::CopyFileName:
         case Menu::Magnet:
         case Menu::MagnetWeb:
         case Menu::MagnetInfo:

@@ -83,8 +83,8 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list){
     menu->addActions(action_list);
     menu->insertMenu(action_list.at(1), down_to);
     menu->insertMenu(action_list.at(2), down_wh_to);
-    menu->insertMenu(action_list.at(5), magnet_menu);
-    menu->insertMenu(action_list.at(12),black_list_menu);
+    menu->insertMenu(action_list.at(6), magnet_menu);
+    menu->insertMenu(action_list.at(13), black_list_menu);
 
     QScopedPointer<QMenu> userm(buildUserCmdMenu(list));
 

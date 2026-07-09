@@ -9,6 +9,7 @@
 
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
+#include "SearchFrameLocal.h"
 #include "SearchModel.h"
 #include "WulforUtil.h"
 #include "GlobalTimer.h"
@@ -112,6 +113,13 @@ void SearchFrame::slotHeaderMenu(const QPoint&){
 void SearchFrame::slotTimer(){
     Q_D(SearchFrame);
 
+#ifdef USE_QT_SQLITE
+    if (++d->indexStatsTick >= 30) {
+        d->indexStatsTick = 0;
+        SearchFrameLocal::refreshIndexStats(this);
+    }
+#endif
+
     if (d->waitingResults) {
         uint64_t now = GlobalTimer::getInstance()->getTicks()*1000;
         float fraction  = 100.0f*(now - d->searchStartTime)/(d->searchEndTime - d->searchStartTime);
@@ -177,5 +185,14 @@ void SearchFrame::slotToggleSidePanel(){
     }
 
     splitter->setSizes(panes);
+}
+
+void SearchFrame::setIndexStats(const QString &text)
+{
+#ifdef USE_QT_SQLITE
+    label_INDEX_STATS->setText(text);
+#else
+    Q_UNUSED(text);
+#endif
 }
 
