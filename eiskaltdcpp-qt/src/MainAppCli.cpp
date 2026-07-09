@@ -18,6 +18,10 @@
 #include "dcpp/Util.h"
 #include "dcpp/SettingsManager.h"
 
+#include "dcpp/DirectoryListing.h"
+
+#include <QDir>
+#include <QFileInfo>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
@@ -27,6 +31,53 @@
 using namespace dcpp;
 
 #ifdef USE_QT_SQLITE
+static int runShareIndexReingest(const QString &listPath)
+{
+    if (listPath.isEmpty() || !QFileInfo::exists(listPath)) {
+        std::cerr << "Usage: --share-index-reingest <path-to-xml.bz2>" << std::endl;
+        return 1;
+    }
+
+    startup(nullptr, nullptr);
+    SettingsManager::getInstance()->set(SettingsManager::KEEP_LISTS, true);
+
+    const UserPtr user = DirectoryListing::getUserFromFilename(_tq(listPath));
+    if (!user) {
+        std::cerr << "Cannot parse CID from list filename" << std::endl;
+        return 1;
+    }
+
+    QString nick;
+    const QString base = QFileInfo(listPath).completeBaseName(); // strips .bz2; still has .xml
+    QString stem = QFileInfo(listPath).fileName();
+    if (stem.endsWith(QLatin1String(".xml.bz2"), Qt::CaseInsensitive))
+        stem.chop(8);
+    else if (stem.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive))
+        stem.chop(4);
+    const int dot = stem.lastIndexOf(QLatin1Char('.'));
+    if (dot > 0)
+        nick = stem.left(dot);
+
+    ShareIndex::newInstance();
+    ShareIndex::getInstance()->open();
+
+    const QString cid = _q(user->getCID().toBase32());
+    std::cout << "Force reingest cid=" << cid.toStdString()
+              << " file=" << QFileInfo(listPath).fileName().toStdString()
+              << " size=" << QFileInfo(listPath).size() << " bytes" << std::endl;
+
+    const qint64 ms = ShareIndex::getInstance()->forceIngestListMs(user, listPath, QString(), nick);
+    if (!ShareIndex::getInstance()->lastError().isEmpty())
+        std::cerr << "Ingest error: " << ShareIndex::getInstance()->lastError().toStdString() << std::endl;
+
+    std::cout << "Reingest wall time: " << ms << " ms ("
+              << (ms / 1000.0) << " s)" << std::endl;
+
+    ShareIndex::deleteInstance();
+    Q_UNUSED(base);
+    return 0;
+}
+
 static int runShareIndexIngest(const QStringList &terms)
 {
     startup(nullptr, nullptr);
@@ -103,6 +154,10 @@ void parseCmdLine(const QStringList &args){
             for (int j = i + 1; j < args.size(); ++j)
                 terms << args.at(j);
             exit(runShareIndexIngest(terms));
+        }
+        else if (arg == "--share-index-reingest"){
+            const QString path = (i + 1 < args.size()) ? args.at(i + 1) : QString();
+            exit(runShareIndexReingest(path));
         }
 #endif
     }
