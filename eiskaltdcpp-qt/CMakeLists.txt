@@ -97,6 +97,7 @@ set(QT_EXTRA_SOURCES
     src/HubFrameUsers.cpp
     src/MainAppCli.cpp
     src/MainAppRun.cpp
+    src/MainAppShareIndex.cpp
     src/MainAppUnix.cpp
     src/MainAppXdg.cpp
     src/MainWindowArena.cpp
@@ -117,12 +118,36 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameUi.cpp
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
+    src/SearchModelSort.cpp
+    src/SearchModelAdd.cpp
+    src/SearchModelData.cpp
+    src/SearchModelMutate.cpp
+    src/SearchItem.cpp
     src/ShareIndex.cpp
     src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp
+    src/ShareIndexInsert.cpp
+    src/ShareIndexQueue.cpp
     src/ShareIndexSearch.cpp
+    src/ShareIndexSearchQuery.cpp
+    src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
+    src/ShareIndexSmokeSearch.cpp
     src/ShareIndexUpsert.cpp
+    src/ShareIndexWalk.cpp
+    src/ShareBrowserContext.cpp
+    src/ShareBrowserContextMore.cpp
+    src/ShareBrowserMenu.cpp
+    src/ShareBrowserNav.cpp
+    src/ShareBrowserSelect.cpp
+    src/ShareBrowserActions.cpp
+    src/ShareBrowserInit.cpp
+    src/ShareBrowserContextUser.cpp
+    src/DownloadQueueContext.cpp
+    src/DownloadQueueContextMore.cpp
+    src/DownloadQueueMenu.cpp
+    src/DownloadQueueItems.cpp
+    src/DownloadQueueListen.cpp
     src/TransferDisplay.cpp
 
     src/TransferViewActions.cpp
