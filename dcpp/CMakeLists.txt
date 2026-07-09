@@ -25,6 +25,7 @@ set(DCPP_EXTRA_SOURCES
     SearchManagerResponse.cpp
     QueueManagerList.cpp
     QueueManagerListMatch.cpp
+    QueueManagerSource.cpp
     NmdcHubLine.cpp
     NmdcHubLineProfile.cpp
     NmdcHubLineHub.cpp
@@ -76,6 +77,12 @@ set(DCPP_EXTRA_SOURCES
     UtilIp.cpp
     UtilDisk.cpp
     QueueManagerDisk.cpp
+    SettingsManagerDefaults.cpp
+    SettingsManagerHublist.cpp
+    SettingsManagerLoad.cpp
+    SettingsManagerSave.cpp
+    SettingsManagerSearch.cpp
+    SettingsManagerAccess.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
