@@ -41,7 +41,7 @@ uint64_t Client::search(int aSizeMode, int64_t aSize, int aFileType, const strin
 void Client::on(Second, uint64_t aTick) noexcept {
     if(state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)) )
         connect();
-    if(!searchQueue.interval) return;
+    if(!searchQueue.interval || getSearchBlocked()) return;
 
     if(isConnected()) {
         SearchCore s;

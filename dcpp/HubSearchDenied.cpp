@@ -38,6 +38,7 @@ bool isSearchDeniedHubText(const string& message) {
             (Util::findSubString(message, "must") != string::npos ||
              Util::findSubString(message, "need") != string::npos ||
              Util::findSubString(message, "require") != string::npos ||
+             Util::findSubString(message, "unless") != string::npos ||
              Util::findSubString(message, "denied") != string::npos ||
              Util::findSubString(message, "not allowed") != string::npos ||
              Util::findSubString(message, "unable") != string::npos))
@@ -46,8 +47,10 @@ bool isSearchDeniedHubText(const string& message) {
 }
 
 void noteSearchDenied(Client& client, const string& message) {
-    if(!client.getSearchBlocked() && isSearchDeniedHubText(message))
-        client.setSearchBlocked(true);
+    if(client.getSearchBlocked() || !isSearchDeniedHubText(message))
+        return;
+    client.setSearchBlocked(true);
+    client.clearSearchQueue();
 }
 
 } // namespace dcpp

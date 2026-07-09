@@ -81,6 +81,7 @@ public:
 
     uint64_t search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList, void* owner);
     void cancelSearch(void* aOwner) { searchQueue.cancelSearch(aOwner); }
+    void clearSearchQueue() { searchQueue.clear(); }
 
     virtual void password(const string& pwd) = 0;
     virtual void info(bool force) = 0;

@@ -66,9 +66,10 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             return;
         }
 
-        stopInfectedConnect(unescape(message), nick);
+        string body = unescape(message);
+        stopInfectedConnect(body, nick);
 
-        ChatMessage chatMessage = { unescape(message), findUser(nick), nullptr, nullptr, false, 0 };
+        ChatMessage chatMessage = { body, findUser(nick), nullptr, nullptr, false, 0 };
         if(!chatMessage.from) {
             OnlineUser& o = getUser(nick);
             o.getIdentity().setHub(true);
@@ -76,6 +77,10 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             updated(o);
             chatMessage.from = &o;
         }
+
+        const Identity& id = chatMessage.from->getIdentity();
+        if(id.isHub() || id.isBot() || id.isOp() || chatMessage.from->getUser()->isSet(User::BOT))
+            noteSearchDenied(*this, body);
 
         fire(ClientListener::Message(), this, chatMessage);
         return;
