@@ -15,6 +15,8 @@
 
 class QAbstractButton;
 class QPainter;
+class QPalette;
+class QProgressBar;
 class QRectF;
 class QWidget;
 
@@ -22,6 +24,7 @@ class QWidget;
 class AppTheme {
 public:
     static bool isDark();
+    static bool isDark(const QPalette &palette);
     static void apply();
     /** Prefer Fusion when no style is saved — flat, consistent controls. */
     static void applyPreferredStyle();
@@ -31,6 +34,7 @@ public:
     static QColor inputBorder(bool focused);
     static void applyInputPalette(QWidget *widget);
     static void applyControlButton(QAbstractButton *button);
+    static void applyProgressBar(QProgressBar *bar);
     static void paintControlBorder(QPainter *painter, const QRectF &rect, bool focused);
 
     static QString chatColor(const QString &settingKey);

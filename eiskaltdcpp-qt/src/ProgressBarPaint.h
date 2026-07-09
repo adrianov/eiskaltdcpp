@@ -21,6 +21,19 @@
 
 namespace {
 
+// Use the cell surface, not qApp palette — Fusion Window can lag system dark.
+inline bool progressIsDark(const QStyleOptionViewItem &option)
+{
+    const QColor bg = (option.state & QStyle::State_Selected)
+        ? option.palette.color(QPalette::Highlight)
+        : option.palette.color(QPalette::Base);
+
+    if (bg.isValid())
+        return bg.lightness() < 128;
+
+    return AppTheme::isDark(option.palette);
+}
+
 inline QColor progressFillColor(const QStyleOptionViewItem &option, const QPalette *barPalette)
 {
     if (barPalette) {
@@ -46,27 +59,33 @@ inline QColor progressTextColor(const QStyleOptionViewItem &option)
 inline QColor progressTrackColor(const QStyleOptionViewItem &option)
 {
     const bool selected = option.state & QStyle::State_Selected;
-    const bool dark = AppTheme::isDark();
+    const bool dark = progressIsDark(option);
 
     if (selected)
-        return dark ? QColor(255, 255, 255, 48) : QColor(255, 255, 255, 72);
+        return dark ? QColor(255, 255, 255, 64) : QColor(255, 255, 255, 72);
 
-    return dark ? QColor(255, 255, 255, 36) : QColor(0, 0, 0, 24);
+    return dark ? QColor(255, 255, 255, 56) : QColor(0, 0, 0, 28);
 }
 
-inline QColor progressBorderColor()
+inline QColor progressBorderColor(const QStyleOptionViewItem &option)
 {
-    return AppTheme::isDark() ? QColor(255, 255, 255, 54) : QColor(0, 0, 0, 42);
+    return progressIsDark(option) ? QColor(255, 255, 255, 72) : QColor(0, 0, 0, 42);
 }
 
-inline QColor readableFillColor(const QColor &fill, const QColor &track)
+inline QColor readableFillColor(const QColor &fill, const QColor &track, const QColor &cellBg)
 {
-    if (qAbs(fill.lightness() - track.lightness()) >= 45)
+    auto contrastOk = [](const QColor &a, const QColor &b) {
+        return qAbs(a.lightness() - b.lightness()) >= 45;
+    };
+
+    if (contrastOk(fill, track) && contrastOk(fill, cellBg))
         return fill;
 
-    return qAbs(AppTheme::linkColor().lightness() - track.lightness()) >= 45
-        ? AppTheme::linkColor()
-        : AppTheme::successColor();
+    const QColor link = AppTheme::linkColor();
+    if (contrastOk(link, track) && contrastOk(link, cellBg))
+        return link;
+
+    return AppTheme::successColor();
 }
 
 inline void paintProgressText(QPainter *painter, const QRect &cell,
@@ -75,7 +94,7 @@ inline void paintProgressText(QPainter *painter, const QRect &cell,
     if (text.isEmpty())
         return;
 
-    const QColor shadow = AppTheme::isDark() ? QColor(0, 0, 0, 110) : QColor(255, 255, 255, 140);
+    const QColor shadow = progressIsDark(option) ? QColor(0, 0, 0, 110) : QColor(255, 255, 255, 140);
     painter->setPen(shadow);
     painter->drawText(cell.adjusted(0, 1, 0, 1), Qt::AlignCenter, text);
     painter->setPen(progressTextColor(option));
@@ -100,18 +119,21 @@ inline void paintStyledProgressBar(QPainter *painter, const QStyleOptionViewItem
                                    double percent, const QString &text, const QPalette *barPalette)
 {
     const QRect cell = option.rect;
+    const QColor cellBg = (option.state & QStyle::State_Selected)
+        ? option.palette.color(QPalette::Highlight)
+        : option.palette.color(QPalette::Base);
 
     if (option.state & QStyle::State_Selected)
-        painter->fillRect(cell, option.palette.highlight());
+        painter->fillRect(cell, cellBg);
 
     const QRect barRect = cell.adjusted(3, 4, -3, -4);
     const qreal radius = qMin(barRect.height() / 2.0, 5.0);
     const QColor track = progressTrackColor(option);
-    const QColor fill = readableFillColor(progressFillColor(option, barPalette), track);
+    const QColor fill = readableFillColor(progressFillColor(option, barPalette), track, cellBg);
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setPen(progressBorderColor());
+    painter->setPen(progressBorderColor(option));
     painter->setBrush(track);
     painter->drawRoundedRect(barRect, radius, radius);
     painter->setPen(Qt::NoPen);
