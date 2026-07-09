@@ -75,11 +75,8 @@ void Client::scheduleReconnectBackoff() {
     setReconnAttempts(attempts);
     const int delay = HubReconnectFilter::delaySec(attempts);
     setReconnDelay(delay);
-
     const time_t nextAt = GET_TIME() + delay;
-    const string& timeStr = delay >= 3600
-        ? Util::getTimeString(nextAt, "%Y-%m-%d %H:%M")
-        : Util::getTimeString(nextAt);
+    const string timeStr = delay >= 3600 ? Util::getTimeString(nextAt, "%Y-%m-%d %H:%M") : Util::getTimeString(nextAt);
     fire(ClientListener::StatusMessage(), this,
          str(F_("Reconnect planned at %1% (in %2%)") % timeStr % HubReconnectFilter::delayLabel(attempts)),
          ClientListener::FLAG_NORMAL);
@@ -90,8 +87,14 @@ void Client::onConnectFailed(const string& aLine) {
     FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
     if(sock)
         sock->removeListener(this);
-    if(getAutoReconnect())
+    if(getAutoReconnect() && HubReconnectFilter::shouldGiveUp(getReconnAttempts())) {
+        setAutoReconnect(false);
+        fire(ClientListener::StatusMessage(), this,
+             str(F_("Giving up hub reconnect after %1% failed attempts") % getReconnAttempts()),
+             ClientListener::FLAG_NORMAL);
+    } else if(getAutoReconnect()) {
         scheduleReconnectBackoff();
+    }
     updateActivity();
     fire(ClientListener::Failed(), this, aLine);
 }
