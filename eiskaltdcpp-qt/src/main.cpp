@@ -31,26 +31,9 @@ using namespace std;
 #include "dcpp/stdinc.h"
 #include "dcpp/DCPlusPlus.h"
 
-#include "dcpp/forward.h"
-#include "dcpp/QueueManager.h"
-#include "dcpp/HashManager.h"
-#include "dcpp/Thread.h"
-#include "dcpp/Singleton.h"
-#include "dcpp/LogManager.h"
-#include "dcpp/ProcessExit.h"
-
-#include "WulforUtil.h"
-#include "WulforSettings.h"
-#include "HubManager.h"
 #include "Notification.h"
-#include "VersionGlobal.h"
-#include "EmoticonFactory.h"
-#include "FinishedTransfers.h"
-#include "QueuedUsers.h"
-#include "ArenaWidgetManager.h"
-#include "ArenaWidgetFactory.h"
-#include "MainWindow.h"
-#include "GlobalTimer.h"
+#include "MainAppCli.h"
+#include "MainAppRun.h"
 
 #if defined(Q_OS_HAIKU)
 #include "EiskaltApp_haiku.h"
@@ -60,56 +43,21 @@ using namespace std;
 #include "EiskaltApp.h"
 #endif
 
-#ifdef USE_ASPELL
-#include "SpellCheck.h"
+#ifdef FORCE_XDG
+#include "MainAppXdg.h"
 #endif
 
-#ifdef USE_JS
-#include "ScriptEngine.h"
-#endif
-
-#include <QApplication>
 #include <QCoreApplication>
 #include <QGuiApplication>
-#include <QMainWindow>
-#include <QRegExp>
 #include <QObject>
 #include <QTextCodec>
 
-#ifdef DBUS_NOTIFY
-#include <QtDBus>
-#endif
+#include <locale.h>
 
 void callBack(void *, const std::string &a)
 {
     std::cout << QObject::tr("Loading: ").toStdString() << a << std::endl;
 }
-
-void parseCmdLine(const QStringList &);
-
-#if !defined(Q_OS_WIN)
-#include <unistd.h>
-#include <signal.h>
-#if !defined (Q_OS_HAIKU) && defined (__GLIBC__)
-#include <execinfo.h>
-
-#ifdef ENABLE_STACKTRACE
-#include "extra/stacktrace.h"
-#endif // ENABLE_STACKTRACE
-#endif
-
-#if !defined (Q_OS_HAIKU)
-void installHandlers();
-#endif
-
-#ifdef FORCE_XDG
-#include <QTextStream>
-void migrateConfig();
-#endif
-
-#else //WIN32
-#include <locale.h>
-#endif
 
 #if defined(Q_OS_MAC)
 #include <objc/objc.h>
@@ -145,13 +93,12 @@ int main(int argc, char *argv[])
 #endif
 
     EiskaltApp app(argc, argv, _q(dcpp::Util::getLoginName()+"EDCPP"));
-    int ret = 0;
 
     parseCmdLine(app.arguments());
 
     if (app.isRunning()){
         QStringList args = app.arguments();
-        args.removeFirst();//remove path to executable
+        args.removeFirst();
 #if !defined (Q_OS_HAIKU)
         app.sendMessage(args.join("\n"));
 #endif
@@ -162,295 +109,5 @@ int main(int argc, char *argv[])
     migrateConfig();
 #endif
 
-    dcpp::startup(callBack, nullptr);
-    dcpp::TimerManager::getInstance()->start();
-
-    {
-        const string prev = dcpp::checkPreviousSession();
-        if(!prev.empty())
-            dcpp::LogManager::getInstance()->message(prev);
-        dcpp::markSessionRunning();
-    }
-
-#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
-    installHandlers();
-#endif
-
-    HashManager::getInstance()->setPriority(Thread::IDLE);
-#if QT_VERSION < 0x050000
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
-#endif
-    app.setOrganizationName("EiskaltDC++ Team");
-    app.setApplicationName("EiskaltDC++ Qt");
-    app.setApplicationVersion(QString::fromStdString(eiskaltdcppVersionString));
-    
-    GlobalTimer::newInstance();
-
-    WulforSettings::newInstance();
-    WulforSettings::getInstance()->load();
-    WulforSettings::getInstance()->loadTheme();
-
-    WulforUtil::newInstance();
-    WulforSettings::getInstance()->loadTranslation();
-#if defined(Q_OS_MAC)
-    // Disable system tray functionality in Mac OS X:
-    WBSET(WB_TRAY_ENABLED, false);
-#endif
-
-    Text::hubDefaultCharset = WulforUtil::getInstance()->qtEnc2DcEnc(WSGET(WS_DEFAULT_LOCALE)).toStdString();
-
-    if (WulforUtil::getInstance()->loadUserIcons())
-        std::cout << QObject::tr("UserList icons has been loaded").toStdString() << std::endl;
-
-    if (WulforUtil::getInstance()->loadIcons())
-        std::cout << QObject::tr("Application icons has been loaded").toStdString() << std::endl;
-
-    app.setWindowIcon(WICON(WulforUtil::eiICON_APPL));
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 1))
-    app.setAttribute(Qt::AA_DisableWindowContextHelpButton);
-#endif
-
-    ArenaWidgetManager::newInstance();
-
-    MainWindow::newInstance();
-#if defined(Q_OS_MAC)
-    MainWindow::getInstance()->setUnload(false);
-    QObject::connect(&app, SIGNAL(clickedOnDock()),
-                     MainWindow::getInstance(), SLOT(show()));
-#else // defined(Q_OS_MAC)
-    MainWindow::getInstance()->setUnload(!WBGET(WB_TRAY_ENABLED));
-#endif // defined(Q_OS_MAC)
-
-    app.connect(&app, SIGNAL(messageReceived(QString)), MainWindow::getInstance(), SLOT(parseInstanceLine(QString)));
-
-    HubManager::newInstance();
-
-    WulforSettings::getInstance()->loadTheme();
-
-    if (WBGET(WB_APP_ENABLE_EMOTICON)){
-        EmoticonFactory::newInstance();
-        EmoticonFactory::getInstance()->load();
-    }
-
-#ifdef USE_ASPELL
-    if (WBGET(WB_APP_ENABLE_ASPELL))
-        SpellCheck::newInstance();
-#endif
-
-    Notification::newInstance();
-
-#ifdef USE_JS
-    ScriptEngine::newInstance();
-    QObject::connect(ScriptEngine::getInstance(), SIGNAL(scriptChanged(QString)), MainWindow::getInstance(), SLOT(slotJSFileChanged(QString)));
-#endif
-
-    ArenaWidgetFactory().create< dcpp::Singleton, FinishedUploads >();
-    ArenaWidgetFactory().create< dcpp::Singleton, FinishedDownloads >();
-    ArenaWidgetFactory().create< dcpp::Singleton, QueuedUsers >();
-
-    MainWindow::getInstance()->autoconnect();
-    MainWindow::getInstance()->parseCmdLine(app.arguments());
-
-    if (!WBGET(WB_MAINWINDOW_HIDE) || !WBGET(WB_TRAY_ENABLED))
-        MainWindow::getInstance()->show();
-
-    ret = app.exec();
-
-    std::cout << QObject::tr("Shutting down libeiskaltdcpp...").toStdString() << std::endl;
-    dcpp::LogManager::getInstance()->message(_("Application shutting down normally"));
-    dcpp::markSessionNormal();
-
-    WulforSettings::getInstance()->save();
-
-    EmoticonFactory::deleteInstance();
-
-#ifdef USE_ASPELL
-    if (SpellCheck::getInstance())
-        SpellCheck::deleteInstance();
-#endif
-    Notification::deleteInstance();
-
-#ifdef USE_JS
-    ScriptEngine::deleteInstance();
-#endif
-
-    GlobalTimer::deleteInstance();
-    
-    ArenaWidgetManager::deleteInstance();
-    
-    HubManager::getInstance()->release();
-
-    MainWindow::deleteInstance();
-
-    WulforUtil::deleteInstance();
-
-    WulforSettings::deleteInstance();
-
-    dcpp::shutdown();
-
-    std::cout << QObject::tr("Quit...").toStdString() << std::endl;
-
-    return ret;
+    return runApplication(app);
 }
-
-void parseCmdLine(const QStringList &args){
-    for (const auto &arg : args){
-        if (arg == "-h" || arg == "--help"){
-            About().printHelp();
-
-            exit(0);
-        }
-        else if (arg == "-V" || arg == "--version"){
-            About().printVersion();
-
-            exit(0);
-        }
-    }
-}
-
-#if !defined (Q_OS_WIN) && !defined (Q_OS_HAIKU)
-
-void catchSIG(int sigNum) {
-    dcpp::noteFatalSignal(sigNum);
-    psignal(sigNum, "Catching signal ");
-
-#ifdef ENABLE_STACKTRACE
-    printBacktrace(sigNum);
-#endif // ENABLE_STACKTRACE
-    
-    EiskaltApp *eapp = dynamic_cast<EiskaltApp*>(qApp);
-    
-    if (eapp) {
-        eapp->getSharedMemory().unlock();
-        eapp->getSharedMemory().detach();
-    }
-    
-    raise(SIGINT);
-    
-    std::abort();
-}
-
-template <int sigNum = 0, int ... Params>
-void catchSignals() {
-    if (!sigNum)
-        return;
-
-    psignal(sigNum, "Installing handler for");
-
-    signal(sigNum, catchSIG);
-
-    catchSignals<Params ... >();
-}
-
-void installHandlers(){
-    dcpp::installSigpipeIgnore();
-
-    catchSignals<SIGSEGV, SIGABRT, SIGBUS, SIGTERM>();
-
-    printf("Signal handlers installed.\n");
-}
-
-#endif
-
-#ifdef FORCE_XDG
-
-void copy(const QDir &from, const QDir &to){
-    if (!from.exists() || to.exists())
-        return;
-
-    QString to_path = to.absolutePath();
-    QString from_path = from.absolutePath();
-
-    if (!to_path.endsWith(QDir::separator()))
-        to_path += QDir::separator();
-
-    if (!from_path.endsWith(QDir::separator()))
-        from_path += QDir::separator();
-
-    for (const auto &s : from.entryList(QDir::Dirs)){
-        QDir new_dir(to_path+s);
-
-        if (new_dir.exists())
-            continue;
-        else{
-            if (!new_dir.mkpath(new_dir.absolutePath()))
-                continue;
-
-            copy(QDir(from_path+s), new_dir);
-        }
-    }
-
-    for (const auto &f : from.entryList(QDir::Files)){
-        QFile orig(from_path+f);
-
-        if (!orig.copy(to_path+f))
-            continue;
-    }
-}
-
-void migrateConfig(){
-    const char* home_ = getenv("HOME");
-    string home = home_ ? Text::toUtf8(home_) : "/tmp/";
-    string old_config = home + "/.eiskaltdc++/";
-
-    const char *xdg_config_home_ = getenv("XDG_CONFIG_HOME");
-    string xdg_config_home = xdg_config_home_? Text::toUtf8(xdg_config_home_) : (home+"/.config");
-    string new_config = xdg_config_home + "/eiskaltdc++/";
-
-    if (!QDir().exists(old_config.c_str()) || QDir().exists(new_config.c_str())){
-        if (!QDir().exists(new_config.c_str())){
-            old_config = _DATADIR + string("/config/");
-
-            if (!QDir().exists(old_config.c_str()))
-                return;
-        }
-        else
-            return;
-    }
-
-    try{
-        printf("Migrating to XDG paths...\n");
-
-        copy(QDir(old_config.c_str()), QDir(new_config.c_str()));
-
-        QFile orig(new_config.c_str()+QString("DCPlusPlus.xml"));
-        QFile new_file(new_config.c_str()+QString("DCPlusPlus.xml.new"));
-
-        if (!(orig.open(QIODevice::ReadOnly | QIODevice::Text) && new_file.open(QIODevice::WriteOnly | QIODevice::Text))){
-            orig.close();
-            new_file.close();
-
-            printf("Migration failed.\n");
-
-            return;
-        }
-
-        QTextStream rstream(&orig);
-        QTextStream wstream(&new_file);
-
-        QRegExp replace_str("/(\\S+)/\\.eiskaltdc\\+\\+/");
-        QString line = "";
-
-        while (!rstream.atEnd()){
-            line = rstream.readLine();
-
-            line.replace(replace_str, QString(new_config.c_str()));
-
-            wstream << line << "\n";
-        }
-
-        wstream.flush();
-
-        orig.close();
-        new_file.close();
-
-        orig.remove();
-        new_file.rename(orig.fileName());
-
-        printf("Ok. Migrated.\n");
-    }
-    catch(const std::exception&){
-        printf("Migration failed.\n");
-    }
-}
-#endif
