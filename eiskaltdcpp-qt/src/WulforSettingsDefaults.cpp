@@ -128,7 +128,7 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WI_CHAT_USERLIST_WIDTH,   -1);
     settings.setValue(WI_CHAT_SORT_COLUMN,      0);
     settings.setValue(WI_CHAT_SORT_ORDER,       0);
-    settings.setValue(WI_CHAT_DBLCLICK_ACT,     0);//nick in chat
+    settings.setValue(WI_CHAT_DBLCLICK_ACT,     1);//browse files
     settings.setValue(WI_CHAT_MDLCLICK_ACT,     1);//browse files
     settings.setValue(WI_CHAT_FIND_COLOR_ALPHA, 127);
     settings.setValue(WI_CHAT_STATUS_HISTORY_SZ,5);

@@ -122,7 +122,7 @@ void WulforSettings::fillOldConfigMaps() {
     intmap.insert(WI_CHAT_USERLIST_WIDTH,   -1);
     intmap.insert(WI_CHAT_SORT_COLUMN,      0);
     intmap.insert(WI_CHAT_SORT_ORDER,       0);
-    intmap.insert(WI_CHAT_DBLCLICK_ACT,     0);//nick in chat
+    intmap.insert(WI_CHAT_DBLCLICK_ACT,     1);//browse files
     intmap.insert(WI_CHAT_MDLCLICK_ACT,     1);//browse files
     intmap.insert(WI_CHAT_FIND_COLOR_ALPHA, 127);
     intmap.insert(WI_CHAT_STATUS_HISTORY_SZ,5);
