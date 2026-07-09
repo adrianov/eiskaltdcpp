@@ -493,8 +493,11 @@ void WulforSettings::installTranslator(QTranslator &translator,
 }
 
 void WulforSettings::loadTheme(){
-    if (!getStr(WS_APP_THEME).isEmpty())
-        qApp->setStyle(getStr(WS_APP_THEME));
+    const QString theme = getStr(WS_APP_THEME);
+    if (!theme.isEmpty())
+        qApp->setStyle(theme);
+    else
+        AppTheme::applyPreferredStyle();
 
     AppTheme::apply();
 }

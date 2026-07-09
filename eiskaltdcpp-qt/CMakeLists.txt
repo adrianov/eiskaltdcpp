@@ -83,11 +83,14 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob is stale.
 set(QT_EXTRA_SOURCES
+    src/AppThemeControls.cpp
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelSort.cpp
     src/FinishedTransfersListener.cpp
     src/FinishedTransfersMenu.cpp
+    src/HubFrameLinkMagnet.cpp
+    src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
     src/HubFrameMenuExec.cpp
     src/TransferDisplay.cpp

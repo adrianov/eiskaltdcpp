@@ -11,17 +11,27 @@
 
 #include <QColor>
 #include <QString>
+#include <QtGlobal>
 
+class QAbstractButton;
+class QPainter;
+class QRectF;
 class QWidget;
 
+/** Palette helpers and SwiftUI-like control chrome on top of Qt 5 (Fusion). */
 class AppTheme {
 public:
     static bool isDark();
     static void apply();
+    /** Prefer Fusion when no style is saved — flat, consistent controls. */
+    static void applyPreferredStyle();
 
+    static qreal controlRadius();
     static QColor inputBackground();
     static QColor inputBorder(bool focused);
     static void applyInputPalette(QWidget *widget);
+    static void applyControlButton(QAbstractButton *button);
+    static void paintControlBorder(QPainter *painter, const QRectF &rect, bool focused);
 
     static QString chatColor(const QString &settingKey);
     static QColor errorColor();

@@ -53,11 +53,9 @@ void ChatEdit::paintEvent(QPaintEvent *e)
 {
     QTextEdit::paintEvent(e);
 
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(QPen(AppTheme::inputBorder(hasFocus()), 1));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 5, 5);
+    // QTextEdit paint targets the viewport; draw there or the border never shows.
+    QPainter painter(viewport());
+    AppTheme::paintControlBorder(&painter, QRectF(viewport()->rect()), hasFocus());
 }
 
 void ChatEdit::focusOutEvent(QFocusEvent *e)

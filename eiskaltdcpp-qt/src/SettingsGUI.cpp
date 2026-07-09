@@ -51,7 +51,7 @@ void SettingsGUI::init(){
         WulforUtil *WU = WulforUtil::getInstance();
         QStringList styles = QStyleFactory::keys();
 
-        comboBox_THEMES->addItem(tr("Default (need to restart)"));
+        comboBox_THEMES->addItem(tr("Default (Fusion)"));
 
         for (const QString &s : styles)
             comboBox_THEMES->addItem(s);
@@ -341,8 +341,11 @@ void SettingsGUI::ok(){
     {//Basic tab
         if (custom_style && comboBox_THEMES->currentIndex() > 0)
             WSSET(WS_APP_THEME, comboBox_THEMES->currentText());
-        else if (!comboBox_THEMES->currentIndex())
+        else if (!comboBox_THEMES->currentIndex()) {
             WSSET(WS_APP_THEME, "");
+            AppTheme::applyPreferredStyle();
+            AppTheme::apply();
+        }
 
         WSSET(WS_TRANSLATION_FILE, lineEdit_LANGFILE->text());
 
@@ -541,22 +544,22 @@ void SettingsGUI::slotSetTransparency(int value){
 }
 
 void SettingsGUI::slotTestAppTheme(){
-    if (!comboBox_THEMES->currentIndex()){ //Default
-        WSSET(WS_APP_THEME, "");
+    custom_style = true;
 
+    if (!comboBox_THEMES->currentIndex()) {
+        WSSET(WS_APP_THEME, "");
+        AppTheme::applyPreferredStyle();
+        AppTheme::apply();
         return;
     }
 
-    custom_style = true;
-
     QString s = comboBox_THEMES->currentText();
-
     if (s.isEmpty())
         return;
 
     qApp->setStyle(s);
-
     WSSET(WS_APP_THEME, s);
+    AppTheme::apply();
 }
 
 void SettingsGUI::slotThemeChanged(){

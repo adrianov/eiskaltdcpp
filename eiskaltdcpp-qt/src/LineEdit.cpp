@@ -54,13 +54,7 @@ void LineEdit::paintEvent(QPaintEvent *e){
     QLineEdit::paintEvent(e);
 
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    QColor border = AppTheme::inputBorder(hasFocus());
-
-    painter.setPen(QPen(border, 1));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 5, 5);
+    AppTheme::paintControlBorder(&painter, QRectF(rect()), hasFocus());
 }
 
 void LineEdit::focusInEvent(QFocusEvent *e){

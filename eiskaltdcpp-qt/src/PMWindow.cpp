@@ -97,6 +97,7 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
     toolButton_SMILE->setVisible(WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance());
     toolButton_SMILE->setIcon(WICON(WulforUtil::eiEMOTICON));
     toolButton_SMILE->setContextMenuPolicy(Qt::CustomContextMenu);
+    AppTheme::applyControlButton(toolButton_SMILE);
 
     toolButton_ALL->setCheckable(true);
 

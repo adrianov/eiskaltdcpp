@@ -9,14 +9,10 @@
 
 #include "AppTheme.h"
 #include "WulforSettings.h"
-#include "ChatEdit.h"
-#include "LineEdit.h"
 
 #include <QApplication>
-#include <QComboBox>
 #include <QPalette>
 #include <QSet>
-#include <QWidget>
 
 static QColor paletteText(){
     return qApp->palette().color(QPalette::Text);
@@ -30,61 +26,6 @@ static QColor paletteSecondary(){
 #endif
     QColor text = paletteText();
     return AppTheme::isDark() ? text.darker(130) : text.lighter(130);
-}
-
-bool AppTheme::isDark(){
-    return qApp->palette().color(QPalette::Window).lightness() < 128;
-}
-
-void AppTheme::apply(){
-    const auto widgets = qApp->allWidgets();
-    for (QWidget *w : widgets) {
-        if (qobject_cast<ChatEdit*>(w) || qobject_cast<LineEdit*>(w) || qobject_cast<QComboBox*>(w))
-            applyInputPalette(w);
-    }
-}
-
-QColor AppTheme::inputBackground(){
-    const QPalette &pal = qApp->palette();
-    QColor bg = pal.color(QPalette::Base);
-
-    if (!isDark())
-        return bg;
-
-    const QColor window = pal.color(QPalette::Window);
-    if (qAbs(bg.lightness() - window.lightness()) >= 12)
-        return bg;
-
-    const QColor control = pal.color(QPalette::Button);
-    if (qAbs(control.lightness() - window.lightness()) >= 12)
-        return control;
-
-    return bg.lighter(118);
-}
-
-QColor AppTheme::inputBorder(bool focused){
-    const QPalette &pal = qApp->palette();
-
-    if (focused)
-        return pal.color(QPalette::Highlight);
-
-    if (!isDark())
-        return QColor(0x6E, 0x6E, 0x73);
-
-    return QColor(255, 255, 255, 46);
-}
-
-void AppTheme::applyInputPalette(QWidget *widget){
-    if (!widget)
-        return;
-
-    QPalette p = widget->palette();
-    const QColor bg = inputBackground();
-
-    p.setColor(QPalette::Base, bg);
-    p.setColor(QPalette::Button, bg);
-    widget->setPalette(p);
-    widget->setAutoFillBackground(true);
 }
 
 bool AppTheme::isLegacyDefault(const QString &colorName){

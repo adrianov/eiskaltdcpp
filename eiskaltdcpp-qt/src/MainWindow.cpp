@@ -287,6 +287,8 @@ MainWindow::MainWindow (QWidget *parent):
 
     if (!WSGET(WS_APP_THEME).isEmpty())
         qApp->setStyle(WSGET(WS_APP_THEME));
+    else
+        AppTheme::applyPreferredStyle();
 
     if (WBGET(WB_APP_REMOVE_NOT_EX_DIRS)){
         StringPairList directories = ShareManager::getInstance()->getDirectories();
