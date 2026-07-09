@@ -100,6 +100,7 @@ void ClientManager::stopConnect(const HintedUser& user) {
     if(!user.user)
         return;
 
+    user.user->setFlag(User::VIRUS_INFECTED);
     PeerConnectLog::skip(getNickOrCid(user), user.hint, _("user marked as virus-infected"));
     ConnectionManager::getInstance()->blockRetry(user.user);
     QueueManager::getInstance()->removeSource(user.user, QueueItem::Source::FLAG_REMOVED);

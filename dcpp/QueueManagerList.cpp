@@ -51,6 +51,16 @@ void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
 }
 
 void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
+    // Skip silent reciprocal lists and directory-list fetches; manual browse / match stay allowed.
+    const bool autoList = aFlags == 0
+            || ((aFlags & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
+                && !(aFlags & (QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST)));
+    if(aUser.user && aUser.user->isSet(User::VIRUS_INFECTED) && autoList) {
+        PeerConnectLog::skip(ClientManager::getInstance()->getNickOrCid(aUser), aUser.hint,
+                             _("user marked as virus-infected"));
+        throw QueueException(_("User is marked as virus-infected"));
+    }
+
     OnlineUser* ou = 0;
     if(!aUser.hint.empty())
         ou = ClientManager::getInstance()->findOnlineUser(aUser.user->getCID(), aUser.hint, true);
@@ -89,6 +99,16 @@ bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
     return qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished();
 }
 
+size_t QueueManager::countQueuedLists() noexcept {
+    Lock l(cs);
+    size_t n = 0;
+    for(const auto& i: fileQueue.getQueue()) {
+        if(i.second->isSet(QueueItem::FLAG_USER_LIST) && !i.second->isFinished())
+            ++n;
+    }
+    return n;
+}
+
 void QueueManager::removeUserLists() noexcept {
     // Match by flag or FileLists/ path: Queue.xml does not persist FLAG_USER_LIST,
     // so reloaded list downloads look like normal files under that directory.
@@ -123,10 +143,9 @@ bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const s
         return true;
     }
 
-    if(processFlags == 0) {
-        PeerConnectLog::cachedList(aUser, listFile);
+    // Silent / match / directory: reuse cache without a download. Log only for browse.
+    if(processFlags == 0)
         fire(QueueManagerListener::ListCached(), aUser, listFile);
-    }
     return true;
 }
 

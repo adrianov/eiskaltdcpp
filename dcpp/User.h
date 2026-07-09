@@ -46,7 +46,8 @@ public:
 #ifdef WITH_DHT
         DHT_BIT,
 #endif
-        NAT_TRAVERSAL_BIT
+        NAT_TRAVERSAL_BIT,
+        VIRUS_INFECTED_BIT
     };
 
     /** Each flag is set if it's true in at least one hub */
@@ -62,7 +63,8 @@ public:
 #ifdef WITH_DHT
         DHT = 1<<DHT_BIT,
 #endif
-        NAT_TRAVERSAL = 1<<NAT_TRAVERSAL_BIT
+        NAT_TRAVERSAL = 1<<NAT_TRAVERSAL_BIT,
+        VIRUS_INFECTED = 1<<VIRUS_INFECTED_BIT  //< Hub reported virus; skip auto file lists
     };
 
     struct Hash {

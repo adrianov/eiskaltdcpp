@@ -11,12 +11,77 @@
 
 #ifdef USE_QT_SQLITE
 
+#include "ShareIndex.h"
+
 #include "dcpp/ListCache.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/Transfer.h"
 #include "dcpp/Upload.h"
+#include "dcpp/User.h"
+
+#include <QMutex>
+#include <QMutexLocker>
+#include <QString>
+
+#include <ctime>
+#include <unordered_map>
 
 using namespace dcpp;
+
+namespace {
+
+/** Cap silent list downloads so reciprocal fetch cannot flood the queue. */
+const size_t kMaxQueuedLists = 3;
+/** Per-peer pause after a reciprocal check (cache hit, skip, or queue). */
+const time_t kPeerCooldownSecs = 10 * 60;
+
+QMutex gPeerMutex;
+std::unordered_map<string, time_t> gPeerChecked;
+
+bool peerCooldownActive(const CID &cid)
+{
+    const string key = cid.toBase32();
+    QMutexLocker lock(&gPeerMutex);
+    const auto it = gPeerChecked.find(key);
+    if (it == gPeerChecked.end())
+        return false;
+    return (time(nullptr) - it->second) < kPeerCooldownSecs;
+}
+
+void markPeerChecked(const CID &cid)
+{
+    const time_t now = time(nullptr);
+    QMutexLocker lock(&gPeerMutex);
+    if (gPeerChecked.size() > 512) {
+        for (auto it = gPeerChecked.begin(); it != gPeerChecked.end(); ) {
+            if ((now - it->second) >= kPeerCooldownSecs)
+                it = gPeerChecked.erase(it);
+            else
+                ++it;
+        }
+    }
+    gPeerChecked[cid.toBase32()] = now;
+}
+
+bool needsIngest(const UserPtr &user, const string &listFile)
+{
+    if (!user || listFile.empty() || !ShareIndex::getInstance())
+        return false;
+    return ShareIndex::getInstance()->needsListIngest(
+        QString::fromStdString(user->getCID().toBase32()),
+        QString::fromStdString(listFile));
+}
+
+void queueSilentList(QueueManager *qm, const HintedUser &peer)
+{
+    try {
+        // flags 0: silent list (ShareIndex ingest, no ShareBrowser).
+        qm->addList(peer, 0);
+    } catch (const Exception &) {
+    }
+}
+
+} // namespace
 
 ReciprocalList::~ReciprocalList()
 {
@@ -47,14 +112,17 @@ void ReciprocalList::on(UploadManagerListener::Complete, Upload *ul) noexcept
 void ReciprocalList::on(QueueManagerListener::SourceAdded, QueueItem *item,
                         const HintedUser &user) noexcept
 {
-    if (!item || item->isSet(QueueItem::FLAG_USER_LIST))
+    // Finished items still fire SourceAdded when alternate sources appear; skip those.
+    if (!item || item->isSet(QueueItem::FLAG_USER_LIST) || item->isFinished())
         return;
     maybeFetch(user);
 }
 
 void ReciprocalList::maybeFetch(const HintedUser &peer)
 {
-    if (!peer.user || !peer.user->isOnline())
+    if (!peer.user || !peer.user->isOnline() || peer.user->isSet(User::VIRUS_INFECTED))
+        return;
+    if (peerCooldownActive(peer.user->getCID()))
         return;
 
     QueueManager *qm = QueueManager::getInstance();
@@ -62,19 +130,28 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
         return;
 
     const string listBase = qm->getListPath(peer);
+    const string listFile = ListCache::findListFile(listBase);
 
-    // Share size unchanged → addList reuses disk list (ListCached → ingest).
-    // Share size changed → download at most once per day; always download if file missing.
-    if (!ListCache::matchesUserShare(peer, listBase)
-            && ListCache::fetchedWithinDay(listBase)
-            && !ListCache::findListFile(listBase).empty())
+    // Share size unchanged: reuse disk list. Only touch the queue when ShareIndex is stale.
+    if (ListCache::matchesUserShare(peer, listBase)) {
+        markPeerChecked(peer.user->getCID());
+        if (!needsIngest(peer.user, listFile))
+            return;
+        queueSilentList(qm, peer);
+        return;
+    }
+
+    // Share size changed (or no .sharesize): refresh at most once per day if a list exists.
+    if (!listFile.empty() && ListCache::fetchedWithinDay(listBase)) {
+        markPeerChecked(peer.user->getCID());
+        return;
+    }
+
+    if (qm->countQueuedLists() >= kMaxQueuedLists)
         return;
 
-    try {
-        // flags 0: silent list (ShareIndex ingest, no ShareBrowser / Listings).
-        qm->addList(peer, 0);
-    } catch (const Exception &) {
-    }
+    markPeerChecked(peer.user->getCID());
+    queueSilentList(qm, peer);
 }
 
 #else

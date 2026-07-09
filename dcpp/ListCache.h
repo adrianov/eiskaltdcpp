@@ -30,7 +30,7 @@ public:
     /** Unix time of last successful full-list download; -1 if unknown. */
     static time_t readFetchTime(const string& listBase);
     static void saveFetchTime(const string& listBase, time_t when = time(nullptr));
-    /** True when a fetch was recorded less than 24 hours ago. */
+    /** True when a successful fetch was recorded less than 24 hours ago (auto-refresh cooldown). */
     static bool fetchedWithinDay(const string& listBase);
 };
 

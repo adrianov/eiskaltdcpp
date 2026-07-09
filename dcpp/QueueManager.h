@@ -53,6 +53,8 @@ public:
     void addList(const HintedUser& HintedUser, int aFlags, const string& aInitialDir = Util::emptyString);
     /** True when this user's full file list is already queued. */
     bool hasListQueued(const HintedUser& user) noexcept;
+    /** Count unfinished FLAG_USER_LIST items in the download queue. */
+    size_t countQueuedLists() noexcept;
     string getListPath(const HintedUser& user);
     /** Readd a source that was removed */
     void readd(const string& target, const HintedUser& aUser);

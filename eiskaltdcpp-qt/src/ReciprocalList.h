@@ -14,7 +14,12 @@
 #include "dcpp/UploadManager.h"
 #include "dcpp/Singleton.h"
 
-/** Queue peer file lists for ShareIndex (reciprocal upload + download-from-user). */
+/**
+ * Silent peer file-list fetch for ShareIndex.
+ * Triggers: peer downloaded our full list, or became a source on an active download.
+ * Reuses ListCache when share size matches; otherwise downloads at most once per day,
+ * with a concurrent queue cap and a short per-peer cooldown.
+ */
 class ReciprocalList :
         public dcpp::Singleton<ReciprocalList>,
         private dcpp::UploadManagerListener,

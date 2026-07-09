@@ -14,6 +14,7 @@
 #include "ConnectionManager.h"
 #include "SearchResult.h"
 #include "SettingsManager.h"
+#include "User.h"
 
 namespace dcpp {
 
@@ -47,7 +48,8 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
         }
     }
 
-    if(added && BOOLSETTING(AUTO_SEARCH_AUTO_MATCH)) {
+    if(added && BOOLSETTING(AUTO_SEARCH_AUTO_MATCH)
+            && !sr->getUser()->isSet(User::VIRUS_INFECTED)) {
         try {
             addList(HintedUser(sr->getUser(), sr->getHubURL()), QueueItem::FLAG_MATCH_QUEUE);
         } catch(const Exception&) {
