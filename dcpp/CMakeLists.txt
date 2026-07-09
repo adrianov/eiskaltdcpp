@@ -28,6 +28,14 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubLineLists.cpp
     NmdcHubConnect.cpp
     AdcHubConnect.cpp
+    AdcHubChat.cpp
+    AdcHubStatus.cpp
+    AdcHubSearch.cpp
+    AdcHubBloom.cpp
+    AdcHubInfo.cpp
+    AdcHubUsers.cpp
+    AdcHubInf.cpp
+    AdcHubEvents.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
     PeerConnectLog.cpp
