@@ -12,23 +12,15 @@
 #include <QtGui>
 #endif
 
-#include <QFileInfo>
 #include <QList>
 #include <QStringList>
-#include <QPalette>
-#include <QColor>
-#include <QDir>
 
 #include "SearchModel.h"
+#include "SearchModelSort.h"
 #include "SearchFrame.h"
 #include "WulforUtil.h"
-#include "AppTheme.h"
 
 #include "dcpp/stdinc.h"
-#include "dcpp/Util.h"
-#include "dcpp/User.h"
-#include "dcpp/CID.h"
-#include "dcpp/ShareManager.h"
 
 #ifdef _DEBUG_QT_UI
 #include <QtDebug>
@@ -69,76 +61,6 @@ int SearchModel::columnCount(const QModelIndex &parent) const
         return static_cast<SearchItem*>(parent.internalPointer())->columnCount();
     else
         return rootItem->columnCount();
-}
-
-QVariant SearchModel::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid())
-        return QVariant();
-
-    SearchItem *item = static_cast<SearchItem*>(index.internalPointer());
-
-    switch(role) {
-        case Qt::DecorationRole: // icon
-        {
-            if (index.column() == COLUMN_SF_FILENAME && !item->isDir)
-                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_SF_FILENAME).toString()), 16);
-            else if (index.column() == COLUMN_SF_FILENAME && item->isDir)
-                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
-            break;
-        }
-        case Qt::DisplayRole:
-            return item->data(index.column());
-        case Qt::TextAlignmentRole:
-        {
-            const int i_column = index.column();
-            bool align_center = (i_column == COLUMN_SF_ALLSLOTS) || (i_column == COLUMN_SF_EXTENSION) ||
-                                (i_column == COLUMN_SF_FREESLOTS);
-            bool align_right  = (i_column == COLUMN_SF_ESIZE) || (i_column == COLUMN_SF_SIZE ) || (i_column == COLUMN_SF_COUNT);
-
-            if (align_center)
-                return Qt::AlignCenter;
-            else if (align_right)
-                return Qt::AlignRight;
-
-            break;
-        }
-        case Qt::ForegroundRole:
-        {
-            if (filterRole == static_cast<int>(SearchFrame::Highlight)){
-                TTHValue t(_tq(item->data(COLUMN_SF_TTH).toString()));
-
-                if (ShareManager::getInstance()->isTTHShared(t)){
-                    static QColor c;
-
-                    c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
-                    c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
-
-                    return c;
-                }
-            }
-
-            break;
-        }
-        case Qt::BackgroundColorRole:
-            break;
-        case Qt::ToolTipRole:
-        {
-            TTHValue t(_tq(item->data(COLUMN_SF_TTH).toString()));
-            ShareManager *SM = ShareManager::getInstance();
-
-            try{
-                QString toolTip = _q(SM->toReal(SM->toVirtual(t)));
-
-                return tr("File already exists: %1").arg(toolTip);
-            }catch( ... ){}
-
-            break;
-        }
-        default: break;
-    }
-
-    return QVariant();
 }
 
 void SearchModel::repaint(){
@@ -218,84 +140,12 @@ QModelIndex SearchModel::createIndexForItem(SearchItem *item){
     if (!(rootItem && item) || item == rootItem)
         return QModelIndex();
 
-    return index(item->row(), COLUMN_SF_FILENAME, (item->parent() == rootItem)? QModelIndex() : createIndexForItem(item->parent()));
+    // Column 0: rowCount()/hasChildren() only report children for column 0,
+    // so branch expand icons require a column-0 parent index.
+    return createIndex(item->row(), 0, item);
 }
-
-namespace {
-
-template <Qt::SortOrder order>
-struct Compare {
-    typedef bool (*AttrComp)(const SearchItem * l, const SearchItem * r);
-
-    void static sort(unsigned column, QList<SearchItem*>& items) {
-        if (column > COLUMN_SF_HOST)
-            return;
-
-        std::stable_sort(items.begin(), items.end(), attrs[column]);
-    }
-
-    QList<SearchItem*>::iterator static insertSorted(unsigned column, QList<SearchItem*>& items, SearchItem* item) {
-        if (column > COLUMN_SF_HOST)
-            return items.end();
-
-        return std::lower_bound(items.begin(),
-                           items.end(),
-                           item,
-                           attrs[column]
-                          );
-    }
-
-    private:
-        template <int i>
-        bool static AttrCmp(const SearchItem * l, const SearchItem * r) {
-            return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
-        }
-        template <typename T, T (SearchItem::*attr)>
-        bool static AttrCmp(const SearchItem * l, const SearchItem * r) {
-            return Cmp(l->*attr, r->*attr);
-        }
-        template <int i>
-        bool static NumCmp(const SearchItem * l, const SearchItem * r) {
-            return Cmp(l->data(i).toULongLong(), r->data(i).toULongLong());
-        }
-        template <typename T>
-        bool static Cmp(const T& l, const T& r);
-
-        static AttrComp attrs[13];
-};
-
-template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[13] = { NumCmp<COLUMN_SF_COUNT>,
-                                                                AttrCmp<COLUMN_SF_FILENAME>,
-                                                                AttrCmp<COLUMN_SF_EXTENSION>,
-                                                                NumCmp<COLUMN_SF_ESIZE>,
-                                                                NumCmp<COLUMN_SF_ESIZE>,
-                                                                AttrCmp<COLUMN_SF_TTH>,
-                                                                AttrCmp<COLUMN_SF_PATH>,
-                                                                AttrCmp<COLUMN_SF_NICK>,
-                                                                NumCmp<COLUMN_SF_FREESLOTS>,
-                                                                NumCmp<COLUMN_SF_ALLSLOTS>,
-                                                                AttrCmp<COLUMN_SF_IP>,
-                                                                AttrCmp<COLUMN_SF_HUB>,
-                                                                AttrCmp<COLUMN_SF_HOST>
-                                                                };
-
-template <> template <typename T>
-bool inline Compare<Qt::AscendingOrder>::Cmp(const T& l, const T& r) {
-    return l < r;
-}
-
-template <> template <typename T>
-bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
-    return l > r;
-}
-
-} //namespace
 
 void SearchModel::sort(int column, Qt::SortOrder order) {
-    static Compare<Qt::AscendingOrder>  acomp = Compare<Qt::AscendingOrder>();
-    static Compare<Qt::DescendingOrder> dcomp = Compare<Qt::DescendingOrder>();
-
     sortColumn = column;
     sortOrder = order;
 
@@ -305,126 +155,13 @@ void SearchModel::sort(int column, Qt::SortOrder order) {
     emit layoutAboutToBeChanged();
 
     try {
-        if (order == Qt::AscendingOrder)
-            acomp.sort(column, rootItem->childItems);
-        else if (order == Qt::DescendingOrder)
-            dcomp.sort(column, rootItem->childItems);
+        sortSearchItems(column, order, rootItem->childItems);
     }
     catch (SearchListException &e){
         sort(COLUMN_SF_FILENAME, order);
     }
 
     emit layoutChanged();
-}
-
-bool SearchModel::addResultPtr(const QVariantMap &map){
-    try {
-        return addResult(map["FILE"].toString(),
-                  map["SIZE"].toULongLong(),
-                  map["TTH"].toString(),
-                  map["PATH"].toString(),
-                  map["NICK"].toString(),
-                  map["FSLS"].toULongLong(),
-                  map["ASLS"].toULongLong(),
-                  map["IP"].toString(),
-                  map["HUB"].toString(),
-                  map["HOST"].toString(),
-                  map["CID"].toString(),
-                  map["ISDIR"].toBool());
-    }
-    catch (SearchListException &) {
-        return false;
-    }
-}
-
-bool SearchModel::addResult
-        (
-        const QString &file,
-        qulonglong size,
-        const QString &tth,
-        const QString &path,
-        const QString &nick,
-        const int free_slots,
-        const int all_slots,
-        const QString &ip,
-        const QString &hub,
-        const QString &host,
-        const QString &cid,
-        const bool isDir
-        )
-{
-    static Compare<Qt::AscendingOrder>  acomp = Compare<Qt::AscendingOrder>();
-    static Compare<Qt::DescendingOrder> dcomp = Compare<Qt::DescendingOrder>();
-
-    if (file.isEmpty())
-        return false;
-
-    SearchItem *item;
-
-    QFileInfo file_info(QDir::toNativeSeparators(file));
-    QString ext = "";
-
-    if (size > 0)
-        ext = file_info.suffix().toUpper();
-
-    SearchItem * parent = nullptr;
-
-    if (!isDir && tths.contains(tth)) {
-        parent = tths[tth];
-        if (parent->exists(cid))
-            return false;
-    } else {
-        parent = rootItem;
-    }
-
-    QList<QVariant> item_data;
-
-    item_data << QVariant() << file << ext << WulforUtil::formatBytes(size)
-              << size << tth << path << nick << free_slots
-              << all_slots << ip << hub << host,
-
-    item =new SearchItem(item_data, parent);
-
-    if (!item)
-        throw SearchListException();
-
-    item->isDir = isDir;
-    item->cid = cid;
-
-    if (parent == rootItem && !isDir)
-        tths.insert(tth, item);
-    else {
-        if (sortColumn == COLUMN_SF_COUNT){
-            parent->appendChild(item);
-
-            sort(sortColumn, sortOrder);
-
-            return true;
-        }
-
-        beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
-        {
-             parent->appendChild(item);
-        }
-        endInsertRows();
-
-        return true;
-    }
-
-    emit layoutAboutToBeChanged();
-
-    auto it = parent->childItems.end();
-
-    if (sortOrder == Qt::AscendingOrder)
-        it = acomp.insertSorted(sortColumn, parent->childItems, item);
-    else
-        it = dcomp.insertSorted(sortColumn, parent->childItems, item);
-
-    parent->childItems.insert(it, item);
-
-    emit layoutChanged();
-
-    return true;
 }
 
 int SearchModel::getSortColumn() const {
@@ -443,146 +180,3 @@ void SearchModel::setSortOrder(Qt::SortOrder o) {
     sortOrder = o;
 }
 
-void SearchModel::clearModel(){
-    blockSignals(true);
-
-    qDeleteAll(rootItem->childItems);
-    rootItem->childItems.clear();
-
-    tths.clear();
-
-    blockSignals(false);
-
-    reset();
-}
-
-void SearchModel::reset() {
-    beginResetModel();
-    endResetModel();
-}
-
-void SearchModel::removeItem(const SearchItem *item){
-    if (!okToFind(item))
-        return;
-
-    QModelIndex i = createIndexForItem(const_cast<SearchItem*>(item));
-
-    beginRemoveRows(i, item->row(), item->row());
-
-    SearchItem *p = const_cast<SearchItem*>(item->parent());
-    p->childItems.removeAt(item->row());
-
-    if (tths[item->data(COLUMN_SF_TTH).toString()] == item)
-        tths.remove(item->data(COLUMN_SF_TTH).toString());
-
-    endRemoveRows();
-
-    delete item;
-}
-
-void SearchModel::setFilterRole(int role){
-    filterRole = role;
-}
-
-bool SearchModel::okToFind(const SearchItem *item){
-    if (!item)
-        return false;
-
-    if (!rootItem->childItems.contains(const_cast<SearchItem*>(item))){
-        QString tth = item->data(COLUMN_SF_TTH).toString();
-
-        SearchItem *tth_root = tths.value(tth);//try to find item by tth
-
-        for (const auto &i : tth_root->childItems){
-            if (item == i)
-                return true;
-        }
-    }
-    else {
-        return true;
-    }
-
-    return false;
-}
-
-SearchItem::SearchItem(const QList<QVariant> &data, SearchItem *parent) :
-    count(0),
-    isDir(false),
-    itemData(data),
-    parentItem(parent)
-{
-}
-
-SearchItem::~SearchItem()
-{
-    qDeleteAll(childItems);
-    childItems.clear();
-}
-
-void SearchItem::appendChild(SearchItem *item) {
-    childItems.append(item);
-    count = childItems.size();
-}
-
-SearchItem *SearchItem::child(int row) {
-    return childItems.value(row);
-}
-
-int SearchItem::childCount() const {
-    return childItems.count();
-}
-
-int SearchItem::columnCount() const {
-    return itemData.count();
-}
-
-QVariant SearchItem::data(int column) const {
-    if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem)
-        return childItems.size()+1;
-
-    return itemData.value(column);
-}
-
-SearchItem *SearchItem::parent() const{
-    return parentItem;
-}
-
-int SearchItem::row() const {
-    if (parentItem)
-        return parentItem->childItems.indexOf(const_cast<SearchItem*>(this));
-
-    return 0;
-}
-
-bool SearchItem::exists(const QString &user_cid) const {
-    if (childItems.isEmpty())
-        return cid == user_cid;
-
-    for (const auto &child : childItems) {
-        if (child->cid == user_cid)
-            return true;
-    }
-    return false;
-}
-
-SearchListException::SearchListException() :
-    message("Unknown"), type(Unkn)
-{}
-
-SearchListException::SearchListException(const SearchListException &ex) :
-    message(ex.message), type(ex.type)
-{}
-
-SearchListException::SearchListException(const QString& message, Type type) :
-    message(message), type(type)
-{}
-
-SearchListException::~SearchListException(){
-}
-
-SearchListException &SearchListException::operator =(const SearchListException &ex2) {
-    type = ex2.type;
-    message = ex2.message;
-
-    return (*this);
-}

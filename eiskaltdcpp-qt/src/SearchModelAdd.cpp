@@ -1,0 +1,116 @@
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
+#include "SearchModel.h"
+#include "SearchModelSort.h"
+#include "WulforUtil.h"
+
+#include <QFileInfo>
+#include <QDir>
+
+bool SearchModel::addResultPtr(const QVariantMap &map){
+    try {
+        return addResult(map["FILE"].toString(),
+                  map["SIZE"].toULongLong(),
+                  map["TTH"].toString(),
+                  map["PATH"].toString(),
+                  map["NICK"].toString(),
+                  map["FSLS"].toULongLong(),
+                  map["ASLS"].toULongLong(),
+                  map["IP"].toString(),
+                  map["HUB"].toString(),
+                  map["HOST"].toString(),
+                  map["CID"].toString(),
+                  map["ISDIR"].toBool());
+    }
+    catch (SearchListException &) {
+        return false;
+    }
+}
+
+bool SearchModel::addResult
+        (
+        const QString &file,
+        qulonglong size,
+        const QString &tth,
+        const QString &path,
+        const QString &nick,
+        const int free_slots,
+        const int all_slots,
+        const QString &ip,
+        const QString &hub,
+        const QString &host,
+        const QString &cid,
+        const bool isDir
+        )
+{
+    if (file.isEmpty())
+        return false;
+
+    SearchItem *item;
+
+    QFileInfo file_info(QDir::toNativeSeparators(file));
+    QString ext = "";
+
+    if (size > 0)
+        ext = file_info.suffix().toUpper();
+
+    SearchItem * parent = nullptr;
+
+    if (!isDir && tths.contains(tth)) {
+        parent = tths[tth];
+        if (parent->exists(cid))
+            return false;
+    } else {
+        parent = rootItem;
+    }
+
+    QList<QVariant> item_data;
+
+    item_data << QVariant() << file << ext << WulforUtil::formatBytes(size)
+              << size << tth << path << nick << free_slots
+              << all_slots << ip << hub << host;
+
+    item = new SearchItem(item_data, parent);
+
+    if (!item)
+        throw SearchListException();
+
+    item->isDir = isDir;
+    item->cid = cid;
+
+    if (parent == rootItem && !isDir)
+        tths.insert(tth, item);
+    else {
+        if (sortColumn == COLUMN_SF_COUNT){
+            parent->appendChild(item);
+
+            sort(sortColumn, sortOrder);
+
+            return true;
+        }
+
+        beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
+        {
+             parent->appendChild(item);
+        }
+        endInsertRows();
+
+        return true;
+    }
+
+    emit layoutAboutToBeChanged();
+
+    auto it = insertSortedSearchItem(sortColumn, sortOrder, parent->childItems, item);
+    parent->childItems.insert(it, item);
+
+    emit layoutChanged();
+
+    return true;
+}
