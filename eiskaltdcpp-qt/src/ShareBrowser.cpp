@@ -47,8 +47,16 @@ AsyncRunner::AsyncRunner(QObject *parent): QThread(parent){
 
 }
 
-AsyncRunner::~AsyncRunner(){
-
+AsyncRunner::~AsyncRunner()
+{
+    // QThread::~QThread() aborts if the thread is still running.
+    if (isRunning()) {
+        quit();
+        wait(5000);
+        if (isRunning())
+            terminate();
+        wait(1000);
+    }
 }
 
 void AsyncRunner::run(){

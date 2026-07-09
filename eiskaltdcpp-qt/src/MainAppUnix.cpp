@@ -38,6 +38,15 @@
 #endif
 
 void catchSIG(int sigNum) {
+    // Avoid abort↔SIGABRT recursion (Qt qFatal → abort → this handler → abort…).
+    static volatile sig_atomic_t handling = 0;
+    if (handling)
+        _Exit(128 + sigNum);
+    handling = 1;
+
+    signal(sigNum, SIG_DFL);
+    signal(SIGABRT, SIG_DFL);
+
     dcpp::noteFatalSignal(sigNum);
     psignal(sigNum, "Catching signal ");
 
@@ -51,8 +60,6 @@ void catchSIG(int sigNum) {
         eapp->getSharedMemory().unlock();
         eapp->getSharedMemory().detach();
     }
-    
-    raise(SIGINT);
     
     std::abort();
 }
