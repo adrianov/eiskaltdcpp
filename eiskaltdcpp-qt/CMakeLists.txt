@@ -87,6 +87,7 @@ set(QT_EXTRA_SOURCES
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelSort.cpp
+    src/FavoriteUsersActions.cpp
     src/FinishedTransfersListener.cpp
     src/FinishedTransfersMenu.cpp
     src/HubFrameLinkMagnet.cpp
@@ -94,6 +95,7 @@ set(QT_EXTRA_SOURCES
     src/HubFrameMenu.cpp
     src/HubFrameMenuExec.cpp
     src/HubFrameMsg.cpp
+    src/HubFrameUserList.cpp
     src/HubFrameUsers.cpp
     src/MainAppCli.cpp
     src/MainAppRun.cpp
