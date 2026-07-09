@@ -116,6 +116,7 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameMenu.cpp
     src/SearchFrameStart.cpp
     src/SearchFrameUi.cpp
+    src/SearchFrameTimer.cpp
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
     src/SearchModelSort.cpp
@@ -128,6 +129,9 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexIngest.cpp
     src/ShareIndexInsert.cpp
     src/ShareIndexQueue.cpp
+    src/ShareIndexQueueCore.cpp
+    src/ShareIndexEnqueue.cpp
+    src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
     src/ShareIndexStats.cpp
