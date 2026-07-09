@@ -11,11 +11,13 @@
 
 #ifdef USE_QT_SQLITE
 
+#include "ShareIndexQueueCore.h"
 #include "WulforUtil.h"
 
 #include <QElapsedTimer>
 
 using namespace dcpp;
+using namespace ShareIndexWriteQueue;
 
 qint64 ShareIndex::forceIngestListMs(const UserPtr &user, const QString &listPath,
                                      const QString &hubUrl, const QString &nick)
@@ -70,10 +72,14 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
     }
 
+    if (isStopping())
+        return;
+
     QList<QVariantMap> rows;
     walkListing(listing, listing.getRoot(), cid, hubUrl, useNick, QString(), rows);
-    if (rows.isEmpty()) {
-        setLastError(QStringLiteral("walkListing empty"));
+    if (isStopping() || rows.isEmpty()) {
+        if (rows.isEmpty() && !isStopping())
+            setLastError(QStringLiteral("walkListing empty"));
         return;
     }
 
@@ -110,6 +116,10 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
 
         const int end = qMin(offset + chunk, rows.size());
         for (; offset < end; ++offset) {
+            if (isStopping()) {
+                db.rollback();
+                return;
+            }
             if (!bindInsert(ins, rows.at(offset), SourceFileList) || !ins.exec()) {
                 setLastError(ins.lastError().text());
                 db.rollback();

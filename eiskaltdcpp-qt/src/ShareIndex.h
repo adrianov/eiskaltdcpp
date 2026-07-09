@@ -69,6 +69,8 @@ public:
 
     /** Block until all queued writes finish (CLI / tests). */
     void waitWritesIdle();
+    /** Drop pending jobs and stop the write worker (app quit). */
+    void stopWrites();
 
     QList<QVariantMap> search(const SearchFilter &filter);
 

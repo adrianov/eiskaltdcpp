@@ -11,10 +11,9 @@
 
 #include "ShareIndex.h"
 
+#include <QAtomicInt>
 #include <QMutex>
 #include <QQueue>
-
-using namespace dcpp;
 
 /** Shared write-queue state for ShareIndexQueue / ShareIndexEnqueue. */
 namespace ShareIndexWriteQueue {
@@ -23,7 +22,7 @@ enum WriteKind { IngestList, IngestCached, UpsertSearch };
 
 struct WriteJob {
     WriteKind kind = IngestList;
-    UserPtr user;
+    dcpp::UserPtr user;
     QString listPath;
     QString hubUrl;
     QString nick;
@@ -33,11 +32,13 @@ struct WriteJob {
 extern QMutex writeMutex;
 extern QQueue<WriteJob> writeQueue;
 extern bool writeWorkerRunning;
+extern QAtomicInt writeStopping;
 extern const int kHubQueueCap;
 
 bool takeNextJob(WriteJob &job);
 void dropOldestHubJob();
 void enqueueWrite(WriteJob job);
+bool isStopping();
 
 } // namespace ShareIndexWriteQueue
 
