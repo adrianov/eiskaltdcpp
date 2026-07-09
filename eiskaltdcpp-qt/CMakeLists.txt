@@ -211,7 +211,10 @@ set(QT_EXTRA_SOURCES
     src/TransferViewMenu.cpp
     src/TransferViewMenuCopy.cpp
     src/TransferViewMenuExec.cpp
+    src/TransferViewModelLookup.cpp
+    src/TransferViewModelMutate.cpp
     src/TransferViewModelQueue.cpp
+    src/TransferViewModelSort.cpp
     src/TransferViewParams.cpp
     src/TransferViewRemove.cpp
     src/TransferViewPath.cpp

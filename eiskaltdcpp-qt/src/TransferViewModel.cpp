@@ -8,8 +8,6 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferDisplay.h"
-
 #include "WulforUtil.h"
 
 #if QT_VERSION >= 0x050000
@@ -17,27 +15,6 @@
 #else
 #include <QtGui>
 #endif
-
-#include <QFileInfo>
-#include <QList>
-#include <QStringList>
-#include <QPalette>
-#include <QColor>
-#include <QIcon>
-#include <QPixmap>
-#include <QFontMetrics>
-#include <QHash>
-
-#include "dcpp/stdinc.h"
-#include "dcpp/ShareManager.h"
-#include "dcpp/Util.h"
-
-#include <set>
-
-#if _DEBUG_QT_UI
-#include <QtDebug>
-#endif
-
 
 TransferViewModel::TransferViewModel(QObject *parent)
     : QAbstractItemModel(parent), showTranferedFilesOnly(false)
@@ -74,8 +51,7 @@ int TransferViewModel::columnCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
         return static_cast<TransferViewItem*>(parent.internalPointer())->columnCount();
-    else
-        return rootItem->columnCount();
+    return rootItem->columnCount();
 }
 
 QVariant TransferViewModel::data(const QModelIndex &index, int role) const
@@ -100,129 +76,55 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
         }
         case Qt::DisplayRole:
         {
-            if (item->download && index.column() != COLUMN_TRANSFER_SIZE && item->childCount() == 1)//This parent item has hidden child, so just copy child column text into parent
-                                return data(createIndex(0, index.column(), reinterpret_cast<void*>(item->childItems.first())), role);
+            if (item->download && index.column() != COLUMN_TRANSFER_SIZE && item->childCount() == 1)
+                return data(createIndex(0, index.column(), reinterpret_cast<void*>(item->childItems.first())), role);
 
             if (index.column() == COLUMN_TRANSFER_SPEED)
                 return WulforUtil::formatDisplayBytes(static_cast<int64_t>(item->data(COLUMN_TRANSFER_SPEED).toDouble())) + tr("/s");
             else if (index.column() == COLUMN_TRANSFER_SIZE)
                 return WulforUtil::formatDisplayBytes(item->data(COLUMN_TRANSFER_SIZE).toLongLong());
             else if (index.column() == COLUMN_TRANSFER_TLEFT){
-                int time = item->data(COLUMN_TRANSFER_TLEFT).toInt();
-
+                const int time = item->data(COLUMN_TRANSFER_TLEFT).toInt();
                 if (time < 0)
                     return QTime(0, 0, 0).toString("hh:mm:ss");
-                else
-                    return QTime(0, 0, 0).addSecs(time).toString("hh:mm:ss");
+                return QTime(0, 0, 0).addSecs(time).toString("hh:mm:ss");
             }
 
             return item->data(index.column());
         }
         case Qt::TextAlignmentRole:
-        {
             if (index.column() == COLUMN_TRANSFER_SPEED || index.column() == COLUMN_TRANSFER_SIZE)
                 return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
-            else
-                return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
-        }
-        case Qt::ForegroundRole:
-        {
-            break;
-        }
-        case Qt::BackgroundColorRole:
-            break;
+            return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
         case Qt::ToolTipRole:
-        {
             if (index.column() == COLUMN_TRANSFER_FNAME)
                 return item->target;
-
             break;
-        }
+        default:
+            break;
     }
 
     return QVariant();
 }
 
-namespace {
-
-template <Qt::SortOrder order>
-struct Compare {
-    void static sort(unsigned col, QList<TransferViewItem*>& items) {
-        std::stable_sort(items.begin(), items.end(), attrs[col]);
-    }
-
-    void static insertSorted(unsigned col, QList<TransferViewItem*>& items, TransferViewItem* item) {
-        auto it = std::lower_bound(items.begin(), items.end(), item, attrs[col]);
-        items.insert(it, item);
-    }
-
-    private:
-        typedef bool (*AttrComp)(const TransferViewItem * l, const TransferViewItem * r);
-
-        template <int i>
-        bool static AttrCmp(const TransferViewItem * l, const TransferViewItem * r) {
-            return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
-        }
-        template <int column>
-        bool static NumCmp(const TransferViewItem * l, const TransferViewItem * r) {
-            return Cmp(l->data(column).toULongLong(), r->data(column).toULongLong());
-       }
-        template <typename T>
-        bool static Cmp(const T& l, const T& r);
-
-        static AttrComp attrs[10];
-};
-template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[10] = {  AttrCmp<COLUMN_TRANSFER_USERS>,
-                                                                 NumCmp<COLUMN_TRANSFER_SPEED>,
-                                                                 AttrCmp<COLUMN_TRANSFER_STATS>,
-                                                                 AttrCmp<COLUMN_TRANSFER_FLAGS>,
-                                                                 NumCmp<COLUMN_TRANSFER_SIZE>,
-                                                                 NumCmp<COLUMN_TRANSFER_TLEFT>,
-                                                                 AttrCmp<COLUMN_TRANSFER_FNAME>,
-                                                                 AttrCmp<COLUMN_TRANSFER_HOST>,
-                                                                 AttrCmp<COLUMN_TRANSFER_IP>,
-                                                                 AttrCmp<COLUMN_TRANSFER_ENCRYPTION>
-                                                             };
-
-template <> template <typename T>
-bool inline Compare<Qt::AscendingOrder>::Cmp(const T& l, const T& r) {
-    return l < r;
-}
-
-template <> template <typename T>
-bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
-    return l > r;
-}
-}
-
-QVariant TransferViewModel::headerData(int section, Qt::Orientation orientation,
-                               int role) const
+QVariant TransferViewModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
         return rootItem->data(section);
-
     return QVariant();
 }
 
-QModelIndex TransferViewModel::index(int row, int column, const QModelIndex &parent)
-            const
+QModelIndex TransferViewModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    TransferViewItem *parentItem;
-
-    if (!parent.isValid())
-        parentItem = rootItem;
-    else
-        parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
+    TransferViewItem *parentItem = parent.isValid()
+        ? static_cast<TransferViewItem*>(parent.internalPointer())
+        : rootItem;
 
     TransferViewItem *childItem = parentItem->child(row);
-    if (childItem)
-        return createIndex(row, column, childItem);
-    else
-        return QModelIndex();
+    return childItem ? createIndex(row, column, childItem) : QModelIndex();
 }
 
 QModelIndex TransferViewModel::parent(const QModelIndex &index) const
@@ -230,13 +132,10 @@ QModelIndex TransferViewModel::parent(const QModelIndex &index) const
     if (!index.isValid())
         return QModelIndex();
 
-    TransferViewItem *childItem = static_cast<TransferViewItem*>(index.internalPointer());
-    TransferViewItem *parentItem = childItem->parent();
-
-    if (parentItem == rootItem || !parentItem)
+    TransferViewItem *parentItem = static_cast<TransferViewItem*>(index.internalPointer())->parent();
+    if (!parentItem || parentItem == rootItem)
         return QModelIndex();
-
-    if (parentItem != rootItem && !rootItem->childItems.contains(parentItem))
+    if (!rootItem->childItems.contains(parentItem))
         return QModelIndex();
 
     return createIndex(parentItem->row(), 0, parentItem);
@@ -244,289 +143,49 @@ QModelIndex TransferViewModel::parent(const QModelIndex &index) const
 
 int TransferViewModel::rowCount(const QModelIndex &parent) const
 {
-    TransferViewItem *parentItem;
     if (parent.column() > 0)
         return 0;
 
-    if (!parent.isValid())
-        parentItem = rootItem;
-    else
-        parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
-
+    TransferViewItem *parentItem = parent.isValid()
+        ? static_cast<TransferViewItem*>(parent.internalPointer())
+        : rootItem;
     return parentItem->childCount();
 }
 
-bool TransferViewModel::hasChildren(const QModelIndex &parent) const{
+bool TransferViewModel::hasChildren(const QModelIndex &parent) const
+{
     if (!parent.isValid())
-        return (rootItem->childCount() > 0);
+        return rootItem->childCount() > 0;
 
     TransferViewItem *parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
-
     if (!parentItem)
         return false;
-
     if (parentItem->download && parentItem->childCount() == 1)
         return false;
-
-    return (parentItem->childCount() > 0);
+    return parentItem->childCount() > 0;
 }
 
-void TransferViewModel::sort(int column, Qt::SortOrder order) {
-    sortColumn = column;
-    sortOrder = order;
-
-    if (!rootItem || rootItem->childItems.empty() || column < 0 || column > columnCount()-1)
-        return;
-
-    emit layoutAboutToBeChanged();
-
-    if (order == Qt::AscendingOrder)
-        Compare<Qt::AscendingOrder>().sort(column, rootItem->childItems);
-    else if (order == Qt::DescendingOrder)
-        Compare<Qt::DescendingOrder>().sort(column, rootItem->childItems);
-
-    emit layoutChanged();
-}
-
-void TransferViewModel::initTransfer(const VarMap &params){
-    if (params.empty())
-        return;
-
-    TransferViewItem *item, *to;
-
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
-        return;
-
-    bool needParent = (vstr(params["FNAME"]) != tr("File list"));
-
-    if (needParent){
-        to = getParent(vstr(params["TARGET"]), params);
-        TransferViewItem *p = item->parent();
-
-        if (p == to)
-            return;
-
-        moveTransfer(item, p, to);
-
-        if (p != rootItem && !p->childCount() && rootItem->childItems.contains(p)){
-            beginRemoveRows(QModelIndex(), p->row(), p->row());
-            {
-                rootItem->childItems.removeAt(p->row());
-
-                delete p;
-            }
-            endRemoveRows();
-        }
-
-        sort(sortColumn, sortOrder);
-    }
-
-    updateTransfer(params);
-}
-
-void TransferViewModel::addConnection(const VarMap &params){
-    if (params.empty())
-        return;
-
-    bool bGroup = false;
-    TransferViewItem *i;
-    TransferViewItem *to = nullptr;
-    bool bDownload = vbol(params["DOWN"]);
-
-    if (findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &i)) {
-        return;
-    } else if (bDownload) {
-        bGroup = vbol(params["BGROUP"]);
-        if (bGroup)
-            to = getParent(vstr(params["TARGET"]), params);
-    }
-
-    QList<QVariant> data;
-
-    data << params["USER"] << "" << params["STAT"] << "" << "" << "" << params["FNAME"] << params["HOST"] << "" << "";
-    TransferViewItem *item = new TransferViewItem(data, (to && bGroup) ? to : rootItem);
-
-    item->download = vbol(params["DOWN"]);
-    item->cid = vstr(params["CID"]);
-
-    if (item->download && bGroup)
-        item->target = vstr(params["TARGET"]);
-
-    transfer_hash.insert(item->cid, item);
-
-    if (showTranferedFilesOnly){
-        if (vstr(params["FNAME"]).isEmpty() || (tr("File list") == params["FNAME"]) ){
-            return;
-        };
-    };
-
-
-    if (!to)
-        rootItem->appendChild(item);
-    else
-        to->appendChild(item);
-
-    emit layoutChanged();
-}
-
-void TransferViewModel::updateTransfer(const VarMap &params){
-    if (params.empty())
-        return;
-
-    TransferViewItem *item;
-
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
-        return;
-
-    VarMap p = params;
-    if (p.contains("SPEED"))
-        p["SPEED"] = TransferDisplay::roundSpeed(vdbl(p["SPEED"]));
-    if (p.contains("TLEFT")) {
-        item->smoothTleft = TransferDisplay::smoothTimeLeft(item->smoothTleft, vlng(p["TLEFT"]));
-        p["TLEFT"] = item->smoothTleft;
-    }
-
-    for (auto i = column_map.constBegin(); i != column_map.constEnd(); ++i) {
-        if (p.contains(i.key())) {
-            item->updateColumn(i.value(), p[i.key()]);
-        }
-    }
-
-    qlonglong dpos = vlng(p["DPOS"]);
-    const double newPercent = vdbl(p["PERC"]);
-
-    if (!vbol(p["DOWN"])) {
-        item->dpos = dpos;
-        if (p.contains("PERC"))
-            item->percent = newPercent;
-    } else {
-        item->dpos = dpos;
-        item->percent = newPercent;
-    }
-
-    item->target = vstr(p["TARGET"]);
-    item->fail = vbol(p["FAIL"]);
-    item->tth = vstr(p["TTH"]);
-
-    if (p.contains("QUEUE_POS"))
-        item->queuePos = vlng(p["QUEUE_POS"]);
-
-
-    if (!vbol(p["DOWN"])){
-
-        if (showTranferedFilesOnly){
-            if (vstr(p["FNAME"]).isEmpty() || (tr("File list") == p["FNAME"]) ){
-                return;
-            };
-        };
-
-        if (!rootItem->childItems.contains(item))
-            rootItem->appendChild(item);
-    }
-
-    if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
-        item->parent()->dpos = vlng(p["FPOS"]);
-
-    const QModelIndex idx = createIndexForItem(item);
-    if (idx.isValid()) {
-        emit dataChanged(index(idx.row(), 0, idx.parent()),
-                         index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
-    }
-}
-
-bool TransferViewModel::findTransfer(const QString &cid, bool download, TransferViewItem **item){
-    if (!item)
-        return false;
-
-    auto i = transfer_hash.find(cid);
-
-    while (i != transfer_hash.end() && i.key() == cid && !cid.isEmpty()){
-        if (i.value()->download == download){
-           *item = i.value();
-
-           return true;
-        }
-
-        ++i;
-    }
-
-    return false;
-}
-
-bool TransferViewModel::findParent(const QString &target, TransferViewItem **item, bool download){
-    if (!item)
-        return false;
-
-    for (const auto &i : rootItem->childItems){
-        if ((i->download == download) && i->target == target && i->cid.isEmpty()){
-            *item = i;
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-TransferViewItem *TransferViewModel::getParent(const QString &target, const VarMap &params){
-    TransferViewItem *p;
-
-    if (findParent(target, &p))
-        return p;
-
-    QList<QVariant> data;
-
-    data << params["USER"] << 0 << "" << "" << params["ESIZE"]
-         << params["TLEFT"] << params["FNAME"] << params["HOST"] << "" << "";
-
-    p = new TransferViewItem(data, rootItem);
-    p->download = true;
-    p->target = target;
-    p->dpos = vlng(params["FPOS"]);
-
-    rootItem->appendChild(p);
-
-    return p;
-}
-
-int TransferViewModel::getSortColumn() const {
-    return sortColumn;
-}
-
-void TransferViewModel::setSortColumn(int c) {
-    sortColumn = c;
-}
-
-Qt::SortOrder TransferViewModel::getSortOrder() const {
-    return sortOrder;
-}
-
-void TransferViewModel::setSortOrder(Qt::SortOrder o) {
-    sortOrder = o;
-}
-
-QModelIndex TransferViewModel::createIndexForItem(TransferViewItem *item){
+QModelIndex TransferViewModel::createIndexForItem(TransferViewItem *item)
+{
     if (!(rootItem && item && item->parent()))
         return QModelIndex();
 
     if (item->parent() == rootItem)
         return index(item->row(), COLUMN_TRANSFER_FNAME, QModelIndex());
-    else
-        return index(item->row(), COLUMN_TRANSFER_FNAME, index(item->parent()->row(), COLUMN_TRANSFER_FNAME, QModelIndex()));
+    return index(item->row(), COLUMN_TRANSFER_FNAME,
+                 index(item->parent()->row(), COLUMN_TRANSFER_FNAME, QModelIndex()));
 }
 
-void TransferViewModel::clear(){
+void TransferViewModel::clear()
+{
     blockSignals(true);
-
     qDeleteAll(rootItem->childItems);
     rootItem->childItems.clear();
-
     blockSignals(false);
-
     emit layoutChanged();
 }
 
-void TransferViewModel::repaint(){
+void TransferViewModel::repaint()
+{
     emit layoutChanged();
 }
-

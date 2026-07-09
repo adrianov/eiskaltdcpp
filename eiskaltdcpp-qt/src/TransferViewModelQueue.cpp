@@ -43,22 +43,19 @@ void TransferViewModel::removeTransfer(const VarMap &params){
             TransferViewItem *item = i.value();
             TransferViewItem *p = item->parent();
 
-            beginRemoveRows(createIndexForItem(p), item->row(), item->row());
-            {
+            if (p && p->childItems.contains(item)) {
+                beginRemoveRows(createIndexForItem(p), item->row(), item->row());
                 p->childItems.removeAt(item->row());
-                delete item;
+                endRemoveRows();
             }
-            endRemoveRows();
 
             transfer_hash.erase(i);
+            delete item;
 
-            if (p != rootItem && !p->childCount()){
+            if (p && p != rootItem && !p->childCount() && rootItem->childItems.contains(p)){
                 beginRemoveRows(QModelIndex(), p->row(), p->row());
-                {
-                    rootItem->childItems.removeAt(p->row());
-
-                    delete p;
-                }
+                rootItem->childItems.removeAt(p->row());
+                delete p;
                 endRemoveRows();
             }
 

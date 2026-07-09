@@ -106,7 +106,8 @@ void TransferView::init(){
     connect(this, SIGNAL(coreDMComplete(VarMap)),       model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreUpdateTransferPosition(VarMap,qint64)), model, SLOT(updateTransferPos(VarMap,qint64)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDMFailed(VarMap)),         model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
-    connect(this, SIGNAL(coreCMAdded(VarMap)),          model, SLOT(addConnection(VarMap)));
+    // Must be queued: ConnectionManager fires Added off the UI thread.
+    connect(this, SIGNAL(coreCMAdded(VarMap)),          model, SLOT(addConnection(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreCMConnected(VarMap)),      model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreCMRemoved(VarMap)),        model, SLOT(removeTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreCMFailed(VarMap)),         model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
