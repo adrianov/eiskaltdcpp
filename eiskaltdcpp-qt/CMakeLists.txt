@@ -95,7 +95,36 @@ set(QT_EXTRA_SOURCES
     src/HubFrameMenuExec.cpp
     src/HubFrameMsg.cpp
     src/HubFrameUsers.cpp
+    src/MainAppCli.cpp
+    src/MainAppRun.cpp
+    src/MainAppUnix.cpp
+    src/MainAppXdg.cpp
+    src/MainWindowArena.cpp
+    src/MainWindowShareIndex.cpp
+    src/MainWindowStatus.cpp
+    src/SearchFrameContext.cpp
+    src/SearchFrameContextDl.cpp
+    src/SearchFrameContextMore.cpp
+    src/SearchFrameContextUser.cpp
+    src/SearchFrameActions.cpp
+    src/SearchFrameHistory.cpp
+    src/SearchFrameInit.cpp
+    src/SearchFrameLife.cpp
+    src/SearchFrameListen.cpp
+    src/SearchFrameLocal.cpp
+    src/SearchFrameMenu.cpp
+    src/SearchFrameStart.cpp
+    src/SearchFrameUi.cpp
+    src/SearchFrameMenuExec.cpp
+    src/SearchFrameParams.cpp
+    src/ShareIndex.cpp
+    src/ShareIndexFts.cpp
+    src/ShareIndexIngest.cpp
+    src/ShareIndexSearch.cpp
+    src/ShareIndexSmoke.cpp
+    src/ShareIndexUpsert.cpp
     src/TransferDisplay.cpp
+
     src/TransferViewActions.cpp
     src/TransferViewConnectionListeners.cpp
     src/TransferViewDelegate.cpp
@@ -130,6 +159,12 @@ if (NOT HAIKU)
 endif (NOT HAIKU)
 
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
+list (REMOVE_ITEM MOC_HDRS
+            ${PROJECT_SOURCE_DIR}/src/MainWindowPrivate.h
+            ${PROJECT_SOURCE_DIR}/src/SearchFramePrivate.h
+            ${PROJECT_SOURCE_DIR}/src/SearchFrameLocal.h
+            ${PROJECT_SOURCE_DIR}/src/HubFramePrivate.h
+            ${PROJECT_SOURCE_DIR}/src/DownloadQueuePrivate.h)
 
 if (NOT HAIKU AND NOT APPLE)
     list (APPEND MOC_HDRS
@@ -452,6 +487,7 @@ endif()
 
 if (FORCE_XDG)
    set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/main.cpp
+                        ${PROJECT_SOURCE_DIR}/src/MainAppXdg.cpp
                 PROPERTY COMPILE_DEFINITIONS FORCE_XDG )
 endif (FORCE_XDG)
 
