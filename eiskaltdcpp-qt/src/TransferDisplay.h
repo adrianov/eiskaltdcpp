@@ -22,7 +22,9 @@ inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
 {
     if (actual < 0 || displayed < 0)
         return actual;
-    if (actual <= displayed)
+    if (actual < displayed)
+        return (displayed + actual) / 2;
+    if (actual == displayed)
         return actual;
     if (!displayed || actual * 2 >= displayed * 3)
         return actual;

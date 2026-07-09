@@ -30,7 +30,9 @@ inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
         return actual;
     if (displayed < 0)
         return actual;
-    if (actual <= displayed)
+    if (actual < displayed)
+        return (displayed + actual) / 2;
+    if (actual == displayed)
         return actual;
     if (actual > displayed + TimeLeftStep)
         return displayed + TimeLeftStep;
