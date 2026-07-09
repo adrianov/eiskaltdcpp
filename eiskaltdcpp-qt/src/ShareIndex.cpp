@@ -10,6 +10,7 @@
 #include "ShareIndex.h"
 
 #include <QDateTime>
+#include <QThread>
 
 #include "dcpp/Util.h"
 #include "WulforUtil.h"
@@ -17,9 +18,6 @@
 using namespace dcpp;
 
 ShareIndex::ShareIndex() : opened(false)
-#ifdef USE_QT_SQLITE
-    , ftsReady(false)
-#endif
 {
 }
 
@@ -27,14 +25,7 @@ ShareIndex::~ShareIndex()
 {
 #ifdef USE_QT_SQLITE
     QMutexLocker lock(&mutex);
-    if (opened && QSqlDatabase::contains("ShareIndex")) {
-        {
-            QSqlDatabase db = QSqlDatabase::database("ShareIndex");
-            if (db.isOpen())
-                db.close();
-        }
-        QSqlDatabase::removeDatabase("ShareIndex");
-    }
+    disconnectThreadDb();
 #endif
     opened = false;
 }
@@ -67,41 +58,64 @@ void ShareIndex::open()
     if (dbFile.isEmpty())
         dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.sqlite";
 
-    QSqlDatabase db = connectDb("ShareIndex");
+    QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return;
 
-    if (!ensureSchema(db))
+    if (!ensureSchema(db) || !ensureFts(db))
         return;
 
-    ftsReady = ensureFts(db);
     opened = true;
 #endif
 }
 
 #ifdef USE_QT_SQLITE
 
-QSqlDatabase ShareIndex::connectDb(const QString &connName)
+QSqlDatabase ShareIndex::threadDb()
 {
-    if (QSqlDatabase::contains(connName))
-        return QSqlDatabase::database(connName);
+    if (dbFile.isEmpty())
+        return QSqlDatabase();
 
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
+    const QString name = QStringLiteral("ShareIndex_%1")
+            .arg(quintptr(QThread::currentThreadId()));
+    if (QSqlDatabase::contains(name)) {
+        QSqlDatabase db = QSqlDatabase::database(name);
+        if (!db.isOpen())
+            db.open();
+        return db;
+    }
+
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", name);
     db.setDatabaseName(dbFile);
-    db.open();
+    if (!db.open())
+        return QSqlDatabase();
+    // Allow readers during long file-list ingest.
+    QSqlQuery pragma(db);
+    pragma.exec("PRAGMA journal_mode=WAL");
+    pragma.exec("PRAGMA busy_timeout=30000");
+    pragma.exec("PRAGMA synchronous=NORMAL");
     return db;
 }
 
-void ShareIndex::disconnectDb(const QString &connName)
+void ShareIndex::disconnectThreadDb()
 {
-    if (!QSqlDatabase::contains(connName))
+    const QString name = QStringLiteral("ShareIndex_%1")
+            .arg(quintptr(QThread::currentThreadId()));
+    if (!QSqlDatabase::contains(name))
         return;
     {
-        QSqlDatabase db = QSqlDatabase::database(connName);
+        QSqlDatabase db = QSqlDatabase::database(name);
         if (db.isOpen())
             db.close();
     }
-    QSqlDatabase::removeDatabase(connName);
+    QSqlDatabase::removeDatabase(name);
+}
+
+void ShareIndex::releaseThreadDb()
+{
+#ifdef USE_QT_SQLITE
+    disconnectThreadDb();
+#endif
 }
 
 bool ShareIndex::ensureSchema(QSqlDatabase &db)
@@ -137,6 +151,9 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
 
     // Migrate DBs created before ext existed.
     q.exec("ALTER TABLE share_entries ADD COLUMN ext TEXT NOT NULL DEFAULT ''");
+    // Unicode case-fold copies for FTS trigram (and any LIKE tooling).
+    q.exec("ALTER TABLE share_entries ADD COLUMN name_cf TEXT NOT NULL DEFAULT ''");
+    q.exec("ALTER TABLE share_entries ADD COLUMN path_cf TEXT NOT NULL DEFAULT ''");
 
     q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_file_tth "
            "ON share_entries(cid, tth) WHERE is_dir = 0 AND tth != ''");
@@ -154,7 +171,17 @@ void ShareIndex::upsertFromSearch(const QVariantMap &) {}
 
 void ShareIndex::ingestList(const UserPtr &, const QString &, const QString &, const QString &) {}
 
+void ShareIndex::ingestCachedLists() {}
+
+void ShareIndex::waitWritesIdle() {}
+
 QList<QVariantMap> ShareIndex::search(const SearchFilter &) { return {}; }
+
+ShareIndex::IndexStats ShareIndex::indexStats() { return {}; }
+
+bool ShareIndex::needsListIngest(const QString &) { return false; }
+
+void ShareIndex::releaseThreadDb() {}
 
 bool ShareIndex::smokeCheck(QString *) { return true; }
 

@@ -57,13 +57,33 @@ public:
     void ingestList(const dcpp::UserPtr &user, const QString &listPath,
                     const QString &hubUrl, const QString &nick);
 
+    /** Index all *.xml / *.xml.bz2 under the FileLists directory (queued). */
+    void ingestCachedLists();
+
     void upsertFromSearch(const QVariantMap &map);
 
+    /** Block until all queued writes finish (CLI / tests). */
+    void waitWritesIdle();
+
     QList<QVariantMap> search(const SearchFilter &filter);
+
+    struct IndexStats {
+        qint64 files = 0;
+        qint64 dbBytes = 0;
+    };
+    IndexStats indexStats();
+    bool needsListIngest(const QString &cid);
+    /** Close this thread's QSqlDatabase before the worker exits. */
+    void releaseThreadDb();
 
     static bool smokeCheck(QString *error = nullptr);
     static QString nowStamp();
     QString lastError() const { return lastSqlError; }
+
+#ifdef USE_QT_SQLITE
+    friend bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error);
+    friend void shareIndexRunWriteWorker();
+#endif
 
 private:
     ShareIndex();
@@ -72,12 +92,15 @@ private:
 #ifdef USE_QT_SQLITE
     bool ensureSchema(QSqlDatabase &db);
     bool ensureFts(QSqlDatabase &db);
-    QSqlDatabase connectDb(const QString &connName);
-    void disconnectDb(const QString &connName);
+    /** Per-thread connection; Qt forbids sharing QSqlDatabase across threads. */
+    QSqlDatabase threadDb();
+    void disconnectThreadDb();
 
     bool upsertRow(QSqlDatabase &db, const QVariantMap &row, int source);
+    bool insertRow(QSqlDatabase &db, const QVariantMap &row, int source);
+    bool prepareInsert(QSqlQuery &ins) const;
+    bool bindInsert(QSqlQuery &ins, const QVariantMap &row, int source) const;
     QList<QVariantMap> searchFts(QSqlDatabase &db, const SearchFilter &filter);
-    QList<QVariantMap> searchLike(QSqlDatabase &db, const SearchFilter &filter);
     QList<QVariantMap> rowsFromQuery(QSqlQuery &q);
     QString filterSql(const SearchFilter &filter, QVariantList &binds) const;
 
@@ -87,8 +110,13 @@ private:
                      const QString &nick, const QString &hubName,
                      QList<QVariantMap> &out);
 
+    void ingestListSync(const dcpp::UserPtr &user, const QString &listPath,
+                        const QString &hubUrl, const QString &nick);
+    void ingestCachedListsSync();
+    void upsertFromSearchSync(const QVariantMap &map);
+    void drainWriteQueue();
+
     QString dbFile;
-    bool ftsReady;
 #endif
     bool opened;
     mutable QMutex mutex;

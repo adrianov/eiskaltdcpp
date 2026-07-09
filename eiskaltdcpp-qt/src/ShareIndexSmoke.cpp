@@ -14,6 +14,8 @@
 #include <QTemporaryDir>
 #include <QUuid>
 
+bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error);
+
 bool ShareIndex::smokeCheck(QString *error)
 {
     QTemporaryDir dir;
@@ -36,14 +38,13 @@ bool ShareIndex::smokeCheck(QString *error)
 
         ShareIndex idx;
         idx.dbFile = db.databaseName();
-        if (!idx.ensureSchema(db)) {
+        if (!idx.ensureSchema(db) || !idx.ensureFts(db)) {
             if (error)
                 *error = "schema";
             db.close();
             QSqlDatabase::removeDatabase(conn);
             return false;
         }
-        idx.ftsReady = idx.ensureFts(db);
 
         QVariantMap file;
         file["cid"] = "CIDTEST";
@@ -140,45 +141,7 @@ bool ShareIndex::smokeCheck(QString *error)
             return false;
         }
 
-        SearchFilter f;
-        f.terms << "breaking";
-        auto hits = idx.searchLike(db, f);
-        if (hits.size() < 1) {
-            if (error)
-                *error = "like search";
-            db.close();
-            QSqlDatabase::removeDatabase(conn);
-            return false;
-        }
-
-        f.terms.clear();
-        f.terms << "BREAKING";
-        hits = idx.searchLike(db, f);
-        if (hits.isEmpty()) {
-            if (error)
-                *error = "case search";
-            db.close();
-            QSqlDatabase::removeDatabase(conn);
-            return false;
-        }
-
-        f.terms.clear();
-        f.terms << "S01E01";
-        f.extensions << "MKV";
-        hits = idx.searchLike(db, f);
-        if (hits.isEmpty()) {
-            if (error)
-                *error = "ext filter";
-            db.close();
-            QSqlDatabase::removeDatabase(conn);
-            return false;
-        }
-        f.extensions.clear();
-        f.extensions << "AVI";
-        hits = idx.searchLike(db, f);
-        if (!hits.isEmpty()) {
-            if (error)
-                *error = "ext filter false positive";
+        if (!shareIndexSmokeSearch(idx, db, error)) {
             db.close();
             QSqlDatabase::removeDatabase(conn);
             return false;

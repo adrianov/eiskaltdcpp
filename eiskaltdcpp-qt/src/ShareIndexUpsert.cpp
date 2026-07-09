@@ -11,16 +11,26 @@
 
 #ifdef USE_QT_SQLITE
 
+namespace {
+
+QString sqlText(const QVariant &v)
+{
+    const QString s = v.toString();
+    return s.isNull() ? QStringLiteral("") : s;
+}
+
+} // namespace
+
 bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
 {
     const QString stamp = nowStamp();
     const bool isDir = row.value("is_dir").toBool();
-    const QString tth = row.value("tth").toString();
-    const QString cid = row.value("cid").toString();
-    const QString path = row.value("path").toString();
-    const QString name = row.value("name").toString();
+    const QString tth = sqlText(row.value("tth"));
+    const QString cid = sqlText(row.value("cid"));
+    const QString path = sqlText(row.value("path"));
+    const QString name = sqlText(row.value("name"));
     const QString ext = row.contains("ext")
-            ? row.value("ext").toString()
+            ? sqlText(row.value("ext"))
             : fileExt(name, isDir);
 
     if (cid.isEmpty() || name.isEmpty())
@@ -44,110 +54,75 @@ bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
         return false;
     }
 
-    if (find.next()) {
-        const qint64 id = find.value(0).toLongLong();
-        const int oldSource = find.value(1).toInt();
-        // Never demote a file-list row to hub-search (list refresh deletes by source=1).
-        const int keepSource = (oldSource == SourceFileList || source == SourceFileList)
-                ? SourceFileList : source;
-        const bool fromList = (source == SourceFileList);
+    if (!find.next())
+        return insertRow(db, row, source);
 
-        QSqlQuery upd(db);
-        if (fromList) {
-            upd.prepare(
-                "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, ext=?, is_dir=?, size=?,"
-                "nick=?, hub_name=?, free_slots=?, all_slots=?, ip=?, bitrate=?, resolution=?,"
-                "video_info=?, audio_info=?, hit=?, shared_ts=?, source=?, updated_at=? WHERE id=?");
-        } else {
-            // Hub hit: refresh display fields; keep media from a prior file list.
-            upd.prepare(
-                "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, ext=?, is_dir=?, size=?,"
-                "nick=?, hub_name=?,"
-                "free_slots=COALESCE(?, free_slots), all_slots=COALESCE(?, all_slots),"
-                "ip=CASE WHEN ? = '' THEN ip ELSE ? END,"
-                "source=?, updated_at=? WHERE id=?");
-        }
+    const qint64 id = find.value(0).toLongLong();
+    const int oldSource = find.value(1).toInt();
+    const int keepSource = (oldSource == SourceFileList || source == SourceFileList)
+            ? SourceFileList : source;
+    const bool fromList = (source == SourceFileList);
 
-        upd.addBindValue(row.value("hub_url").toString());
-        upd.addBindValue(tth);
-        upd.addBindValue(path);
-        upd.addBindValue(name);
-        upd.addBindValue(ext.isEmpty() ? QStringLiteral("") : ext);
-        upd.addBindValue(isDir ? 1 : 0);
-        upd.addBindValue(row.value("size").toLongLong());
-        upd.addBindValue(row.value("nick").toString());
-        upd.addBindValue(row.value("hub_name").toString());
-
-        if (fromList) {
-            upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
-            upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
-            upd.addBindValue(row.value("ip").toString());
-            upd.addBindValue(row.contains("bitrate") ? row.value("bitrate") : QVariant());
-            upd.addBindValue(row.value("resolution").toString());
-            upd.addBindValue(row.value("video_info").toString());
-            upd.addBindValue(row.value("audio_info").toString());
-            upd.addBindValue(row.contains("hit") ? row.value("hit") : QVariant());
-            upd.addBindValue(row.contains("shared_ts") ? row.value("shared_ts") : QVariant());
-            upd.addBindValue(keepSource);
-            upd.addBindValue(stamp);
-            upd.addBindValue(id);
-        } else {
-            upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
-            upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
-            const QString ip = row.value("ip").toString();
-            upd.addBindValue(ip);
-            upd.addBindValue(ip);
-            upd.addBindValue(keepSource);
-            upd.addBindValue(stamp);
-            upd.addBindValue(id);
-        }
-
-        if (!upd.exec()) {
-            lastSqlError = upd.lastError().text();
-            return false;
-        }
-        lastSqlError.clear();
-        return true;
+    QSqlQuery upd(db);
+    if (fromList) {
+        upd.prepare(
+            "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, name_cf=?, path_cf=?, ext=?,"
+            "is_dir=?, size=?, nick=?, hub_name=?, free_slots=?, all_slots=?, ip=?, bitrate=?,"
+            "resolution=?, video_info=?, audio_info=?, hit=?, shared_ts=?, source=?, updated_at=? WHERE id=?");
+    } else {
+        upd.prepare(
+            "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, name_cf=?, path_cf=?, ext=?,"
+            "is_dir=?, size=?, nick=?, hub_name=?,"
+            "free_slots=COALESCE(?, free_slots), all_slots=COALESCE(?, all_slots),"
+            "ip=CASE WHEN ? = '' THEN ip ELSE ? END,"
+            "source=?, updated_at=? WHERE id=?");
     }
 
-    QSqlQuery ins(db);
-    ins.prepare(
-        "INSERT INTO share_entries ("
-        "cid, hub_url, tth, path, name, ext, is_dir, size, nick, hub_name,"
-        "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
-        "hit, shared_ts, source, created_at, updated_at"
-        ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-    ins.addBindValue(cid);
-    ins.addBindValue(row.value("hub_url").toString());
-    ins.addBindValue(tth);
-    ins.addBindValue(path);
-    ins.addBindValue(name);
-    ins.addBindValue(ext.isEmpty() ? QStringLiteral("") : ext);
-    ins.addBindValue(isDir ? 1 : 0);
-    ins.addBindValue(row.value("size").toLongLong());
-    ins.addBindValue(row.value("nick").toString());
-    ins.addBindValue(row.value("hub_name").toString());
-    ins.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
-    ins.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
-    ins.addBindValue(row.value("ip").toString());
-    ins.addBindValue(row.contains("bitrate") ? row.value("bitrate") : QVariant());
-    ins.addBindValue(row.value("resolution").toString());
-    ins.addBindValue(row.value("video_info").toString());
-    ins.addBindValue(row.value("audio_info").toString());
-    ins.addBindValue(row.contains("hit") ? row.value("hit") : QVariant());
-    ins.addBindValue(row.contains("shared_ts") ? row.value("shared_ts") : QVariant());
-    ins.addBindValue(source);
-    ins.addBindValue(stamp);
-    ins.addBindValue(stamp);
-    if (!ins.exec()) {
-        lastSqlError = ins.lastError().text();
+    upd.addBindValue(sqlText(row.value("hub_url")));
+    upd.addBindValue(tth);
+    upd.addBindValue(path);
+    upd.addBindValue(name);
+    upd.addBindValue(name.toCaseFolded());
+    upd.addBindValue(path.toCaseFolded());
+    upd.addBindValue(ext.isEmpty() ? QStringLiteral("") : ext);
+    upd.addBindValue(isDir ? 1 : 0);
+    upd.addBindValue(row.value("size").toLongLong());
+    upd.addBindValue(sqlText(row.value("nick")));
+    upd.addBindValue(sqlText(row.value("hub_name")));
+
+    if (fromList) {
+        upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
+        upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
+        upd.addBindValue(sqlText(row.value("ip")));
+        upd.addBindValue(row.contains("bitrate") ? row.value("bitrate") : QVariant());
+        upd.addBindValue(sqlText(row.value("resolution")));
+        upd.addBindValue(sqlText(row.value("video_info")));
+        upd.addBindValue(sqlText(row.value("audio_info")));
+        upd.addBindValue(row.contains("hit") ? row.value("hit") : QVariant());
+        upd.addBindValue(row.contains("shared_ts") ? row.value("shared_ts") : QVariant());
+        upd.addBindValue(keepSource);
+        upd.addBindValue(stamp);
+        upd.addBindValue(id);
+    } else {
+        upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
+        upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
+        const QString ip = sqlText(row.value("ip"));
+        upd.addBindValue(ip);
+        upd.addBindValue(ip);
+        upd.addBindValue(keepSource);
+        upd.addBindValue(stamp);
+        upd.addBindValue(id);
+    }
+
+    if (!upd.exec()) {
+        lastSqlError = upd.lastError().text();
         return false;
     }
     lastSqlError.clear();
     return true;
 }
 
-void ShareIndex::upsertFromSearch(const QVariantMap &map)
+void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
 {
     open();
     if (!opened)
@@ -172,7 +147,7 @@ void ShareIndex::upsertFromSearch(const QVariantMap &map)
     row["ip"] = map.value("IP");
 
     QMutexLocker lock(&mutex);
-    QSqlDatabase db = QSqlDatabase::database("ShareIndex");
+    QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return;
     upsertRow(db, row, SourceHubSearch);

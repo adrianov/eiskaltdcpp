@@ -17,33 +17,14 @@
 #include "dcpp/QueueItem.h"
 #include "dcpp/Download.h"
 #include "dcpp/ClientManager.h"
+#include "dcpp/Util.h"
+
+#include <QDir>
+#include <QFile>
 
 using namespace dcpp;
 
 namespace {
-
-void queueIngest(const UserPtr &user, const QString &listPath, const QString &hubUrl)
-{
-    if (!user || listPath.isEmpty())
-        return;
-
-    QString nick;
-    if (WulforUtil::getInstance())
-        nick = WulforUtil::getInstance()->getNicks(user->getCID(), hubUrl);
-
-    // Capture by value for the worker thread.
-    const UserPtr u = user;
-    const QString path = listPath;
-    const QString hub = hubUrl;
-    const QString n = nick;
-
-    AsyncRunner *runner = new AsyncRunner();
-    runner->setRunFunction([u, path, hub, n]() {
-        ShareIndex::getInstance()->ingestList(u, path, hub, n);
-    });
-    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
-    runner->start();
-}
 
 HintedUser hintedFromQueue(QueueItem *item)
 {
@@ -59,6 +40,55 @@ HintedUser hintedFromQueue(QueueItem *item)
     return HintedUser();
 }
 
+void enqueueIngest(const UserPtr &user, const QString &listPath, const QString &hubUrl)
+{
+    if (!user || listPath.isEmpty())
+        return;
+
+    QString nick;
+    if (WulforUtil::getInstance())
+        nick = WulforUtil::getInstance()->getNicks(user->getCID(), hubUrl);
+
+    ShareIndex::getInstance()->ingestList(user, listPath, hubUrl, nick);
+}
+
+void maybeIngestUserList(const HintedUser &hinted)
+{
+#ifdef USE_QT_SQLITE
+    if (!hinted.user)
+        return;
+
+    const QString cid = _q(hinted.user->getCID().toBase32());
+    if (!ShareIndex::getInstance()->needsListIngest(cid))
+        return;
+
+    QString listPath;
+    const QDir listDir(_q(Util::getListPath()));
+    const QString pattern = QLatin1Char('.') + cid + QLatin1String(".xml.bz2");
+    for (const QString &fn : listDir.entryList(QDir::Files)) {
+        if (fn.endsWith(pattern, Qt::CaseInsensitive)) {
+            listPath = listDir.absoluteFilePath(fn);
+            break;
+        }
+    }
+    if (listPath.isEmpty()) {
+        const QString patternXml = QLatin1Char('.') + cid + QLatin1String(".xml");
+        for (const QString &fn : listDir.entryList(QDir::Files)) {
+            if (fn.endsWith(patternXml, Qt::CaseInsensitive)) {
+                listPath = listDir.absoluteFilePath(fn);
+                break;
+            }
+        }
+    }
+    if (listPath.isEmpty())
+        return;
+
+    enqueueIngest(hinted.user, listPath, _q(hinted.hint));
+#else
+    Q_UNUSED(hinted);
+#endif
+}
+
 } // namespace
 
 void MainWindow::on(dcpp::QueueManagerListener::Finished, QueueItem *item, const std::string &dir, int64_t) noexcept
@@ -66,11 +96,12 @@ void MainWindow::on(dcpp::QueueManagerListener::Finished, QueueItem *item, const
     if (item && item->isAnySet(QueueItem::FLAG_USER_LIST)) {
         const HintedUser hinted = hintedFromQueue(item);
         const QString listName = _q(item->getListName());
-        queueIngest(hinted.user, listName, _q(hinted.hint));
+        enqueueIngest(hinted.user, listName, _q(hinted.hint));
 
-        // Open ShareBrowser only when the list was requested for viewing.
         if (item->isSet(QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_USER_LIST) && hinted.user)
             emit coreOpenShare(hinted.user, listName, _q(dir));
+    } else if (item) {
+        maybeIngestUserList(hintedFromQueue(item));
     }
 
     const int qsize = QueueManager::getInstance()->lockQueue().size();
@@ -83,6 +114,6 @@ void MainWindow::on(dcpp::QueueManagerListener::Finished, QueueItem *item, const
 void MainWindow::on(dcpp::QueueManagerListener::ListFromCache, const dcpp::HintedUser &user,
                     const std::string &listPath, const std::string &initialDir) noexcept
 {
-    queueIngest(user.user, _q(listPath), _q(user.hint));
+    enqueueIngest(user.user, _q(listPath), _q(user.hint));
     emit coreOpenShare(user.user, _q(listPath), _q(initialDir));
 }

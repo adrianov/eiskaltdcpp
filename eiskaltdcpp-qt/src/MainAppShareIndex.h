@@ -7,22 +7,6 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "ShareIndex.h"
+#pragma once
 
-#ifdef USE_QT_SQLITE
-
-QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
-{
-    open();
-    if (!opened || filter.terms.isEmpty())
-        return {};
-
-    QMutexLocker lock(&mutex);
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
-        return {};
-
-    return searchFts(db, filter);
-}
-
-#endif
+void startShareIndexBackfill();
