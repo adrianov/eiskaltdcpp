@@ -89,6 +89,19 @@ bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
     return qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished();
 }
 
+void QueueManager::removeUserLists() noexcept {
+    StringList targets;
+    {
+        Lock l(cs);
+        for(const auto& i: fileQueue.getQueue()) {
+            if(i.second->isSet(QueueItem::FLAG_USER_LIST))
+                targets.push_back(*i.first);
+        }
+    }
+    for(const auto& t: targets)
+        remove(t);
+}
+
 bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const string& aInitialDir) {
     const string listBase = getListPath(aUser);
     if(!ListCache::matchesUserShare(aUser, listBase))

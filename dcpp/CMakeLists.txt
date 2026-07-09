@@ -23,9 +23,24 @@ set(DCPP_EXTRA_SOURCES
     SearchQuery.cpp
     SearchManagerUdp.cpp
     SearchManagerResponse.cpp
+    QueueManagerIndex.cpp
     QueueManagerList.cpp
     QueueManagerListMatch.cpp
+    QueueManagerLoad.cpp
+    QueueManagerPut.cpp
+    QueueManagerSave.cpp
     QueueManagerSource.cpp
+    QueueManagerUserQueue.cpp
+    QueueManagerWorkers.cpp
+    QueueManagerRecheck.cpp
+    QueueManagerPartial.cpp
+    QueueManagerSfv.cpp
+    QueueManagerTimer.cpp
+    QueueManagerGet.cpp
+    QueueManagerRemove.cpp
+    QueueManagerAdd.cpp
+    QueueManagerListeners.cpp
+    QueueManagerTarget.cpp
     NmdcHubLine.cpp
     NmdcHubLineProfile.cpp
     NmdcHubLineHub.cpp

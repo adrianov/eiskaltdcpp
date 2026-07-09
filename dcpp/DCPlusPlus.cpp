@@ -150,6 +150,7 @@ void shutdown() {
     MappingManager::getInstance()->close();
 
     BufferedSocket::waitShutdown();
+    QueueManager::getInstance()->removeUserLists();
     QueueManager::getInstance()->saveQueue(true);
     ClientManager::getInstance()->saveUsers();
     if (IPFilter::getInstance()) {

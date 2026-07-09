@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include <deque>
-
 #include "ClientManagerListener.h"
 #include "CriticalSection.h"
 #include "DirectoryListing.h"
@@ -26,7 +24,9 @@
 #include "File.h"
 #include "MerkleTree.h"
 #include "QueueItem.h"
+#include "QueueManagerIndex.h"
 #include "QueueManagerListener.h"
+#include "QueueManagerWorkers.h"
 #include "SearchManagerListener.h"
 #include "Singleton.h"
 #include "TimerManager.h"
@@ -34,37 +34,9 @@
 
 namespace dcpp {
 
-using std::deque;
-
 STANDARD_EXCEPTION(QueueException);
 
 class UserConnection;
-
-class DirectoryItem {
-public:
-    typedef DirectoryItem* Ptr;
-    typedef unordered_multimap<UserPtr, Ptr, User::Hash> DirectoryMap;
-    typedef DirectoryMap::iterator DirectoryIter;
-    typedef pair<DirectoryIter, DirectoryIter> DirectoryPair;
-
-    typedef vector<Ptr> List;
-    typedef List::iterator Iter;
-
-    DirectoryItem() : priority(QueueItem::DEFAULT) { }
-    DirectoryItem(const UserPtr& aUser, const string& aName, const string& aTarget,
-                  QueueItem::Priority p) : name(aName), target(aTarget), priority(p), user(aUser) { }
-    ~DirectoryItem() { }
-
-    UserPtr& getUser() { return user; }
-    void setUser(const UserPtr& aUser) { user = aUser; }
-
-    GETSET(string, name, Name);
-    GETSET(string, target, Target);
-    GETSET(QueueItem::Priority, priority, Priority);
-private:
-    UserPtr user;
-};
-
 class ConnectionQueueItem;
 class QueueLoader;
 
@@ -72,8 +44,6 @@ class QueueManager : public Singleton<QueueManager>, public Speaker<QueueManager
         private SearchManagerListener, private ClientManagerListener
 {
 public:
-    typedef deque<QueueItemPtr> QueueItemList;
-
     void add(const string& aTarget, int64_t aSize, const TTHValue& root); // NOTE: freedcpp
 
     /** Add a file to the queue. */
@@ -103,6 +73,8 @@ public:
     void move(const string& aSource, const string& aTarget) noexcept;
 
     void remove(const string& aTarget) noexcept;
+    /** Remove all file-list items from the download queue (disk cache unchanged). */
+    void removeUserLists() noexcept;
     void removeSource(const string& aTarget, const UserPtr& aUser, int reason, bool removeConn = true) noexcept;
     void removeSource(const UserPtr& aUser, int reason) noexcept;
 
@@ -153,134 +125,32 @@ public:
     GETSET(uint64_t, lastSave, LastSave);
     GETSET(string, queueFile, QueueFile);
 private:
-    static const int64_t MOVER_LIMIT = 10*1024*1024;
-
-    class FileMover : public Thread {
-    public:
-        FileMover() : active(false) { }
-        virtual ~FileMover() { join(); }
-
-        void moveFile(const string& source, const string& target);
-        virtual int run();
-    private:
-        typedef pair<string, string> FilePair;
-
-        bool active;
-        CriticalSection cs;
-
-        vector<FilePair> files;
-    } mover;
-
-    typedef vector<pair<QueueItem::SourceConstIter, const QueueItem*> > PFSSourceList;
-
-    class Rechecker : public Thread {
-        struct DummyOutputStream : OutputStream {
-            virtual size_t write(const void*, size_t n) { return n; }
-            virtual size_t flush() { return 0; }
-        };
-
-    public:
-        explicit Rechecker(QueueManager* qm_) : qm(qm_), active(false) { }
-        virtual ~Rechecker() { join(); }
-
-        void add(const string& file);
-        virtual int run();
-
-    private:
-        QueueManager* qm;
-        bool active;
-
-        StringList files;
-        CriticalSection cs;
-    } rechecker;
-
-    /** All queue items by target */
-    class FileQueue {
-    public:
-        FileQueue() : lastInsert(queue.end()) { }
-        ~FileQueue() {
-            for(auto& i : queue)
-                delete i.second;
-        }
-        void add(QueueItem* qi);
-        QueueItem* add(const string& aTarget, int64_t aSize, int aFlags, QueueItem::Priority p,
-                       const string& aTempTarget, time_t aAdded, const TTHValue& root);
-
-        QueueItem* find(const string& target);
-        QueueManager::QueueItemList find(const TTHValue& tth);
-        // find some PFS sources to exchange parts info
-        void findPFSSources(PFSSourceList&);
-
-#ifdef WITH_DHT
-        // return a PFS tth to DHT publish
-        TTHValue* findPFSPubTTH();
-#endif
-
-        size_t getSize() { return queue.size(); }
-        QueueItem::StringMap& getQueue() { return queue; }
-        void move(QueueItem* qi, const string& aTarget);
-        void remove(QueueItem* qi);
-    private:
-        QueueItem::StringMap queue;
-        /** A hint where to insert an item... */
-        QueueItem::StringIter lastInsert;
-    };
-
-    /** All queue items indexed by user (this is a cache for the FileQueue really...) */
-    class UserQueue {
-    public:
-        void add(QueueItem* qi);
-        void add(QueueItem* qi, const UserPtr& aUser);
-        QueueItem* getNext(const UserPtr& aUser, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0,int64_t lastSpeed =0 ,bool allowRemove = true);
-        QueueItem* getRunning(const UserPtr& aUser);
-        void addDownload(QueueItem* qi, Download* d);
-        void removeDownload(QueueItem* qi, const UserPtr& d);
-        QueueItem::UserListMap& getList(int p) { return userQueue[p]; }
-        void remove(QueueItem* qi, bool removeRunning = true);
-        void remove(QueueItem* qi, const UserPtr& aUser, bool removeRunning = true);
-        void setPriority(QueueItem* qi, QueueItem::Priority p);
-
-        QueueItem::UserMap& getRunning() { return running; }
-        bool isRunning(const UserPtr& aUser) const {
-            return (running.find(aUser) != running.end());
-        }
-        int64_t getQueued(const UserPtr& aUser) const;
-    private:
-        /** QueueItems by priority and user (this is where the download order is determined) */
-        QueueItem::UserListMap userQueue[QueueItem::LAST];
-        /** Currently running downloads, a QueueItem is always either here or in the userQueue */
-        QueueItem::UserMap running;
-    };
-
+    friend class FileMover;
+    friend class Rechecker;
     friend class QueueLoader;
     friend class Singleton<QueueManager>;
+
+    static const int64_t MOVER_LIMIT = 10*1024*1024;
+
+    FileMover mover;
+    Rechecker rechecker;
 
     QueueManager();
     virtual ~QueueManager();
 
     mutable CriticalSection cs;
 
-    /** QueueItems by target */
     FileQueue fileQueue;
-    /** QueueItems by user */
     UserQueue userQueue;
-    /** Directories queued for downloading */
     DirectoryItem::DirectoryMap directories;
-    /** Recent TTH auto-searches by target, to avoid duplicate searches */
     StringList recent;
-    /** Recent filename auto-searches by target basename */
     StringList recentNames;
-    /** The queue needs to be saved */
     bool dirty;
-    /** Next auto-search tick */
     uint64_t nextSearch;
-    /** Alternate TTH and filename background searches */
     bool nextAutoSearchTTH;
-    /** File lists not to delete */
     StringList protectedFileLists;
-    /** Sanity check for the target filename */
+
     static string checkTarget(const string& aTarget, bool checkExsistence);
-    /** Add a source to an existing queue item */
     bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad);
 
     void processList(const string& name, const HintedUser& user, int flags);
@@ -300,14 +170,11 @@ private:
 
     void logFinishedDownload(QueueItem* qi, Download* d, bool crcChecked);
 
-    // TimerManagerListener
     virtual void on(TimerManagerListener::Second, uint64_t aTick) noexcept;
     virtual void on(TimerManagerListener::Minute, uint64_t aTick) noexcept;
 
-    // SearchManagerListener
     virtual void on(SearchManagerListener::SR, const SearchResultPtr&) noexcept;
 
-    // ClientManagerListener
     virtual void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept;
     virtual void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept;
 };
