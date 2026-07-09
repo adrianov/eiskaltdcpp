@@ -108,6 +108,9 @@ void SearchFrame::slotStartSearch(){
     d->withFreeSlots = checkBox_FILTERSLOTS->isChecked();
 
     d->model->setFilterRole(static_cast<int>(d->filterShared));
+    if (d->resultFlush)
+        d->resultFlush->stop();
+    d->pendingResults.clear();
     d->model->clearModel();
 
     d->dropped = d->filtered = d->results = 0;

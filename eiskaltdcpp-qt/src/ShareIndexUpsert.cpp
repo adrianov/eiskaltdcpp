@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "ShareIndex.h"
+#include "ShareIndexQueueCore.h"
 
 #ifdef USE_QT_SQLITE
 
@@ -122,12 +123,10 @@ bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
     return true;
 }
 
-void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
-{
-    open();
-    if (!isOpen())
-        return;
+namespace {
 
+QVariantMap searchMapToRow(const QVariantMap &map)
+{
     const bool isDir = map.value("ISDIR").toBool();
     const QString name = map.value("FILE").toString();
 
@@ -137,7 +136,7 @@ void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
     row["tth"] = map.value("TTH");
     row["path"] = map.value("PATH");
     row["name"] = name;
-    row["ext"] = fileExt(name, isDir);
+    row["ext"] = ShareIndex::fileExt(name, isDir);
     row["is_dir"] = isDir;
     row["size"] = map.value("SIZE");
     row["nick"] = map.value("NICK");
@@ -145,11 +144,42 @@ void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
     row["free_slots"] = map.value("FSLS");
     row["all_slots"] = map.value("ASLS");
     row["ip"] = map.value("IP");
+    return row;
+}
+
+} // namespace
+
+void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
+{
+    upsertFromSearchBatchSync(QList<QVariantMap>() << map);
+}
+
+void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
+{
+    if (maps.isEmpty())
+        return;
+
+    open();
+    if (!isOpen())
+        return;
 
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return;
-    upsertRow(db, row, SourceHubSearch);
+
+    db.transaction();
+    for (const QVariantMap &map : maps) {
+        if (ShareIndexWriteQueue::isStopping()) {
+            db.rollback();
+            return;
+        }
+        if (!upsertRow(db, searchMapToRow(map), SourceHubSearch)) {
+            db.rollback();
+            return;
+        }
+    }
+    if (!db.commit())
+        setLastError(db.lastError().text());
 }
 
 #endif

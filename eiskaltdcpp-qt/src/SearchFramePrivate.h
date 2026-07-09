@@ -15,6 +15,7 @@
 #include <QCompleter>
 #include <QMenu>
 #include <QShortcut>
+#include <QTimer>
 
 #include "SearchFrame.h"
 #include "SearchModel.h"
@@ -62,4 +63,8 @@ public:
     uint64_t searchEndTime = 0;
     bool waitingResults = false;
     int indexStatsTick = 0;
+
+    /** Coalesce hub SR UI inserts (ShareIndex upsert stays per-result). */
+    QList<SearchFrame::VarMap> pendingResults;
+    QTimer *resultFlush = nullptr;
 };

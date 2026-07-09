@@ -161,6 +161,10 @@ private Q_SLOTS:
     void onHubChanged(const QString &info);
     void onHubRemoved(const QString &info);
     void addResult(const VarMap &map);
+    void addResults(const QList<VarMap> &maps);
+    void addResultsPacked(const QVariant &packed);
+    void queueResult(const VarMap &map);
+    void flushResults();
     void setIndexStats(const QString &text);
 
 private:

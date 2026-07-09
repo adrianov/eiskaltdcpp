@@ -97,25 +97,51 @@ bool SearchFrame::getWholeDirParams(SearchFrame::VarMap &params, SearchItem *ite
 }
 
 void SearchFrame::addResult(const QVariantMap &map){
+    addResults(QList<VarMap>() << map);
+}
+
+void SearchFrame::addResultsPacked(const QVariant &packed){
+    addResults(packed.value<QList<VarMap> >());
+}
+
+void SearchFrame::queueResult(const VarMap &map){
+    Q_D(SearchFrame);
+    d->pendingResults.append(map);
+    if (d->resultFlush && !d->resultFlush->isActive())
+        d->resultFlush->start();
+}
+
+void SearchFrame::flushResults(){
+    Q_D(SearchFrame);
+    if (d->pendingResults.isEmpty())
+        return;
+    const QList<VarMap> batch = d->pendingResults;
+    d->pendingResults.clear();
+    addResults(batch);
+}
+
+void SearchFrame::addResults(const QList<VarMap> &maps){
     Q_D(SearchFrame);
     static SearchBlacklist *SB = SearchBlacklist::getInstance();
 
-    try {
-        if (SB->ok(map["FILE"].toString(), SearchBlacklist::NAME) && SB->ok(map["TTH"].toString(), SearchBlacklist::TTH)){
-            if (d->model->addResult(map["FILE"].toString(),
-                                    map["SIZE"].toULongLong(),
-                                    map["TTH"].toString(),
-                                    map["PATH"].toString(),
-                                    map["NICK"].toString(),
-                                    map["FSLS"].toULongLong(),
-                                    map["ASLS"].toULongLong(),
-                                    map["IP"].toString(),
-                                    map["HUB"].toString(),
-                                    map["HOST"].toString(),
-                                    map["CID"].toString(),
-                                    map["ISDIR"].toBool()))
-                d->results++;
+    for (const VarMap &map : maps) {
+        try {
+            if (SB->ok(map["FILE"].toString(), SearchBlacklist::NAME) && SB->ok(map["TTH"].toString(), SearchBlacklist::TTH)){
+                if (d->model->addResult(map["FILE"].toString(),
+                                        map["SIZE"].toULongLong(),
+                                        map["TTH"].toString(),
+                                        map["PATH"].toString(),
+                                        map["NICK"].toString(),
+                                        map["FSLS"].toULongLong(),
+                                        map["ASLS"].toULongLong(),
+                                        map["IP"].toString(),
+                                        map["HUB"].toString(),
+                                        map["HOST"].toString(),
+                                        map["CID"].toString(),
+                                        map["ISDIR"].toBool()))
+                    d->results++;
+            }
         }
+        catch (const SearchListException&){}
     }
-    catch (const SearchListException&){}
 }

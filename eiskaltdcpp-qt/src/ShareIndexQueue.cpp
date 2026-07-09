@@ -11,6 +11,26 @@
 
 #ifdef USE_QT_SQLITE
 
+namespace {
+
+/** Drain queued hub upserts into one SQLite transaction (avoids per-SR commit cost). */
+QList<QVariantMap> takeHubUpserts()
+{
+    using namespace ShareIndexWriteQueue;
+    QList<QVariantMap> maps;
+    QMutexLocker lock(&writeMutex);
+    for (int i = 0; i < writeQueue.size(); ) {
+        if (writeQueue.at(i).kind == UpsertSearch) {
+            maps.append(writeQueue.takeAt(i).map);
+            continue;
+        }
+        ++i;
+    }
+    return maps;
+}
+
+} // namespace
+
 void shareIndexRunWriteWorker()
 {
     ShareIndex::getInstance()->drainWriteQueue();
@@ -32,7 +52,6 @@ void ShareIndex::drainWriteQueue()
         {
             QMutexLocker lock(&writeMutex);
             if (!takeNextJob(job)) {
-                // Enqueue holds the same mutex, so a new job cannot appear here.
                 writeWorkerRunning = false;
                 disconnectThreadDb();
                 return;
@@ -46,9 +65,13 @@ void ShareIndex::drainWriteQueue()
         case IngestCached:
             ingestCachedListsSync();
             break;
-        case UpsertSearch:
-            upsertFromSearchSync(job.map);
+        case UpsertSearch: {
+            QList<QVariantMap> maps;
+            maps.append(job.map);
+            maps.append(takeHubUpserts());
+            upsertFromSearchBatchSync(maps);
             break;
+        }
         }
     }
 }
@@ -72,7 +95,6 @@ void ShareIndex::requeueCachedIngest()
         if (writeQueue.at(i).kind == IngestCached)
             writeQueue.removeAt(i);
     }
-    // Current IngestCached is running (not queued); put a fresh one at the end.
     WriteJob job;
     job.kind = IngestCached;
     writeQueue.enqueue(job);

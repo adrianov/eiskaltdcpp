@@ -101,7 +101,12 @@ void SearchFrame::init(){
     connect(this, SIGNAL(coreClientConnected(QString)),    this, SLOT(onHubAdded(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientDisconnected(QString)), this, SLOT(onHubRemoved(QString)),Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientUpdated(QString)),      this, SLOT(onHubChanged(QString)), Qt::QueuedConnection);
-    connect(this, SIGNAL(coreSR(VarMap)),                  this, SLOT(addResult(VarMap)), Qt::QueuedConnection);
+    connect(this, SIGNAL(coreSR(VarMap)),                  this, SLOT(queueResult(VarMap)), Qt::QueuedConnection);
+
+    d->resultFlush = new QTimer(this);
+    d->resultFlush->setSingleShot(true);
+    d->resultFlush->setInterval(50);
+    connect(d->resultFlush, SIGNAL(timeout()), this, SLOT(flushResults()));
 
     connect(d->focusShortcut, SIGNAL(activated()), lineEdit_SEARCHSTR, SLOT(setFocus()));
     connect(d->focusShortcut, SIGNAL(activated()), lineEdit_SEARCHSTR, SLOT(selectAll()));

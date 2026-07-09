@@ -69,6 +69,10 @@ void SearchFrame::fastSearch(const QString &text, bool isTTH){
 void SearchFrame::slotClear(){
     Q_D(SearchFrame);
 
+    if (d->resultFlush)
+        d->resultFlush->stop();
+    d->pendingResults.clear();
+
     treeView_RESULTS->clearSelection();
     d->model->clearModel();
     lineEdit_SEARCHSTR->clear();

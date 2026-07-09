@@ -59,7 +59,9 @@ void SearchFrame::slotTimer(){
             frame_PROGRESS->hide();
         else {
             frame_PROGRESS->show();
-            status->setText(tr("<b>No results</b>"));
+            const QString text = tr("<b>No results</b>");
+            if (status->text() != text)
+                status->setText(text);
         }
     }
     else {
@@ -71,7 +73,8 @@ void SearchFrame::slotTimer(){
         if (d->filtered)
             text += QString(tr("  Filtered: <b>%1</b>")).arg(d->filtered);
 
-        status->setText(text);
+        if (status->text() != text)
+            status->setText(text);
     }
 }
 

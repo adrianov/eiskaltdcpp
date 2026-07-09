@@ -124,6 +124,7 @@ private:
                         bool force = false);
     void ingestCachedListsSync();
     void upsertFromSearchSync(const QVariantMap &map);
+    void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
     void drainWriteQueue();
     bool pendingListIngest() const;
     void requeueCachedIngest();

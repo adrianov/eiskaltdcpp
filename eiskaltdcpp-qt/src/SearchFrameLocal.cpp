@@ -15,6 +15,7 @@
 
 #include <QMetaObject>
 #include <QPointer>
+#include <QVariant>
 
 #include <functional>
 
@@ -75,12 +76,11 @@ void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
         ShareIndex *idx = ShareIndex::getInstance();
         const QList<QVariantMap> rows = idx->search(filter);
         idx->releaseThreadDb();
-        if (!guard)
+        if (!guard || rows.isEmpty())
             return;
-        for (const QVariantMap &map : rows) {
-            QMetaObject::invokeMethod(guard.data(), "addResult", Qt::QueuedConnection,
-                                      Q_ARG(QVariantMap, map));
-        }
+        // One queued slot instead of up to 500 layoutChanged storms on the GUI thread.
+        QMetaObject::invokeMethod(guard.data(), "addResultsPacked", Qt::QueuedConnection,
+                                  Q_ARG(QVariant, QVariant::fromValue(rows)));
     });
 }
 
