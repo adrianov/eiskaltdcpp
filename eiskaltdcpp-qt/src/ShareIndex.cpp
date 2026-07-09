@@ -8,9 +8,9 @@
  ***************************************************************************/
 
 #include "ShareIndex.h"
+#include "ShareIndexQueueCore.h"
 
 #include <QDateTime>
-#include <QThread>
 
 #include "dcpp/Util.h"
 #include "WulforUtil.h"
@@ -67,6 +67,9 @@ void ShareIndex::open()
     if (dbFile.isEmpty())
         dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.sqlite";
 
+    // 30 GiB WAL + full disk → sqlite3_wal_checkpoint aborts; drop sidecars first.
+    prepareDbFile();
+
     QSqlDatabase db = threadDb();
     if (!db.isOpen())
         return;
@@ -88,64 +91,29 @@ void ShareIndex::open()
 #endif
 }
 
+void ShareIndex::openAsync()
+{
+#ifdef USE_QT_SQLITE
+    if (opened.loadAcquire())
+        return;
+    if (dbFile.isEmpty())
+        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.sqlite";
+
+    using namespace ShareIndexWriteQueue;
+    WriteJob job;
+    job.kind = OpenDb;
+    enqueueWrite(job);
+#else
+    open();
+#endif
+}
+
 #ifdef USE_QT_SQLITE
 
 void ShareIndex::setLastError(const QString &err)
 {
     QMutexLocker lock(&errorMutex);
     lastSqlError = err;
-}
-
-QSqlDatabase ShareIndex::threadDb()
-{
-    if (dbFile.isEmpty())
-        return QSqlDatabase();
-
-    const QString name = QStringLiteral("ShareIndex_%1")
-            .arg(quintptr(QThread::currentThreadId()));
-
-    QMutexLocker lock(&connMutex);
-    if (QSqlDatabase::contains(name)) {
-        QSqlDatabase db = QSqlDatabase::database(name);
-        if (!db.isOpen())
-            db.open();
-        return db;
-    }
-
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", name);
-    db.setDatabaseName(dbFile);
-    if (!db.open())
-        return QSqlDatabase();
-    // WAL: concurrent readers while one writer runs (write queue is single-threaded).
-    QSqlQuery pragma(db);
-    pragma.exec("PRAGMA journal_mode=WAL");
-    pragma.exec("PRAGMA busy_timeout=30000");
-    pragma.exec("PRAGMA synchronous=NORMAL");
-    // Cap trigger DELETE must fire FTS/count AFTER DELETE triggers.
-    pragma.exec("PRAGMA recursive_triggers=ON");
-    // ~64 MiB page cache (negative = KiB); helps multi-GB ShareIndex reads.
-    pragma.exec("PRAGMA cache_size=-65536");
-    return db;
-}
-
-void ShareIndex::disconnectThreadDb()
-{
-    const QString name = QStringLiteral("ShareIndex_%1")
-            .arg(quintptr(QThread::currentThreadId()));
-    QMutexLocker lock(&connMutex);
-    if (!QSqlDatabase::contains(name))
-        return;
-    {
-        QSqlDatabase db = QSqlDatabase::database(name);
-        if (db.isOpen())
-            db.close();
-    }
-    QSqlDatabase::removeDatabase(name);
-}
-
-void ShareIndex::releaseThreadDb()
-{
-    disconnectThreadDb();
 }
 
 #else

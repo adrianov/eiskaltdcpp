@@ -18,7 +18,8 @@
 void startShareIndex()
 {
     ShareIndex::newInstance();
-    ShareIndex::getInstance()->open();
+    // Open on the write worker: large WAL/DB must not block or abort the UI thread.
+    ShareIndex::getInstance()->openAsync();
     // Keep downloaded file lists so share-size cache and ShareIndex can reuse them.
     dcpp::SettingsManager::getInstance()->set(dcpp::SettingsManager::KEEP_LISTS, true);
     ReciprocalList::newInstance();

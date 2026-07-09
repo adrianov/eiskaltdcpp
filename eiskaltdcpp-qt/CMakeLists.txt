@@ -162,6 +162,7 @@ set(QT_EXTRA_SOURCES
     src/WulforSettingsOldMaps.cpp
     src/WulforSettingsI18n.cpp
     src/ShareIndex.cpp
+    src/ShareIndexConn.cpp
     src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp
     src/ShareIndexIngestWrite.cpp

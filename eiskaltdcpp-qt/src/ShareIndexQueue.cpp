@@ -59,6 +59,9 @@ void ShareIndex::drainWriteQueue()
         }
 
         switch (job.kind) {
+        case OpenDb:
+            open();
+            break;
         case IngestList:
             ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
             break;

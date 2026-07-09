@@ -13,7 +13,7 @@
 
 QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
 {
-    open();
+    // Wait for async open; never run schema/WAL work on the UI thread.
     if (!isOpen() || filter.terms.isEmpty())
         return {};
 

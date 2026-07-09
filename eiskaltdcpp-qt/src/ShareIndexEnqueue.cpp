@@ -35,13 +35,25 @@ void enqueueWrite(WriteJob job)
     QMutexLocker lock(&writeMutex);
     if (isStopping())
         return;
-    if (job.kind == IngestList) {
+    if (job.kind == OpenDb) {
+        for (const WriteJob &pending : writeQueue) {
+            if (pending.kind == OpenDb)
+                return;
+        }
+        // Schema open before any ingest / upsert.
+        writeQueue.prepend(job);
+    } else if (job.kind == IngestList) {
         for (const WriteJob &pending : writeQueue) {
             if (pending.kind == IngestList && pending.listPath == job.listPath)
                 return;
         }
-        // Prefer interactive list ingest over hub upserts and startup backfill.
-        writeQueue.prepend(job);
+        // After OpenDb (if any); ahead of hub upserts / backfill.
+        int insertAt = 0;
+        for (int i = 0; i < writeQueue.size(); ++i) {
+            if (writeQueue.at(i).kind == OpenDb)
+                insertAt = i + 1;
+        }
+        writeQueue.insert(insertAt, job);
     } else if (job.kind == UpsertSearch) {
         int hubJobs = 0;
         for (const WriteJob &pending : writeQueue) {

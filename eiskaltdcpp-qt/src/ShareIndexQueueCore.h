@@ -18,7 +18,7 @@
 /** Shared write-queue state for ShareIndexQueue / ShareIndexEnqueue. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { IngestList, IngestCached, UpsertSearch, BumpShowHits };
+enum WriteKind { OpenDb, IngestList, IngestCached, UpsertSearch, BumpShowHits };
 
 struct WriteJob {
     WriteKind kind = IngestList;

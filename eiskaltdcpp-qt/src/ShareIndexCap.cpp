@@ -33,54 +33,101 @@ bool upsertMeta(QSqlDatabase &db, const QString &key, qint64 value, QString *err
     return true;
 }
 
+qint64 metaValue(QSqlDatabase &db, const QString &key, qint64 fallback = -1)
+{
+    QSqlQuery q(db);
+    q.prepare(QStringLiteral("SELECT value FROM share_index_meta WHERE key = ?"));
+    q.addBindValue(key);
+    if (!q.exec() || !q.next())
+        return fallback;
+    return q.value(0).toLongLong();
+}
+
+bool hasTrigger(QSqlDatabase &db, const char *name)
+{
+    QSqlQuery q(db);
+    q.prepare(QStringLiteral(
+        "SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=? LIMIT 1"));
+    q.addBindValue(QLatin1String(name));
+    return q.exec() && q.next();
+}
+
+bool metaTableExists(QSqlDatabase &db)
+{
+    QSqlQuery q(db);
+    return q.exec(QStringLiteral(
+               "SELECT 1 FROM sqlite_master WHERE type='table' "
+               "AND name='share_index_meta' LIMIT 1"))
+            && q.next();
+}
+
 } // namespace
 
 bool ShareIndex::ensureCap(QSqlDatabase &db)
 {
-    QSqlQuery q(db);
-    if (!q.exec(QStringLiteral(
-            "CREATE TABLE IF NOT EXISTS share_index_meta ("
-            "key TEXT PRIMARY KEY,"
-            "value INTEGER NOT NULL DEFAULT 0)"))) {
-        setLastError(q.lastError().text());
-        return false;
+    // Startup must stay read-only when possible: any DDL/DML against a multi-GB
+    // WAL can call sqlite3_wal_checkpoint and hang/abort (disk full).
+
+    if (!metaTableExists(db)) {
+        QSqlQuery q(db);
+        if (!q.exec(QStringLiteral(
+                "CREATE TABLE share_index_meta ("
+                "key TEXT PRIMARY KEY,"
+                "value INTEGER NOT NULL DEFAULT 0)"))) {
+            setLastError(q.lastError().text());
+            return false;
+        }
     }
 
-    // Recreate so trigger body updates apply across versions.
-    q.exec(QStringLiteral("DROP TRIGGER IF EXISTS share_entries_cnt_ai"));
-    q.exec(QStringLiteral("DROP TRIGGER IF EXISTS share_entries_cnt_ad"));
-    q.exec(QStringLiteral("DROP TRIGGER IF EXISTS share_entries_cap"));
+    const bool haveCount = metaValue(db, QStringLiteral("entry_count")) >= 0;
+    const bool capOk = hasTrigger(db, "share_entries_cap");
 
-    // O(1) WHEN checks (count(*) at 5M would stall every INSERT).
-    q.exec(QStringLiteral(
-        "CREATE TRIGGER share_entries_cnt_ai AFTER INSERT ON share_entries BEGIN "
-        "UPDATE share_index_meta SET value = value + 1 WHERE key = 'entry_count'; "
-        "END"));
-    q.exec(QStringLiteral(
-        "CREATE TRIGGER share_entries_cnt_ad AFTER DELETE ON share_entries BEGIN "
-        "UPDATE share_index_meta SET value = value - 1 WHERE key = 'entry_count'; "
-        "END"));
+    // Usable index: skip all writes (missing count triggers are repaired later).
+    if (haveCount && capOk)
+        return true;
 
-    // Evict lowest show_hits, then oldest updated_at / created_at.
-    // cap_armed=0 during bulk ingest; recursive_triggers keep FTS/count in sync.
-    q.exec(QStringLiteral(
-        "CREATE TRIGGER share_entries_cap AFTER INSERT ON share_entries "
-        "WHEN COALESCE((SELECT value FROM share_index_meta WHERE key = 'cap_armed'), 1) != 0 "
-        "AND (SELECT value FROM share_index_meta WHERE key = 'entry_count') > %1 "
-        "BEGIN "
-        "DELETE FROM share_entries WHERE id = ("
-        "SELECT id FROM share_entries "
-        "ORDER BY show_hits ASC, updated_at ASC, created_at ASC "
-        "LIMIT 1);"
-        "END").arg(kMaxEntries));
+    if (!hasTrigger(db, "share_entries_cnt_ai")) {
+        QSqlQuery q(db);
+        q.exec(QStringLiteral(
+            "CREATE TRIGGER share_entries_cnt_ai AFTER INSERT ON share_entries BEGIN "
+            "UPDATE share_index_meta SET value = value + 1 WHERE key = 'entry_count'; "
+            "END"));
+    }
+    if (!hasTrigger(db, "share_entries_cnt_ad")) {
+        QSqlQuery q(db);
+        q.exec(QStringLiteral(
+            "CREATE TRIGGER share_entries_cnt_ad AFTER DELETE ON share_entries BEGIN "
+            "UPDATE share_index_meta SET value = value - 1 WHERE key = 'entry_count'; "
+            "END"));
+    }
+    if (!capOk) {
+        QSqlQuery q(db);
+        q.exec(QStringLiteral(
+            "CREATE TRIGGER share_entries_cap AFTER INSERT ON share_entries "
+            "WHEN COALESCE((SELECT value FROM share_index_meta WHERE key = 'cap_armed'), 1) != 0 "
+            "AND (SELECT value FROM share_index_meta WHERE key = 'entry_count') > %1 "
+            "BEGIN "
+            "DELETE FROM share_entries WHERE id = ("
+            "SELECT id FROM share_entries "
+            "ORDER BY show_hits ASC, updated_at ASC, created_at ASC "
+            "LIMIT 1);"
+            "END").arg(kMaxEntries));
+    }
 
     QString err;
-    if (!q.exec(QStringLiteral("SELECT count(*) FROM share_entries")) || !q.next()) {
-        setLastError(q.lastError().text());
-        return false;
+    if (!haveCount) {
+        QSqlQuery q(db);
+        if (!q.exec(QStringLiteral("SELECT count(*) FROM share_entries")) || !q.next()) {
+            setLastError(q.lastError().text());
+            return false;
+        }
+        if (!upsertMeta(db, QStringLiteral("entry_count"), q.value(0).toLongLong(), &err)) {
+            setLastError(err);
+            return false;
+        }
     }
-    if (!upsertMeta(db, QStringLiteral("entry_count"), q.value(0).toLongLong(), &err)
-            || !upsertMeta(db, QStringLiteral("cap_armed"), 1, &err)) {
+    if (metaValue(db, QStringLiteral("cap_armed"), -1) < 0
+            && !upsertMeta(db, QStringLiteral("cap_armed"), 1, &err)) {
         setLastError(err);
         return false;
     }

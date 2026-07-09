@@ -53,6 +53,8 @@ public:
     static QString fileExt(const QString &name, bool isDir);
 
     void open();
+    /** Open schema on the write worker (never block the UI on a large WAL). */
+    void openAsync();
     bool isOpen() const { return opened.loadAcquire() != 0; }
 
     void ingestList(const dcpp::UserPtr &user, const QString &listPath,
@@ -111,6 +113,8 @@ private:
     /** Per-thread connection; Qt forbids sharing QSqlDatabase across threads. */
     QSqlDatabase threadDb();
     void disconnectThreadDb();
+    /** Drop uncheckpointable oversized WAL before open. */
+    void prepareDbFile();
     void setLastError(const QString &err);
 
     bool upsertRow(QSqlDatabase &db, const QVariantMap &row, int source);

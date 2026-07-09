@@ -40,28 +40,6 @@ void rebuildFts(QSqlDatabase &db)
     q.exec("INSERT INTO share_entries_fts(share_entries_fts) VALUES('rebuild')");
 }
 
-/** True when inverted index cannot MATCH a known 3+ char sample from content. */
-bool ftsIndexStale(QSqlDatabase &db)
-{
-    QSqlQuery sample(db);
-    if (!sample.exec(
-            "SELECT name_cf FROM share_entries "
-            "WHERE length(name_cf) >= 3 LIMIT 1")
-            || !sample.next())
-        return false;
-
-    const QString name = sample.value(0).toString();
-    QString token = name.left(3);
-    token.replace('"', "\"\"");
-
-    QSqlQuery probe(db);
-    probe.prepare("SELECT 1 FROM share_entries_fts WHERE share_entries_fts MATCH ? LIMIT 1");
-    probe.addBindValue("\"" + token + "\"");
-    if (!probe.exec())
-        return true;
-    return !probe.next();
-}
-
 } // namespace
 
 bool ShareIndex::ensureFts(QSqlDatabase &db)
@@ -103,17 +81,9 @@ bool ShareIndex::ensureFts(QSqlDatabase &db)
         "VALUES (new.id, new.name_cf, new.path_cf); "
         "END");
 
-    QSqlQuery cnt(db);
-    qint64 ftsCount = -1;
-    qint64 rowCount = 0;
-    if (cnt.exec("SELECT count(*) FROM share_entries_fts") && cnt.next())
-        ftsCount = cnt.value(0).toLongLong();
-    if (cnt.exec("SELECT count(*) FROM share_entries") && cnt.next())
-        rowCount = cnt.value(0).toLongLong();
-
-    const bool countGap = rowCount > 0
-            && (ftsCount == 0 || (ftsCount >= 0 && ftsCount + 1000 < rowCount));
-    if (migrated || countGap || (rowCount > 0 && ftsIndexStale(db)))
+    // Avoid count(*) / MATCH probes on multi-GB DBs (WAL checkpoint / UI hang).
+    // Rebuild only when the FTS schema itself changed.
+    if (migrated)
         rebuildFts(db);
 
     return true;

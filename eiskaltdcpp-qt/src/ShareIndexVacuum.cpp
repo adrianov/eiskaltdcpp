@@ -101,6 +101,7 @@ void ShareIndex::reclaimFreePages(QSqlDatabase &db)
         q.exec(QStringLiteral("PRAGMA incremental_vacuum(%1)").arg(n));
         left -= n;
     }
+    // PASSIVE never blocks readers; skip if another connection holds a lock.
     q.exec(QStringLiteral("PRAGMA wal_checkpoint(PASSIVE)"));
 }
 

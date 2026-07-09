@@ -11,8 +11,6 @@
 
 #ifdef USE_QT_SQLITE
 
-#include "ShareIndex.h"
-
 #include "dcpp/ListCache.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/Transfer.h"
@@ -21,7 +19,6 @@
 
 #include <QMutex>
 #include <QMutexLocker>
-#include <QString>
 
 #include <ctime>
 #include <unordered_map>
@@ -61,15 +58,6 @@ void markPeerChecked(const CID &cid)
         }
     }
     gPeerChecked[cid.toBase32()] = now;
-}
-
-bool needsIngest(const UserPtr &user, const string &listFile)
-{
-    if (!user || listFile.empty() || !ShareIndex::getInstance())
-        return false;
-    return ShareIndex::getInstance()->needsListIngest(
-        QString::fromStdString(user->getCID().toBase32()),
-        QString::fromStdString(listFile));
 }
 
 void queueSilentList(QueueManager *qm, const HintedUser &peer)
@@ -132,10 +120,11 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
     const string listBase = qm->getListPath(peer);
     const string listFile = ListCache::findListFile(listBase);
 
-    // Share size unchanged: reuse disk list. Only touch the queue when ShareIndex is stale.
+    // Valid cache: addList → ListCached → ShareIndexListListener (ingest if stale).
+    // Do not touch SQLite here — this runs under QueueManager callbacks.
     if (ListCache::matchesUserShare(peer, listBase)) {
         markPeerChecked(peer.user->getCID());
-        if (!needsIngest(peer.user, listFile))
+        if (listFile.empty())
             return;
         queueSilentList(qm, peer);
         return;

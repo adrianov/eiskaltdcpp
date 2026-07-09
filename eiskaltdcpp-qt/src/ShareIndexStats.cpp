@@ -17,7 +17,7 @@
 ShareIndex::IndexStats ShareIndex::indexStats()
 {
     IndexStats stats;
-    open();
+    // Do not open() here — schema open runs on the write worker.
     if (!isOpen())
         return stats;
 
@@ -49,9 +49,9 @@ bool ShareIndex::needsListIngest(const QString &cid, const QString &listPath)
     if (cid.isEmpty())
         return false;
 
-    open();
+    // Not open yet → allow enqueue; write worker opens first.
     if (!isOpen())
-        return false;
+        return true;
 
     QSqlDatabase db = threadDb();
     if (!db.isOpen())

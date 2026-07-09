@@ -26,7 +26,6 @@ void ShareIndex::recordSearchShowsSync(const QList<qint64> &ids)
     if (ids.isEmpty())
         return;
 
-    open();
     if (!isOpen())
         return;
 
