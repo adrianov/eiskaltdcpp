@@ -81,7 +81,7 @@ static QColor defaultChatColor(const QString &key){
         return AppTheme::successColor();
 
     if (key == WS_CHAT_OP_COLOR)
-        return paletteText();
+        return AppTheme::isDark() ? QColor(0xFF, 0xD6, 0x0A) : QColor(0x00, 0x00, 0x00);
 
     if (key == WS_CHAT_BOT_COLOR)
         return paletteSecondary();
