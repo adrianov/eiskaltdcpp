@@ -19,6 +19,8 @@
 
 #include "ClientManager.h"
 
+#include "ClientManagerHubGuard.h"
+
 #include "AdcHub.h"
 #include "ConnectionManager.h"
 #include "ConnectivityManager.h"
@@ -151,14 +153,7 @@ uint8_t ClientManager::getSlots(const CID& cid) const {
 }
 
 bool ClientManager::isConnected(const string& aUrl) const {
-    Lock l(cs);
-
-    for(auto i: clients) {
-        if(i->getHubUrl() == aUrl) {
-            return true;
-        }
-    }
-    return false;
+    return ClientManagerHubGuard::hasActiveHub(aUrl, nullptr);
 }
 
 string ClientManager::findHub(const string& ipPort) const {

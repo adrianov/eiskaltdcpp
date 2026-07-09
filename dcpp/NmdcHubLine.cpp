@@ -113,7 +113,8 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         onLineHubSetup(cmd, param, aLine);
     else if(cmd == "$ForceMove") {
         disconnect(false);
-        fire(ClientListener::Redirect(), this, param);
+        if(!handleRedirect(param))
+            fire(ClientListener::Redirect(), this, param);
     } else if(cmd == "$HubIsFull")
         fire(ClientListener::HubFull(), this);
     else if(cmd == "$HubTopic") {

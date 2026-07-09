@@ -13,6 +13,7 @@
 
 #include "BufferedSocket.h"
 #include "ClientManager.h"
+#include "ClientManagerHubGuard.h"
 #include "DebugManager.h"
 #include "Encoder.h"
 #include "FavoriteManager.h"
@@ -77,6 +78,12 @@ void Client::reloadSettings(bool updateNick) {
 }
 
 void Client::connect() {
+    if(ClientManagerHubGuard::hasActiveHub(getHubUrl(), this)) {
+        setAutoReconnect(false);
+        fire(ClientListener::StatusMessage(), this, str(F_("Already connected to %1%") % getHubUrl()), ClientListener::FLAG_NORMAL);
+        return;
+    }
+
     if(sock) {
         BufferedSocket::putSocket(sock);
         sock = 0;
@@ -140,6 +147,14 @@ void Client::disconnect(bool graceLess) {
         sock->disconnect(graceLess);
 }
 
+bool Client::handleRedirect(const string& targetUrl) {
+    if(!ClientManagerHubGuard::sameHubUrl(targetUrl, getHubUrl()) && !ClientManagerHubGuard::hasActiveHub(targetUrl, this))
+        return false;
+    setAutoReconnect(false);
+    fire(ClientListener::StatusMessage(), this, _("The hub is trying to redirect you to a hub you are already connected to. Disconnecting."), ClientListener::FLAG_NORMAL);
+    return true;
+}
+
 bool Client::isSecure() const {
     return isReady() && sock->isSecure();
 }
@@ -154,37 +169,6 @@ std::string Client::getCipherName() const {
 
 vector<uint8_t> Client::getKeyprint() const {
     return isReady() ? sock->getKeyprint() : vector<uint8_t>();
-}
-
-// Public IP that some connected hub reported for us ($UserIP / ADC INF).
-static string hubReportedIp() {
-    auto cm = ClientManager::getInstance();
-    auto lock = cm->lock();
-    for(auto c: cm->getClients()) {
-        const string ip = Util::normalizeIpv4(c->getMyIdentity().getIp());
-        if(!ip.empty() && !Util::isPrivateIp(ip))
-            return ip;
-    }
-    return Util::emptyString;
-}
-
-// Each candidate is validated; invalid ones fall through to the next source.
-string Client::getLocalIp() const {
-    string ip;
-    if(!externalIP.empty())
-        ip = Util::normalizeIpv4(Socket::resolve(externalIP));
-    if(ip.empty() && (!BOOLSETTING(NO_IP_OVERRIDE) || SETTING(EXTERNAL_IP).empty()))
-        ip = Util::normalizeIpv4(getMyIdentity().getIp());
-    if(ip.empty() && !SETTING(EXTERNAL_IP).empty())
-        ip = Util::normalizeIpv4(Socket::resolve(SETTING(EXTERNAL_IP)));
-    // On a public hub a LAN address is known-wrong; prefer an IP another hub told us.
-    if(ip.empty() && !Util::isPrivateIp(getIp()))
-        ip = hubReportedIp();
-    if(ip.empty())
-        ip = Util::normalizeIpv4(localIp);
-    if(ip.empty())
-        ip = Util::normalizeIpv4(Util::getLocalIp(AF_INET));
-    return ip;
 }
 
 } // namespace dcpp

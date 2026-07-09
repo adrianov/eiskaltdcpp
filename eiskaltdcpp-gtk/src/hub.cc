@@ -3073,7 +3073,7 @@ void Hub::redirect_client(string address, bool follow)
     {
         if (ClientManager::getInstance()->isConnected(address))
         {
-            string error = _("Unable to connect: already connected to the requested hub");
+            string error = _("The hub is trying to redirect you to a hub you are already connected to. Disconnecting.");
             typedef Func3<Hub, string, Msg::TypeMsg, Sound::TypeSound> F3;
             F3 *f3 = new F3(this, &Hub::addStatusMessage_gui, error, Msg::STATUS, Sound::NONE);
             WulforManager::get()->dispatchGuiFunc(f3);

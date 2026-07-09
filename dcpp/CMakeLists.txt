@@ -10,6 +10,8 @@ set(DCPP_EXTRA_SOURCES
     ClientConnect.cpp
     ClientManagerConnect.cpp
     ClientManagerConnectHub.cpp
+    ClientManagerHubGuard.cpp
+    ClientLocalIp.cpp
     ClientManagerUserLookup.cpp
     ClientSearch.cpp
     HubSearchDenied.cpp

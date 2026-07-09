@@ -334,7 +334,8 @@ void AdcHub::handle(AdcCommand::QUI, AdcCommand& c) noexcept {
             fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_NORMAL);
         }
         if(c.getParam("RD", 1, tmp)) {
-            fire(ClientListener::Redirect(), this, tmp);
+            if(!handleRedirect(tmp))
+                fire(ClientListener::Redirect(), this, tmp);
         }
     }
 }
