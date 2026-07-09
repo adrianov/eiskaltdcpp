@@ -35,6 +35,7 @@
 #include "SettingsManager.h"
 #include "HintedUser.h"
 #include "UserConnection.h"
+#include "Transfer.h"
 #include "GetSet.h"
 
 namespace dcpp {
@@ -134,6 +135,13 @@ private:
     virtual void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept;
 
     bool prepareFile(UserConnection& aSource, const string& aType, const string& aFile, int64_t aResume, int64_t aBytes, bool listRecursive = false);
+    bool finishPrepare(UserConnection& aSource, InputStream* is, const string& sourceFile,
+                       int64_t start, int64_t size, Transfer::Type type, bool free,
+                       const string& aFile, int64_t aStartPos, int64_t aBytes);
+    /** Partial TTH share after ShareException: 1 ready, 0 not found, -1 failed (already notified). */
+    int openPartialFile(UserConnection& aSource, const string& aFile, int64_t aStartPos, int64_t aBytes,
+                        InputStream*& is, string& sourceFile, int64_t& start, int64_t& size,
+                        int64_t& fileSize, Transfer::Type& type);
 };
 
 } // namespace dcpp

@@ -45,6 +45,14 @@ set(DCPP_EXTRA_SOURCES
     DownloadManagerSlots.cpp
     DownloadManagerSlotFail.cpp
     DownloadManagerTimer.cpp
+    UploadManagerTimer.cpp
+    UploadManagerWaiting.cpp
+    UploadManagerMinute.cpp
+    UploadManagerTransfer.cpp
+    UploadManagerPrepare.cpp
+    UploadManagerPartial.cpp
+    UploadManagerGrant.cpp
+    UploadManagerAutoSlot.cpp
     DownloadManagerTransfer.cpp
     ConnectionManagerQueue.cpp
     ConnectionManagerGetDownload.cpp
