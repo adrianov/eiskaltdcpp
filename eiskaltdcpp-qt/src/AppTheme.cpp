@@ -69,7 +69,7 @@ QColor AppTheme::inputBorder(bool focused){
         return pal.color(QPalette::Highlight);
 
     if (!isDark())
-        return QColor(0xA0, 0xA0, 0xA4);
+        return QColor(0x6E, 0x6E, 0x73);
 
     return QColor(255, 255, 255, 46);
 }
