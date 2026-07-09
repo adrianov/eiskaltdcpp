@@ -37,6 +37,7 @@ SearchFrame::SearchFrame(QWidget *parent): QWidget(parent), d_ptr(new SearchFram
     d->isHash = false;
     d->arena_menu = nullptr;
     d->dropped = 0L;
+    d->filtered = 0L;
     d->results = 0L;
     d->filterShared = SearchFrame::None;
     d->withFreeSlots = false;

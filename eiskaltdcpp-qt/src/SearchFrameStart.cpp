@@ -110,7 +110,7 @@ void SearchFrame::slotStartSearch(){
     d->model->setFilterRole(static_cast<int>(d->filterShared));
     d->model->clearModel();
 
-    d->dropped = d->results = 0;
+    d->dropped = d->filtered = d->results = 0;
 
     string ftypeStr;
     if (ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_LAST)

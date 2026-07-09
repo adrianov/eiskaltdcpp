@@ -14,6 +14,9 @@
 #include "WulforUtil.h"
 
 #include <QMetaObject>
+#include <QPointer>
+
+#include <functional>
 
 namespace SearchFrameLocal {
 
@@ -39,6 +42,15 @@ QString statsText(const ShareIndex::IndexStats &stats)
             .arg(compactCount(stats.files), WulforUtil::formatBytes(stats.dbBytes));
 }
 
+void startDetached(std::function<void()> work)
+{
+    // Do not parent to SearchFrame: closing the frame must not destroy a live QThread.
+    AsyncRunner *runner = new AsyncRunner(nullptr);
+    runner->setRunFunction(std::move(work));
+    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
+    runner->start();
+}
+
 } // namespace
 
 void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
@@ -58,18 +70,18 @@ void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
     filter.sizeMode = sizeMode;
     filter.limit = 500;
 
-    AsyncRunner *runner = new AsyncRunner(frame);
-    runner->setRunFunction([frame, filter]() {
+    QPointer<SearchFrame> guard(frame);
+    startDetached([guard, filter]() {
         ShareIndex *idx = ShareIndex::getInstance();
         const QList<QVariantMap> rows = idx->search(filter);
+        idx->releaseThreadDb();
+        if (!guard)
+            return;
         for (const QVariantMap &map : rows) {
-            QMetaObject::invokeMethod(frame, "addResult", Qt::QueuedConnection,
+            QMetaObject::invokeMethod(guard.data(), "addResult", Qt::QueuedConnection,
                                       Q_ARG(QVariantMap, map));
         }
-        idx->releaseThreadDb();
     });
-    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
-    runner->start();
 }
 
 void upsertHubResult(const QVariantMap &map)
@@ -83,16 +95,16 @@ void refreshIndexStats(SearchFrame *frame)
     if (!frame)
         return;
 
-    AsyncRunner *runner = new AsyncRunner(frame);
-    runner->setRunFunction([frame]() {
+    QPointer<SearchFrame> guard(frame);
+    startDetached([guard]() {
         ShareIndex *idx = ShareIndex::getInstance();
         const QString text = statsText(idx->indexStats());
-        QMetaObject::invokeMethod(frame, "setIndexStats", Qt::QueuedConnection,
-                                  Q_ARG(QString, text));
         idx->releaseThreadDb();
+        if (!guard)
+            return;
+        QMetaObject::invokeMethod(guard.data(), "setIndexStats", Qt::QueuedConnection,
+                                  Q_ARG(QString, text));
     });
-    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()));
-    runner->start();
 #else
     Q_UNUSED(frame);
 #endif

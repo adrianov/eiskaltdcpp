@@ -30,7 +30,8 @@ public:
 
     TStringList currentSearch;
 
-    qulonglong dropped = 0;
+    qulonglong dropped = 0;   // query mismatch (token / terms / TTH)
+    qulonglong filtered = 0;  // UI prefs: already shared / no free slots
     qulonglong results = 0;
     SearchFrame::AlreadySharedAction filterShared = SearchFrame::None;
     bool withFreeSlots = false;

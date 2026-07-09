@@ -80,16 +80,15 @@ void SearchFrame::on(SearchManagerListener::SR, const dcpp::SearchResultPtr& aRe
     if (d->currentSearch.empty() || !aResult || d->stop == true)
         return;
 
+    // Dropped = does not satisfy this search query (DC++ / Flylink meaning).
     if (!aResult->getToken().empty() && d->token != _q(aResult->getToken())){
         d->dropped++;
-
         return;
     }
 
     if(d->isHash) {
         if(aResult->getType() != SearchResult::TYPE_FILE || TTHValue(Text::fromT(d->currentSearch[0])) != aResult->getTTH()) {
             d->dropped++;
-
             return;
         }
     }
@@ -100,32 +99,28 @@ void SearchFrame::on(SearchManagerListener::SR, const dcpp::SearchResultPtr& aRe
               )
            {
                     d->dropped++;
-
                     return;
            }
         }
     }
 
+    // Query matched: keep for ShareIndex even if UI filters hide the row.
+    QVariantMap map;
+    getParams(map, aResult);
+    SearchFrameLocal::upsertHubResult(map);
+
+    // Filtered = matches query but hidden by display preferences (not "bad" results).
     if (d->filterShared == Filter && aResult->getType() == SearchResult::TYPE_FILE){
-        const TTHValue& t = aResult->getTTH();
-
-        if (ShareManager::getInstance()->isTTHShared(t)) {
-            d->dropped++;
-
+        if (ShareManager::getInstance()->isTTHShared(aResult->getTTH())) {
+            d->filtered++;
             return;
         }
     }
 
     if (d->withFreeSlots && !aResult->getFreeSlots()){
-        d->dropped++;
-
+        d->filtered++;
         return;
     }
-
-    QVariantMap map;
-    getParams(map, aResult);
-
-    SearchFrameLocal::upsertHubResult(map);
 
     emit coreSR(map);
 }

@@ -9,12 +9,11 @@
 
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
-#include "SearchFrameLocal.h"
 #include "SearchModel.h"
 #include "WulforUtil.h"
-#include "GlobalTimer.h"
 
 #include "dcpp/SearchManager.h"
+#include "dcpp/SettingsManager.h"
 
 #include <QHeaderView>
 #include <QSplitter>
@@ -75,7 +74,7 @@ void SearchFrame::slotClear(){
     lineEdit_SEARCHSTR->clear();
     lineEdit_SIZE->setText("");
 
-    d->dropped = d->results = 0;
+    d->dropped = d->filtered = d->results = 0;
 }
 
 void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
@@ -110,66 +109,6 @@ void SearchFrame::slotHeaderMenu(const QPoint&){
     WulforUtil::headerMenu(treeView_RESULTS);
 }
 
-void SearchFrame::slotTimer(){
-    Q_D(SearchFrame);
-
-#ifdef USE_QT_SQLITE
-    if (++d->indexStatsTick >= 30) {
-        d->indexStatsTick = 0;
-        SearchFrameLocal::refreshIndexStats(this);
-    }
-#endif
-
-    if (d->waitingResults) {
-        uint64_t now = GlobalTimer::getInstance()->getTicks()*1000;
-        float fraction  = 100.0f*(now - d->searchStartTime)/(d->searchEndTime - d->searchStartTime);
-        if (fraction >= 100.0) {
-            fraction = 100.0;
-            d->waitingResults = false;
-        }
-#if defined(USE_PROGRESS_BARS)
-        const QString msg = tr("Searching for %1 ...").arg(d->target);
-        progressBar->setFormat(msg);
-        progressBar->setValue(static_cast<unsigned>(fraction));
-#else
-        const QString msg = tr("Search progress of \"%1\" is %2\%")
-                .arg(d->target)
-                .arg(QString::number(fraction, 'f', 1));
-        progressIndicator->setText(msg);
-#endif
-    }
-    else {
-#if defined(USE_PROGRESS_BARS)
-        progressBar->setFormat(QString());
-        progressBar->setValue(0);
-#else
-        progressIndicator->clear();
-#endif
-        lineEdit_SEARCHSTR->setEnabled(true);
-    }
-
-    if (d->dropped == d->results && !d->dropped){
-
-        if (d->currentSearch.empty())
-            frame_PROGRESS->hide();
-        else {
-            frame_PROGRESS->show();
-
-            QString text = QString(tr("<b>No results</b>"));
-
-            status->setText(text);
-        }
-    }
-    else {
-        if (!frame_PROGRESS->isVisible())
-            frame_PROGRESS->show();
-
-        QString text = QString(tr("Found: <b>%1</b>  Dropped: <b>%2</b>")).arg(d->results).arg(d->dropped);
-
-        status->setText(text);
-    }
-}
-
 void SearchFrame::slotToggleSidePanel(){
     QList<int> panes = splitter->sizes();
     Q_D(SearchFrame);
@@ -186,13 +125,3 @@ void SearchFrame::slotToggleSidePanel(){
 
     splitter->setSizes(panes);
 }
-
-void SearchFrame::setIndexStats(const QString &text)
-{
-#ifdef USE_QT_SQLITE
-    label_INDEX_STATS->setText(text);
-#else
-    Q_UNUSED(text);
-#endif
-}
-
