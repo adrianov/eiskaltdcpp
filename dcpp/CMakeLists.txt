@@ -6,6 +6,9 @@ file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
 set(DCPP_EXTRA_SOURCES
+    DirectoryListingLoad.cpp
+    DirectoryListingLoader.cpp
+    DirectoryListingDir.cpp
     IncomingPortCheck.cpp
     ClientConnect.cpp
     ClientManagerConnect.cpp

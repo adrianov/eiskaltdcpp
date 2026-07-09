@@ -36,8 +36,6 @@ namespace dcpp {
 
 using std::set;
 
-class ListLoader;
-
 class DirectoryListing : private NonCopyable
 {
 public:
@@ -95,6 +93,8 @@ public:
         void filterList(DirectoryListing& dirList);
         void filterList(TTHSet& l);
         void getHashList(TTHSet& l);
+        /** Remove complete dirs with no files after pruning children (empty / nest-only). */
+        void pruneEmptyDirs();
 
         size_t getFileCount() const { return files.size(); }
 
