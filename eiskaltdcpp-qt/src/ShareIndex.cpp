@@ -24,7 +24,7 @@ ShareIndex::ShareIndex() : opened(0)
 ShareIndex::~ShareIndex()
 {
 #ifdef USE_QT_SQLITE
-    waitWritesIdle();
+    stopWrites();
     disconnectThreadDb();
 #endif
     opened.storeRelease(0);
@@ -148,6 +148,8 @@ qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QSt
 void ShareIndex::ingestCachedLists() {}
 
 void ShareIndex::waitWritesIdle() {}
+
+void ShareIndex::stopWrites() {}
 
 QList<QVariantMap> ShareIndex::search(const SearchFilter &) { return {}; }
 

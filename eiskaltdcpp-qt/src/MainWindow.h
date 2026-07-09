@@ -34,55 +34,21 @@
 #include "dcpp/SettingsManager.h"
 #include "dcpp/Download.h"
 #include "dcpp/Util.h"
-#include "dcpp/version.h"
 
 #include "ArenaWidget.h"
 #include "HistoryInterface.h"
 #include "LineEdit.h"
 #include "ShortcutManager.h"
-
-#include "ui_UIAbout.h"
+#include "AboutDialog.h"
+#include "MainWindowMenuSlots.h"
 
 class FavoriteHubs;
 class DownloadQueue;
 class ToolBar;
-class MainWindow;
 class MultiLineToolBar;
 #ifdef USE_JS
 class ScriptConsole;
 #endif
-
-class QProgressBar;
-
-class About:
-        public QDialog,
-        public Ui::UIAbout
-{
-Q_OBJECT
-
-public:
-    About(QWidget *parent = nullptr): QDialog(parent){ setupUi(this); }
-
-    void printHelp() const {
-        QString msg =   tr("Usage:\n"
-                        "  eiskaltdcpp-qt <magnet link> <dchub://link> <adc(s)://link>\n"
-                        "  eiskaltdcpp-qt <Key>\n"
-                        "EiskaltDC++ is a cross-platform program that uses the Direct Connect and ADC protocols.\n"
-                        "\n"
-                        "Keys:\n"
-                        "  -h, --help\t Show this message\n"
-                        "  -V, --version\t Show version string\n"
-                        "  --share-index-smoke\t Run ShareIndex SQLite self-check and exit\n"
-                        "  --share-index-reingest <list>\t Force re-index one file list and print ms"
-                        );
-
-        printf("%s\n", msg.toUtf8().constData());
-    }
-
-    void printVersion() const {
-        printf("%s\n", eiskaltdcppVersionString.c_str());
-    }
-};
 
 class HashProgress;
 class MainWindowPrivate;
@@ -91,8 +57,7 @@ class MainWindow:
         public QMainWindow,
         public  dcpp::Singleton<MainWindow>,
         private dcpp::LogManagerListener,
-        private dcpp::TimerManagerListener,
-        private dcpp::QueueManagerListener
+        private dcpp::TimerManagerListener
 {
     Q_OBJECT
 
@@ -106,58 +71,32 @@ friend class dcpp::Singleton<MainWindow>;
         Q_PROPERTY (QMenuBar* MenuBar READ menuBar);
 
         void beginExit();
-
-        /** */
         void newHubFrame(QString, QString);
-
-        /** */
         void browseOwnFiles();
-
-        /** */
         void startSocket(bool changed);
-        /** */
         void showPortsError(const std::string& port);
-        /** */
         void autoconnect();
-        /** */
         void retranslateUi();
-
-        /** */
         void reloadSomeSettings();
-
-        /** */
         void setUnload(bool b);
-
         ArenaWidget *widgetForRole(ArenaWidget::Role) const;
 
     Q_SIGNALS:
         void redrawWidgetPanels();
+        void coreLogMessage(const QString&);
+        void coreUpdateStats(const QMap<QString, QString> &);
+        void notifyMessage(int, const QString&, const QString&);
 
     public Q_SLOTS:
-         QObject *getToolBar();
-
-        /** */
+        QObject *getToolBar();
         void addActionOnToolBar(QAction*);
-        /** */
         void remActionFromToolBar(QAction*);
-
-        /** */
         void toggleMainMenu(bool);
-
         void slotChatClear();
-
-        /** */
         void redrawToolPanel();
-
-        /** */
         void setStatusMessage(QString);
-
-        /** */
         void show();
-
-        /** */
         void parseCmdLine(const QStringList &);
-        /** */
         void parseInstanceLine(const QString &);
 
     protected:
@@ -168,112 +107,23 @@ friend class dcpp::Singleton<MainWindow>;
         virtual bool eventFilter(QObject *, QEvent *);
 
     private Q_SLOTS:
-        /** Show widget on arena */
         void mapWidgetOnArena(ArenaWidget*);
         void removeWidget(ArenaWidget *awgt);
         void insertWidget(ArenaWidget *awgt);
         void updated(ArenaWidget *awgt);
-
-        void slotOpenMagnet();
-        void slotFileOpenLogFile();
-        void slotFileOpenDownloadDirectory();
-        void slotFileBrowseFilelist();
-        void slotFileHasher();
-        void slotFileBrowseOwnFilelist();
-        void slotFileMatchAllList();
-        void slotFileHashProgress();
-        void slotFileRefreshShareHashProgress();
-        void slotHubsReconnect();
-        void slotHubsFavoriteHubs();
-        void slotHubsPublicHubs();
-        void slotHubsFavoriteUsers();
-        void slotToolsDownloadQueue();
-        void slotToolsQueuedUsers();
-        void slotToolsHubManager();
-        void slotToolsFinishedDownloads();
-        void slotToolsFinishedUploads();
-        void slotToolsSpy();
-        void slotToolsAntiSpam();
-        void slotToolsIPFilter();
-        void slotToolsSwitchAway();
-        void slotToolsAutoAway();
-        void slotToolsSearch();
-        void slotToolsADLS();
-        void slotToolsCmdDebug();
-        void slotToolsSecretary();
-        void slotToolsCopyWindowTitle();
-        void slotToolsSettings();
-        void slotToolsJS();
-        void slotToolsJSConsole();
-        void slotJSFileChanged(const QString&);
-        void slotToolsTransfer(bool);
-        void slotToolsSwitchSpeedLimit();
-        void updateActionIcons();
-        void slotPanelMenuActionClicked();
-        void slotWidgetsToggle();
-        void slotQC();
-        void slotHideMainMenu();
-        void slotShowMainMenu();
-        void slotHideWindow();
-        void slotHideProgressSpace();
-        void slotHideLastStatus();
-        void slotHideUsersStatistics();
-        void slotSideBarDockMenu();
-        void slotExit();
-        void slotToolbarCustomization();
-        void slotToolbarCustomizerDone(const QList<QAction*> &enabled);
-
-        void slotCloseCurrentWidget();
-
-        void slotUnixSignal(int);
-
-        void nextMsg();
-        void prevMsg();
-
-        void slotFind();
-        void slotChatDisable();
-
-        void slotAboutOpenUrl();
-        void slotAboutClient();
-        void slotAboutQt();
-
-        void showShareBrowser(dcpp::UserPtr, const QString &, const QString&);
-        void updateStatus(const QMap<QString,QString> &);
-
-        void slotUpdateFavHubMenu();
-        void slotConnectFavHub(QAction*);
-
-        // These slots are used only in Mac OS X.
-        // But due to bug in moc they cannot be placed in #ifdef block.
-        void slotShowSpeedLimits();
-        void slotSuppressTxt();
-        void slotSuppressSnd();
-        //
-
-    Q_SIGNALS:
-        void coreLogMessage(const QString&);
-        void coreOpenShare(dcpp::UserPtr, const QString &, const QString&);
-        void coreUpdateStats(const QMap<QString, QString> &);
-        void notifyMessage(int, const QString&, const QString&);
+        MAINWINDOW_MENU_SLOTS
 
     private:
         MainWindow (QWidget *parent=nullptr);
         virtual ~MainWindow();
 
-        /** LogManagerListener */
         virtual void on(dcpp::LogManagerListener::Message, time_t t, const std::string&) noexcept;
-        /** TimerManagerListener */
         virtual void on(dcpp::TimerManagerListener::Second, uint64_t) noexcept;
-        /** QueueManagerListener */
-        virtual void on(dcpp::QueueManagerListener::Finished, dcpp::QueueItem*, const std::string&, int64_t) noexcept;
-        virtual void on(dcpp::QueueManagerListener::ListFromCache, const dcpp::HintedUser&, const std::string& listPath, const std::string& initialDir) noexcept;
 
-        // Interface setup functions
         void init();
         void loadSettings();
         void saveSettings();
         void getWindowGeometry();
-
         void initActions();
         void initMenuBar();
         void initStatusBar();
@@ -284,15 +134,11 @@ friend class dcpp::Singleton<MainWindow>;
 #if defined(Q_OS_MAC)
         void initDockMenuBar();
 #endif
-
         void toggleSingletonWidget(ArenaWidget *a);
-
         void updateHashProgressStatus();
 
         Q_DECLARE_PRIVATE(MainWindow)
-
-        HashProgress *progress_dialog(); // Lazy initialization for _progress_dialog;
-
+        HashProgress *progress_dialog();
         MainWindowPrivate *d_ptr;
 };
 

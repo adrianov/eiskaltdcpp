@@ -8,7 +8,9 @@
 ***************************************************************************/
 
 #include "MainWindow.h"
+#include "AboutDialog.h"
 #include "Notification.h"
+#include "ShareIndexListListener.h"
 #include "StatusBarLogLabel.h"
 #include "MainWindowHashProgress.h"
 
@@ -145,7 +147,6 @@ MainWindow::MainWindow (QWidget *parent):
 
     LogManager::getInstance()->addListener(this);
     TimerManager::getInstance()->addListener(this);
-    QueueManager::getInstance()->addListener(this);
 
     startSocket(false);
 
@@ -189,7 +190,6 @@ HashProgress* MainWindow::progress_dialog() {
 MainWindow::~MainWindow(){
     LogManager::getInstance()->removeListener(this);
     TimerManager::getInstance()->removeListener(this);
-    QueueManager::getInstance()->removeListener(this);
 
     if (AntiSpam::getInstance()){
         AntiSpam::getInstance()->saveLists();
@@ -423,8 +423,15 @@ void MainWindow::init(){
     setObjectName("MainWindow");
 
     connect(this, SIGNAL(coreLogMessage(QString)), this, SLOT(setStatusMessage(QString)), Qt::QueuedConnection);
-    connect(this, SIGNAL(coreOpenShare(dcpp::UserPtr,QString,QString)), this, SLOT(showShareBrowser(dcpp::UserPtr,QString,QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreUpdateStats(QMap<QString,QString>)), this, SLOT(updateStatus(QMap<QString,QString>)), Qt::QueuedConnection);
+
+    if (ShareIndexListListener::getInstance()) {
+        connect(ShareIndexListListener::getInstance(),
+                SIGNAL(openShare(dcpp::UserPtr,QString,QString)),
+                this, SLOT(showShareBrowser(dcpp::UserPtr,QString,QString)), Qt::QueuedConnection);
+        connect(ShareIndexListListener::getInstance(), SIGNAL(queueEmpty()),
+                this, SLOT(slotShareIndexQueueEmpty()), Qt::QueuedConnection);
+    }
 
     d->arena = new QDockWidget();
     d->arena->setWidget(nullptr);
@@ -1685,6 +1692,11 @@ void MainWindow::showPortsError(const string& port) {
 }
 void MainWindow::showShareBrowser(dcpp::UserPtr usr, const QString &file, const QString &jump_to){
     ArenaWidgetFactory().create<ShareBrowser, UserPtr, QString, QString>(usr, file, jump_to);
+}
+
+void MainWindow::slotShareIndexQueueEmpty()
+{
+    emit notifyMessage(Notification::TRANSFER, tr("Download Queue"), tr("All downloads complete"));
 }
 
 void MainWindow::reloadSomeSettings(){
