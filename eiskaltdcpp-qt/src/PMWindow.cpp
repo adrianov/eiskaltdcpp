@@ -423,12 +423,12 @@ void PMWindow::addStatus(QString msg){
     addOutput(status);
 }
 
-void PMWindow::addOutput(QString msg){
+void PMWindow::addOutput(QString msg, bool markUnread){
     msg.replace("\r", "");
     msg = "<pre>" + msg + "</pre>";
     textEdit_CHAT->append(msg);
 
-    if (!isVisible()) {
+    if (markUnread && !isVisible()) {
         hasMessages = true;
         MainWindow::getInstance()->redrawToolPanel();
     }

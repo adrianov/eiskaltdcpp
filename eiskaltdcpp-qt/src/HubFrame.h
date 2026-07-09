@@ -90,7 +90,7 @@ public:
     inline void reconnect() { slotReconnect(); }
 
     // PM functions
-    void addPM(QString, QString, bool keepfocus = true, QString nick = QString());
+    void addPM(QString, QString, bool keepfocus = true, QString nick = QString(), bool markUnread = true);
 
     // Arena Widget interface
     QWidget *getWidget();

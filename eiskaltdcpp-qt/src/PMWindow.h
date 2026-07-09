@@ -87,7 +87,7 @@ protected:
 
 private:
     void addStatusMessage(const QString &);
-    void addOutput(QString);
+    void addOutput(QString, bool markUnread = true);
     void addUserData(const QString &);
 
     void updateStyles();

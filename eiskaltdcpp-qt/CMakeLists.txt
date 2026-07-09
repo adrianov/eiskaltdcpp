@@ -93,6 +93,8 @@ set(QT_EXTRA_SOURCES
     src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
     src/HubFrameMenuExec.cpp
+    src/HubFrameMsg.cpp
+    src/HubFrameUsers.cpp
     src/TransferDisplay.cpp
     src/TransferViewActions.cpp
     src/TransferViewConnectionListeners.cpp
@@ -108,6 +110,11 @@ set(QT_EXTRA_SOURCES
     src/TransferViewPath.cpp
     src/TransferViewMetrics.cpp
     src/TransferViewUploadListeners.cpp
+    src/UserListItem.cpp
+    src/UserListModelData.cpp
+    src/UserListModelMatch.cpp
+    src/UserListModelMutate.cpp
+    src/UserListModelSort.cpp
 )
 foreach(_src ${QT_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
