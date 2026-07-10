@@ -177,6 +177,9 @@ private:
 
     void setDirty();
 
+    void putDownloadBody(Download* d, bool finished, HintedUserList& getConn,
+            string& fl_fname, HintedUser& fl_user, int& fl_flag);
+
     bool checkSfv(QueueItem* qi, Download* d);
     uint32_t calcCrc32(const string& file);
 

@@ -29,6 +29,11 @@ public:
     /** True when the online user's reported share size matches cached metadata. */
     static bool matchesShare(const UserPtr& user);
     static bool matchesUserShare(const HintedUser& user, const string& listBase);
+    /**
+     * Empty FileListing.xml.bz2 is ~200 bytes. Reject that as a cache hit when the hub
+     * advertises a real share — usually a wrong-peer or stub list.
+     */
+    static bool isPlausibleList(int64_t shareSize, int64_t listSize);
     /** Downloaded XML/XML.BZ2 byte size, or -1 when no size was recorded. */
     static int64_t fileSize(const CID& cid);
     static void saveListMeta(const CID& cid, int64_t shareSize, int64_t fileSize,
