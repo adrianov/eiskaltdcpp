@@ -109,6 +109,7 @@ set(DCPP_EXTRA_SOURCES
     ScriptManagerLua.cpp
     ScriptManagerLuaQuery.cpp
     ScriptManagerEval.cpp
+    ShareManagerFile.cpp
 )
 foreach(_src ${DCPP_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})
