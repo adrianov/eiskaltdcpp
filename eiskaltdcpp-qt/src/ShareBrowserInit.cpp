@@ -104,6 +104,16 @@ void ShareBrowser::continueInit(){
         list_model->setOwnList(true);
     }
 
+    // Flat lists have no subfolders; select root so the right pane shows files immediately.
+    const QModelIndex rootIdx = tree_model->index(0, 0);
+    if (rootIdx.isValid()) {
+        treeView_LPANE->selectionModel()->select(rootIdx,
+                QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+        changeRoot(listing.getRoot());
+        lineEdit_PATH->setText(tree_model->createRemotePath(
+                static_cast<FileBrowserItem*>(rootIdx.internalPointer())));
+    }
+
     if (!jump_to.isEmpty()){
         FileBrowserItem *root = tree_model->getRootElem();
 
