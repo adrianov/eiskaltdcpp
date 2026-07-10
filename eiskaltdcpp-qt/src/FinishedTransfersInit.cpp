@@ -9,6 +9,7 @@
 
 #include "FinishedTransfers.h"
 #include "FinishedTransfersProxy.h"
+#include "SearchFileTypes.h"
 #include "WulforSettings.h"
 
 template <bool isUpload>
@@ -67,6 +68,8 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
     QObject::connect(this, SIGNAL(coreEndBulkLoad()), model, SLOT(endBulkLoad()), Qt::QueuedConnection);
 
     QObject::connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
+    SearchFileTypes::fillCombo(comboBox_FILETYPES);
+
     QObject::connect(comboBox, SIGNAL(activated(int)), this, SLOT(slotTypeChanged(int)));
     QObject::connect(pushButton, SIGNAL(clicked()), this, SLOT(slotClear()));
     QObject::connect(treeView, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(slotItemDoubleClicked(const QModelIndex &)));
@@ -74,6 +77,7 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
     QObject::connect(treeView->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu()));
     QObject::connect(checkBox_FULL, SIGNAL(toggled(bool)), this, SLOT(slotSwitchOnlyFull(bool)));
     QObject::connect(lineEdit_FILTER, SIGNAL(textChanged(QString)), this, SLOT(slotFilterText(QString)));
+    QObject::connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(slotFileTypeChanged(int)));
 
     if (isUpload) {
         FinishedTransfers::slotSwitchOnlyFull(false);
@@ -82,113 +86,10 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
         FinishedTransfers::slotSwitchOnlyFull(true);
     }
     FinishedTransfers::slotTypeChanged(0);
+    FinishedTransfers::slotFileTypeChanged(comboBox_FILETYPES->currentIndex());
 
     ArenaWidget::setState( ArenaWidget::Flags(ArenaWidget::state() | ArenaWidget::Singleton | ArenaWidget::Hidden) );
 }
 
-template <bool isUpload>
-FinishedTransfers<isUpload>::~FinishedTransfers(){
-    QString key = (comboBox->currentIndex() == 0)? WS_FTRANSFERS_FILES_STATE : WS_FTRANSFERS_USERS_STATE;
-    WVSET(key, treeView->header()->saveState());
-
-    FinishedManager::getInstance()->removeListener(this);
-
-    model->clearModel();
-
-#ifdef USE_QT_SQLITE
-    // Close then drop the registry entry before QApplication teardown
-    // (QtSql post-routines abort in sqlite if connections linger).
-    const QString conn = db.connectionName();
-    db.close();
-    db = QSqlDatabase();
-    if (!conn.isEmpty())
-        QSqlDatabase::removeDatabase(conn);
-#endif
-
-    delete proxy;
-    delete model;
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotTypeChanged(int index) {
-    QString from_key = (index == 0)? WS_FTRANSFERS_USERS_STATE : WS_FTRANSFERS_FILES_STATE;
-    QString to_key = (index == 0)? WS_FTRANSFERS_FILES_STATE : WS_FTRANSFERS_USERS_STATE;
-    QByteArray old_state = treeView->header()->saveState();
-
-    if (sender() == comboBox)
-        WVSET(from_key, old_state);
-
-    QByteArray state = WVGET(to_key, QByteArray()).toByteArray();
-    WulforUtil::restoreTreeHeader(treeView->header(), state);
-    treeView->setSortingEnabled(true);
-
-    model->switchViewType(static_cast<FinishedTransfersModel::ViewType>(index));
-
-    if (state.isEmpty())
-        treeView->sortByColumn(COLUMN_FINISHED_TIME, Qt::AscendingOrder);
-    else {
-        const int sortCol = treeView->header()->sortIndicatorSection();
-        if (sortCol >= 0)
-            treeView->sortByColumn(sortCol, treeView->header()->sortIndicatorOrder());
-    }
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotClear() {
-    model->clearModel();
-
-    try {
-        FinishedManager::getInstance()->removeAll(isUpload);
-    }
-    catch (const std::exception&){}
-
-#ifdef USE_QT_SQLITE
-    if (!db_opened)
-        return;
-
-    QSqlQuery q(db);
-    q.exec("DROP TABLE files;");
-    q.exec("DROP TABLE users;");
-#endif
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotHeaderMenu() {
-    WulforUtil::headerMenu(treeView);
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotSwitchOnlyFull(bool checked) {
-    proxy->setFullOnly(checked);
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotFilterText(const QString &text) {
-    proxy->setTextFilter(text);
-}
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::slotSettingsChanged(const QString &key, const QString &) {
-    if (key == WS_TRANSLATION_FILE) {
-        retranslateUi(this);
-        lineEdit_FILTER->setPlaceholderText(tr("Filter"));
-        lineEdit_FILTER->setToolTip(tr("Filter by name, path, or user"));
-    }
-}
-
 template FinishedTransfers<true>::FinishedTransfers(QWidget*);
 template FinishedTransfers<false>::FinishedTransfers(QWidget*);
-template FinishedTransfers<true>::~FinishedTransfers();
-template FinishedTransfers<false>::~FinishedTransfers();
-template void FinishedTransfers<true>::slotTypeChanged(int);
-template void FinishedTransfers<false>::slotTypeChanged(int);
-template void FinishedTransfers<true>::slotClear();
-template void FinishedTransfers<false>::slotClear();
-template void FinishedTransfers<true>::slotHeaderMenu();
-template void FinishedTransfers<false>::slotHeaderMenu();
-template void FinishedTransfers<true>::slotSwitchOnlyFull(bool);
-template void FinishedTransfers<false>::slotSwitchOnlyFull(bool);
-template void FinishedTransfers<true>::slotFilterText(const QString&);
-template void FinishedTransfers<false>::slotFilterText(const QString&);
-template void FinishedTransfers<true>::slotSettingsChanged(const QString&, const QString&);
-template void FinishedTransfers<false>::slotSettingsChanged(const QString&, const QString&);

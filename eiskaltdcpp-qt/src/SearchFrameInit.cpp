@@ -10,6 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchFrameLocal.h"
+#include "SearchFileTypes.h"
 #include "SearchModel.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
@@ -53,34 +54,7 @@ void SearchFrame::init(){
     d->arena_menu = new QMenu(this->windowTitle());
     QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), d->arena_menu);
     d->arena_menu->addAction(close_wnd);
-    const SettingsManager::SearchTypes &searchTypes = SettingsManager::getInstance()->getSearchTypes();
-    QStringList filetypes;
-    // Predefined
-    for (int i = SearchManager::TYPE_ANY; i < SearchManager::TYPE_LAST; i++)
-    {
-            filetypes << _q(SearchManager::getTypeStr(i));
-    }
-
-    // Customs
-    for (const auto &i : searchTypes)
-    {
-        string type = i.first;
-        if (!(type.size() == 1 && type[0] >= '1' && type[0] <= '7'))
-        {
-                filetypes << _q(type);
-        }
-    }
-    comboBox_FILETYPES->addItems(filetypes);
-    comboBox_FILETYPES->setCurrentIndex(0);
-
-    QList<WulforUtil::Icons> icons;
-    icons   << WulforUtil::eiFILETYPE_UNKNOWN  << WulforUtil::eiFILETYPE_MP3         << WulforUtil::eiFILETYPE_ARCHIVE
-            << WulforUtil::eiFILETYPE_DOCUMENT << WulforUtil::eiFILETYPE_APPLICATION << WulforUtil::eiFILETYPE_PICTURE
-            << WulforUtil::eiFILETYPE_VIDEO    << WulforUtil::eiFOLDER_BLUE          << WulforUtil::eiFIND
-            << WulforUtil::eiFILETYPE_ARCHIVE;
-
-    for (int i = 0; i < icons.size(); i++)
-        comboBox_FILETYPES->setItemIcon(i, WICON(icons.at(i)));
+    SearchFileTypes::fillCombo(comboBox_FILETYPES);
 
     QString     raw  = QByteArray::fromBase64(WSGET(WS_SEARCH_HISTORY).toUtf8());
     d->searchHistory = raw.replace("\r","").split('\n', WULFOR_SKIP_EMPTY);

@@ -65,6 +65,7 @@ public Q_SLOTS:
     virtual void slotHeaderMenu() = 0;
     virtual void slotSwitchOnlyFull(bool) = 0;
     virtual void slotFilterText(const QString &) = 0;
+    virtual void slotFileTypeChanged(int) = 0;
     virtual void slotSettingsChanged(const QString &key, const QString &) = 0;
 };
 
@@ -127,6 +128,7 @@ private:
     void slotHeaderMenu() override;
     void slotSwitchOnlyFull(bool checked) override;
     void slotFilterText(const QString &text) override;
+    void slotFileTypeChanged(int index) override;
     void slotSettingsChanged(const QString &key, const QString &) override;
 
     void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override;

@@ -14,6 +14,8 @@
 #include "dcpp/Util.h"
 #include "WulforUtil.h"
 
+#include <QFileInfo>
+
 using namespace dcpp;
 
 bool isFinishedFileList(const string &path) {
@@ -47,6 +49,20 @@ void FinishedTransferProxyModel::setTextFilter(const QString &text) {
     invalidateFilter();
 }
 
+void FinishedTransferProxyModel::setFileView(bool fileView) {
+    if (fileView_ == fileView)
+        return;
+    fileView_ = fileView;
+    invalidateFilter();
+}
+
+void FinishedTransferProxyModel::setExtFilter(const QStringList &exts) {
+    if (extFilter_ == exts)
+        return;
+    extFilter_ = exts;
+    invalidateFilter();
+}
+
 bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
     const QAbstractItemModel *model = sourceModel();
     if (!model)
@@ -75,6 +91,16 @@ bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelInd
 
     if (fullOnly_ && model->data(fullIndex, Qt::DisplayRole).toString() != QLatin1String("1"))
         return false;
+
+    if (fileView_ && !extFilter_.isEmpty()) {
+        QString candidate = model->data(targetIndex, Qt::DisplayRole).toString();
+        if (candidate.isEmpty())
+            candidate = model->data(pathIndex, Qt::DisplayRole).toString() +
+                        model->data(nameIndex, Qt::DisplayRole).toString();
+        const QString ext = QFileInfo(candidate).suffix().toUpper();
+        if (ext.isEmpty() || !extFilter_.contains(ext))
+            return false;
+    }
 
     if (!textFilter_.isEmpty()) {
         const Qt::CaseSensitivity cs = Qt::CaseInsensitive;
