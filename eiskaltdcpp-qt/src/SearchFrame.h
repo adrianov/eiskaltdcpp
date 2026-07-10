@@ -67,6 +67,8 @@ class SearchFrame : public QWidget,
             DownloadTo,
             DownloadWholeDir,
             DownloadWholeDirTo,
+            OpenFile,
+            OpenDirectory,
             SearchTTH,
             CopyFileName,
             Magnet,
@@ -85,7 +87,7 @@ class SearchFrame : public QWidget,
             None
         };
 
-        Action exec(const QStringList &);
+        Action exec(const QStringList &, bool canOpenLocal = false);
         QMenu *buildUserCmdMenu(QList<QString> hubs);
         QString getDownloadToPath() { return downToPath; }
         int getCommandId() { return uc_cmd_id; }

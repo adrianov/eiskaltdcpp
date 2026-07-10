@@ -21,7 +21,7 @@
 
 using namespace dcpp;
 
-SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list){
+SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool canOpenLocal){
     for (const auto &a : action_list)
         a->setParent(nullptr);
 
@@ -79,12 +79,16 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list){
     down_to->addAction(browse);
     down_wh_to->addAction(browse1);
 
+    // Open file / Open directory are action_list[2] and [3]
+    action_list.at(2)->setEnabled(canOpenLocal);
+    action_list.at(3)->setEnabled(canOpenLocal);
+
     menu->clear();
     menu->addActions(action_list);
     menu->insertMenu(action_list.at(1), down_to);
     menu->insertMenu(action_list.at(2), down_wh_to);
-    menu->insertMenu(action_list.at(6), magnet_menu);
-    menu->insertMenu(action_list.at(13), black_list_menu);
+    menu->insertMenu(action_list.at(8), magnet_menu);
+    menu->insertMenu(action_list.at(15), black_list_menu);
 
     QScopedPointer<QMenu> userm(buildUserCmdMenu(list));
 

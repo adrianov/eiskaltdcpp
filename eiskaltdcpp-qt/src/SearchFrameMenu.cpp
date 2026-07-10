@@ -30,6 +30,12 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     down_wh_to          = new QMenu(tr("Download Whole Directory to..."));
     down_wh_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
 
+    QAction *open_file  = new QAction(tr("Open file"), nullptr);
+    open_file->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+
+    QAction *open_dir   = new QAction(tr("Open directory"), nullptr);
+    open_dir->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+
     QAction *sep        = new QAction(menu);
     sep->setSeparator(true);
 
@@ -92,6 +98,8 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
 
     actions.insert(down, Download);
     actions.insert(down_wh, DownloadWholeDir);
+    actions.insert(open_file, OpenFile);
+    actions.insert(open_dir, OpenDirectory);
     actions.insert(find_tth, SearchTTH);
     actions.insert(copy_name, CopyFileName);
     actions.insert(magnet, Magnet);
@@ -107,7 +115,7 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(blacklist, Blacklist);
     actions.insert(add_to_blacklist, AddToBlacklist);
 
-    action_list << down << down_wh << sep << find_tth << copy_name << browse << match
+    action_list << down << down_wh << open_file << open_dir << sep << find_tth << copy_name << browse << match
                 << send_pm << add_to_fav << grant << sep1 << rem_queue << rem << sep2;
 }
 

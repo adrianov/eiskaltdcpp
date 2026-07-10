@@ -12,6 +12,7 @@
 #include "SearchModel.h"
 #include "SearchBlacklist.h"
 #include "SearchBlacklistDialog.h"
+#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "Magnet.h"
 #include "ArenaWidgetFactory.h"
@@ -46,6 +47,7 @@ void SearchFrame::slotContextMenu(const QPoint &){
         Menu::newInstance();
 
     QStringList hubs;
+    bool canOpenLocal = false;
 
     for (const auto &i : list){
         SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
@@ -53,9 +55,12 @@ void SearchFrame::slotContextMenu(const QPoint &){
 
         if (!hubs.contains(host))
             hubs.push_back(host);
+
+        if (!item->isDir && !SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString()).isEmpty())
+            canOpenLocal = true;
     }
 
-    Menu::Action act = Menu::getInstance()->exec(hubs);
+    Menu::Action act = Menu::getInstance()->exec(hubs, canOpenLocal);
 
     switch (act){
         case Menu::None:
@@ -68,6 +73,8 @@ void SearchFrame::slotContextMenu(const QPoint &){
         case Menu::DownloadWholeDirTo:
             contextDownloads(act, list);
             break;
+        case Menu::OpenFile:
+        case Menu::OpenDirectory:
         case Menu::SearchTTH:
         case Menu::CopyFileName:
         case Menu::Magnet:
@@ -93,4 +100,3 @@ void SearchFrame::slotContextMenu(const QPoint &){
         }
     }
 }
-

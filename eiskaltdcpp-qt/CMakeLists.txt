@@ -137,6 +137,7 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameTimer.cpp
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
+    src/SearchLocalPath.cpp
     src/SearchFileTypes.cpp
     src/SearchModelSort.cpp
     src/SearchModelAdd.cpp

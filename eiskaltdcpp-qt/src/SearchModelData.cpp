@@ -8,11 +8,9 @@
  ***************************************************************************/
 
 #include "SearchModel.h"
-#include "SearchFrame.h"
+#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "AppTheme.h"
-
-#include "dcpp/ShareManager.h"
 
 using namespace dcpp;
 
@@ -24,7 +22,7 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
     SearchItem *item = static_cast<SearchItem*>(index.internalPointer());
 
     switch(role) {
-        case Qt::DecorationRole: // icon
+        case Qt::DecorationRole:
         {
             if (index.column() == COLUMN_SF_FILENAME && !item->isDir)
                 return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_SF_FILENAME).toString()), 16);
@@ -50,34 +48,28 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         }
         case Qt::ForegroundRole:
         {
-            if (filterRole == static_cast<int>(SearchFrame::Highlight)){
-                TTHValue t(_tq(item->data(COLUMN_SF_TTH).toString()));
+            if (item->isDir)
+                break;
 
-                if (ShareManager::getInstance()->isTTHShared(t)){
-                    static QColor c;
-
-                    c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
-                    c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
-
-                    return c;
-                }
+            const QString localPath = SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString());
+            if (!localPath.isEmpty()) {
+                static QColor c;
+                c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
+                c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
+                return c;
             }
-
             break;
         }
         case Qt::BackgroundColorRole:
             break;
         case Qt::ToolTipRole:
         {
-            TTHValue t(_tq(item->data(COLUMN_SF_TTH).toString()));
-            ShareManager *SM = ShareManager::getInstance();
+            if (item->isDir)
+                break;
 
-            try{
-                QString toolTip = _q(SM->toReal(SM->toVirtual(t)));
-
-                return tr("File already exists: %1").arg(toolTip);
-            }catch( ... ){}
-
+            const QString localPath = SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString());
+            if (!localPath.isEmpty())
+                return tr("File already exists: %1").arg(localPath);
             break;
         }
         default: break;

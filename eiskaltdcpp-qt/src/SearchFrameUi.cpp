@@ -10,6 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
+#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 
 #include "dcpp/SearchManager.h"
@@ -90,6 +91,15 @@ void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
     QModelIndex i = d->proxy? d->proxy->mapToSource(index) : index;
 
     SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+
+    if (!item->isDir) {
+        const QString tth = item->data(COLUMN_SF_TTH).toString();
+        if (!SearchLocalPath::resolve(tth).isEmpty()) {
+            SearchLocalPath::openDirectory(tth);
+            return;
+        }
+    }
+
     VarMap params;
 
     if (getDownloadParams(params, item)){
@@ -98,8 +108,8 @@ void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
         if (item->childCount() > 0 && !SETTING(DONT_DL_ALREADY_QUEUED)){//download all child items
             QString fname = params["FNAME"].toString();
 
-            for (const auto &i : item->childItems){
-                if (getDownloadParams(params, i)){
+            for (const auto &child : item->childItems){
+                if (getDownloadParams(params, child)){
                     params["FNAME"] = fname;
 
                     download(params);

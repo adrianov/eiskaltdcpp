@@ -10,6 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
+#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "DownloadToHistory.h"
 #include "ArenaWidgetFactory.h"
@@ -31,6 +32,24 @@ using namespace dcpp;
 bool SearchFrame::contextMoreActions(Menu::Action act, const QModelIndexList &list)
 {
     switch (act){
+        case Menu::OpenFile:
+        {
+            for (const auto &i : list){
+                SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+                if (!item->isDir)
+                    SearchLocalPath::openFile(item->data(COLUMN_SF_TTH).toString());
+            }
+            break;
+        }
+        case Menu::OpenDirectory:
+        {
+            for (const auto &i : list){
+                SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+                if (!item->isDir)
+                    SearchLocalPath::openDirectory(item->data(COLUMN_SF_TTH).toString());
+            }
+            break;
+        }
         case Menu::SearchTTH:
         {
             for (const auto &i : list){
