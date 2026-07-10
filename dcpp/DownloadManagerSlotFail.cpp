@@ -154,7 +154,11 @@ void DownloadManager::fileNotAvailable(UserConnection* aSource) {
     removeDownload(d);
     fire(DownloadManagerListener::Failed(), d, str(F_("%1%: File not available") % Util::addBrackets(d->getTargetFileName())));
 
-    QueueManager::getInstance()->removeSource(d->getPath(), aSource->getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE, false);
+    // Tree FNF: peer may still have the file — skip further tthl and keep source when allowed.
+    const int reason = (d->getType() == Transfer::TYPE_TREE)
+        ? QueueItem::Source::FLAG_NO_TREE
+        : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE;
+    QueueManager::getInstance()->removeSource(d->getPath(), aSource->getUser(), reason, false);
 
     QueueManager::getInstance()->putDownload(d, false);
 

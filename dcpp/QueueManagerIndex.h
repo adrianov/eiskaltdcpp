@@ -101,6 +101,8 @@ public:
     void remove(QueueItem* qi, bool removeRunning = true);
     void remove(QueueItem* qi, const UserPtr& aUser, bool removeRunning = true);
     void setPriority(QueueItem* qi, QueueItem::Priority p);
+    /** Move a partial with progress ahead of not-started items for each source. */
+    void promotePartial(QueueItem* qi);
 
     QueueItem::UserMap& getRunning() { return running; }
     bool isRunning(const UserPtr& aUser) const {

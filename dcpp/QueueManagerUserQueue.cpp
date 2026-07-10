@@ -20,9 +20,6 @@
 #include "QueueManagerIndex.h"
 
 #include "Download.h"
-#include "HashManager.h"
-#include "Segment.h"
-#include "Transfer.h"
 #include "Util.h"
 
 namespace dcpp {
@@ -41,57 +38,6 @@ void UserQueue::add(QueueItem* qi, const UserPtr& aUser) {
     } else {
         l.push_back(qi);
     }
-}
-
-QueueItem* UserQueue::getNext(const UserPtr& aUser, QueueItem::Priority minPrio, int64_t wantedSize,int64_t lastSpeed,bool allowRemove) {
-    int p = QueueItem::LAST - 1;
-    string lastError = Util::emptyString;
-
-    do {
-        auto i = userQueue[p].find(aUser);
-        if(i != userQueue[p].end()) {
-            dcassert(!i->second.empty());
-            for(auto qi: i->second) {
-                QueueItem::SourceConstIter source = qi->getSource(aUser);
-                if(source->isSet(QueueItem::Source::FLAG_PARTIAL)) {
-                    auto blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
-                    if(blockSize == 0)
-                        blockSize = qi->getSize();
-
-                    Segment segment = qi->getNextSegment(blockSize, wantedSize, lastSpeed, source->getPartialSource());
-                    if(allowRemove && segment.getStart() != -1 && segment.getSize() == 0) {
-                        remove(qi, aUser);
-                        qi->removeSource(aUser, QueueItem::Source::FLAG_NO_NEED_PARTS);
-                        lastError = _("No needed part");
-                        p++;
-                        break;
-                    }
-                }
-                if(qi->isWaiting()) {
-                    return qi;
-                }
-
-                if(qi->getDownloads()[0]->getType() == Transfer::TYPE_TREE) {
-                    continue;
-                }
-                if(!qi->isSet(QueueItem::FLAG_USER_LIST)) {
-                    auto blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
-                    if(blockSize == 0)
-                        blockSize = qi->getSize();
-                    if(qi->getNextSegment(blockSize, wantedSize,lastSpeed, source->getPartialSource()).getSize() == 0) {
-                        dcdebug("No segment for %s in %s, block " I64_FMT "\n",
-                                aUser->getCID().toBase32().c_str(), qi->getTarget().c_str(),
-                                static_cast<long long int>(blockSize));
-                        continue;
-                    }
-                }
-                return qi;
-            }
-        }
-        p--;
-    } while(p >= minPrio);
-
-    return NULL;
 }
 
 void UserQueue::addDownload(QueueItem* qi, Download* d) {

@@ -32,6 +32,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerSave.cpp
     QueueManagerSource.cpp
     QueueManagerUserQueue.cpp
+    QueueManagerUserQueueNext.cpp
     QueueManagerWorkers.cpp
     QueueManagerRecheck.cpp
     QueueManagerPartial.cpp
@@ -81,6 +82,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
     ConnectionManagerNmdcHandshake.cpp
+    ConnectionManagerNmdcMyNick.cpp
     ConnectionManagerAssoc.cpp
     ConnectionManagerAdcHandshake.cpp
     ConnectionManagerConnectOut.cpp

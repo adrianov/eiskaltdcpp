@@ -157,6 +157,9 @@ int Rechecker::run() {
         for(auto& i : sizes)
             q->addSegment(Segment(i.first, i.second));
 
+        if(q->getDownloadedBytes() > 0)
+            qm->userQueue.promotePartial(q);
+
         qm->rechecked(q);
     }
     return 0;

@@ -105,6 +105,7 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
 
                         string dir;
                         bool crcError = false;
+                        const bool wasEmpty = q->getDownloadedBytes() == 0;
                         if(d->getType() == Transfer::TYPE_FULL_LIST) {
                             dir = q->getTempTarget();
                             q->addSegment(Segment(0, q->getSize()));
@@ -113,6 +114,8 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
                                 File::getSize(q->getListName()));
                         } else if(d->getType() == Transfer::TYPE_FILE) {
                             q->addSegment(d->getSegment());
+                            if(wasEmpty)
+                                userQueue.promotePartial(q);
                         }
 
                         if (q->isFinished() && BOOLSETTING(SFV_CHECK)) {
@@ -156,7 +159,10 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
                             downloaded -= downloaded % d->getTigerTree().getBlockSize();
 
                             if(downloaded > 0) {
+                                const bool wasEmpty = q->getDownloadedBytes() == 0;
                                 q->addSegment(Segment(d->getStartPos(), downloaded));
+                                if(wasEmpty)
+                                    userQueue.promotePartial(q);
                                 setDirty();
                             }
                         }
