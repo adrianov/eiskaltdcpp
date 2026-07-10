@@ -23,8 +23,6 @@
 #include "ClientManager.h"
 #include "DebugManager.h"
 #include "FavoriteManager.h"
-#include "format.h"
-#include "HubReconnectFilter.h"
 #include "TimerManager.h"
 #include "Util.h"
 #include "Text.h"
@@ -56,51 +54,6 @@ Client::~Client() {
     FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
     TimerManager::getInstance()->removeListener(this);
     updateCounts(true);
-}
-
-void Client::reconnect() {
-    disconnect(true);
-    setReconnAttempts(0);
-    setAutoReconnect(true);
-    setReconnDelay(0);
-}
-
-void Client::resetReconnBackoff() {
-    setReconnAttempts(0);
-    setReconnDelay(HubReconnectFilter::delaySec(1));
-}
-
-void Client::scheduleReconnectBackoff() {
-    const uint32_t attempts = getReconnAttempts() + 1;
-    setReconnAttempts(attempts);
-    const int delay = HubReconnectFilter::delaySec(attempts);
-    setReconnDelay(delay);
-    const time_t nextAt = GET_TIME() + delay;
-    const string timeStr = delay >= 3600 ? Util::getTimeString(nextAt, "%Y-%m-%d %H:%M") : Util::getTimeString(nextAt);
-    fire(ClientListener::StatusMessage(), this,
-         str(F_("Reconnect planned at %1% (in %2%)") % timeStr % HubReconnectFilter::delayLabel(attempts)),
-         ClientListener::FLAG_NORMAL);
-}
-
-void Client::onConnectFailed(const string& aLine) {
-    state = STATE_DISCONNECTED;
-    FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
-    if(sock)
-        sock->removeListener(this);
-    if(getAutoReconnect() && HubReconnectFilter::shouldGiveUp(getReconnAttempts())) {
-        setAutoReconnect(false);
-        fire(ClientListener::StatusMessage(), this,
-             str(F_("Giving up hub reconnect after %1% failed attempts") % getReconnAttempts()),
-             ClientListener::FLAG_NORMAL);
-    } else if(getAutoReconnect()) {
-        scheduleReconnectBackoff();
-    }
-    updateActivity();
-    fire(ClientListener::Failed(), this, aLine);
-}
-
-void Client::on(Failed, const string& aLine) noexcept {
-    onConnectFailed(aLine);
 }
 
 void Client::shutdown() {
@@ -150,30 +103,6 @@ void Client::updated(OnlineUserList& users) {
 void Client::on(Line, const string& aLine) noexcept {
     updateActivity();
     COMMAND_DEBUG((Util::stricmp(getEncoding(), Text::utf8) != 0 ? Text::toUtf8(aLine, getEncoding()) : aLine), DebugManager::HUB_IN, getIpPort())
-}
-
-bool Client::tryAlternateNick() {
-    FavoriteManager* fm = FavoriteManager::getInstance();
-    const string oldNick = getCurrentNick();
-    const string next = fm->nextHubNick(getHubUrl(), oldNick);
-    if(next.empty())
-        return false;
-
-    fm->setHubNick(getHubUrl(), next);
-    setCurrentNick(checkNick(next));
-
-    fire(ClientListener::StatusMessage(), this,
-         str(F_("Nick \"%1%\" is taken, trying \"%2%\"...") % oldNick % next),
-         ClientListener::FLAG_NORMAL);
-
-    disconnect(true);
-    setAutoReconnect(true);
-    resetReconnBackoff();
-    return true;
-}
-
-void Client::storeHubNick() {
-    FavoriteManager::getInstance()->setHubNick(getHubUrl(), getCurrentNick());
 }
 
 #ifdef LUA_SCRIPT

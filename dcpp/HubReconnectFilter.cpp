@@ -10,7 +10,11 @@
 #include "stdinc.h"
 #include "HubReconnectFilter.h"
 
+#include "CriticalSection.h"
 #include "format.h"
+#include "TimerManager.h"
+
+#include <unordered_map>
 
 namespace dcpp {
 namespace HubReconnectFilter {
@@ -27,6 +31,35 @@ constexpr int DELAYS_SEC[] = {
     43200,   // 12 hours
     86400    // 1 day
 };
+
+struct DayCount {
+    int day = 0;
+    int count = 0;
+};
+
+CriticalSection cs;
+unordered_map<string, DayCount> byHub;
+
+int localDayKey() {
+    const time_t now = GET_TIME();
+    tm local{};
+#if defined(_WIN32)
+    localtime_s(&local, &now);
+#else
+    localtime_r(&now, &local);
+#endif
+    return (local.tm_year + 1900) * 10000 + (local.tm_mon + 1) * 100 + local.tm_mday;
+}
+
+DayCount& hubDay(const string& hubUrl) {
+    auto& e = byHub[hubUrl];
+    const int day = localDayKey();
+    if(e.day != day) {
+        e.day = day;
+        e.count = 0;
+    }
+    return e;
+}
 
 } // namespace
 
@@ -51,6 +84,23 @@ string delayLabel(int attempts) {
     case 7: return _("12 hours");
     default: return _("1 day");
     }
+}
+
+int noteDisconnect(const string& hubUrl) {
+    Lock l(cs);
+    auto& e = hubDay(hubUrl);
+    ++e.count;
+    return e.count;
+}
+
+int todayCount(const string& hubUrl) {
+    Lock l(cs);
+    return hubDay(hubUrl).count;
+}
+
+void clearToday(const string& hubUrl) {
+    Lock l(cs);
+    byHub.erase(hubUrl);
 }
 
 } // namespace HubReconnectFilter

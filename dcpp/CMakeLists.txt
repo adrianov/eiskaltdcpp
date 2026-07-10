@@ -11,6 +11,7 @@ set(DCPP_EXTRA_SOURCES
     DirectoryListingDir.cpp
     IncomingPortCheck.cpp
     ClientConnect.cpp
+    ClientReconnect.cpp
     ClientManagerConnect.cpp
     ClientManagerConnectHub.cpp
     ClientManagerHubGuard.cpp

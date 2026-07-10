@@ -90,7 +90,7 @@ void Client::connect() {
     }
 
     setAutoReconnect(true);
-    if(getReconnAttempts() == 0)
+    if(HubReconnectFilter::todayCount(getHubUrl()) == 0)
         setReconnDelay(HubReconnectFilter::delaySec(1));
     reloadSettings(true);
     setRegistered(false);
