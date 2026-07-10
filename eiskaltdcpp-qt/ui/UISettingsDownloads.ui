@@ -967,7 +967,7 @@ from the queue either, you must do that manually.</string>
        <item>
         <widget class="QCheckBox" name="checkBox_ALLOW_SIM_UPLOADS">
          <property name="text">
-          <string>Allow simultaneous uploads by one user from few NMDC hubs</string>
+          <string>Allow multiple upload connections from the same user</string>
          </property>
         </widget>
        </item>

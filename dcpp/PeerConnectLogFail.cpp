@@ -15,6 +15,8 @@
 #include "UserConnection.h"
 #include "format.h"
 
+#include <unordered_map>
+
 namespace dcpp {
 
 namespace {
@@ -134,7 +136,35 @@ void connectionReject(const UserConnection* uc, const string& reason) {
     if(!uc)
         return;
 
+    // Peers that spam $ConnectToMe while an upload slot is held can reject hundreds of
+    // times per minute; keep one line per user per minute with a suppressed count.
+    static CriticalSection rejectCs;
+    static unordered_map<CID, pair<uint64_t, unsigned>> rejectLog;
+    constexpr uint64_t kRejectLogInterval = 60 * 1000;
+    unsigned suppressed = 0;
+    if(uc->getUser()) {
+        Lock l(rejectCs);
+        const uint64_t tick = GET_TICK();
+        auto& entry = rejectLog[uc->getUser()->getCID()];
+        if(entry.first && tick < entry.first + kRejectLogInterval) {
+            ++entry.second;
+            return;
+        }
+        suppressed = entry.second;
+        entry = { tick, 0 };
+        if(rejectLog.size() > 256) {
+            for(auto it = rejectLog.begin(); it != rejectLog.end(); ) {
+                if(tick >= it->second.first + kRejectLogInterval)
+                    it = rejectLog.erase(it);
+                else
+                    ++it;
+            }
+        }
+    }
+
     string msg = reason;
+    if(suppressed)
+        msg += str(F_(" (+%1% similar)") % suppressed);
     const string dirDetail = directionDetail(uc);
     if(!dirDetail.empty())
         msg += " [" + dirDetail + "]";

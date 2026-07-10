@@ -12,6 +12,7 @@
 
 #include "DownloadManager.h"
 #include "PeerConnectLog.h"
+#include "SettingsManager.h"
 #include "UploadManager.h"
 #include "UserConnection.h"
 
@@ -31,6 +32,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
             if(cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING) {
                 cqi->setState(ConnectionQueueItem::ACTIVE);
                 cqi->setSlotWaits(0);
+                cqi->setErrors(0);
                 uc->setFlag(UserConnection::FLAG_ASSOCIATED);
 
                 fire(ConnectionManagerListener::Connected(), cqi);
@@ -49,27 +51,52 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
     }
 }
 
+namespace {
+
+/** Idle upload waiting for $Get/$ADCGET — safe to replace on peer reconnect spam. */
+UserConnection* findIdleUpload(UserConnectionList& conns, UserConnection* uc) {
+    for(auto* existing : conns) {
+        if(existing == uc || existing->getUser() != uc->getUser())
+            continue;
+        if(!existing->isSet(UserConnection::FLAG_UPLOAD) ||
+                !existing->isSet(UserConnection::FLAG_ASSOCIATED))
+            continue;
+        if(existing->getState() == UserConnection::STATE_GET)
+            return existing;
+    }
+    return nullptr;
+}
+
+} // namespace
+
 void ConnectionManager::addUploadConnection(UserConnection* uc) {
     dcassert(uc->isSet(UserConnection::FLAG_UPLOAD));
 
     bool addConn = false;
+    UserConnection* stale = nullptr;
     {
         Lock l(cs);
 
-        auto i = find(uploads.begin(), uploads.end(), uc->getUser());
-        if(i == uploads.end()) {
-            ConnectionQueueItem* cqi = getCQI(uc->getHintedUser(), false);
+        const bool haveUpload = find(uploads.begin(), uploads.end(), uc->getUser()) != uploads.end();
+        stale = findIdleUpload(userConnections, uc);
 
+        if(!haveUpload || (!stale && BOOLSETTING(ALLOW_SIM_UPLOADS))) {
+            ConnectionQueueItem* cqi = getCQI(uc->getHintedUser(), false);
             cqi->setState(ConnectionQueueItem::ACTIVE);
             uc->setFlag(UserConnection::FLAG_ASSOCIATED);
-
             fire(ConnectionManagerListener::Connected(), cqi);
-
             PeerConnectLog::connected(cqi->getUser(), false);
-            dcdebug("ConnectionManager::addUploadConnection, leaving to uploadmanager\n");
+            addConn = true;
+        } else if(stale) {
+            // Reconnect while a prior socket sat idle — reuse the slot.
+            stale->unsetFlag(UserConnection::FLAG_ASSOCIATED);
+            uc->setFlag(UserConnection::FLAG_ASSOCIATED);
             addConn = true;
         }
     }
+
+    if(stale)
+        stale->disconnect(true);
 
     if(addConn) {
         UploadManager::getInstance()->addConnection(uc);

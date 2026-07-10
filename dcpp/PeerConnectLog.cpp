@@ -16,6 +16,8 @@
 #include "PeerConnectFilter.h"
 #include "format.h"
 
+#include <unordered_map>
+
 namespace dcpp {
 
 namespace {
@@ -112,6 +114,29 @@ void queueSlotWait(const HintedUser& user, int slotWaits, int backoffMin) {
 }
 
 void connected(const HintedUser& user, bool download) {
+    if(!download && user.user) {
+        // Upload connect churn (peer $ConnectToMe spam) can log hundreds of lines/min.
+        static CriticalSection cs;
+        static unordered_map<CID, pair<uint64_t, unsigned>> last;
+        constexpr uint64_t kInterval = 60 * 1000;
+        unsigned suppressed = 0;
+        {
+            Lock l(cs);
+            const uint64_t tick = GET_TICK();
+            auto& e = last[user.user->getCID()];
+            if(e.first && tick < e.first + kInterval) {
+                ++e.second;
+                return;
+            }
+            suppressed = e.second;
+            e = { tick, 0 };
+        }
+        string msg = str(F_("Connected to %1% (upload)") % userName(user));
+        if(suppressed)
+            msg += str(F_(" (+%1% similar)") % suppressed);
+        logMsg(withProfile(user, msg));
+        return;
+    }
     logMsg(withProfile(user, str(F_("Connected to %1% (%2%)") % userName(user) % (download ? "download" : "upload"))));
 }
 

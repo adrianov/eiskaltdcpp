@@ -27,7 +27,7 @@ ConnectionQueueItem* ConnectionManager::getCQI(const HintedUser& user, bool down
         dcassert(find(downloads.begin(), downloads.end(), user.user) == downloads.end());
         downloads.push_back(cqi);
     } else {
-        dcassert(find(uploads.begin(), uploads.end(), user.user) == uploads.end());
+        // Multiple upload CQIs per user are allowed when ALLOW_SIM_UPLOADS is on.
         uploads.push_back(cqi);
     }
 

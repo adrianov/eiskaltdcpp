@@ -14,6 +14,7 @@
 #include "ClientManager.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
+#include "SettingsManager.h"
 #include "UserConnection.h"
 #include "format.h"
 
@@ -29,6 +30,22 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
 
     if(checkHubCCBlock(aServer, aPort, hubUrl))
         return;
+
+    // Skip $ConnectToMe only when an idle upload already holds this IP (spam).
+    // Running transfers may open more sockets when ALLOW_SIM_UPLOADS is enabled.
+    {
+        Lock l(cs);
+        for(auto* existing : userConnections) {
+            if(!existing->isSet(UserConnection::FLAG_UPLOAD) ||
+                    !existing->isSet(UserConnection::FLAG_ASSOCIATED))
+                continue;
+            if(existing->getRemoteIp() != aServer)
+                continue;
+            if(existing->getState() == UserConnection::STATE_GET ||
+                    !BOOLSETTING(ALLOW_SIM_UPLOADS))
+                return;
+        }
+    }
 
     UserConnection* uc = getConnection(true, secure);
     uc->setToken(aNick);
