@@ -171,7 +171,9 @@ Keys for cmake
 -DUSE_QT_QML=ON/OFF (default: OFF)
     Enable/disable Qt Declarative UI support. Work only with Qt >= 4.7.0
 -DUSE_QT_SQLITE=ON/OFF (default: ON)
-    Build with SQLite support. (This is experimental option)
+    Build with SQLite (FinishedTransfers) and DuckDB ShareIndex.
+    On macOS, install DuckDB via Homebrew (`brew install duckdb`); packaging
+    copies libduckdb into the .app so the DMG runs without Homebrew.
 -----------------
 :eiskaltdcpp-gtk:
 -----------------
