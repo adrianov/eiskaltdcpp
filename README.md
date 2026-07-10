@@ -20,6 +20,7 @@ Currently supported features (not full list):
 
 * Programs with graphical user interface (UI) on Qt (main) and GTK+ (alternative), plus daemon which may be controlled from command line or from Web UI (connected via JSON-RPC).
 * Multi-threaded download (download fragments of a single file from several sources at once).
+* Alias-aware downloads avoid duplicate connections to the same NMDC user across multiple hubs.
 * Support of PFSR (partial file sharing): users may download parts of file from each other during file download even when no one of them do not have fully downloaded file.
 * Support of DHT (allows one to search file by TTH and exchange these files without connection to any hub). Implementation of this feature is based on StrongDC++ code and compatible with all versions of StrongDC++, ApexDC++, RSX++, FlylinkDC++ and Pulse++K where this feature exists. (Some DC clients have dropped the support of this function in latest versions.)
 * Support of UPnP (simplifies network connection configuration when user Wi-Fi router supports this feature).
@@ -38,7 +39,7 @@ Currently supported features (not full list):
 * Indicator of free space on disk where main downloads directory is located.
 * Support of IP filter and basic antispam.
 * Search spy (allows one to see search phrases which send other users, but without identifying users of course).
-* Share index (Qt + DuckDB): indexes files and directories from downloaded user file lists and hub search hits; local matches appear immediately when starting a search, then hub results enrich the same table.
+* Share index (Qt + DuckDB): indexes downloaded user file lists and hub search hits, returns immediate local search matches, and adds online cached-list sources to queued downloads by TTH.
 * ADL search with support for Perl-style regular expressions (using PCRE library).
 * Flexible filter (with regular expressions support) in users list, search results, public hubs lists, file lists, etc.. (Use ##&lt;regexp&gt; string and read about Qt QRegExp syntax.)
 * Full-featured chat (different fonts, nick coloring, parsing of magnet links and other links, emoticons, chat search, chat commands, BBCode support, disable/enable/clear chat, spell check (Aspell is used), keywords highlighting in the chat, separator for unread messages, saving of chat logs, the ability to display IP addresses and countries of users in the chat (depends on hub settings: some of them hide this data for usual users).
