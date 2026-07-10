@@ -35,19 +35,27 @@ string ListCache::findListFile(const string& listBase) {
     return Util::emptyString;
 }
 
-bool ListCache::matchesUserShare(const HintedUser& user, const string& listBase) {
-    if(!user.user->isOnline() || findListFile(listBase).empty())
+bool ListCache::matchesShare(const UserPtr& user) {
+    if(!user || !user->isOnline())
         return false;
 
-    const int64_t saved = ListCacheStore::shareSize(user.user->getCID());
+    const int64_t saved = ListCacheStore::shareSize(user->getCID());
     if(saved < 0)
         return false;
 
-    return ClientManager::getInstance()->getBytesShared(user.user) == saved;
+    return ClientManager::getInstance()->getBytesShared(user) == saved;
 }
 
-void ListCache::saveListMeta(const CID& cid, int64_t shareSize, time_t when) {
-    ListCacheStore::setMeta(cid, shareSize, when);
+bool ListCache::matchesUserShare(const HintedUser& user, const string& listBase) {
+    return matchesShare(user.user) && !findListFile(listBase).empty();
+}
+
+int64_t ListCache::fileSize(const CID& cid) {
+    return ListCacheStore::fileSize(cid);
+}
+
+void ListCache::saveListMeta(const CID& cid, int64_t shareSize, int64_t listSize, time_t when) {
+    ListCacheStore::setMeta(cid, shareSize, listSize, when);
 }
 
 bool ListCache::fetchedWithinDay(const CID& cid) {

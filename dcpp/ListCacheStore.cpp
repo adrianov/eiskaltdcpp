@@ -17,17 +17,15 @@
 
 #include <mutex>
 #include <unordered_map>
-
 namespace dcpp {
-
 namespace ListCacheStore {
 namespace {
-
 const size_t CID_LEN = 39;
 const string SIZE_EXT = ".sharesize";
 const string FETCH_EXT = ".listfetch";
 struct Entry {
     int64_t shareSize = -1;
+    int64_t fileSize = -1;
     time_t fetchTime = -1;
 };
 
@@ -35,7 +33,6 @@ std::unordered_map<string, Entry> entries;
 CriticalSection dataCs;
 CriticalSection fileCs;
 std::once_flag loadFlag;
-
 string cacheFile() {
     return Util::getPath(Util::PATH_USER_LOCAL) + "ListCache.xml";
 }
@@ -43,7 +40,6 @@ string cacheFile() {
 bool validCid(const string& cid) {
     return cid.size() == CID_LEN && Encoder::isBase32(cid);
 }
-
 void writeXml() {
     Lock fileLock(fileCs);
     SimpleXML xml;
@@ -53,17 +49,18 @@ void writeXml() {
     {
         Lock l(dataCs);
         for(const auto& i: entries) {
-            if(i.second.shareSize < 0 && i.second.fetchTime < 0)
+            if(i.second.shareSize < 0 && i.second.fileSize < 0 && i.second.fetchTime < 0)
                 continue;
             xml.addTag("User");
             xml.addChildAttrib("CID", i.first);
             if(i.second.shareSize >= 0)
                 xml.addChildAttrib("ShareSize", Util::toString(i.second.shareSize));
+            if(i.second.fileSize >= 0)
+                xml.addChildAttrib("FileSize", Util::toString(i.second.fileSize));
             if(i.second.fetchTime >= 0)
                 xml.addChildAttrib("FetchTime", Util::toString(static_cast<int64_t>(i.second.fetchTime)));
         }
     }
-
     xml.stepOut();
 
     const string fName = cacheFile();
@@ -75,7 +72,6 @@ void writeXml() {
     out.close();
     File::renameFile(fName + ".tmp", fName);
 }
-
 void readXml() {
     if(File::getSize(cacheFile()) == -1)
         return;
@@ -94,15 +90,17 @@ void readXml() {
 
         Entry entry;
         const string size = xml.getChildAttrib("ShareSize");
+        const string fileSize = xml.getChildAttrib("FileSize");
         const string time = xml.getChildAttrib("FetchTime");
         if(!size.empty())
             entry.shareSize = Util::toInt64(size);
+        if(!fileSize.empty())
+            entry.fileSize = Util::toInt64(fileSize);
         if(!time.empty())
             entry.fetchTime = static_cast<time_t>(Util::toInt64(time));
         entries[cid] = entry;
     }
 }
-
 StringList migrateSidecars() {
     StringList migrated;
     for(const auto& sizePath: File::findFiles(Util::getListPath(), "*" + SIZE_EXT)) {
@@ -138,7 +136,6 @@ StringList migrateSidecars() {
     }
     return migrated;
 }
-
 void loadStore() {
     try {
         readXml();
@@ -156,18 +153,22 @@ void loadStore() {
         // Keep legacy files when centralized persistence fails.
     }
 }
-
 } // namespace
-
 void load() {
     std::call_once(loadFlag, loadStore);
 }
-
 int64_t shareSize(const CID& cid) {
     load();
     Lock l(dataCs);
     const auto it = entries.find(cid.toBase32());
     return it == entries.end() ? -1 : it->second.shareSize;
+}
+
+int64_t fileSize(const CID& cid) {
+    load();
+    Lock l(dataCs);
+    const auto it = entries.find(cid.toBase32());
+    return it == entries.end() ? -1 : it->second.fileSize;
 }
 
 time_t fetchTime(const CID& cid) {
@@ -177,12 +178,13 @@ time_t fetchTime(const CID& cid) {
     return it == entries.end() ? -1 : it->second.fetchTime;
 }
 
-void setMeta(const CID& cid, int64_t shareSize, time_t when) {
+void setMeta(const CID& cid, int64_t shareSize, int64_t fileSize, time_t when) {
     load();
     {
         Lock l(dataCs);
         Entry& entry = entries[cid.toBase32()];
         entry.shareSize = shareSize;
+        entry.fileSize = fileSize;
         entry.fetchTime = when;
     }
     try {

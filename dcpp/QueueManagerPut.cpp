@@ -109,7 +109,8 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
                             dir = q->getTempTarget();
                             q->addSegment(Segment(0, q->getSize()));
                             ListCache::saveListMeta(d->getUser()->getCID(),
-                                ClientManager::getInstance()->getBytesShared(d->getUser()));
+                                ClientManager::getInstance()->getBytesShared(d->getUser()),
+                                File::getSize(q->getListName()));
                         } else if(d->getType() == Transfer::TYPE_FILE) {
                             q->addSegment(d->getSegment());
                         }

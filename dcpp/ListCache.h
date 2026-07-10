@@ -26,8 +26,13 @@ public:
     static void load();
 
     static string findListFile(const string& listBase);
+    /** True when the online user's reported share size matches cached metadata. */
+    static bool matchesShare(const UserPtr& user);
     static bool matchesUserShare(const HintedUser& user, const string& listBase);
-    static void saveListMeta(const CID& cid, int64_t shareSize, time_t when = time(nullptr));
+    /** Downloaded XML/XML.BZ2 byte size, or -1 when no size was recorded. */
+    static int64_t fileSize(const CID& cid);
+    static void saveListMeta(const CID& cid, int64_t shareSize, int64_t fileSize,
+                             time_t when = time(nullptr));
     /** True when a successful fetch was recorded less than 24 hours ago (auto-refresh cooldown). */
     static bool fetchedWithinDay(const CID& cid);
 };

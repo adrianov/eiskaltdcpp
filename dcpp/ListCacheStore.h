@@ -20,8 +20,9 @@ namespace ListCacheStore {
 
 void load();
 int64_t shareSize(const CID& cid);
+int64_t fileSize(const CID& cid);
 time_t fetchTime(const CID& cid);
-void setMeta(const CID& cid, int64_t shareSize, time_t when);
+void setMeta(const CID& cid, int64_t shareSize, int64_t fileSize, time_t when);
 
 } // namespace ListCacheStore
 
