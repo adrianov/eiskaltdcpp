@@ -21,6 +21,9 @@ Currently supported features (not full list):
 * Programs with graphical user interface (UI) on Qt (main) and GTK+ (alternative), plus daemon which may be controlled from command line or from Web UI (connected via JSON-RPC).
 * Multi-threaded download (download fragments of a single file from several sources at once).
 * Alias-aware downloads avoid duplicate connections to the same NMDC user across multiple hubs.
+* Peers.cn.ru **Pikachu / Pikachundr** clients: real peers (distinct share sizes, `$Lock EXTENDEDPROTOCOLpikachu`, `$Supports XmlBZList ADCGet TTHF`) work with multi-upload + CTM rate-limits; the mass clone swarm (identical ~137 GiB share, random nicks, empty lists) is hidden from the hub user list and skipped as non-viable for auto-connect/search sources.
+* Idle upload slots are replaced when the same peer reconnects (avoids “upload already active” floods from clients that spam `$ConnectToMe` after File Not Available); duplicate reject and upload-connected lines are rate-limited in the connect log. Outgoing `$ConnectToMe` to an IP that already has an idle upload is skipped. With **Allow multiple upload connections from the same user** (default on), additional sockets are accepted while existing uploads are busy (segmented downloads). Download-queue `$MyNick` matching is hub-scoped so another hub’s CTM cannot steal a download CQI and flip it to upload churn.
+* Share browser opens the list root automatically so flat file lists (no subfolders) show files immediately.
 * Support of PFSR (partial file sharing): users may download parts of file from each other during file download even when no one of them do not have fully downloaded file.
 * Support of DHT (allows one to search file by TTH and exchange these files without connection to any hub). Implementation of this feature is based on StrongDC++ code and compatible with all versions of StrongDC++, ApexDC++, RSX++, FlylinkDC++ and Pulse++K where this feature exists. (Some DC clients have dropped the support of this function in latest versions.)
 * Support of UPnP (simplifies network connection configuration when user Wi-Fi router supports this feature).
@@ -35,11 +38,11 @@ Currently supported features (not full list):
 * Lists of public and favorite hubs. Public hubs lists have multiple sources; favorite hubs are extremely flexible in configuration features.
 * Lists of favorite users (they will receive extra slot for downloading files, etc.).
 * List of active transfers (downloads/uploads), including the queue of users waiting for the slot (user may temporary grant extra slot for them).
-* Flexible settings for downloading files (lists of destination directories, directory for incomplete downloads, limitation of number of simultaneous downloads, compressed transfers, check of check sums, etc.).
+* Flexible settings for downloading files (lists of destination directories, directory for incomplete downloads, limitation of number of simultaneous downloads, compressed transfers, check of check sums, etc.). Incomplete files with download progress are preferred over not-started items within the same queue priority. TTH tree (`tthl`) is requested only for large files (≥ 20 MiB) or when multiple sources need block segments; smaller single-source downloads use the TTH root alone.
 * Indicator of free space on disk where main downloads directory is located.
 * Support of IP filter and basic antispam.
 * Search spy (allows one to see search phrases which send other users, but without identifying users of course).
-* Share index (Qt + DuckDB): indexes downloaded user file lists and hub search hits, returns immediate local search matches, and adds online cached-list sources to queued downloads by TTH.
+* Share index (Qt + DuckDB): indexes downloaded user file lists and hub search hits, returns immediate local search matches, and adds online cached-list sources to queued downloads by TTH (skipping a fresh list match when the index already knows the user has that TTH). Stale index rows are dropped when a peer reports File Not Available.
 * ADL search with support for Perl-style regular expressions (using PCRE library).
 * Flexible filter (with regular expressions support) in users list, search results, public hubs lists, file lists, etc.. (Use ##&lt;regexp&gt; string and read about Qt QRegExp syntax.)
 * Full-featured chat (different fonts, nick coloring, parsing of magnet links and other links, emoticons, chat search, chat commands, BBCode support, disable/enable/clear chat, spell check (Aspell is used), keywords highlighting in the chat, separator for unread messages, saving of chat logs, the ability to display IP addresses and countries of users in the chat (depends on hub settings: some of them hide this data for usual users).
