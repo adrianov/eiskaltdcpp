@@ -30,9 +30,9 @@ void SettingsManager::setDefaults() {
     setDefault(TEMP_DOWNLOAD_DIRECTORY, Util::getPath(Util::PATH_DOWNLOADS) + "Incomplete" PATH_SEPARATOR_STR);
     setDefault(BIND_ADDRESS, "0.0.0.0");
     setDefault(SLOTS, 50);
-    setDefault(TCP_PORT, 30000);
-    setDefault(UDP_PORT, 30000);
-    setDefault(TLS_PORT, 30001);
+    setDefault(TCP_PORT, 30001);
+    setDefault(UDP_PORT, 30002);
+    setDefault(TLS_PORT, 30003);
     setDefault(INCOMING_CONNECTIONS, INCOMING_DIRECT);
     setDefault(OUTGOING_CONNECTIONS, OUTGOING_DIRECT);
     setDefault(AUTO_DETECT_CONNECTION, false);
