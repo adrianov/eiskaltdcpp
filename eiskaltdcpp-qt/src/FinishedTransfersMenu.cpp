@@ -169,8 +169,8 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     }
     else if (delete_f && ret == delete_f){
         for (const auto &f : files) {
-            File::deleteFile(_tq(f));
             try {
+                File::deleteFile(_tq(f));
                 FinishedManager::getInstance()->remove(isUpload, _tq(f));
             } catch (const std::exception&) {}
         }
