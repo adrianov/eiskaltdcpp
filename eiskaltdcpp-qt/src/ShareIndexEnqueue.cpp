@@ -35,37 +35,52 @@ void enqueueWrite(WriteJob job)
     QMutexLocker lock(&writeMutex);
     if (isStopping())
         return;
+
     if (job.kind == OpenDb) {
-        for (const WriteJob &pending : writeQueue) {
-            if (pending.kind == OpenDb)
+        for (const WriteJob &p : writeQueue) {
+            if (p.kind == OpenDb)
                 return;
         }
-        // Schema open before any ingest / upsert.
         writeQueue.prepend(job);
     } else if (job.kind == IngestList) {
-        for (const WriteJob &pending : writeQueue) {
-            if (pending.kind == IngestList && pending.listPath == job.listPath)
+        for (const WriteJob &p : writeQueue) {
+            if (p.kind == IngestList && p.listPath == job.listPath) {
+                // Upgrade a queued backfill slot to interactive.
+                if (!job.backfill) {
+                    for (int i = 0; i < writeQueue.size(); ++i) {
+                        if (writeQueue[i].kind == IngestList
+                                && writeQueue[i].listPath == job.listPath) {
+                            writeQueue[i].backfill = false;
+                            break;
+                        }
+                    }
+                    requestAbortBackfill();
+                }
                 return;
+            }
         }
-        // After OpenDb (if any); ahead of hub upserts / backfill.
-        int insertAt = 0;
-        for (int i = 0; i < writeQueue.size(); ++i) {
-            if (writeQueue.at(i).kind == OpenDb)
-                insertAt = i + 1;
-        }
-        writeQueue.insert(insertAt, job);
+        if (!job.backfill)
+            requestAbortBackfill();
+        writeQueue.enqueue(job);
     } else if (job.kind == UpsertSearch) {
         int hubJobs = 0;
-        for (const WriteJob &pending : writeQueue) {
-            if (pending.kind == UpsertSearch)
+        for (const WriteJob &p : writeQueue) {
+            if (p.kind == UpsertSearch)
                 ++hubJobs;
         }
         if (hubJobs >= kHubQueueCap)
             dropOldestHubJob();
         writeQueue.enqueue(job);
+    } else if (job.kind == ScanCached) {
+        for (const WriteJob &p : writeQueue) {
+            if (p.kind == ScanCached)
+                return;
+        }
+        writeQueue.enqueue(job);
     } else {
         writeQueue.enqueue(job);
     }
+
     if (!writeWorkerRunning) {
         writeWorkerRunning = true;
         lock.unlock();
@@ -87,14 +102,20 @@ void ShareIndex::ingestList(const UserPtr &user, const QString &listPath,
     job.listPath = listPath;
     job.hubUrl = hubUrl;
     job.nick = nick;
+    job.backfill = false;
     enqueueWrite(job);
 }
 
 void ShareIndex::ingestCachedLists()
 {
     WriteJob job;
-    job.kind = IngestCached;
+    job.kind = ScanCached;
     enqueueWrite(job);
+}
+
+void ShareIndex::ingestCachedListsNow()
+{
+    ingestCachedListsSync();
 }
 
 void ShareIndex::upsertFromSearch(const QVariantMap &map)
@@ -109,7 +130,6 @@ void ShareIndex::recordSearchShows(const QList<qint64> &ids)
 {
     if (ids.isEmpty())
         return;
-
     WriteJob job;
     job.kind = BumpShowHits;
     job.ids = ids;
@@ -131,11 +151,11 @@ void ShareIndex::waitWritesIdle()
 void ShareIndex::stopWrites()
 {
     writeStopping.storeRelease(1);
+    requestAbortBackfill();
     {
         QMutexLocker lock(&writeMutex);
         writeQueue.clear();
     }
-    // Must wait until the worker exits: returning early UAF's ShareIndex under AsyncRunner.
     for (;;) {
         {
             QMutexLocker lock(&writeMutex);

@@ -12,23 +12,44 @@
 #ifdef USE_QT_SQLITE
 
 #include "ShareIndexQueueCore.h"
-#include "dcpp/ClientManager.h"
 #include "dcpp/DirectoryListing.h"
+#include "dcpp/Util.h"
 #include "WulforUtil.h"
 
 #include <QDir>
+#include <utility>
 
 using namespace dcpp;
+using namespace ShareIndexWriteQueue;
+
+namespace {
+
+void appendUnique(QVariantMap row, QSet<QString> &seen, QList<QVariantMap> &out)
+{
+    const QString key = ShareIndexDb::rowUkey(
+        row.value("cid").toString(), row.value("tth").toString(),
+        row.value("path").toString(), row.value("name").toString(),
+        row.value("is_dir").toBool());
+    if (!seen.contains(key)) {
+        seen.insert(key);
+        out.append(std::move(row));
+    }
+}
+
+} // namespace
 
 void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Directory *dir,
                              const QString &cid, const QString &hubUrl,
                              const QString &nick, const QString &hubName,
-                             const QString &ip, QList<QVariantMap> &out)
+                             const QString &ip, QSet<QString> &seen,
+                             QList<QVariantMap> &out,
+                             bool backfill)
 {
     if (!dir)
         return;
+    if (backfill && shouldAbortBackfill())
+        return;
 
-    // Skip listing root; index named directories and all files.
     if (dir != listing.getRoot() && !dir->getName().empty()) {
         QVariantMap row;
         row["cid"] = cid;
@@ -42,11 +63,11 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         row["nick"] = nick;
         row["hub_name"] = hubName;
         row["ip"] = ip;
-        out.append(row);
+        appendUnique(std::move(row), seen, out);
     }
 
     for (auto &f : dir->files) {
-        if (ShareIndexWriteQueue::isStopping())
+        if (isStopping() || (backfill && shouldAbortBackfill()))
             return;
         if (!f || f->getName().empty())
             continue;
@@ -67,18 +88,18 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         row["resolution"] = _q(f->mediaInfo.resolution);
         row["video_info"] = _q(f->mediaInfo.video_info);
         row["audio_info"] = _q(f->mediaInfo.audio_info);
-        row["hit"] = qulonglong(f->getHit());
         row["shared_ts"] = qulonglong(f->getTS());
-        out.append(row);
+        appendUnique(std::move(row), seen, out);
     }
 
     for (auto &sub : dir->directories) {
-        if (ShareIndexWriteQueue::isStopping())
+        if (isStopping() || (backfill && shouldAbortBackfill()))
             return;
-        walkListing(listing, sub, cid, hubUrl, nick, hubName, ip, out);
+        walkListing(listing, sub, cid, hubUrl, nick, hubName, ip, seen, out, backfill);
     }
 }
 
+/** CLI: ingest every cached list on this thread (no write worker). */
 void ShareIndex::ingestCachedListsSync()
 {
     open();
@@ -92,13 +113,8 @@ void ShareIndex::ingestCachedListsSync()
 
     const QStringList names = dir.entryList(QStringList() << "*.xml.bz2" << "*.xml", QDir::Files);
     for (const QString &fn : names) {
-        if (ShareIndexWriteQueue::isStopping())
+        if (isStopping())
             return;
-        // Let an interactive list ingest run before the rest of backfill.
-        if (pendingListIngest()) {
-            requeueCachedIngest();
-            return;
-        }
 
         const QString fullPath = dir.absoluteFilePath(fn);
         const UserPtr user = DirectoryListing::getUserFromFilename(_tq(fullPath));
@@ -110,14 +126,13 @@ void ShareIndex::ingestCachedListsSync()
             base.chop(8);
         else if (base.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive))
             base.chop(4);
-
         QString nick;
         const int dot = base.lastIndexOf(QLatin1Char('.'));
         if (dot > 0)
             nick = base.left(dot);
 
         setLastError(QString());
-        ingestListSync(user, fullPath, QString(), nick);
+        ingestListSync(user, fullPath, QString(), nick, false, false);
     }
 }
 

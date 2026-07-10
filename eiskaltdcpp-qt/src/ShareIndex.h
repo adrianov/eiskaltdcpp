@@ -16,9 +16,13 @@
 #include <QList>
 #include <QMutex>
 #include <QAtomicInt>
+#include <QHash>
+#include <QSet>
+
+#include <memory>
 
 #ifdef USE_QT_SQLITE
-#include <QtSql>
+#include "ShareIndexDb.h"
 #endif
 
 #include "dcpp/stdinc.h"
@@ -26,7 +30,7 @@
 #include "dcpp/DirectoryListing.h"
 #include "dcpp/Singleton.h"
 
-/** Persistent index of remote share entries from file lists and hub search. */
+/** Persistent index of remote share entries from file lists and hub search (DuckDB). */
 class ShareIndex : public QObject, public dcpp::Singleton<ShareIndex>
 {
     Q_OBJECT
@@ -53,7 +57,7 @@ public:
     static QString fileExt(const QString &name, bool isDir);
 
     void open();
-    /** Open schema on the write worker (never block the UI on a large WAL). */
+    /** Open schema on the write worker (never block the UI). */
     void openAsync();
     bool isOpen() const { return opened.loadAcquire() != 0; }
 
@@ -67,6 +71,9 @@ public:
     /** Index all *.xml / *.xml.bz2 under the FileLists directory (queued). */
     void ingestCachedLists();
 
+    /** Index all cached file lists on the calling thread (CLI; no write queue). */
+    void ingestCachedListsNow();
+
     void upsertFromSearch(const QVariantMap &map);
 
     /** Block until all queued writes finish (CLI / tests). */
@@ -76,7 +83,7 @@ public:
 
     QList<QVariantMap> search(const SearchFilter &filter);
 
-    /** +1 show_hits for rows displayed from local Search (queued write). */
+    /** Kept for SearchFrame drop-in; hit stats removed (no-op). */
     void recordSearchShows(const QList<qint64> &ids);
 
     /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
@@ -87,7 +94,7 @@ public:
     IndexStats indexStats();
     /** True when cid has no rows, or listPath mtime/size differs from last ingest. */
     bool needsListIngest(const QString &cid, const QString &listPath = QString());
-    /** Close this thread's QSqlDatabase before the worker exits. */
+    /** Close this thread's DuckDB connection before the worker exits. */
     void releaseThreadDb();
 
     static bool smokeCheck(QString *error = nullptr);
@@ -95,7 +102,7 @@ public:
     QString lastError() const;
 
 #ifdef USE_QT_SQLITE
-    friend bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error);
+    friend bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
     friend void shareIndexRunWriteWorker();
 #endif
 
@@ -104,57 +111,54 @@ private:
     ~ShareIndex() override;
 
 #ifdef USE_QT_SQLITE
-    /** Empty DB: page_size=16KiB + auto_vacuum=INCREMENTAL; else false → recreate. */
-    bool ensureAutoVacuum(QSqlDatabase &db);
-    /** Drop DB (+WAL/SHM) and reopen so page_size / auto_vacuum can be set. */
-    bool recreateForVacuum();
-    bool ensureSchema(QSqlDatabase &db);
-    bool ensureCap(QSqlDatabase &db);
-    bool ensureFts(QSqlDatabase &db);
-    /** Per-thread connection; Qt forbids sharing QSqlDatabase across threads. */
-    QSqlDatabase threadDb();
+    bool ensureSchema(duckdb::Connection &con);
+    bool ensureCap(duckdb::Connection &con);
+    bool ensureFts(duckdb::Connection &con);
+    duckdb::Connection *threadConn();
     void disconnectThreadDb();
-    /** Drop uncheckpointable oversized WAL before open. */
-    void prepareDbFile();
     void setLastError(const QString &err);
 
-    bool upsertRow(QSqlDatabase &db, const QVariantMap &row, int source);
-    bool insertRow(QSqlDatabase &db, const QVariantMap &row, int source);
-    bool prepareInsert(QSqlQuery &ins) const;
-    bool bindInsert(QSqlQuery &ins, const QVariantMap &row, int source) const;
-    QList<QVariantMap> searchFts(QSqlDatabase &db, const SearchFilter &filter);
-    QList<QVariantMap> rowsFromQuery(QSqlQuery &q);
-    QString filterSql(const SearchFilter &filter, QVariantList &binds) const;
+    bool upsertRow(duckdb::Connection &con, const QVariantMap &row, int source);
+    bool insertRow(duckdb::Connection &con, const QVariantMap &row, int source);
+    bool appendListRows(duckdb::Connection &con, const QList<QVariantMap> &rows);
+    QList<QVariantMap> searchFts(duckdb::Connection &con, const SearchFilter &filter);
+    QList<QVariantMap> rowsFromResult(duckdb::MaterializedQueryResult &res);
+    QString filterSql(const SearchFilter &filter, duckdb::vector<duckdb::Value> &binds) const;
 
     void walkListing(dcpp::DirectoryListing &listing,
                      dcpp::DirectoryListing::Directory *dir,
                      const QString &cid, const QString &hubUrl,
                      const QString &nick, const QString &hubName,
-                     const QString &ip, QList<QVariantMap> &out);
+                     const QString &ip, QSet<QString> &seen,
+                     QList<QVariantMap> &out,
+                     bool backfill = false);
 
     void ingestListSync(const dcpp::UserPtr &user, const QString &listPath,
                         const QString &hubUrl, const QString &nick,
-                        bool force = false);
-    /** Chunked DELETE+INSERT for one file list; returns false on abort/error. */
-    bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
+                        bool force = false, bool backfill = false);
+    /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
+    bool writeListRows(const QString &cid, const QList<QVariantMap> &rows, bool backfill = false);
     void ingestCachedListsSync();
+    void scanCachedListsSync();
+    void enqueueBackfillList(const dcpp::UserPtr &user, const QString &listPath,
+                             const QString &nick);
     void upsertFromSearchSync(const QVariantMap &map);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
     void recordSearchShowsSync(const QList<qint64> &ids);
-    void setCapArmed(QSqlDatabase &db, bool armed);
-    void pruneExcess(QSqlDatabase &db);
-    void reclaimFreePages(QSqlDatabase &db);
+    void pruneExcess(duckdb::Connection &con);
+    void refreshEntryCount(duckdb::Connection &con);
+    void reclaimFreePages(duckdb::Connection &con);
     void drainWriteQueue();
-    bool pendingListIngest() const;
-    void requeueCachedIngest();
     void rememberListMeta(const QString &cid, const QString &listPath, int rowCount);
 
     QString dbFile;
+    std::unique_ptr<duckdb::DuckDB> duck;
+    QHash<quintptr, std::shared_ptr<duckdb::Connection>> threadConns;
 #endif
     QAtomicInt opened;
-    /** One-time schema/FTS open. */
+    /** One-time schema open. */
     mutable QMutex openMutex;
-    /** Serializes QSqlDatabase registry add/remove across threads. */
+    /** Serializes per-thread connection map. */
     mutable QMutex connMutex;
     mutable QMutex errorMutex;
     QString lastSqlError;

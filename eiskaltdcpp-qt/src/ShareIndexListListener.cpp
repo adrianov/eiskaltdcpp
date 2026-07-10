@@ -13,9 +13,8 @@
 
 #include "dcpp/QueueItem.h"
 #include "dcpp/Download.h"
-#include "dcpp/Util.h"
 
-#include <QDir>
+#include <QFileInfo>
 
 using namespace dcpp;
 
@@ -25,67 +24,25 @@ HintedUser hintedFromQueue(QueueItem *item)
 {
     if (!item)
         return HintedUser();
-
-    if (!item->getDownloads().empty() && item->getDownloads()[0]) {
-        Download *d = item->getDownloads()[0];
-        return d->getHintedUser();
-    }
+    if (!item->getDownloads().empty() && item->getDownloads()[0])
+        return item->getDownloads()[0]->getHintedUser();
     if (!item->getSources().empty())
         return item->getSources().front().getUser();
     return HintedUser();
 }
 
-void enqueueIngest(const UserPtr &user, const QString &listPath, const QString &hubUrl)
+/** Only real file-list paths — never on ordinary download Finished. */
+void enqueueListIngest(const UserPtr &user, const QString &listPath, const QString &hubUrl)
 {
-    if (!user || listPath.isEmpty())
+    if (!user || listPath.isEmpty() || !QFileInfo::exists(listPath))
         return;
-
-    const QString cid = _q(user->getCID().toBase32());
-    if (!ShareIndex::getInstance()->needsListIngest(cid, listPath))
+    if (!ShareIndex::getInstance())
         return;
 
     QString nick;
     if (WulforUtil::getInstance())
         nick = WulforUtil::getInstance()->getNicks(user->getCID(), hubUrl);
-
     ShareIndex::getInstance()->ingestList(user, listPath, hubUrl, nick);
-}
-
-void maybeIngestUserList(const HintedUser &hinted)
-{
-#ifdef USE_QT_SQLITE
-    if (!hinted.user)
-        return;
-
-    const QString cid = _q(hinted.user->getCID().toBase32());
-    QString listPath;
-    const QDir listDir(_q(Util::getListPath()));
-    const QString pattern = QLatin1Char('.') + cid + QLatin1String(".xml.bz2");
-    for (const QString &fn : listDir.entryList(QDir::Files)) {
-        if (fn.endsWith(pattern, Qt::CaseInsensitive)) {
-            listPath = listDir.absoluteFilePath(fn);
-            break;
-        }
-    }
-    if (listPath.isEmpty()) {
-        const QString patternXml = QLatin1Char('.') + cid + QLatin1String(".xml");
-        for (const QString &fn : listDir.entryList(QDir::Files)) {
-            if (fn.endsWith(patternXml, Qt::CaseInsensitive)) {
-                listPath = listDir.absoluteFilePath(fn);
-                break;
-            }
-        }
-    }
-    if (listPath.isEmpty())
-        return;
-
-    if (!ShareIndex::getInstance()->needsListIngest(cid, listPath))
-        return;
-
-    enqueueIngest(hinted.user, listPath, _q(hinted.hint));
-#else
-    Q_UNUSED(hinted);
-#endif
 }
 
 } // namespace
@@ -109,33 +66,39 @@ void ShareIndexListListener::stop()
 void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
                                 const std::string &dir, int64_t) noexcept
 {
+    // Only FLAG_USER_LIST. Hooking every download Finished was aborting backfill
+    // on each file and preventing any list write from committing.
     if (item && item->isAnySet(QueueItem::FLAG_USER_LIST)) {
         const HintedUser hinted = hintedFromQueue(item);
         const QString listName = _q(item->getListName());
-        enqueueIngest(hinted.user, listName, _q(hinted.hint));
+        enqueueListIngest(hinted.user, listName, _q(hinted.hint));
 
         if (item->isSet(QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_USER_LIST) && hinted.user)
             emit openShare(hinted.user, listName, _q(dir));
-    } else if (item) {
-        maybeIngestUserList(hintedFromQueue(item));
     }
 
-    const int qsize = QueueManager::getInstance()->lockQueue().size();
+    bool empty = true;
+    auto &queue = QueueManager::getInstance()->lockQueue();
+    for (const auto &entry : queue) {
+        if (!entry.second->isFinished()) {
+            empty = false;
+            break;
+        }
+    }
     QueueManager::getInstance()->unlockQueue();
-
-    if (qsize == 1)
+    if (empty)
         emit queueEmpty();
 }
 
 void ShareIndexListListener::on(QueueManagerListener::ListFromCache, const HintedUser &user,
                                 const std::string &listPath, const std::string &initialDir) noexcept
 {
-    enqueueIngest(user.user, _q(listPath), _q(user.hint));
+    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
     emit openShare(user.user, _q(listPath), _q(initialDir));
 }
 
 void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUser &user,
                                 const std::string &listPath) noexcept
 {
-    enqueueIngest(user.user, _q(listPath), _q(user.hint));
+    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
 }

@@ -11,12 +11,21 @@
 
 #ifdef USE_QT_SQLITE
 
-bool ShareIndex::ensureSchema(QSqlDatabase &db)
+bool ShareIndex::ensureSchema(duckdb::Connection &con)
 {
-    QSqlQuery q(db);
-    if (!q.exec(
+    QString err;
+    if (!ShareIndexDb::execOk(con,
+            "CREATE SEQUENCE IF NOT EXISTS share_entry_seq START 1", &err)) {
+        setLastError(err);
+        return false;
+    }
+
+    // No hit / show_hits / updated_at. created_at kept for age trim.
+    // ukey replaces partial unique indexes (DuckDB-friendly upsert key).
+    if (!ShareIndexDb::execOk(con,
             "CREATE TABLE IF NOT EXISTS share_entries ("
-            "id INTEGER PRIMARY KEY,"
+            "id BIGINT PRIMARY KEY DEFAULT nextval('share_entry_seq'),"
+            "ukey TEXT NOT NULL UNIQUE,"
             "cid TEXT NOT NULL,"
             "hub_url TEXT NOT NULL DEFAULT '',"
             "tth TEXT NOT NULL DEFAULT '',"
@@ -24,7 +33,7 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
             "name TEXT NOT NULL,"
             "ext TEXT NOT NULL DEFAULT '',"
             "is_dir INTEGER NOT NULL DEFAULT 0,"
-            "size INTEGER NOT NULL DEFAULT 0,"
+            "size BIGINT NOT NULL DEFAULT 0,"
             "nick TEXT NOT NULL DEFAULT '',"
             "hub_name TEXT NOT NULL DEFAULT '',"
             "free_slots INTEGER,"
@@ -34,42 +43,33 @@ bool ShareIndex::ensureSchema(QSqlDatabase &db)
             "resolution TEXT,"
             "video_info TEXT,"
             "audio_info TEXT,"
-            "hit INTEGER,"
-            "show_hits INTEGER NOT NULL DEFAULT 0,"
-            "shared_ts INTEGER,"
+            "shared_ts BIGINT,"
             "source INTEGER NOT NULL,"
             "created_at TEXT NOT NULL,"
-            "updated_at TEXT NOT NULL"
-            ")"))
+            "name_cf TEXT NOT NULL DEFAULT '',"
+            "path_cf TEXT NOT NULL DEFAULT ''"
+            ")", &err)) {
+        setLastError(err);
         return false;
+    }
 
-    // Migrate DBs created before ext existed.
-    q.exec("ALTER TABLE share_entries ADD COLUMN ext TEXT NOT NULL DEFAULT ''");
-    // Unicode case-fold copies for FTS trigram (and any LIKE tooling).
-    q.exec("ALTER TABLE share_entries ADD COLUMN name_cf TEXT NOT NULL DEFAULT ''");
-    q.exec("ALTER TABLE share_entries ADD COLUMN path_cf TEXT NOT NULL DEFAULT ''");
-    /** Times this row was shown from local Search (not remote file-list HIT). */
-    q.exec("ALTER TABLE share_entries ADD COLUMN show_hits INTEGER NOT NULL DEFAULT 0");
+    ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
+    ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
+    // Trim / cap eviction by age only (no show_hits / updated_at index).
+    ShareIndexDb::execOk(con,
+            "CREATE INDEX IF NOT EXISTS share_entries_created ON share_entries(created_at)");
 
-    q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_file_tth "
-           "ON share_entries(cid, tth) WHERE is_dir = 0 AND tth != ''");
-    q.exec("CREATE UNIQUE INDEX IF NOT EXISTS share_entries_path_name "
-           "ON share_entries(cid, path, name, is_dir) WHERE is_dir = 1 OR tth = ''");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_updated ON share_entries(updated_at)");
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
-    // Cap eviction: lowest show_hits, then oldest updated_at / created_at.
-    q.exec("CREATE INDEX IF NOT EXISTS share_entries_evict "
-           "ON share_entries(show_hits, updated_at, created_at)");
-
-    // Skip re-indexing a file list when path/mtime/size are unchanged.
-    q.exec("CREATE TABLE IF NOT EXISTS share_list_meta ("
-           "cid TEXT PRIMARY KEY,"
-           "list_path TEXT NOT NULL,"
-           "list_mtime INTEGER NOT NULL,"
-           "list_size INTEGER NOT NULL,"
-           "row_count INTEGER NOT NULL DEFAULT 0,"
-           "indexed_at TEXT NOT NULL)");
+    if (!ShareIndexDb::execOk(con,
+            "CREATE TABLE IF NOT EXISTS share_list_meta ("
+            "cid TEXT PRIMARY KEY,"
+            "list_path TEXT NOT NULL,"
+            "list_mtime BIGINT NOT NULL,"
+            "list_size BIGINT NOT NULL,"
+            "row_count INTEGER NOT NULL DEFAULT 0,"
+            "indexed_at TEXT NOT NULL)", &err)) {
+        setLastError(err);
+        return false;
+    }
     return true;
 }
 

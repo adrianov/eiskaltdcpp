@@ -22,101 +22,82 @@ QString sqlText(const QVariant &v)
 
 } // namespace
 
-bool ShareIndex::upsertRow(QSqlDatabase &db, const QVariantMap &row, int source)
+bool ShareIndex::upsertRow(duckdb::Connection &con, const QVariantMap &row, int source)
 {
-    const QString stamp = nowStamp();
     const bool isDir = row.value("is_dir").toBool();
     const QString tth = sqlText(row.value("tth"));
     const QString cid = sqlText(row.value("cid"));
     const QString path = sqlText(row.value("path"));
     const QString name = sqlText(row.value("name"));
-    const QString ext = row.contains("ext")
-            ? sqlText(row.value("ext"))
-            : fileExt(name, isDir);
+    const QString ext = row.contains("ext") ? sqlText(row.value("ext")) : fileExt(name, isDir);
+    const QString stamp = nowStamp();
+    const QString ukey = ShareIndexDb::rowUkey(cid, tth, path, name, isDir);
 
     if (cid.isEmpty() || name.isEmpty())
         return false;
 
-    QSqlQuery find(db);
-    if (!isDir && !tth.isEmpty()) {
-        find.prepare("SELECT id, source FROM share_entries WHERE cid = ? AND tth = ? AND is_dir = 0");
-        find.addBindValue(cid);
-        find.addBindValue(tth);
-    } else {
-        find.prepare("SELECT id, source FROM share_entries WHERE cid = ? AND path = ? AND name = ? AND is_dir = ?");
-        find.addBindValue(cid);
-        find.addBindValue(path);
-        find.addBindValue(name);
-        find.addBindValue(isDir ? 1 : 0);
-    }
-
-    if (!find.exec()) {
-        setLastError(find.lastError().text());
-        return false;
-    }
-
-    if (!find.next())
-        return insertRow(db, row, source);
-
-    const qint64 id = find.value(0).toLongLong();
-    const int oldSource = find.value(1).toInt();
-    const int keepSource = (oldSource == SourceFileList || source == SourceFileList)
-            ? SourceFileList : source;
     const bool fromList = (source == SourceFileList);
 
-    QSqlQuery upd(db);
+    // created_at only on insert; ON CONFLICT keeps existing created_at.
+    std::string sql;
     if (fromList) {
-        upd.prepare(
-            "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, name_cf=?, path_cf=?, ext=?,"
-            "is_dir=?, size=?, nick=?, hub_name=?, free_slots=?, all_slots=?, ip=?, bitrate=?,"
-            "resolution=?, video_info=?, audio_info=?, hit=?, shared_ts=?, source=?, updated_at=? WHERE id=?");
+        sql = "INSERT INTO share_entries ("
+              "ukey, cid, hub_url, tth, path, name, name_cf, path_cf, ext, is_dir, size, nick, hub_name,"
+              "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
+              "shared_ts, source, created_at"
+              ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+              "ON CONFLICT(ukey) DO UPDATE SET "
+              "hub_url=excluded.hub_url, tth=excluded.tth, path=excluded.path, name=excluded.name,"
+              "name_cf=excluded.name_cf, path_cf=excluded.path_cf, ext=excluded.ext,"
+              "is_dir=excluded.is_dir, size=excluded.size, nick=excluded.nick, hub_name=excluded.hub_name,"
+              "free_slots=excluded.free_slots, all_slots=excluded.all_slots, ip=excluded.ip,"
+              "bitrate=excluded.bitrate, resolution=excluded.resolution, video_info=excluded.video_info,"
+              "audio_info=excluded.audio_info, shared_ts=excluded.shared_ts,"
+              "source=CASE WHEN share_entries.source=1 OR excluded.source=1 THEN 1 ELSE excluded.source END";
     } else {
-        upd.prepare(
-            "UPDATE share_entries SET hub_url=?, tth=?, path=?, name=?, name_cf=?, path_cf=?, ext=?,"
-            "is_dir=?, size=?, nick=?, hub_name=?,"
-            "free_slots=COALESCE(?, free_slots), all_slots=COALESCE(?, all_slots),"
-            "ip=CASE WHEN ? = '' THEN ip ELSE ? END,"
-            "source=?, updated_at=? WHERE id=?");
+        sql = "INSERT INTO share_entries ("
+              "ukey, cid, hub_url, tth, path, name, name_cf, path_cf, ext, is_dir, size, nick, hub_name,"
+              "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
+              "shared_ts, source, created_at"
+              ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+              "ON CONFLICT(ukey) DO UPDATE SET "
+              "hub_url=excluded.hub_url, tth=excluded.tth, path=excluded.path, name=excluded.name,"
+              "name_cf=excluded.name_cf, path_cf=excluded.path_cf, ext=excluded.ext,"
+              "is_dir=excluded.is_dir, size=excluded.size, nick=excluded.nick, hub_name=excluded.hub_name,"
+              "free_slots=COALESCE(excluded.free_slots, share_entries.free_slots),"
+              "all_slots=COALESCE(excluded.all_slots, share_entries.all_slots),"
+              "ip=CASE WHEN excluded.ip = '' THEN share_entries.ip ELSE excluded.ip END,"
+              "source=CASE WHEN share_entries.source=1 OR excluded.source=1 THEN 1 ELSE excluded.source END";
     }
 
-    upd.addBindValue(sqlText(row.value("hub_url")));
-    upd.addBindValue(tth);
-    upd.addBindValue(path);
-    upd.addBindValue(name);
-    upd.addBindValue(name.toCaseFolded());
-    upd.addBindValue(path.toCaseFolded());
-    upd.addBindValue(ext.isEmpty() ? QStringLiteral("") : ext);
-    upd.addBindValue(isDir ? 1 : 0);
-    upd.addBindValue(row.value("size").toLongLong());
-    upd.addBindValue(sqlText(row.value("nick")));
-    upd.addBindValue(sqlText(row.value("hub_name")));
+    auto res = con.Query(
+        sql,
+        ShareIndexDb::strVal(ukey),
+        ShareIndexDb::strVal(cid),
+        ShareIndexDb::strVal(row.value("hub_url")),
+        ShareIndexDb::strVal(tth),
+        ShareIndexDb::strVal(path),
+        ShareIndexDb::strVal(name),
+        ShareIndexDb::strVal(name.toCaseFolded()),
+        ShareIndexDb::strVal(path.toCaseFolded()),
+        ShareIndexDb::strVal(ext.isEmpty() ? QStringLiteral("") : ext),
+        ShareIndexDb::i64Val(isDir ? 1 : 0),
+        ShareIndexDb::i64Val(row.value("size").toLongLong()),
+        ShareIndexDb::strVal(row.value("nick")),
+        ShareIndexDb::strVal(row.value("hub_name")),
+        row.contains("free_slots") ? ShareIndexDb::i32Val(row.value("free_slots")) : ShareIndexDb::nullVal(),
+        row.contains("all_slots") ? ShareIndexDb::i32Val(row.value("all_slots")) : ShareIndexDb::nullVal(),
+        ShareIndexDb::strVal(row.value("ip")),
+        row.contains("bitrate") ? ShareIndexDb::i32Val(row.value("bitrate")) : ShareIndexDb::nullVal(),
+        ShareIndexDb::strVal(row.value("resolution")),
+        ShareIndexDb::strVal(row.value("video_info")),
+        ShareIndexDb::strVal(row.value("audio_info")),
+        row.contains("shared_ts") ? ShareIndexDb::i64Val(row.value("shared_ts")) : ShareIndexDb::nullVal(),
+        ShareIndexDb::i64Val(source),
+        ShareIndexDb::strVal(stamp));
 
-    if (fromList) {
-        upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
-        upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
-        upd.addBindValue(sqlText(row.value("ip")));
-        upd.addBindValue(row.contains("bitrate") ? row.value("bitrate") : QVariant());
-        upd.addBindValue(sqlText(row.value("resolution")));
-        upd.addBindValue(sqlText(row.value("video_info")));
-        upd.addBindValue(sqlText(row.value("audio_info")));
-        upd.addBindValue(row.contains("hit") ? row.value("hit") : QVariant());
-        upd.addBindValue(row.contains("shared_ts") ? row.value("shared_ts") : QVariant());
-        upd.addBindValue(keepSource);
-        upd.addBindValue(stamp);
-        upd.addBindValue(id);
-    } else {
-        upd.addBindValue(row.contains("free_slots") ? row.value("free_slots") : QVariant());
-        upd.addBindValue(row.contains("all_slots") ? row.value("all_slots") : QVariant());
-        const QString ip = sqlText(row.value("ip"));
-        upd.addBindValue(ip);
-        upd.addBindValue(ip);
-        upd.addBindValue(keepSource);
-        upd.addBindValue(stamp);
-        upd.addBindValue(id);
-    }
-
-    if (!upd.exec()) {
-        setLastError(upd.lastError().text());
+    if (res->HasError()) {
+        setLastError(QString::fromStdString(res->GetError()));
         return false;
     }
     setLastError(QString());
@@ -163,25 +144,28 @@ void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
     if (!isOpen())
         return;
 
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
+    duckdb::Connection *con = threadConn();
+    if (!con)
         return;
 
-    db.transaction();
+    if (!ShareIndexDb::execOk(*con, "BEGIN TRANSACTION"))
+        return;
     for (const QVariantMap &map : maps) {
         if (ShareIndexWriteQueue::isStopping()) {
-            db.rollback();
+            ShareIndexDb::execOk(*con, "ROLLBACK");
             return;
         }
-        if (!upsertRow(db, searchMapToRow(map), SourceHubSearch)) {
-            db.rollback();
+        if (!upsertRow(*con, searchMapToRow(map), SourceHubSearch)) {
+            ShareIndexDb::execOk(*con, "ROLLBACK");
             return;
         }
     }
-    if (!db.commit())
-        setLastError(db.lastError().text());
-    else
-        reclaimFreePages(db);
+    if (!ShareIndexDb::execOk(*con, "COMMIT")) {
+        setLastError(QStringLiteral("commit failed"));
+        return;
+    }
+    refreshEntryCount(*con);
+    // No CHECKPOINT here: hub SRs are frequent; vacuum after list ingest only.
 }
 
 #endif

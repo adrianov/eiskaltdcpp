@@ -30,12 +30,10 @@ QString joinHubField(const StringList &parts)
     return _q(Util::toString(parts));
 }
 
-/** Hub URL / name / IP from ClientManager when the user is online. */
 void fillUserHubFields(const UserPtr &user, QString &hubUrl, QString &hubName, QString &ip)
 {
     if (!user)
         return;
-
     ClientManager *cm = ClientManager::getInstance();
     if (!cm)
         return;
@@ -46,7 +44,6 @@ void fillUserHubFields(const UserPtr &user, QString &hubUrl, QString &hubName, Q
         if (!hubs.empty())
             hubUrl = _q(hubs.front());
     }
-
     hubName = joinHubField(cm->getHubNames(user->getCID(), _tq(hubUrl)));
     ip = _q(cm->getOnlineUserIdentity(user).getIp());
 }
@@ -59,14 +56,14 @@ qint64 ShareIndex::forceIngestListMs(const UserPtr &user, const QString &listPat
     QElapsedTimer timer;
     timer.start();
     waitWritesIdle();
-    ingestListSync(user, listPath, hubUrl, nick, true);
+    ingestListSync(user, listPath, hubUrl, nick, true, false);
     releaseThreadDb();
     return timer.elapsed();
 }
 
 void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
                                 const QString &hubUrl, const QString &nick,
-                                bool force)
+                                bool force, bool backfill)
 {
     if (!user || listPath.isEmpty())
         return;
@@ -79,7 +76,6 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
     if (cid.isEmpty())
         return;
 
-    // Unchanged list: skip full walk + FTS rebuild (can be minutes for large shares).
     if (!force && !needsListIngest(cid, listPath)) {
         setLastError(QString());
         return;
@@ -90,23 +86,22 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
     QString useIp;
     fillUserHubFields(user, useHubUrl, useHubName, useIp);
 
-    // Keep last known IP/Hub when the user is offline during re-index.
     if (useHubUrl.isEmpty() || useHubName.isEmpty() || useIp.isEmpty()) {
-        QSqlDatabase db = threadDb();
-        if (db.isOpen()) {
-            QSqlQuery prev(db);
-            prev.prepare(
+        duckdb::Connection *con = threadConn();
+        if (con) {
+            auto prev = ShareIndexDb::query1(
+                *con,
                 "SELECT ip, hub_name, hub_url FROM share_entries WHERE cid = ?"
                 " AND (ip != '' OR hub_name != '' OR hub_url != '')"
-                " ORDER BY updated_at DESC LIMIT 1");
-            prev.addBindValue(cid);
-            if (prev.exec() && prev.next()) {
+                " ORDER BY created_at DESC LIMIT 1",
+                ShareIndexDb::strVal(cid));
+            if (prev && !prev->HasError() && prev->RowCount() > 0) {
                 if (useIp.isEmpty())
-                    useIp = prev.value(0).toString();
+                    useIp = ShareIndexDb::qstr(prev->GetValue(0, 0));
                 if (useHubName.isEmpty())
-                    useHubName = prev.value(1).toString();
+                    useHubName = ShareIndexDb::qstr(prev->GetValue(1, 0));
                 if (useHubUrl.isEmpty())
-                    useHubUrl = prev.value(2).toString();
+                    useHubUrl = ShareIndexDb::qstr(prev->GetValue(2, 0));
             }
         }
     }
@@ -116,6 +111,11 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         WulforUtil *wu = WulforUtil::getInstance();
         if (wu)
             useNick = wu->getNicks(user->getCID(), useHubUrl);
+    }
+
+    if (backfill && shouldAbortBackfill()) {
+        enqueueBackfillList(user, listPath, useNick);
+        return;
     }
 
     DirectoryListing listing(HintedUser(user, _tq(useHubUrl)));
@@ -132,19 +132,26 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
     }
 
-    if (isStopping())
-        return;
-
-    QList<QVariantMap> rows;
-    walkListing(listing, listing.getRoot(), cid, useHubUrl, useNick, useHubName, useIp, rows);
-    if (isStopping() || rows.isEmpty()) {
-        if (rows.isEmpty() && !isStopping())
-            setLastError(QStringLiteral("walkListing empty"));
+    if (isStopping() || (backfill && shouldAbortBackfill())) {
+        if (backfill && !isStopping())
+            enqueueBackfillList(user, listPath, useNick);
         return;
     }
 
-    if (!writeListRows(cid, rows))
+    QList<QVariantMap> rows;
+    QSet<QString> seen;
+    walkListing(listing, listing.getRoot(), cid, useHubUrl, useNick, useHubName, useIp,
+                seen, rows, backfill);
+    if (isStopping() || (backfill && shouldAbortBackfill())) {
+        if (backfill && !isStopping())
+            enqueueBackfillList(user, listPath, useNick);
         return;
+    }
+    if (!writeListRows(cid, rows, backfill)) {
+        if (backfill && shouldAbortBackfill() && !isStopping())
+            enqueueBackfillList(user, listPath, useNick);
+        return;
+    }
     if (isStopping())
         return;
     rememberListMeta(cid, listPath, rows.size());

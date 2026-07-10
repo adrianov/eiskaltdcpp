@@ -11,154 +11,100 @@
 
 #ifdef USE_QT_SQLITE
 
-#include <QSqlQuery>
-
 namespace {
 
 const qint64 kMaxEntries = 5000000;
 
-bool upsertMeta(QSqlDatabase &db, const QString &key, qint64 value, QString *err)
+bool upsertMeta(duckdb::Connection &con, const QString &key, qint64 value, QString *err)
 {
-    QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "INSERT INTO share_index_meta(key, value) VALUES(?, ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value"));
-    q.addBindValue(key);
-    q.addBindValue(value);
-    if (!q.exec()) {
-        if (err)
-            *err = q.lastError().text();
-        return false;
-    }
-    return true;
+    auto res = ShareIndexDb::query2(
+        con,
+        "INSERT INTO share_index_meta(key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        ShareIndexDb::strVal(key), ShareIndexDb::i64Val(value), err);
+    return res && !res->HasError();
 }
 
-qint64 metaValue(QSqlDatabase &db, const QString &key, qint64 fallback = -1)
+qint64 metaValue(duckdb::Connection &con, const QString &key, qint64 fallback = -1)
 {
-    QSqlQuery q(db);
-    q.prepare(QStringLiteral("SELECT value FROM share_index_meta WHERE key = ?"));
-    q.addBindValue(key);
-    if (!q.exec() || !q.next())
+    QString err;
+    auto res = ShareIndexDb::query1(con, "SELECT value FROM share_index_meta WHERE key = ?",
+                                    ShareIndexDb::strVal(key), &err);
+    if (!res || res->HasError() || res->RowCount() == 0)
         return fallback;
-    return q.value(0).toLongLong();
+    return ShareIndexDb::qi64(res->GetValue(0, 0));
 }
 
-bool hasTrigger(QSqlDatabase &db, const char *name)
+bool metaTableExists(duckdb::Connection &con)
 {
-    QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=? LIMIT 1"));
-    q.addBindValue(QLatin1String(name));
-    return q.exec() && q.next();
-}
-
-bool metaTableExists(QSqlDatabase &db)
-{
-    QSqlQuery q(db);
-    return q.exec(QStringLiteral(
-               "SELECT 1 FROM sqlite_master WHERE type='table' "
-               "AND name='share_index_meta' LIMIT 1"))
-            && q.next();
+    auto res = con.Query(
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_name = 'share_index_meta' LIMIT 1");
+    return !res->HasError() && res->RowCount() > 0;
 }
 
 } // namespace
 
-bool ShareIndex::ensureCap(QSqlDatabase &db)
+void ShareIndex::refreshEntryCount(duckdb::Connection &con)
 {
-    // Startup must stay read-only when possible: any DDL/DML against a multi-GB
-    // WAL can call sqlite3_wal_checkpoint and hang/abort (disk full).
+    auto res = con.Query("SELECT count(*)::BIGINT FROM share_entries");
+    if (res->HasError() || res->RowCount() == 0) {
+        setLastError(QString::fromStdString(res->GetError()));
+        return;
+    }
+    QString err;
+    if (!upsertMeta(con, QStringLiteral("entry_count"),
+                    ShareIndexDb::qi64(res->GetValue(0, 0)), &err))
+        setLastError(err);
+}
 
-    if (!metaTableExists(db)) {
-        QSqlQuery q(db);
-        if (!q.exec(QStringLiteral(
+bool ShareIndex::ensureCap(duckdb::Connection &con)
+{
+    if (!metaTableExists(con)) {
+        QString err;
+        if (!ShareIndexDb::execOk(con,
                 "CREATE TABLE share_index_meta ("
                 "key TEXT PRIMARY KEY,"
-                "value INTEGER NOT NULL DEFAULT 0)"))) {
-            setLastError(q.lastError().text());
-            return false;
-        }
-    }
-
-    const bool haveCount = metaValue(db, QStringLiteral("entry_count")) >= 0;
-    const bool capOk = hasTrigger(db, "share_entries_cap");
-
-    // Usable index: skip all writes (missing count triggers are repaired later).
-    if (haveCount && capOk)
-        return true;
-
-    if (!hasTrigger(db, "share_entries_cnt_ai")) {
-        QSqlQuery q(db);
-        q.exec(QStringLiteral(
-            "CREATE TRIGGER share_entries_cnt_ai AFTER INSERT ON share_entries BEGIN "
-            "UPDATE share_index_meta SET value = value + 1 WHERE key = 'entry_count'; "
-            "END"));
-    }
-    if (!hasTrigger(db, "share_entries_cnt_ad")) {
-        QSqlQuery q(db);
-        q.exec(QStringLiteral(
-            "CREATE TRIGGER share_entries_cnt_ad AFTER DELETE ON share_entries BEGIN "
-            "UPDATE share_index_meta SET value = value - 1 WHERE key = 'entry_count'; "
-            "END"));
-    }
-    if (!capOk) {
-        QSqlQuery q(db);
-        q.exec(QStringLiteral(
-            "CREATE TRIGGER share_entries_cap AFTER INSERT ON share_entries "
-            "WHEN COALESCE((SELECT value FROM share_index_meta WHERE key = 'cap_armed'), 1) != 0 "
-            "AND (SELECT value FROM share_index_meta WHERE key = 'entry_count') > %1 "
-            "BEGIN "
-            "DELETE FROM share_entries WHERE id = ("
-            "SELECT id FROM share_entries "
-            "ORDER BY show_hits ASC, updated_at ASC, created_at ASC "
-            "LIMIT 1);"
-            "END").arg(kMaxEntries));
-    }
-
-    QString err;
-    if (!haveCount) {
-        QSqlQuery q(db);
-        if (!q.exec(QStringLiteral("SELECT count(*) FROM share_entries")) || !q.next()) {
-            setLastError(q.lastError().text());
-            return false;
-        }
-        if (!upsertMeta(db, QStringLiteral("entry_count"), q.value(0).toLongLong(), &err)) {
+                "value BIGINT NOT NULL DEFAULT 0)", &err)) {
             setLastError(err);
             return false;
         }
     }
-    if (metaValue(db, QStringLiteral("cap_armed"), -1) < 0
-            && !upsertMeta(db, QStringLiteral("cap_armed"), 1, &err)) {
-        setLastError(err);
-        return false;
+
+    if (metaValue(con, QStringLiteral("entry_count")) < 0) {
+        QString err;
+        auto res = con.Query("SELECT count(*)::BIGINT FROM share_entries");
+        if (res->HasError() || res->RowCount() == 0) {
+            setLastError(QString::fromStdString(res->GetError()));
+            return false;
+        }
+        if (!upsertMeta(con, QStringLiteral("entry_count"),
+                        ShareIndexDb::qi64(res->GetValue(0, 0)), &err)) {
+            setLastError(err);
+            return false;
+        }
     }
     return true;
 }
 
-void ShareIndex::setCapArmed(QSqlDatabase &db, bool armed)
+void ShareIndex::pruneExcess(duckdb::Connection &con)
 {
-    upsertMeta(db, QStringLiteral("cap_armed"), armed ? 1 : 0, nullptr);
-}
-
-void ShareIndex::pruneExcess(QSqlDatabase &db)
-{
-    QSqlQuery q(db);
-    if (!q.exec(QStringLiteral(
-            "SELECT value FROM share_index_meta WHERE key = 'entry_count'"))
-            || !q.next())
-        return;
-
-    const qint64 excess = q.value(0).toLongLong() - kMaxEntries;
+    const qint64 count = metaValue(con, QStringLiteral("entry_count"), 0);
+    const qint64 excess = count - kMaxEntries;
     if (excess <= 0)
         return;
 
-    q.prepare(QStringLiteral(
+    auto res = ShareIndexDb::query1(
+        con,
         "DELETE FROM share_entries WHERE id IN ("
-        "SELECT id FROM share_entries "
-        "ORDER BY show_hits ASC, updated_at ASC, created_at ASC "
-        "LIMIT ?)"));
-    q.addBindValue(excess);
-    if (!q.exec())
-        setLastError(q.lastError().text());
+        "SELECT id FROM share_entries WHERE source = 2 "
+        "ORDER BY created_at ASC LIMIT ?)",
+        ShareIndexDb::i64Val(excess));
+    if (!res || res->HasError()) {
+        setLastError(res ? QString::fromStdString(res->GetError()) : QStringLiteral("prune"));
+        return;
+    }
+    refreshEntryCount(con);
 }
 
 #endif

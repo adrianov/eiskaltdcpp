@@ -133,6 +133,8 @@ public Q_SLOTS:
     void searchAlternates(const QString &);
     void searchFile(const QString &);
     void fastSearch(const QString &, bool);
+    /** Local ShareIndex hits (queued from a worker thread). */
+    void addResultsPacked(const QVariant &packed);
 
 protected:
     virtual void closeEvent(QCloseEvent*);
@@ -162,7 +164,6 @@ private Q_SLOTS:
     void onHubRemoved(const QString &info);
     void addResult(const VarMap &map);
     void addResults(const QList<VarMap> &maps);
-    void addResultsPacked(const QVariant &packed);
     void queueResult(const VarMap &map);
     void flushResults();
     void setIndexStats(const QString &text);

@@ -75,12 +75,20 @@ void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
     startDetached([guard, filter]() {
         ShareIndex *idx = ShareIndex::getInstance();
         const QList<QVariantMap> rows = idx->search(filter);
+        const QString err = idx->lastError();
         idx->releaseThreadDb();
-        if (!guard || rows.isEmpty())
+        if (!guard)
             return;
-        // One queued slot instead of up to 500 layoutChanged storms on the GUI thread.
-        QMetaObject::invokeMethod(guard.data(), "addResultsPacked", Qt::QueuedConnection,
-                                  Q_ARG(QVariant, QVariant::fromValue(rows)));
+        if (rows.isEmpty()) {
+            if (!err.isEmpty())
+                qWarning("ShareIndex search: %s", qPrintable(err));
+            return;
+        }
+        // Pass QList directly (registered metatype) — avoid QVariant double-wrap loss.
+        if (!QMetaObject::invokeMethod(guard.data(), "addResultsPacked", Qt::QueuedConnection,
+                                      Q_ARG(QVariant, QVariant::fromValue(rows)))) {
+            qWarning("ShareIndex search: invokeMethod(addResultsPacked) failed");
+        }
     });
 }
 

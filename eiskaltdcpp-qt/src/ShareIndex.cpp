@@ -21,6 +21,7 @@ ShareIndex::ShareIndex() : opened(0)
 {
 #ifdef USE_QT_SQLITE
     ShareIndexWriteQueue::writeStopping.storeRelease(0);
+    ShareIndexWriteQueue::clearAbortBackfill();
 #endif
 }
 
@@ -28,7 +29,11 @@ ShareIndex::~ShareIndex()
 {
 #ifdef USE_QT_SQLITE
     stopWrites();
-    disconnectThreadDb();
+    {
+        QMutexLocker lock(&connMutex);
+        threadConns.clear();
+    }
+    duck.reset();
 #endif
     opened.storeRelease(0);
 }
@@ -47,7 +52,6 @@ QString ShareIndex::fileExt(const QString &name, bool isDir)
     if (dot < 0 || dot == name.size() - 1)
         return QString();
 
-    // Match SearchModel: QFileInfo::suffix().toUpper()
     return name.mid(dot + 1).toUpper();
 }
 
@@ -68,26 +72,25 @@ void ShareIndex::open()
         return;
 
     if (dbFile.isEmpty())
-        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.sqlite";
+        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.duckdb";
 
-    // 30 GiB WAL + full disk → sqlite3_wal_checkpoint aborts; drop sidecars first.
-    prepareDbFile();
-
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
+    try {
+        duck = std::make_unique<duckdb::DuckDB>(dbFile.toStdString());
+    } catch (const std::exception &e) {
+        setLastError(QString::fromUtf8(e.what()));
+        duck.reset();
         return;
-
-    // Prefer incremental auto_vacuum + 16 KiB pages on empty DBs only.
-    // Existing indexes keep their layout (no wipe / no full VACUUM).
-    if (!ensureAutoVacuum(db)) {
-        if (!recreateForVacuum())
-            return;
-        db = threadDb();
-        if (!db.isOpen() || !ensureAutoVacuum(db))
-            return;
     }
 
-    if (!ensureSchema(db) || !ensureCap(db) || !ensureFts(db))
+    duckdb::Connection *con = threadConn();
+    if (!con)
+        return;
+
+    // Bound RAM so the index does not dominate the process.
+    ShareIndexDb::execOk(*con, "SET memory_limit='1GB'");
+    ShareIndexDb::execOk(*con, "SET threads=2");
+
+    if (!ensureSchema(*con) || !ensureCap(*con) || !ensureFts(*con))
         return;
 
     opened.storeRelease(1);
@@ -100,7 +103,7 @@ void ShareIndex::openAsync()
     if (opened.loadAcquire())
         return;
     if (dbFile.isEmpty())
-        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.sqlite";
+        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.duckdb";
 
     using namespace ShareIndexWriteQueue;
     WriteJob job;
@@ -131,6 +134,8 @@ qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QSt
 }
 
 void ShareIndex::ingestCachedLists() {}
+
+void ShareIndex::ingestCachedListsNow() {}
 
 void ShareIndex::waitWritesIdle() {}
 

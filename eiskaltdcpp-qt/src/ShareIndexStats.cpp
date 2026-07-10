@@ -12,39 +12,30 @@
 
 #ifdef USE_QT_SQLITE
 
+#include <QDateTime>
 #include <QFileInfo>
-#include <QSqlQuery>
 
 ShareIndex::IndexStats ShareIndex::indexStats()
 {
     IndexStats stats;
-    // Do not open() here — schema open runs on the write worker.
     if (!isOpen())
         return stats;
 
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
+    duckdb::Connection *con = threadConn();
+    if (!con)
         return stats;
 
-    // O(1) meta counter (triggers in ensureCap) — never COUNT(*) here.
-    // Includes dirs; compact UI rounding makes that negligible.
-    QSqlQuery q(db);
-    q.prepare(QStringLiteral(
-        "SELECT value FROM share_index_meta WHERE key = 'entry_count'"));
-    if (q.exec() && q.next())
-        stats.files = q.value(0).toLongLong();
+    auto res = con->Query("SELECT value FROM share_index_meta WHERE key = 'entry_count'");
+    if (!res->HasError() && res->RowCount() > 0)
+        stats.files = ShareIndexDb::qi64(res->GetValue(0, 0));
 
     const QFileInfo dbInfo(dbFile);
     if (dbInfo.exists())
         stats.dbBytes = dbInfo.size();
 
-    const QFileInfo wal(dbFile + QStringLiteral("-wal"));
+    const QFileInfo wal(dbFile + QStringLiteral(".wal"));
     if (wal.exists())
         stats.dbBytes += wal.size();
-
-    const QFileInfo shm(dbFile + QStringLiteral("-shm"));
-    if (shm.exists())
-        stats.dbBytes += shm.size();
 
     return stats;
 }
@@ -54,46 +45,36 @@ bool ShareIndex::needsListIngest(const QString &cid, const QString &listPath)
     if (cid.isEmpty())
         return false;
 
-    // Not open yet → allow enqueue; write worker opens first.
     if (!isOpen())
         return true;
 
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
-        return false;
+    duckdb::Connection *con = threadConn();
+    if (!con)
+        return true;
 
     if (listPath.isEmpty()) {
-        QSqlQuery q(db);
-        q.prepare("SELECT 1 FROM share_entries WHERE cid = ? LIMIT 1");
-        q.addBindValue(cid);
-        if (!q.exec())
-            return false;
-        return !q.next();
+        auto res = ShareIndexDb::query1(*con, "SELECT 1 FROM share_entries WHERE cid = ? LIMIT 1",
+                                        ShareIndexDb::strVal(cid));
+        if (!res || res->HasError())
+            return true;
+        return res->RowCount() == 0;
     }
 
     const QFileInfo fi(listPath);
     if (!fi.exists())
         return false;
 
-    QSqlQuery q(db);
-    q.prepare("SELECT list_path, list_mtime, list_size FROM share_list_meta WHERE cid = ?");
-    q.addBindValue(cid);
-    if (!q.exec() || !q.next()) {
-        // Pre-meta DB: keep existing rows searchable; record current file stamp.
-        QSqlQuery has(db);
-        has.prepare("SELECT 1 FROM share_entries WHERE cid = ? AND source = ? LIMIT 1");
-        has.addBindValue(cid);
-        has.addBindValue(int(SourceFileList));
-        if (has.exec() && has.next()) {
-            rememberListMeta(cid, listPath, 0);
-            return false;
-        }
+    auto res = ShareIndexDb::query1(
+        *con, "SELECT list_path, list_mtime, list_size FROM share_list_meta WHERE cid = ?",
+        ShareIndexDb::strVal(cid));
+    if (!res || res->HasError() || res->RowCount() == 0) {
+        // No meta → ingest (including after a partial/aborted write).
         return true;
     }
 
-    return q.value(0).toString() != listPath
-            || q.value(1).toLongLong() != fi.lastModified().toSecsSinceEpoch()
-            || q.value(2).toLongLong() != fi.size();
+    return ShareIndexDb::qstr(res->GetValue(0, 0)) != listPath
+            || ShareIndexDb::qi64(res->GetValue(1, 0)) != fi.lastModified().toSecsSinceEpoch()
+            || ShareIndexDb::qi64(res->GetValue(2, 0)) != fi.size();
 }
 
 void ShareIndex::rememberListMeta(const QString &cid, const QString &listPath, int rowCount)
@@ -107,26 +88,29 @@ void ShareIndex::rememberListMeta(const QString &cid, const QString &listPath, i
     if (!fi.exists())
         return;
 
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
+    duckdb::Connection *con = threadConn();
+    if (!con)
         return;
 
-    QSqlQuery q(db);
-    q.prepare(
+    duckdb::vector<duckdb::Value> binds;
+    binds.push_back(ShareIndexDb::strVal(cid));
+    binds.push_back(ShareIndexDb::strVal(listPath));
+    binds.push_back(ShareIndexDb::i64Val(fi.lastModified().toSecsSinceEpoch()));
+    binds.push_back(ShareIndexDb::i64Val(fi.size()));
+    binds.push_back(ShareIndexDb::i64Val(rowCount));
+    binds.push_back(ShareIndexDb::strVal(nowStamp()));
+    QString err;
+    auto res = ShareIndexDb::queryMat(
+        *con,
         "INSERT INTO share_list_meta(cid, list_path, list_mtime, list_size, row_count, indexed_at) "
         "VALUES(?,?,?,?,?,?) "
         "ON CONFLICT(cid) DO UPDATE SET "
         "list_path=excluded.list_path, list_mtime=excluded.list_mtime, "
         "list_size=excluded.list_size, row_count=excluded.row_count, "
-        "indexed_at=excluded.indexed_at");
-    q.addBindValue(cid);
-    q.addBindValue(listPath);
-    q.addBindValue(fi.lastModified().toSecsSinceEpoch());
-    q.addBindValue(fi.size());
-    q.addBindValue(rowCount);
-    q.addBindValue(nowStamp());
-    if (!q.exec())
-        setLastError(q.lastError().text());
+        "indexed_at=excluded.indexed_at",
+        binds, &err);
+    if (!res)
+        setLastError(err);
 }
 
 #endif

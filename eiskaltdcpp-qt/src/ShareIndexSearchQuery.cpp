@@ -21,19 +21,24 @@ static const char *kSelectCols =
     "SELECT e.id, e.name, e.size, e.tth, e.path, e.nick, e.free_slots, e.all_slots, "
     "e.ip, e.hub_name, e.hub_url, e.cid, e.is_dir, e.ext FROM share_entries e ";
 
-/** Quote a term for FTS5 MATCH; trigram needs ≥3 chars for substring hits. */
+/** Case-folded term for contains(); keep ≥3 chars like FTS5 trigram. */
 QString matchToken(const QString &term)
 {
     QString s = term.trimmed().toCaseFolded();
     if (s.isEmpty() || s.startsWith('-') || s.size() < 3)
         return QString();
-    s.replace('"', "\"\"");
-    return "\"" + s + "\"";
+    return s;
+}
+
+duckdb::unique_ptr<duckdb::MaterializedQueryResult>
+runBinds(duckdb::Connection &con, const std::string &sql, duckdb::vector<duckdb::Value> &binds, QString *err)
+{
+    return ShareIndexDb::queryMat(con, sql, binds, err);
 }
 
 } // namespace
 
-QString ShareIndex::filterSql(const SearchFilter &filter, QVariantList &binds) const
+QString ShareIndex::filterSql(const SearchFilter &filter, duckdb::vector<duckdb::Value> &binds) const
 {
     QStringList parts;
 
@@ -47,7 +52,7 @@ QString ShareIndex::filterSql(const SearchFilter &filter, QVariantList &binds) c
         QStringList ph;
         for (const QString &e : filter.extensions) {
             ph << "?";
-            binds << e.toUpper();
+            binds.push_back(ShareIndexDb::strVal(e.toUpper()));
         }
         parts << QString("e.ext IN (%1)").arg(ph.join(','));
     }
@@ -55,10 +60,10 @@ QString ShareIndex::filterSql(const SearchFilter &filter, QVariantList &binds) c
     if (filter.size > 0 && filter.sizeMode != SearchManager::SIZE_DONTCARE) {
         if (filter.sizeMode == SearchManager::SIZE_ATLEAST) {
             parts << "e.size >= ?";
-            binds << filter.size;
+            binds.push_back(ShareIndexDb::i64Val(filter.size));
         } else if (filter.sizeMode == SearchManager::SIZE_ATMOST) {
             parts << "e.size <= ?";
-            binds << filter.size;
+            binds.push_back(ShareIndexDb::i64Val(filter.size));
         }
     }
 
@@ -67,47 +72,50 @@ QString ShareIndex::filterSql(const SearchFilter &filter, QVariantList &binds) c
     return " AND " + parts.join(" AND ");
 }
 
-QList<QVariantMap> ShareIndex::rowsFromQuery(QSqlQuery &q)
+QList<QVariantMap> ShareIndex::rowsFromResult(duckdb::MaterializedQueryResult &res)
 {
     QList<QVariantMap> out;
-    while (q.next()) {
+    const idx_t n = res.RowCount();
+    out.reserve(int(n));
+    for (idx_t r = 0; r < n; ++r) {
         QVariantMap map;
-        map["ID"] = q.value(0).toLongLong();
-        map["FILE"] = q.value(1);
-        map["SIZE"] = q.value(2).toULongLong();
-        map["TTH"] = q.value(3);
-        map["PATH"] = q.value(4);
-        map["NICK"] = q.value(5);
-        map["FSLS"] = q.value(6).isNull() ? 0 : q.value(6).toULongLong();
-        map["ASLS"] = q.value(7).isNull() ? 0 : q.value(7).toULongLong();
-        map["IP"] = q.value(8).toString();
-        map["HUB"] = q.value(9);
-        map["HOST"] = q.value(10);
-        map["CID"] = q.value(11);
-        map["ISDIR"] = q.value(12).toInt() != 0;
-        map["EXT"] = q.value(13).toString();
+        map["ID"] = ShareIndexDb::qi64(res.GetValue(0, r));
+        map["FILE"] = ShareIndexDb::qstr(res.GetValue(1, r));
+        map["SIZE"] = quint64(ShareIndexDb::qi64(res.GetValue(2, r)));
+        map["TTH"] = ShareIndexDb::qstr(res.GetValue(3, r));
+        map["PATH"] = ShareIndexDb::qstr(res.GetValue(4, r));
+        map["NICK"] = ShareIndexDb::qstr(res.GetValue(5, r));
+        map["FSLS"] = res.GetValue(6, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(6, r)));
+        map["ASLS"] = res.GetValue(7, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(7, r)));
+        map["IP"] = ShareIndexDb::qstr(res.GetValue(8, r));
+        map["HUB"] = ShareIndexDb::qstr(res.GetValue(9, r));
+        map["HOST"] = ShareIndexDb::qstr(res.GetValue(10, r));
+        map["CID"] = ShareIndexDb::qstr(res.GetValue(11, r));
+        map["ISDIR"] = ShareIndexDb::qi64(res.GetValue(12, r)) != 0;
+        map["EXT"] = ShareIndexDb::qstr(res.GetValue(13, r));
         out.append(map);
     }
     return out;
 }
 
-QList<QVariantMap> ShareIndex::searchFts(QSqlDatabase &db, const SearchFilter &filter)
+QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFilter &filter)
 {
-    QVariantList binds;
+    QString err;
 
     if (filter.isHash && !filter.terms.isEmpty()) {
-        QSqlQuery q(db);
-        q.prepare(QString(kSelectCols) + "WHERE e.tth = ?" + filterSql(filter, binds) + " LIMIT ?");
-        q.addBindValue(filter.terms.first());
-        for (const auto &b : binds)
-            q.addBindValue(b);
-        q.addBindValue(filter.limit);
-        if (!q.exec()) {
-            setLastError(q.lastError().text());
+        duckdb::vector<duckdb::Value> binds;
+        QString sql = QString(kSelectCols) + "WHERE e.tth = ?";
+        binds.push_back(ShareIndexDb::strVal(filter.terms.first()));
+        sql += filterSql(filter, binds);
+        sql += " LIMIT ?";
+        binds.push_back(ShareIndexDb::i64Val(filter.limit));
+        auto mat = runBinds(con, sql.toStdString(), binds, &err);
+        if (!mat) {
+            setLastError(err);
             return {};
         }
         setLastError(QString());
-        return rowsFromQuery(q);
+        return rowsFromResult(*mat);
     }
 
     QStringList tokens;
@@ -119,25 +127,25 @@ QList<QVariantMap> ShareIndex::searchFts(QSqlDatabase &db, const SearchFilter &f
     if (tokens.isEmpty())
         return {};
 
-    // AND of quoted phrases: each term is a substring; order does not matter.
-    const QString match = tokens.join(" AND ");
+    // Substring AND on case-folded name/path (FTS5 trigram drop-in semantics).
+    duckdb::vector<duckdb::Value> binds;
+    QString sql = QString(kSelectCols) + "WHERE 1=1";
+    for (const QString &tok : tokens) {
+        sql += " AND (contains(e.name_cf, ?) OR contains(e.path_cf, ?))";
+        binds.push_back(ShareIndexDb::strVal(tok));
+        binds.push_back(ShareIndexDb::strVal(tok));
+    }
+    sql += filterSql(filter, binds);
+    sql += " LIMIT ?";
+    binds.push_back(ShareIndexDb::i64Val(filter.limit));
 
-    QSqlQuery q(db);
-    QString sql = QString(kSelectCols) +
-                  "JOIN share_entries_fts ON share_entries_fts.rowid = e.id "
-                  "WHERE share_entries_fts MATCH ?" +
-                  filterSql(filter, binds) + " LIMIT ?";
-    q.prepare(sql);
-    q.addBindValue(match);
-    for (const auto &b : binds)
-        q.addBindValue(b);
-    q.addBindValue(filter.limit);
-    if (!q.exec()) {
-        setLastError(q.lastError().text());
+    auto mat = runBinds(con, sql.toStdString(), binds, &err);
+    if (!mat) {
+        setLastError(err);
         return {};
     }
     setLastError(QString());
-    return rowsFromQuery(q);
+    return rowsFromResult(*mat);
 }
 
 #endif

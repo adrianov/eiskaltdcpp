@@ -52,7 +52,7 @@
 
 namespace dcpp {
 
-void startup(void (*f)(void*, const string&), void* p) {
+void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     // "Dedicated to the near-memory of Nev. Let's start remembering people while they're still alive."
     // Nev's great contribution to dc++
     while(1) break;
@@ -124,7 +124,8 @@ void startup(void (*f)(void*, const string&), void* p) {
             File::copyFile(XmlListFileName + ".bak", XmlListFileName);
         } catch(const FileException&) { }
     }
-    ShareManager::getInstance()->refresh(true, false, true);
+    if (refreshShare)
+        ShareManager::getInstance()->refresh(true, false, true);
     if(f != NULL)
         (*f)(p, _("Download Queue"));
     QueueManager::getInstance()->loadQueue();

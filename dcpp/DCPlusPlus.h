@@ -24,7 +24,8 @@ namespace dcpp {
 
 using std::string;
 
-extern void startup(void (*f)(void*, const string&), void* p);
+/** refreshShare: false for headless CLI that exits without joining ShareManager. */
+extern void startup(void (*f)(void*, const string&), void* p, bool refreshShare = true);
 extern void shutdown();
 
 } // namespace dcpp

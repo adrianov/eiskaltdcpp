@@ -72,11 +72,12 @@ if (USE_QT_SQLITE)
     elseif (USE_QT5)
         find_package (Qt5Sql 5.0.2 REQUIRED)
     endif (USE_QT)
+    find_package (DuckDB REQUIRED)
     add_definitions (-DUSE_QT_SQLITE)
     set (QT_USE_QTSQL 1)
-    message (STATUS "Building with Qt SQLite support")
+    message (STATUS "Building with Qt SQLite (FinishedTransfers) + DuckDB ShareIndex")
 else (USE_QT_SQLITE)
-    message (STATUS "Building without Qt SQLite support")
+    message (STATUS "Building without Qt SQLite / DuckDB ShareIndex")
 endif (USE_QT_SQLITE)
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
@@ -98,6 +99,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersModelView.cpp
     src/FinishedTransfersParams.cpp
     src/FinishedTransfersProxy.cpp
+    src/FinishedTransfersSlots.cpp
     src/HubFrameLinkMagnet.cpp
     src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
@@ -129,6 +131,7 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameTimer.cpp
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
+    src/SearchFileTypes.cpp
     src/SearchModelSort.cpp
     src/SearchModelAdd.cpp
     src/SearchModelData.cpp
@@ -424,6 +427,11 @@ elseif (USE_QT5)
                       ${Qt5Script_LIBRARIES}
                       ${Qt5Sql_LIBRARIES}
                       ${Qt5Network_LIBRARIES})
+endif ()
+
+if (USE_QT_SQLITE)
+    include_directories (${DuckDB_INCLUDE_DIRS})
+    list (APPEND LIBS ${DuckDB_LIBRARIES})
 endif ()
 
 include_directories (${PROJECT_SOURCE_DIR}
@@ -722,10 +730,47 @@ if (APPLE)
         else (${_qt5Core_install_prefix} STREQUAL "")
         set (MACDEPLOYQT "${_qt5Core_install_prefix}/bin/macdeployqt")
         endif (${_qt5Core_install_prefix} STREQUAL "")
+        # Help macdeployqt find Homebrew-linked libs (DuckDB, aspell, …).
+        if (DuckDB_LIBRARY)
+            get_filename_component (_MAC_LIBPATH "${DuckDB_LIBRARY}" DIRECTORY)
+        else (DuckDB_LIBRARY)
+            set (_MAC_LIBPATH "/opt/homebrew/lib")
+        endif (DuckDB_LIBRARY)
         install (CODE "
                     execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=2
+                        -libpath=${_MAC_LIBPATH}
                         WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})")
     endif (USE_QT)
+
+    # Explicitly embed DuckDB (macdeployqt may miss non-Qt dylibs). Self-contained .app.
+    if (USE_QT_SQLITE AND DuckDB_LIBRARY)
+        get_filename_component (_DUCKDB_REAL "${DuckDB_LIBRARY}" REALPATH)
+        get_filename_component (_DUCKDB_NAME "${_DUCKDB_REAL}" NAME)
+        install (CODE "
+            set (BUNDLE_APP_NAME \"${PROJECT_NAME_GLOBAL}\")
+            set (BUNDLE_DYLIB_SRC \"${DuckDB_LIBRARY}\")
+            set (BUNDLE_DYLIB_REAL \"${_DUCKDB_REAL}\")
+            set (BUNDLE_DYLIB_NAME \"${_DUCKDB_NAME}\")
+            # Homebrew opt/ symlink and Cellar path both appear in otool -L.
+            set (BUNDLE_DYLIB_EXTRA_OLDS \"/opt/homebrew/opt/duckdb/lib/${_DUCKDB_NAME};/usr/local/opt/duckdb/lib/${_DUCKDB_NAME}\")
+            include (\"${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake\")
+            ")
+        # Build-tree .app: same embed so local runs do not need Homebrew at runtime.
+        # install_name_tool -change/-add_rpath fail if the entry is missing/already set.
+        # Build-tree .app: same embed so local runs do not need Homebrew at runtime.
+        add_custom_command (TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+                "-DBUNDLE_APP_NAME=${PROJECT_NAME_GLOBAL}"
+                "-DBUNDLE_DYLIB_SRC=${DuckDB_LIBRARY}"
+                "-DBUNDLE_DYLIB_REAL=${_DUCKDB_REAL}"
+                "-DBUNDLE_DYLIB_NAME=${_DUCKDB_NAME}"
+                "-DBUNDLE_DYLIB_EXTRA_OLDS=/opt/homebrew/opt/duckdb/lib/${_DUCKDB_NAME};/usr/local/opt/duckdb/lib/${_DUCKDB_NAME}"
+                "-DCMAKE_INSTALL_PREFIX=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/.."
+                -P "${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake"
+            COMMENT "Bundle libduckdb into ${PROJECT_NAME_GLOBAL}.app"
+            VERBATIM)
+    endif (USE_QT_SQLITE AND DuckDB_LIBRARY)
+
     set (CPACK_BINARY_DRAGNDROP ON)
 endif (APPLE)
 

@@ -13,16 +13,14 @@
 
 QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
 {
-    // Wait for async open; never run schema/WAL work on the UI thread.
     if (!isOpen() || filter.terms.isEmpty())
         return {};
 
-    // No app-level lock: WAL + per-thread connections allow parallel searches.
-    QSqlDatabase db = threadDb();
-    if (!db.isOpen())
+    duckdb::Connection *con = threadConn();
+    if (!con)
         return {};
 
-    return searchFts(db, filter);
+    return searchFts(*con, filter);
 }
 
 #endif

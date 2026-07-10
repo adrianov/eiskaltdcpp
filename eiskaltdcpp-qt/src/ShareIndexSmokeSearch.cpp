@@ -11,8 +11,8 @@
 
 #ifdef USE_QT_SQLITE
 
-/** FTS trigram MATCH checks for ShareIndex::smokeCheck. */
-bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
+/** Substring contains() checks for ShareIndex::smokeCheck. */
+bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error)
 {
     ShareIndex::SearchFilter f;
     f.terms << "volume" << "softkey";
@@ -27,13 +27,13 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
     soft["size"] = 1;
     soft["nick"] = "Alice";
     soft["hub_name"] = "TestHub";
-    if (!idx.upsertRow(db, soft, ShareIndex::SourceFileList)) {
+    if (!idx.upsertRow(con, soft, ShareIndex::SourceFileList)) {
         if (error)
             *error = "insert softkey";
         return false;
     }
 
-    auto hits = idx.searchFts(db, f);
+    auto hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = QString("multi-term match: %1").arg(idx.lastError());
@@ -53,13 +53,13 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
         cyr["size"] = 2;
         cyr["nick"] = "Alice";
         cyr["hub_name"] = "TestHub";
-        if (!idx.upsertRow(db, cyr, ShareIndex::SourceFileList)) {
+        if (!idx.upsertRow(con, cyr, ShareIndex::SourceFileList)) {
             if (error)
                 *error = "insert cyrillic";
             return false;
         }
     }
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = "cyrillic match";
@@ -79,13 +79,13 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
         camel["size"] = 3;
         camel["nick"] = "Alice";
         camel["hub_name"] = "TestHub";
-        if (!idx.upsertRow(db, camel, ShareIndex::SourceFileList)) {
+        if (!idx.upsertRow(con, camel, ShareIndex::SourceFileList)) {
             if (error)
                 *error = "insert camel";
             return false;
         }
     }
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = "camelCase match";
@@ -105,13 +105,13 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
         ru["size"] = 4;
         ru["nick"] = "Alice";
         ru["hub_name"] = "TestHub";
-        if (!idx.upsertRow(db, ru, ShareIndex::SourceFileList)) {
+        if (!idx.upsertRow(con, ru, ShareIndex::SourceFileList)) {
             if (error)
                 *error = "insert ru";
             return false;
         }
     }
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = "ru inflection match";
@@ -120,7 +120,7 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
 
     f.terms.clear();
     f.terms << "breaking";
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.size() < 1) {
         if (error)
             *error = "match search";
@@ -129,7 +129,7 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
 
     f.terms.clear();
     f.terms << "BREAKING";
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = "case search";
@@ -139,7 +139,7 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
     f.terms.clear();
     f.terms << "S01E01";
     f.extensions << "MKV";
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (hits.isEmpty()) {
         if (error)
             *error = "ext filter";
@@ -147,7 +147,7 @@ bool shareIndexSmokeSearch(ShareIndex &idx, QSqlDatabase &db, QString *error)
     }
     f.extensions.clear();
     f.extensions << "AVI";
-    hits = idx.searchFts(db, f);
+    hits = idx.searchFts(con, f);
     if (!hits.isEmpty()) {
         if (error)
             *error = "ext filter false positive";

@@ -143,9 +143,8 @@ bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const s
         return true;
     }
 
-    // Silent / match / directory: reuse cache without a download. Log only for browse.
-    if(processFlags == 0)
-        fire(QueueManagerListener::ListCached(), aUser, listFile);
+    // Every non-browse cache hit must notify consumers such as ShareIndex.
+    fire(QueueManagerListener::ListCached(), aUser, listFile);
     return true;
 }
 

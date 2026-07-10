@@ -15,80 +15,88 @@
 
 using namespace ShareIndexWriteQueue;
 
-bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &rows)
+bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &rows, bool backfill)
 {
-    // Large commits (~10s on M1 SQLite+FTS trigram). Write queue is single-threaded;
-    // WAL lets searches continue while this transaction runs.
-    // Disarm per-INSERT eviction; prune once after the bulk load.
-    QSqlDatabase armDb = threadDb();
-    if (armDb.isOpen())
-        setCapArmed(armDb, false);
+    if (rows.isEmpty()) {
+        duckdb::Connection *con = threadConn();
+        if (!con) {
+            setLastError(QStringLiteral("threadConn not open"));
+            return false;
+        }
+        auto res = ShareIndexDb::query1(
+            *con, "DELETE FROM share_entries WHERE cid = ?", ShareIndexDb::strVal(cid));
+        if (!res || res->HasError()) {
+            setLastError(res ? QString::fromStdString(res->GetError()) : QStringLiteral("delete"));
+            return false;
+        }
+        refreshEntryCount(*con);
+        return true;
+    }
 
     bool loaded = false;
-    const int chunk = 100000;
+    // Smaller chunks: commit + HUD update sooner; abort can yield between chunks.
+    const int chunk = 20000;
     for (int offset = 0; offset < rows.size(); ) {
-        QSqlDatabase db = threadDb();
-        if (!db.isOpen()) {
-            setLastError(QStringLiteral("threadDb not open"));
+        if (isStopping() || (backfill && shouldAbortBackfill()))
+            break;
+
+        duckdb::Connection *con = threadConn();
+        if (!con) {
+            setLastError(QStringLiteral("threadConn not open"));
             break;
         }
 
-        db.transaction();
+        if (!ShareIndexDb::execOk(*con, "BEGIN TRANSACTION")) {
+            setLastError(QStringLiteral("BEGIN failed"));
+            break;
+        }
 
         if (offset == 0) {
-            QSqlQuery del(db);
-            del.prepare("DELETE FROM share_entries WHERE cid = ? AND source = ?");
-            del.addBindValue(cid);
-            del.addBindValue(int(SourceFileList));
-            if (!del.exec()) {
-                setLastError(del.lastError().text());
-                db.rollback();
+            // A complete file list is authoritative for this user. Removing all
+            // rows also prevents collisions with earlier hub-search entries.
+            auto del = ShareIndexDb::query1(
+                *con, "DELETE FROM share_entries WHERE cid = ?",
+                ShareIndexDb::strVal(cid));
+            if (!del || del->HasError()) {
+                setLastError(del ? QString::fromStdString(del->GetError()) : QStringLiteral("delete"));
+                ShareIndexDb::execOk(*con, "ROLLBACK");
                 break;
             }
-        }
-
-        QSqlQuery ins(db);
-        if (!prepareInsert(ins)) {
-            setLastError(ins.lastError().text());
-            db.rollback();
-            break;
         }
 
         const int end = qMin(offset + chunk, rows.size());
-        bool chunkOk = true;
-        for (; offset < end; ++offset) {
-            if (isStopping()) {
-                db.rollback();
-                chunkOk = false;
-                break;
-            }
-            if (!bindInsert(ins, rows.at(offset), SourceFileList) || !ins.exec()) {
-                setLastError(ins.lastError().text());
-                db.rollback();
-                chunkOk = false;
-                break;
-            }
-        }
-        if (!chunkOk)
-            break;
+        QList<QVariantMap> slice;
+        slice.reserve(end - offset);
+        for (; offset < end; ++offset)
+            slice.append(rows.at(offset));
 
-        if (!db.commit()) {
-            setLastError(db.lastError().text());
+        if (!appendListRows(*con, slice)) {
+            ShareIndexDb::execOk(*con, "ROLLBACK");
             break;
         }
+
+        if (!ShareIndexDb::execOk(*con, "COMMIT")) {
+            setLastError(QStringLiteral("COMMIT failed"));
+            break;
+        }
+
+        // Visible progress after each chunk.
+        refreshEntryCount(*con);
+
         if (offset >= rows.size())
             loaded = true;
     }
 
-    armDb = threadDb();
-    if (armDb.isOpen()) {
+    duckdb::Connection *con = threadConn();
+    if (con) {
+        if (loaded && !isStopping()) {
+            refreshEntryCount(*con);
+            pruneExcess(*con);
+        }
         if (loaded && !isStopping())
-            pruneExcess(armDb);
-        setCapArmed(armDb, true);
-        if (loaded && !isStopping())
-            reclaimFreePages(armDb);
+            reclaimFreePages(*con);
     }
-    return loaded && !isStopping();
+    return loaded && !isStopping() && !(backfill && shouldAbortBackfill());
 }
 
 #endif
