@@ -92,12 +92,12 @@ void FinishedTransfersModel::addUser(const QVariantMap &params){
 }
 
 void FinishedTransfersModel::remFile(const QString &file){
-    FinishedTransfersItem *item = findFile(file);
-
-    if (!item)
+    auto it = file_hash.find(file);
+    if (it == file_hash.end())
         return;
 
-    file_hash.remove(file);
+    FinishedTransfersItem *item = it.value();
+    file_hash.erase(it);
 
     beginRemoveRows(QModelIndex(), item->row(), item->row());
     {
@@ -109,12 +109,12 @@ void FinishedTransfersModel::remFile(const QString &file){
 }
 
 void FinishedTransfersModel::remUser(const QString &cid){
-    FinishedTransfersItem *item = findUser(cid);
-
-    if (!item)
+    auto it = user_hash.find(cid);
+    if (it == user_hash.end())
         return;
 
-    user_hash.remove(cid);
+    FinishedTransfersItem *item = it.value();
+    user_hash.erase(it);
 
     beginRemoveRows(QModelIndex(), item->row(), item->row());
     {

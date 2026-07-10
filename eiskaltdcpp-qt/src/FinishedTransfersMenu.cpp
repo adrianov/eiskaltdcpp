@@ -9,8 +9,6 @@
 
 #include "FinishedTransfers.h"
 
-#include "dcpp/File.h"
-
 #include <QApplication>
 #include <QClipboard>
 #include <QCursor>
@@ -168,12 +166,7 @@ void FinishedTransfers<isUpload>::slotContextMenu()
             qApp->clipboard()->setText(names, QClipboard::Clipboard);
     }
     else if (delete_f && ret == delete_f){
-        for (const auto &f : files) {
-            try {
-                File::deleteFile(_tq(f));
-                FinishedManager::getInstance()->remove(isUpload, _tq(f));
-            } catch (const std::exception&) {}
-        }
+        deleteDiskFiles(files);
     }
 }
 

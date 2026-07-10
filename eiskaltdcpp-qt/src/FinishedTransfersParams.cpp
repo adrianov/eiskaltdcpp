@@ -111,28 +111,9 @@ void FinishedTransfers<isUpload>::removeFileFromDB(const QString &target)
 #endif
 }
 
-template <bool isUpload>
-void FinishedTransfers<isUpload>::pruneMissingFiles()
-{
-    const QStringList targets = model->fileTargets();
-    for (const QString &qtarget : targets) {
-        if (Util::fileExists(_tq(qtarget)))
-            continue;
-
-        try {
-            FinishedManager::getInstance()->remove(false, _tq(qtarget));
-        } catch (const std::exception&) {}
-
-        removeFileFromDB(qtarget);
-        model->remFile(qtarget);
-    }
-}
-
 template void FinishedTransfers<true>::getParams(const FinishedFileItemPtr&, const string&, VarMap&);
 template void FinishedTransfers<false>::getParams(const FinishedFileItemPtr&, const string&, VarMap&);
 template void FinishedTransfers<true>::getParams(const FinishedUserItemPtr&, const UserPtr&, VarMap&);
 template void FinishedTransfers<false>::getParams(const FinishedUserItemPtr&, const UserPtr&, VarMap&);
 template void FinishedTransfers<true>::removeFileFromDB(const QString&);
 template void FinishedTransfers<false>::removeFileFromDB(const QString&);
-template void FinishedTransfers<true>::pruneMissingFiles();
-template void FinishedTransfers<false>::pruneMissingFiles();

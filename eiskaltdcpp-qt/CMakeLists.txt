@@ -99,6 +99,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersModelMut.cpp
     src/FinishedTransfersModelView.cpp
     src/FinishedTransfersParams.cpp
+    src/FinishedTransfersDelete.cpp
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp
     src/HubFrameClient.cpp

@@ -119,6 +119,7 @@ private:
     void getParams(const FinishedUserItemPtr& item, const UserPtr& user, VarMap &params);
     void removeFileFromDB(const QString &target);
     void pruneMissingFiles();
+    void deleteDiskFiles(const QStringList &files);
 
     void slotTypeChanged(int index) override;
     void slotClear() override;
