@@ -42,7 +42,7 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
     string nick = fromUtf8(aUser.getIdentity().getNick());
     ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
-    bool secure = PeerConnectTls::resolveSecure(secureMode, aUser.getUser());
+    bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(secureMode, aUser);
     string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
     const string detail = getLocalIp() + ":" + port + (secure ? " TLS" : "");
     PeerConnectLog::nmdcSend(aUser, "$ConnectToMe", detail);
@@ -134,54 +134,6 @@ void NmdcHub::search(int aSizeType, int64_t aSize, int aFileType, const string& 
         tmp2 = "Hub:" + fromUtf8(getMyNick());
     }
     send("$Search " + tmp2 + ' ' + c1 + '?' + c2 + '?' + Util::toString(aSize) + '?' + Util::toString(aFileType+1) + '?' + tmp + '|');
-}
-
-string NmdcHub::validateMessage(string tmp, bool reverse) {
-    string::size_type i = 0;
-
-    if(reverse) {
-        while( (i = tmp.find("&#36;", i)) != string::npos) {
-            tmp.replace(i, 5, "$");
-            i++;
-        }
-        i = 0;
-        while( (i = tmp.find("&#124;", i)) != string::npos) {
-            tmp.replace(i, 6, "|");
-            i++;
-        }
-        i = 0;
-        while( (i = tmp.find("&amp;", i)) != string::npos) {
-            tmp.replace(i, 5, "&");
-            i++;
-        }
-    } else {
-        i = 0;
-        while( (i = tmp.find("&amp;", i)) != string::npos) {
-            tmp.replace(i, 1, "&amp;");
-            i += 4;
-        }
-        i = 0;
-        while( (i = tmp.find("&#36;", i)) != string::npos) {
-            tmp.replace(i, 1, "&amp;");
-            i += 4;
-        }
-        i = 0;
-        while( (i = tmp.find("&#124;", i)) != string::npos) {
-            tmp.replace(i, 1, "&amp;");
-            i += 4;
-        }
-        i = 0;
-        while( (i = tmp.find('$', i)) != string::npos) {
-            tmp.replace(i, 1, "&#36;");
-            i += 4;
-        }
-        i = 0;
-        while( (i = tmp.find('|', i)) != string::npos) {
-            tmp.replace(i, 1, "&#124;");
-            i += 5;
-        }
-    }
-    return tmp;
 }
 
 void NmdcHub::privateMessage(const string& nick, const string& message) {

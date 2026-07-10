@@ -80,7 +80,9 @@ private:
     enum SupportFlags {
         SUPPORTS_USERCOMMAND = 0x01,
         SUPPORTS_NOGETINFO = 0x02,
-        SUPPORTS_USERIP2 = 0x04
+        SUPPORTS_USERIP2 = 0x04,
+        /** Hub rejected $ConnectToMe with TLS "S" port suffix (e.g. some PtokaX). */
+        SUPPORTS_NO_SECURE_CTM = 0x08
     };
 
     mutable CriticalSection cs;
@@ -124,6 +126,8 @@ private:
     void supports(const StringList& feat);
     void clearFlooders(uint64_t tick);
     void stopInfectedConnect(const string& message, const string& aNick = Util::emptyString);
+    void noteSecureCtmRejected(const string& message);
+    bool allowSecureCtm() const { return !(supportFlags & SUPPORTS_NO_SECURE_CTM); }
 
     void updateFromTag(Identity& id, const string& tag);
     void findTagInMyINFO(Identity& id, const string& param, size_t start);

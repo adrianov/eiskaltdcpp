@@ -57,6 +57,8 @@ set(DCPP_EXTRA_SOURCES
     AdcHubEvents.cpp
     NmdcHubSend.cpp
     NmdcHubUsers.cpp
+    NmdcHubUserParse.cpp
+    NmdcHubEscape.cpp
     PeerConnectLog.cpp
     PeerConnectFilter.cpp
     HubReconnectFilter.cpp

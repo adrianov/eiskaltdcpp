@@ -12,6 +12,7 @@
 
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
+#include "OnlineUser.h"
 #include "SettingsManager.h"
 #include "User.h"
 #include "UserConnection.h"
@@ -60,6 +61,18 @@ bool resolveSecure(int mode, const UserPtr& user) {
     if(BOOLSETTING(REQUIRE_TLS))
         return true;
     return peerSupportsTls(user);
+}
+
+bool resolveSecureNmdc(int mode, const OnlineUser& ou) {
+    if(!tlsAvailable())
+        return false;
+    if(mode == PLAIN)
+        return false;
+    if(mode == TLS || learnedTlsRequired(ou.getUser()))
+        return true;
+    if(ou.getIdentity().getStatus() & Identity::TLS)
+        return true;
+    return BOOLSETTING(REQUIRE_TLS);
 }
 
 bool rejectPeer(const UserPtr& user) {

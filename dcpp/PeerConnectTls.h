@@ -28,6 +28,8 @@ bool peerSupportsTls(const UserPtr& user);
 bool learnedTlsRequired(const UserPtr& user);
 void rememberTlsRequired(const UserPtr& user);
 bool resolveSecure(int mode, const UserPtr& user);
+/** NMDC $ConnectToMe: use this hub's MyINFO TLS bit, not User::TLS from other hubs. */
+bool resolveSecureNmdc(int mode, const OnlineUser& ou);
 bool rejectPeer(const UserPtr& user);
 bool isTlsMismatch(const string& err);
 void scheduleRetry(ConnectionQueueItem* cqi, bool wasSecure, bool protocolError, int connectPhase, const string& err);
