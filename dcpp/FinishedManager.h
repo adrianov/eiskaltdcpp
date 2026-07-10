@@ -31,37 +31,10 @@
 #include "ClientManager.h"
 #include "HintedUser.h"
 
+#include <unordered_map>
+
 namespace dcpp {
 
-class FinishedItem
-{
-public:
-    typedef vector<FinishedItem> FinishedItemList;
-
-    FinishedItem(string const& aTarget, const UserPtr& aUser, string const& aHub,
-                 int64_t aSize, int64_t aSpeed, time_t aTime,
-                 const string& aTTH = Util::emptyString) :
-        target(aTarget),  hub(aHub), tth(aTTH), size(aSize), avgSpeed(aSpeed),
-        time(aTime), user(aUser)
-    {
-    }
-
-    int imageIndex() const;
-
-    GETSET(string, target, Target);
-    GETSET(string, hub, Hub);
-    GETSET(string, tth, TTH);
-
-    GETSET(int64_t, size, Size);
-    GETSET(int64_t, avgSpeed, AvgSpeed);
-    GETSET(time_t, time, Time);
-    GETSET(UserPtr, user, User);
-
-private:
-    friend class FinishedManager;
-
-};
-/**/
 class FinishedManager : public Singleton<FinishedManager>,
         public Speaker<FinishedManagerListener>, private DownloadManagerListener, private UploadManagerListener, private QueueManagerListener
 {
@@ -77,20 +50,18 @@ public:
     void remove(bool upload, const string& file);
     void remove(bool upload, const HintedUser& user);
     void removeAll(bool upload);
-    //Partial
-    /** Get file full path by tth to share */
+    /** Full path of a finished download by TTH (base32), if still on disk. */
     string getTarget(const string& aTTH);
 
     bool handlePartialRequest(const TTHValue& tth, vector<uint16_t>& outPartialInfo);
-    //end
 private:
     friend class Singleton<FinishedManager>;
 
     CriticalSection cs;
     MapByFile DLByFile, ULByFile;
     MapByUser DLByUser, ULByUser;
-    //Partial
-    FinishedItem::FinishedItemList downloads, uploads;
+    /** Finished download targets keyed by TTH base32. */
+    unordered_map<string, string> dlByTth;
 
     FinishedManager();
     virtual ~FinishedManager();
