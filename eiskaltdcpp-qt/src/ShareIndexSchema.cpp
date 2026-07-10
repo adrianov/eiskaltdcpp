@@ -11,39 +11,38 @@
 
 #ifdef USE_QT_SQLITE
 
-bool ShareIndex::ensureSchema(duckdb::Connection &con)
+/** Normalized share-index schema. Names and paths stay scalar because each
+    location is independently searchable and returned to the UI. */
+bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix)
 {
     QString err;
     if (!ShareIndexDb::execOk(con,
-            "CREATE SEQUENCE IF NOT EXISTS share_entry_seq START 1", &err)) {
-        setLastError(err);
-        return false;
-    }
-
-    // No hit / show_hits / updated_at. created_at kept for age trim.
-    // ukey replaces partial unique indexes (DuckDB-friendly upsert key).
-    if (!ShareIndexDb::execOk(con,
-            "CREATE TABLE IF NOT EXISTS share_entries ("
-            "id BIGINT PRIMARY KEY DEFAULT nextval('share_entry_seq'),"
-            "ukey TEXT NOT NULL UNIQUE,"
+            "CREATE TABLE IF NOT EXISTS " + prefix + "share_files ("
+            "file_id BIGINT PRIMARY KEY,"
+            "tth TEXT NOT NULL,"
+            "size BIGINT NOT NULL,"
+            "UNIQUE(tth, size))", &err)
+            || !ShareIndexDb::execOk(con,
+            "CREATE TABLE IF NOT EXISTS " + prefix + "share_users ("
+            "user_id BIGINT PRIMARY KEY,"
             "cid TEXT NOT NULL,"
             "hub_url TEXT NOT NULL DEFAULT '',"
-            "tth TEXT NOT NULL DEFAULT '',"
-            "path TEXT NOT NULL,"
-            "name TEXT NOT NULL,"
-            "ext TEXT NOT NULL DEFAULT '',"
-            "is_dir INTEGER NOT NULL DEFAULT 0,"
-            "size BIGINT NOT NULL DEFAULT 0,"
             "nick TEXT NOT NULL DEFAULT '',"
             "hub_name TEXT NOT NULL DEFAULT '',"
             "free_slots INTEGER,"
             "all_slots INTEGER,"
             "ip TEXT,"
-            "bitrate INTEGER,"
-            "resolution TEXT,"
-            "video_info TEXT,"
-            "audio_info TEXT,"
-            "shared_ts BIGINT,"
+            "updated_at TEXT NOT NULL,"
+            "UNIQUE(cid, hub_url))", &err)
+            || !ShareIndexDb::execOk(con,
+            "CREATE TABLE IF NOT EXISTS " + prefix + "share_locations ("
+            "user_id BIGINT NOT NULL,"
+            "file_id BIGINT,"
+            "path TEXT NOT NULL,"
+            "name TEXT NOT NULL,"
+            "ext TEXT NOT NULL DEFAULT '',"
+            "is_dir INTEGER NOT NULL DEFAULT 0,"
+            "local_size BIGINT,"
             "source INTEGER NOT NULL,"
             "created_at TEXT NOT NULL,"
             "name_cf TEXT NOT NULL DEFAULT '',"
@@ -53,16 +52,12 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con)
         return false;
     }
 
-    ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
     ShareIndexDb::execOk(con,
-            "CREATE INDEX IF NOT EXISTS share_entries_cid_tth ON share_entries(cid, tth)");
-    ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
-    // Trim / cap eviction by age only (no show_hits / updated_at index).
-    ShareIndexDb::execOk(con,
-            "CREATE INDEX IF NOT EXISTS share_entries_created ON share_entries(created_at)");
+            "CREATE INDEX IF NOT EXISTS share_users_cid ON "
+            + prefix + "share_users(cid)");
 
     if (!ShareIndexDb::execOk(con,
-            "CREATE TABLE IF NOT EXISTS share_list_meta ("
+            "CREATE TABLE IF NOT EXISTS " + prefix + "share_list_meta ("
             "cid TEXT PRIMARY KEY,"
             "list_path TEXT NOT NULL,"
             "list_mtime BIGINT NOT NULL,"

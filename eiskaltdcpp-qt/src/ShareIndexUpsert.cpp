@@ -14,98 +14,6 @@
 
 namespace {
 
-QString sqlText(const QVariant &v)
-{
-    const QString s = v.toString();
-    return s.isNull() ? QStringLiteral("") : s;
-}
-
-} // namespace
-
-bool ShareIndex::upsertRow(duckdb::Connection &con, const QVariantMap &row, int source)
-{
-    const bool isDir = row.value("is_dir").toBool();
-    const QString tth = sqlText(row.value("tth"));
-    const QString cid = sqlText(row.value("cid"));
-    const QString path = sqlText(row.value("path"));
-    const QString name = sqlText(row.value("name"));
-    const QString ext = row.contains("ext") ? sqlText(row.value("ext")) : fileExt(name, isDir);
-    const QString stamp = nowStamp();
-    const QString ukey = ShareIndexDb::rowUkey(cid, tth, path, name, isDir);
-
-    if (cid.isEmpty() || name.isEmpty())
-        return false;
-
-    const bool fromList = (source == SourceFileList);
-
-    // created_at only on insert; ON CONFLICT keeps existing created_at.
-    std::string sql;
-    if (fromList) {
-        sql = "INSERT INTO share_entries ("
-              "ukey, cid, hub_url, tth, path, name, name_cf, path_cf, ext, is_dir, size, nick, hub_name,"
-              "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
-              "shared_ts, source, created_at"
-              ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-              "ON CONFLICT(ukey) DO UPDATE SET "
-              "hub_url=excluded.hub_url, tth=excluded.tth, path=excluded.path, name=excluded.name,"
-              "name_cf=excluded.name_cf, path_cf=excluded.path_cf, ext=excluded.ext,"
-              "is_dir=excluded.is_dir, size=excluded.size, nick=excluded.nick, hub_name=excluded.hub_name,"
-              "free_slots=excluded.free_slots, all_slots=excluded.all_slots, ip=excluded.ip,"
-              "bitrate=excluded.bitrate, resolution=excluded.resolution, video_info=excluded.video_info,"
-              "audio_info=excluded.audio_info, shared_ts=excluded.shared_ts,"
-              "source=CASE WHEN share_entries.source=1 OR excluded.source=1 THEN 1 ELSE excluded.source END";
-    } else {
-        sql = "INSERT INTO share_entries ("
-              "ukey, cid, hub_url, tth, path, name, name_cf, path_cf, ext, is_dir, size, nick, hub_name,"
-              "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
-              "shared_ts, source, created_at"
-              ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-              "ON CONFLICT(ukey) DO UPDATE SET "
-              "hub_url=excluded.hub_url, tth=excluded.tth, path=excluded.path, name=excluded.name,"
-              "name_cf=excluded.name_cf, path_cf=excluded.path_cf, ext=excluded.ext,"
-              "is_dir=excluded.is_dir, size=excluded.size, nick=excluded.nick, hub_name=excluded.hub_name,"
-              "free_slots=COALESCE(excluded.free_slots, share_entries.free_slots),"
-              "all_slots=COALESCE(excluded.all_slots, share_entries.all_slots),"
-              "ip=CASE WHEN excluded.ip = '' THEN share_entries.ip ELSE excluded.ip END,"
-              "source=CASE WHEN share_entries.source=1 OR excluded.source=1 THEN 1 ELSE excluded.source END";
-    }
-
-    auto res = con.Query(
-        sql,
-        ShareIndexDb::strVal(ukey),
-        ShareIndexDb::strVal(cid),
-        ShareIndexDb::strVal(row.value("hub_url")),
-        ShareIndexDb::strVal(tth),
-        ShareIndexDb::strVal(path),
-        ShareIndexDb::strVal(name),
-        ShareIndexDb::strVal(name.toCaseFolded()),
-        ShareIndexDb::strVal(path.toCaseFolded()),
-        ShareIndexDb::strVal(ext.isEmpty() ? QStringLiteral("") : ext),
-        ShareIndexDb::i64Val(isDir ? 1 : 0),
-        ShareIndexDb::i64Val(row.value("size").toLongLong()),
-        ShareIndexDb::strVal(row.value("nick")),
-        ShareIndexDb::strVal(row.value("hub_name")),
-        row.contains("free_slots") ? ShareIndexDb::i32Val(row.value("free_slots")) : ShareIndexDb::nullVal(),
-        row.contains("all_slots") ? ShareIndexDb::i32Val(row.value("all_slots")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::strVal(row.value("ip")),
-        row.contains("bitrate") ? ShareIndexDb::i32Val(row.value("bitrate")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::strVal(row.value("resolution")),
-        ShareIndexDb::strVal(row.value("video_info")),
-        ShareIndexDb::strVal(row.value("audio_info")),
-        row.contains("shared_ts") ? ShareIndexDb::i64Val(row.value("shared_ts")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::i64Val(source),
-        ShareIndexDb::strVal(stamp));
-
-    if (res->HasError()) {
-        setLastError(QString::fromStdString(res->GetError()));
-        return false;
-    }
-    setLastError(QString());
-    return true;
-}
-
-namespace {
-
 QVariantMap searchMapToRow(const QVariantMap &map)
 {
     const bool isDir = map.value("ISDIR").toBool();
@@ -129,11 +37,6 @@ QVariantMap searchMapToRow(const QVariantMap &map)
 }
 
 } // namespace
-
-void ShareIndex::upsertFromSearchSync(const QVariantMap &map)
-{
-    upsertFromSearchBatchSync(QList<QVariantMap>() << map);
-}
 
 void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
 {
@@ -164,6 +67,8 @@ void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
         setLastError(QStringLiteral("commit failed"));
         return;
     }
+    if (!removeOrphans(*con))
+        return;
     refreshEntryCount(*con);
     // No CHECKPOINT here: hub SRs are frequent; vacuum after list ingest only.
 }

@@ -108,6 +108,8 @@ set(QT_EXTRA_SOURCES
     src/HubFrameMsg.cpp
     src/HubFrameUserList.cpp
     src/HubFrameUsers.cpp
+    src/PmSpamFilter.cpp
+    src/PMWindowEvents.cpp
     src/MainAppCli.cpp
     src/MainAppRun.cpp
     src/MainAppShareIndex.cpp
@@ -116,6 +118,7 @@ set(QT_EXTRA_SOURCES
     src/MainWindowArena.cpp
     src/MainWindowAbout.cpp
     src/MainWindowStatus.cpp
+    src/MainWindowTools.cpp
     src/SearchFrameContext.cpp
     src/SearchFrameContextDl.cpp
     src/SearchFrameContextMore.cpp
@@ -175,22 +178,23 @@ set(QT_EXTRA_SOURCES
     src/WulforSettingsI18n.cpp
     src/ShareIndex.cpp
     src/ShareIndexConn.cpp
-    src/ShareIndexFts.cpp
     src/ShareIndexIngest.cpp
     src/ShareIndexIngestWrite.cpp
     src/ShareIndexInsert.cpp
+    src/ShareIndexMigrate.cpp
     src/ShareIndexQueue.cpp
     src/ShareIndexQueueCore.cpp
     src/ShareIndexQueueMatch.cpp
+    src/ShareIndexRowWrite.cpp
     src/ShareIndexEnqueue.cpp
     src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
-    src/ShareIndexShowHits.cpp
     src/ShareIndexCap.cpp
     src/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
+    src/ShareIndexSmokeMigrate.cpp
     src/ShareIndexSmokeSearch.cpp
     src/ShareIndexUpsert.cpp
     src/ShareIndexWalk.cpp

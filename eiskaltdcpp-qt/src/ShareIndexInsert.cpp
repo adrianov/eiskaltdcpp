@@ -21,68 +21,24 @@ QString sqlText(const QVariant &v)
 
 } // namespace
 
-bool ShareIndex::insertRow(duckdb::Connection &con, const QVariantMap &row, int source)
-{
-    const bool isDir = row.value("is_dir").toBool();
-    const QString tth = sqlText(row.value("tth"));
-    const QString cid = sqlText(row.value("cid"));
-    const QString path = sqlText(row.value("path"));
-    const QString name = sqlText(row.value("name"));
-    const QString ext = row.contains("ext") ? sqlText(row.value("ext")) : fileExt(name, isDir);
-    const QString stamp = nowStamp();
-    const QString ukey = ShareIndexDb::rowUkey(cid, tth, path, name, isDir);
-
-    if (cid.isEmpty() || name.isEmpty())
-        return false;
-
-    auto res = con.Query(
-        "INSERT OR IGNORE INTO share_entries ("
-        "ukey, cid, hub_url, tth, path, name, name_cf, path_cf, ext, is_dir, size, nick, hub_name,"
-        "free_slots, all_slots, ip, bitrate, resolution, video_info, audio_info,"
-        "shared_ts, source, created_at"
-        ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        ShareIndexDb::strVal(ukey),
-        ShareIndexDb::strVal(cid),
-        ShareIndexDb::strVal(row.value("hub_url")),
-        ShareIndexDb::strVal(tth),
-        ShareIndexDb::strVal(path),
-        ShareIndexDb::strVal(name),
-        ShareIndexDb::strVal(name.toCaseFolded()),
-        ShareIndexDb::strVal(path.toCaseFolded()),
-        ShareIndexDb::strVal(ext.isEmpty() ? QStringLiteral("") : ext),
-        ShareIndexDb::i64Val(isDir ? 1 : 0),
-        ShareIndexDb::i64Val(row.value("size").toLongLong()),
-        ShareIndexDb::strVal(row.value("nick")),
-        ShareIndexDb::strVal(row.value("hub_name")),
-        row.contains("free_slots") ? ShareIndexDb::i32Val(row.value("free_slots")) : ShareIndexDb::nullVal(),
-        row.contains("all_slots") ? ShareIndexDb::i32Val(row.value("all_slots")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::strVal(row.value("ip")),
-        row.contains("bitrate") ? ShareIndexDb::i32Val(row.value("bitrate")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::strVal(row.value("resolution")),
-        ShareIndexDb::strVal(row.value("video_info")),
-        ShareIndexDb::strVal(row.value("audio_info")),
-        row.contains("shared_ts") ? ShareIndexDb::i64Val(row.value("shared_ts")) : ShareIndexDb::nullVal(),
-        ShareIndexDb::i64Val(source),
-        ShareIndexDb::strVal(stamp));
-
-    if (res->HasError()) {
-        setLastError(QString::fromStdString(res->GetError()));
-        return false;
-    }
-    setLastError(QString());
-    return true;
-}
-
+/** Stage one file-list chunk, normalize shared file/user data, then append
+    scalar locations. walkListing has already deduplicated natural keys. */
 bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap> &rows)
 {
     try {
-        duckdb::Appender app(con, "share_entries");
+        if (!ShareIndexDb::execOk(con,
+                "CREATE TEMP TABLE IF NOT EXISTS share_stage ("
+                "cid TEXT, hub_url TEXT, tth TEXT, path TEXT, name TEXT, "
+                "name_cf TEXT, path_cf TEXT, ext TEXT, is_dir INTEGER, size BIGINT, "
+                "nick TEXT, hub_name TEXT, ip TEXT, source INTEGER, created_at TEXT)")
+                || !ShareIndexDb::execOk(con, "DELETE FROM share_stage"))
+            return false;
+
+        duckdb::Appender app(con, "share_stage");
         app.ClearColumns();
         const char *cols[] = {
-            "ukey", "cid", "hub_url", "tth", "path", "name", "name_cf", "path_cf", "ext",
-            "is_dir", "size", "nick", "hub_name", "free_slots", "all_slots", "ip",
-            "bitrate", "resolution", "video_info", "audio_info", "shared_ts", "source",
-            "created_at"
+            "cid", "hub_url", "tth", "path", "name", "name_cf", "path_cf", "ext",
+            "is_dir", "size", "nick", "hub_name", "ip", "source", "created_at"
         };
         for (const char *c : cols)
             app.AddColumn(c);
@@ -95,7 +51,6 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
         const QString stamp = nowStamp();
         for (const QVariantMap &row : rows) {
             const bool isDir = row.value("is_dir").toBool();
-            const QString tth = sqlText(row.value("tth"));
             const QString cid = sqlText(row.value("cid"));
             const QString path = sqlText(row.value("path"));
             const QString name = sqlText(row.value("name"));
@@ -103,13 +58,11 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
                 continue;
             const QString ext = row.contains("ext") ? sqlText(row.value("ext"))
                                                     : fileExt(name, isDir);
-            const QString ukey = ShareIndexDb::rowUkey(cid, tth, path, name, isDir);
 
             app.BeginRow();
-            appendStr(ukey);
             appendStr(cid);
             appendStr(sqlText(row.value("hub_url")));
-            appendStr(tth);
+            appendStr(sqlText(row.value("tth")));
             appendStr(path);
             appendStr(name);
             appendStr(name.toCaseFolded());
@@ -119,31 +72,44 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             app.Append(int64_t(row.value("size").toLongLong()));
             appendStr(sqlText(row.value("nick")));
             appendStr(sqlText(row.value("hub_name")));
-            if (row.contains("free_slots"))
-                app.Append(int32_t(row.value("free_slots").toInt()));
-            else
-                app.AppendDefault();
-            if (row.contains("all_slots"))
-                app.Append(int32_t(row.value("all_slots").toInt()));
-            else
-                app.AppendDefault();
             appendStr(sqlText(row.value("ip")));
-            if (row.contains("bitrate"))
-                app.Append(int32_t(row.value("bitrate").toInt()));
-            else
-                app.AppendDefault();
-            appendStr(sqlText(row.value("resolution")));
-            appendStr(sqlText(row.value("video_info")));
-            appendStr(sqlText(row.value("audio_info")));
-            if (row.contains("shared_ts"))
-                app.Append(int64_t(row.value("shared_ts").toLongLong()));
-            else
-                app.AppendDefault();
             app.Append(int32_t(SourceFileList));
             appendStr(stamp);
             app.EndRow();
         }
         app.Close();
+
+        const char *sql[] = {
+            "INSERT INTO share_users "
+            "SELECT (SELECT coalesce(max(user_id),0)+1 FROM share_users), cid, hub_url, "
+            "nick, hub_name, NULL, NULL, ip, created_at FROM share_stage s "
+            "WHERE NOT EXISTS (SELECT 1 FROM share_users u "
+            "WHERE u.cid=s.cid AND u.hub_url=s.hub_url) LIMIT 1",
+            "UPDATE share_users u SET nick=s.nick, hub_name=s.hub_name, "
+            "ip=CASE WHEN s.ip='' THEN u.ip ELSE s.ip END, updated_at=s.created_at "
+            "FROM (SELECT * FROM share_stage LIMIT 1) s "
+            "WHERE u.cid=s.cid AND u.hub_url=s.hub_url",
+            "INSERT INTO share_files "
+            "SELECT base + row_number() OVER (), fresh.tth, fresh.size FROM ("
+            "SELECT DISTINCT s.tth, s.size FROM share_stage s "
+            "LEFT JOIN share_files f ON f.tth=s.tth AND f.size=s.size "
+            "WHERE s.is_dir=0 AND s.tth!='' AND f.file_id IS NULL) fresh "
+            "CROSS JOIN (SELECT coalesce(max(file_id), 0) AS base FROM share_files)",
+            "INSERT INTO share_locations "
+            "SELECT u.user_id, f.file_id, s.path, s.name, s.ext, s.is_dir, "
+            "CASE WHEN f.file_id IS NULL THEN s.size ELSE NULL END, "
+            "s.source, s.created_at, s.name_cf, s.path_cf "
+            "FROM share_stage s LEFT JOIN share_files f "
+            "ON f.tth=s.tth AND f.size=s.size "
+            "JOIN share_users u ON u.cid=s.cid AND u.hub_url=s.hub_url"
+        };
+        for (const char *statement : sql) {
+            QString err;
+            if (!ShareIndexDb::execOk(con, statement, &err)) {
+                setLastError(err);
+                return false;
+            }
+        }
     } catch (const std::exception &e) {
         setLastError(QString::fromUtf8(e.what()));
         return false;

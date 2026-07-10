@@ -11,6 +11,7 @@
 #include "ShareIndexQueueCore.h"
 
 #include <QDateTime>
+#include <QFile>
 
 #include "dcpp/Util.h"
 #include "WulforUtil.h"
@@ -73,6 +74,12 @@ void ShareIndex::open()
     if (dbFile.isEmpty())
         dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.duckdb";
 
+    const QString oldFile = dbFile + QStringLiteral(".migrate-old");
+    if (!QFile::exists(dbFile) && QFile::exists(oldFile))
+        QFile::rename(oldFile, dbFile);
+    else if (QFile::exists(dbFile))
+        QFile::remove(oldFile);
+
     try {
         duck = std::make_unique<duckdb::DuckDB>(dbFile.toStdString());
     } catch (const std::exception &e) {
@@ -89,7 +96,11 @@ void ShareIndex::open()
     ShareIndexDb::execOk(*con, "SET memory_limit='1GB'");
     ShareIndexDb::execOk(*con, "SET threads=2");
 
-    if (!ensureSchema(*con) || !ensureCap(*con) || !ensureFts(*con))
+    if (!compactLegacyDb())
+        return;
+
+    con = threadConn();
+    if (!con || !ensureSchema(*con) || !ensureCap(*con))
         return;
 
     opened.storeRelease(1);

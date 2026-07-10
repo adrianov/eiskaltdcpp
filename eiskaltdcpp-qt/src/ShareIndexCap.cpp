@@ -47,7 +47,7 @@ bool metaTableExists(duckdb::Connection &con)
 
 void ShareIndex::refreshEntryCount(duckdb::Connection &con)
 {
-    auto res = con.Query("SELECT count(*)::BIGINT FROM share_entries");
+    auto res = con.Query("SELECT count(*)::BIGINT FROM share_locations");
     if (res->HasError() || res->RowCount() == 0) {
         setLastError(QString::fromStdString(res->GetError()));
         return;
@@ -73,7 +73,7 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
 
     if (metaValue(con, QStringLiteral("entry_count")) < 0) {
         QString err;
-        auto res = con.Query("SELECT count(*)::BIGINT FROM share_entries");
+        auto res = con.Query("SELECT count(*)::BIGINT FROM share_locations");
         if (res->HasError() || res->RowCount() == 0) {
             setLastError(QString::fromStdString(res->GetError()));
             return false;
@@ -91,7 +91,7 @@ void ShareIndex::pruneExcess(duckdb::Connection &con)
 {
     // File-list rows mirror lists cached on disk and are replaced per user;
     // only hub-search rows grow without bound, so the cap applies to them.
-    auto cnt = con.Query("SELECT count(*)::BIGINT FROM share_entries WHERE source = 2");
+    auto cnt = con.Query("SELECT count(*)::BIGINT FROM share_locations WHERE source = 2");
     if (cnt->HasError() || cnt->RowCount() == 0)
         return;
     const qint64 excess = ShareIndexDb::qi64(cnt->GetValue(0, 0)) - kMaxHubEntries;
@@ -100,14 +100,16 @@ void ShareIndex::pruneExcess(duckdb::Connection &con)
 
     auto res = ShareIndexDb::query1(
         con,
-        "DELETE FROM share_entries WHERE id IN ("
-        "SELECT id FROM share_entries WHERE source = 2 "
+        "DELETE FROM share_locations WHERE rowid IN ("
+        "SELECT rowid FROM share_locations WHERE source = 2 "
         "ORDER BY created_at ASC LIMIT ?)",
         ShareIndexDb::i64Val(excess));
     if (!res || res->HasError()) {
         setLastError(res ? QString::fromStdString(res->GetError()) : QStringLiteral("prune"));
         return;
     }
+    if (!removeOrphans(con))
+        return;
     refreshEntryCount(con);
 }
 

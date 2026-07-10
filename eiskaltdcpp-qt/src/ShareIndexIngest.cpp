@@ -91,9 +91,9 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         if (con) {
             auto prev = ShareIndexDb::query1(
                 *con,
-                "SELECT ip, hub_name, hub_url FROM share_entries WHERE cid = ?"
+                "SELECT ip, hub_name, hub_url FROM share_users WHERE cid = ?"
                 " AND (ip != '' OR hub_name != '' OR hub_url != '')"
-                " ORDER BY created_at DESC LIMIT 1",
+                " ORDER BY updated_at DESC LIMIT 1",
                 ShareIndexDb::strVal(cid));
             if (prev && !prev->HasError() && prev->RowCount() > 0) {
                 if (useIp.isEmpty())

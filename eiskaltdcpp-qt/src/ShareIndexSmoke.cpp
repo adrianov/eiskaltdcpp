@@ -14,6 +14,7 @@
 #include <QTemporaryDir>
 
 bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
+bool shareIndexSmokeMigrate(const QString &path, QString *error);
 
 bool ShareIndex::smokeCheck(QString *error)
 {
@@ -41,7 +42,7 @@ bool ShareIndex::smokeCheck(QString *error)
         return false;
     }
 
-    if (!idx.ensureSchema(*con) || !idx.ensureCap(*con) || !idx.ensureFts(*con)) {
+    if (!idx.ensureSchema(*con) || !idx.ensureCap(*con)) {
         if (error)
             *error = idx.lastError().isEmpty() ? QStringLiteral("schema") : idx.lastError();
         return false;
@@ -65,7 +66,9 @@ bool ShareIndex::smokeCheck(QString *error)
     }
 
     {
-        auto extq = con->Query("SELECT ext FROM share_entries WHERE tth != ''");
+        auto extq = con->Query(
+            "SELECT l.ext FROM share_locations l JOIN share_files f USING(file_id) "
+            "WHERE f.tth != ''");
         if (extq->HasError() || extq->RowCount() == 0
                 || ShareIndexDb::qstr(extq->GetValue(0, 0)) != QLatin1String("MKV")) {
             if (error)
@@ -90,7 +93,9 @@ bool ShareIndex::smokeCheck(QString *error)
         return false;
     }
 
-    con->Query("UPDATE share_entries SET created_at='2000-01-01 00:00:00' WHERE tth != ''");
+    con->Query(
+        "UPDATE share_locations SET created_at='2000-01-01 00:00:00' "
+        "WHERE file_id IS NOT NULL");
 
     file["name"] = "S01E01_renamed.mkv";
     file["size"] = 99999;
@@ -101,7 +106,7 @@ bool ShareIndex::smokeCheck(QString *error)
     }
 
     auto created = con->Query(
-        "SELECT created_at, name, source FROM share_entries WHERE tth != ''");
+        "SELECT created_at, name, source FROM share_locations WHERE file_id IS NOT NULL");
     if (created->HasError() || created->RowCount() == 0) {
         if (error)
             *error = "select after upsert";
@@ -126,7 +131,7 @@ bool ShareIndex::smokeCheck(QString *error)
     if (!shareIndexSmokeSearch(idx, *con, error))
         return false;
 
-    return true;
+    return shareIndexSmokeMigrate(dir.path() + "/legacy's.duckdb", error);
 }
 
 #endif

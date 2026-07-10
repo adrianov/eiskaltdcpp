@@ -18,7 +18,7 @@
 /** Serialized ShareIndex jobs, including online-user queue matching. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, BumpShowHits, RemoveTth };
+enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, RemoveTth };
 
 struct WriteJob {
     WriteKind kind = IngestList;
@@ -29,7 +29,6 @@ struct WriteJob {
     QString cid;
     QString tth;
     QVariantMap map;
-    QList<qint64> ids;
     dcpp::UserList users;
 };
 

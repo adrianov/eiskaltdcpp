@@ -17,50 +17,30 @@ using namespace ShareIndexWriteQueue;
 
 bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &rows)
 {
-    if (rows.isEmpty()) {
-        duckdb::Connection *con = threadConn();
-        if (!con) {
-            setLastError(QStringLiteral("threadConn not open"));
-            return false;
-        }
-        auto res = ShareIndexDb::query1(
-            *con, "DELETE FROM share_entries WHERE cid = ?", ShareIndexDb::strVal(cid));
-        if (!res || res->HasError()) {
-            setLastError(res ? QString::fromStdString(res->GetError()) : QStringLiteral("delete"));
-            return false;
-        }
-        refreshEntryCount(*con);
-        return true;
+    duckdb::Connection *con = threadConn();
+    if (!con) {
+        setLastError(QStringLiteral("threadConn not open"));
+        return false;
+    }
+    if (!ShareIndexDb::execOk(*con, "BEGIN TRANSACTION")) {
+        setLastError(QStringLiteral("BEGIN failed"));
+        return false;
+    }
+    auto del = ShareIndexDb::query1(
+        *con, "DELETE FROM share_locations WHERE user_id IN ("
+        "SELECT user_id FROM share_users WHERE cid = ?)", ShareIndexDb::strVal(cid));
+    if (!del || del->HasError()) {
+        ShareIndexDb::execOk(*con, "ROLLBACK");
+        setLastError(del ? QString::fromStdString(del->GetError()) : QStringLiteral("delete"));
+        return false;
     }
 
-    bool loaded = false;
     const int chunk = 20000;
     for (int offset = 0; offset < rows.size(); ) {
-        if (isStopping())
-            break;
-
-        duckdb::Connection *con = threadConn();
-        if (!con) {
-            setLastError(QStringLiteral("threadConn not open"));
-            break;
+        if (isStopping()) {
+            ShareIndexDb::execOk(*con, "ROLLBACK");
+            return false;
         }
-
-        if (!ShareIndexDb::execOk(*con, "BEGIN TRANSACTION")) {
-            setLastError(QStringLiteral("BEGIN failed"));
-            break;
-        }
-
-        if (offset == 0) {
-            auto del = ShareIndexDb::query1(
-                *con, "DELETE FROM share_entries WHERE cid = ?",
-                ShareIndexDb::strVal(cid));
-            if (!del || del->HasError()) {
-                setLastError(del ? QString::fromStdString(del->GetError()) : QStringLiteral("delete"));
-                ShareIndexDb::execOk(*con, "ROLLBACK");
-                break;
-            }
-        }
-
         const int end = qMin(offset + chunk, rows.size());
         QList<QVariantMap> slice;
         slice.reserve(end - offset);
@@ -69,30 +49,20 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
 
         if (!appendListRows(*con, slice)) {
             ShareIndexDb::execOk(*con, "ROLLBACK");
-            break;
+            return false;
         }
-
-        if (!ShareIndexDb::execOk(*con, "COMMIT")) {
-            setLastError(QStringLiteral("COMMIT failed"));
-            break;
-        }
-
-        refreshEntryCount(*con);
-
-        if (offset >= rows.size())
-            loaded = true;
     }
 
-    duckdb::Connection *con = threadConn();
-    if (con) {
-        if (loaded && !isStopping()) {
-            refreshEntryCount(*con);
-            pruneExcess(*con);
-        }
-        if (loaded && !isStopping())
-            reclaimFreePages(*con);
+    if (!ShareIndexDb::execOk(*con, "COMMIT")) {
+        setLastError(QStringLiteral("COMMIT failed"));
+        return false;
     }
-    return loaded && !isStopping();
+    if (!removeOrphans(*con))
+        return false;
+    refreshEntryCount(*con);
+    pruneExcess(*con);
+    reclaimFreePages(*con);
+    return true;
 }
 
 void ShareIndex::removeTthSync(const QString &cid, const QString &tth)
@@ -107,13 +77,37 @@ void ShareIndex::removeTthSync(const QString &cid, const QString &tth)
     QString err;
     auto res = ShareIndexDb::query2(
         *con,
-        "DELETE FROM share_entries WHERE cid = ? AND tth = ?",
+        "DELETE FROM share_locations WHERE user_id IN ("
+        "SELECT user_id FROM share_users WHERE cid = ?) AND file_id IN ("
+        "SELECT file_id FROM share_files WHERE tth = ?)",
         ShareIndexDb::strVal(cid), ShareIndexDb::strVal(tth), &err);
     if (!res || res->HasError()) {
         setLastError(err.isEmpty() && res ? QString::fromStdString(res->GetError()) : err);
         return;
     }
+    if (!removeOrphans(*con))
+        return;
     refreshEntryCount(*con);
+}
+
+bool ShareIndex::removeOrphans(duckdb::Connection &con)
+{
+    QString err;
+    if (!ShareIndexDb::execOk(con,
+            "DELETE FROM share_files f WHERE NOT EXISTS ("
+            "SELECT 1 FROM share_locations l WHERE l.file_id = f.file_id)",
+            &err)) {
+        setLastError(err.isEmpty() ? QStringLiteral("orphan files") : err);
+        return false;
+    }
+    if (!ShareIndexDb::execOk(con,
+            "DELETE FROM share_users u WHERE NOT EXISTS ("
+            "SELECT 1 FROM share_locations l WHERE l.user_id = u.user_id)",
+            &err)) {
+        setLastError(err.isEmpty() ? QStringLiteral("orphan users") : err);
+        return false;
+    }
+    return true;
 }
 
 #endif

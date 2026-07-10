@@ -18,8 +18,11 @@ using namespace dcpp;
 namespace {
 
 static const char *kSelectCols =
-    "SELECT e.id, e.name, e.size, e.tth, e.path, e.nick, e.free_slots, e.all_slots, "
-    "e.ip, e.hub_name, e.hub_url, e.cid, e.is_dir, e.ext FROM share_entries e ";
+    "SELECT e.name, coalesce(f.size,e.local_size,0), coalesce(f.tth,''), e.path, "
+    "u.nick, u.free_slots, u.all_slots, u.ip, u.hub_name, u.hub_url, "
+    "u.cid, e.is_dir, e.ext FROM share_locations e "
+    "JOIN share_users u ON u.user_id=e.user_id "
+    "LEFT JOIN share_files f ON f.file_id=e.file_id ";
 
 /** Case-folded term for contains(); keep ≥3 chars like FTS5 trigram. */
 QString matchToken(const QString &term)
@@ -59,10 +62,10 @@ QString ShareIndex::filterSql(const SearchFilter &filter, duckdb::vector<duckdb:
 
     if (filter.size > 0 && filter.sizeMode != SearchManager::SIZE_DONTCARE) {
         if (filter.sizeMode == SearchManager::SIZE_ATLEAST) {
-            parts << "e.size >= ?";
+            parts << "coalesce(f.size,e.local_size,0) >= ?";
             binds.push_back(ShareIndexDb::i64Val(filter.size));
         } else if (filter.sizeMode == SearchManager::SIZE_ATMOST) {
-            parts << "e.size <= ?";
+            parts << "coalesce(f.size,e.local_size,0) <= ?";
             binds.push_back(ShareIndexDb::i64Val(filter.size));
         }
     }
@@ -79,20 +82,19 @@ QList<QVariantMap> ShareIndex::rowsFromResult(duckdb::MaterializedQueryResult &r
     out.reserve(int(n));
     for (idx_t r = 0; r < n; ++r) {
         QVariantMap map;
-        map["ID"] = ShareIndexDb::qi64(res.GetValue(0, r));
-        map["FILE"] = ShareIndexDb::qstr(res.GetValue(1, r));
-        map["SIZE"] = quint64(ShareIndexDb::qi64(res.GetValue(2, r)));
-        map["TTH"] = ShareIndexDb::qstr(res.GetValue(3, r));
-        map["PATH"] = ShareIndexDb::qstr(res.GetValue(4, r));
-        map["NICK"] = ShareIndexDb::qstr(res.GetValue(5, r));
-        map["FSLS"] = res.GetValue(6, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(6, r)));
-        map["ASLS"] = res.GetValue(7, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(7, r)));
-        map["IP"] = ShareIndexDb::qstr(res.GetValue(8, r));
-        map["HUB"] = ShareIndexDb::qstr(res.GetValue(9, r));
-        map["HOST"] = ShareIndexDb::qstr(res.GetValue(10, r));
-        map["CID"] = ShareIndexDb::qstr(res.GetValue(11, r));
-        map["ISDIR"] = ShareIndexDb::qi64(res.GetValue(12, r)) != 0;
-        map["EXT"] = ShareIndexDb::qstr(res.GetValue(13, r));
+        map["FILE"] = ShareIndexDb::qstr(res.GetValue(0, r));
+        map["SIZE"] = quint64(ShareIndexDb::qi64(res.GetValue(1, r)));
+        map["TTH"] = ShareIndexDb::qstr(res.GetValue(2, r));
+        map["PATH"] = ShareIndexDb::qstr(res.GetValue(3, r));
+        map["NICK"] = ShareIndexDb::qstr(res.GetValue(4, r));
+        map["FSLS"] = res.GetValue(5, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(5, r)));
+        map["ASLS"] = res.GetValue(6, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(6, r)));
+        map["IP"] = ShareIndexDb::qstr(res.GetValue(7, r));
+        map["HUB"] = ShareIndexDb::qstr(res.GetValue(8, r));
+        map["HOST"] = ShareIndexDb::qstr(res.GetValue(9, r));
+        map["CID"] = ShareIndexDb::qstr(res.GetValue(10, r));
+        map["ISDIR"] = ShareIndexDb::qi64(res.GetValue(11, r)) != 0;
+        map["EXT"] = ShareIndexDb::qstr(res.GetValue(12, r));
         out.append(map);
     }
     return out;
@@ -104,7 +106,7 @@ QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFi
 
     if (filter.isHash && !filter.terms.isEmpty()) {
         duckdb::vector<duckdb::Value> binds;
-        QString sql = QString(kSelectCols) + "WHERE e.tth = ?";
+        QString sql = QString(kSelectCols) + "WHERE f.tth = ?";
         binds.push_back(ShareIndexDb::strVal(filter.terms.first()));
         sql += filterSql(filter, binds);
         sql += " LIMIT ?";

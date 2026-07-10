@@ -71,9 +71,12 @@ void ShareIndex::matchQueueSync(const UserList &users)
         for (size_t ti = 0; ti < tths.size(); ti += TTH_BATCH) {
             const size_t tn = std::min(TTH_BATCH, tths.size() - ti);
             const std::string sql =
-                "SELECT cid,tth,size FROM share_entries WHERE source=1 AND is_dir=0"
-                " AND cid IN (" + bindMarks(cn) + ")"
-                " AND tth IN (" + bindMarks(tn) + ")";
+                "SELECT u.cid,f.tth,f.size FROM share_locations l "
+                "JOIN share_users u ON u.user_id=l.user_id "
+                "JOIN share_files f ON f.file_id=l.file_id "
+                "WHERE l.source=1 AND l.is_dir=0"
+                " AND u.cid IN (" + bindMarks(cn) + ")"
+                " AND f.tth IN (" + bindMarks(tn) + ")";
 
             duckdb::vector<duckdb::Value> binds;
             for (size_t i = 0; i < cn; ++i)

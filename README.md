@@ -33,16 +33,16 @@ Currently supported features (not full list):
 * User interface is translated to many languages.
 * GUI programs allow to place list of widgets on sidebar, on multiline tabbar panel or on single-line tabbar.
 * GUI program based on Qt has support of hiding the program menu (it will be available by special button to the toolbar).
-* Advanced search with the ability to group results; black list for search results.
+* Advanced search with the ability to group results (same-TTH files and same name+path directories); black list for search results.
 * Lists of downloaded and uploaded files (with file-type filter on finished downloads, same types as Search); ability to save logs of downloads.
 * Lists of public and favorite hubs. Public hubs lists have multiple sources; favorite hubs are extremely flexible in configuration features.
 * Lists of favorite users (they will receive extra slot for downloading files, etc.).
 * List of active transfers (downloads/uploads), including the queue of users waiting for the slot (user may temporary grant extra slot for them).
 * Flexible settings for downloading files (lists of destination directories, directory for incomplete downloads, limitation of number of simultaneous downloads, compressed transfers, check of check sums, etc.). Incomplete files with download progress are preferred over not-started items within the same queue priority. TTH tree (`tthl`) is requested only for large files (≥ 20 MiB) or when multiple sources need block segments; smaller single-source downloads use the TTH root alone.
 * Indicator of free space on disk where main downloads directory is located.
-* Support of IP filter and basic antispam.
+* Support of IP filter and basic antispam. Private-message sidebar **Mark as Spam** stores message bodies and silently discards identical future PMs.
 * Search spy (allows one to see search phrases which send other users, but without identifying users of course).
-* Share index (Qt + DuckDB): indexes downloaded user file lists and hub search hits, returns immediate local search matches, and adds online cached-list sources to queued downloads by TTH (skipping a fresh list match when the index already knows the user has that TTH). Stale index rows are dropped when a peer reports File Not Available.
+* Share index (Qt + DuckDB): indexes downloaded user file lists and hub search hits into normalized files/users/locations tables, returns immediate local search matches, and adds online cached-list sources to queued downloads by TTH (skipping a fresh list match when the index already knows the user has that TTH). Stale index rows are dropped when a peer reports File Not Available. A legacy flat DB is replaced with an empty normalized schema on first open so the write worker is not blocked; cached lists re-ingest as peers come online.
 * ADL search with support for Perl-style regular expressions (using PCRE library).
 * Flexible filter (with regular expressions support) in users list, search results, public hubs lists, file lists, etc.. (Use ##&lt;regexp&gt; string and read about Qt QRegExp syntax.)
 * Full-featured chat (different fonts, nick coloring, parsing of magnet links and other links, emoticons, chat search, chat commands, BBCode support, disable/enable/clear chat, spell check (Aspell is used), keywords highlighting in the chat, separator for unread messages, saving of chat logs, the ability to display IP addresses and countries of users in the chat (depends on hub settings: some of them hide this data for usual users).

@@ -53,7 +53,9 @@ bool ShareIndex::needsListIngest(const QString &cid, const QString &listPath)
         return true;
 
     if (listPath.isEmpty()) {
-        auto res = ShareIndexDb::query1(*con, "SELECT 1 FROM share_entries WHERE cid = ? LIMIT 1",
+        auto res = ShareIndexDb::query1(*con,
+            "SELECT 1 FROM share_locations l JOIN share_users u USING(user_id) "
+            "WHERE u.cid = ? LIMIT 1",
                                         ShareIndexDb::strVal(cid));
         if (!res || res->HasError())
             return true;

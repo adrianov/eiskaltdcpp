@@ -127,7 +127,8 @@ query2(duckdb::Connection &con, const std::string &sql, const duckdb::Value &a, 
     return queryMat(con, sql, binds, err);
 }
 
-/** Upsert key: file with TTH → f:cid:tth; else → p:cid:path:name:is_dir. */
+/** In-memory dedup key for list walking (not stored): file with TTH →
+    f:cid:tth; else → p:cid:path:name:is_dir. */
 inline QString rowUkey(const QString &cid, const QString &tth, const QString &path,
                        const QString &name, bool isDir)
 {

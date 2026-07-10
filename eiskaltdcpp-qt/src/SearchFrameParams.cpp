@@ -11,7 +11,6 @@
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
 #include "SearchBlacklist.h"
-#include "ShareIndex.h"
 #include "WulforUtil.h"
 
 #include "dcpp/SettingsManager.h"
@@ -124,7 +123,6 @@ void SearchFrame::flushResults(){
 void SearchFrame::addResults(const QList<VarMap> &maps){
     Q_D(SearchFrame);
     static SearchBlacklist *SB = SearchBlacklist::getInstance();
-    QList<qint64> shownIds;
 
     for (const VarMap &map : maps) {
         try {
@@ -140,17 +138,10 @@ void SearchFrame::addResults(const QList<VarMap> &maps){
                                         map["HUB"].toString(),
                                         map["HOST"].toString(),
                                         map["CID"].toString(),
-                                        map["ISDIR"].toBool())) {
+                                        map["ISDIR"].toBool()))
                     d->results++;
-                    const qint64 id = map.value("ID").toLongLong();
-                    if (id > 0)
-                        shownIds.append(id);
-                }
             }
         }
         catch (const SearchListException&){}
     }
-
-    if (!shownIds.isEmpty())
-        ShareIndex::getInstance()->recordSearchShows(shownIds);
 }

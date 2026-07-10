@@ -81,9 +81,6 @@ public:
 
     QList<QVariantMap> search(const SearchFilter &filter);
 
-    /** Kept for SearchFrame drop-in; hit stats removed (no-op). */
-    void recordSearchShows(const QList<qint64> &ids);
-
     /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
     struct IndexStats {
         qint64 files = 0;   // share_index_meta.entry_count (files + dirs)
@@ -101,6 +98,7 @@ public:
 
 #ifdef USE_QT_SQLITE
     friend bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
+    friend bool shareIndexSmokeMigrate(const QString &path, QString *error);
     friend void shareIndexRunWriteWorker();
 #endif
 
@@ -109,15 +107,15 @@ private:
     ~ShareIndex() override;
 
 #ifdef USE_QT_SQLITE
-    bool ensureSchema(duckdb::Connection &con);
+    bool ensureSchema(duckdb::Connection &con, const std::string &prefix = std::string());
     bool ensureCap(duckdb::Connection &con);
-    bool ensureFts(duckdb::Connection &con);
+    /** Replace a legacy flat share_entries DB with an empty normalized schema. */
+    bool compactLegacyDb();
     duckdb::Connection *threadConn();
     void disconnectThreadDb();
     void setLastError(const QString &err);
 
     bool upsertRow(duckdb::Connection &con, const QVariantMap &row, int source);
-    bool insertRow(duckdb::Connection &con, const QVariantMap &row, int source);
     bool appendListRows(duckdb::Connection &con, const QList<QVariantMap> &rows);
     QList<QVariantMap> searchFts(duckdb::Connection &con, const SearchFilter &filter);
     QList<QVariantMap> rowsFromResult(duckdb::MaterializedQueryResult &res);
@@ -137,10 +135,9 @@ private:
     void removeTthSync(const QString &cid, const QString &tth);
     /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
-    void upsertFromSearchSync(const QVariantMap &map);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
-    void recordSearchShowsSync(const QList<qint64> &ids);
     void pruneExcess(duckdb::Connection &con);
+    bool removeOrphans(duckdb::Connection &con);
     void refreshEntryCount(duckdb::Connection &con);
     void reclaimFreePages(duckdb::Connection &con);
     void drainWriteQueue();
