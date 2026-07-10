@@ -9,6 +9,8 @@
 
 #include "FinishedTransfers.h"
 
+#include "dcpp/File.h"
+
 #include <QApplication>
 #include <QClipboard>
 #include <QCursor>
@@ -123,6 +125,7 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     QAction *open_f   = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open file"), m);
     QAction *open_dir = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), m);
     QAction *copy_name = nullptr;
+    QAction *delete_f = nullptr;
 
     m->addAction(open_f);
     m->addAction(open_dir);
@@ -130,6 +133,10 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     if (comboBox->currentIndex() == 0){
         copy_name = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy file name"), m);
         m->addAction(copy_name);
+
+        delete_f = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete File"), m);
+        m->addSeparator();
+        m->addAction(delete_f);
     }
 
     QAction *ret = m->exec(QCursor::pos());
@@ -159,6 +166,14 @@ void FinishedTransfers<isUpload>::slotContextMenu()
 
         if (!names.isEmpty())
             qApp->clipboard()->setText(names, QClipboard::Clipboard);
+    }
+    else if (delete_f && ret == delete_f){
+        for (const auto &f : files) {
+            File::deleteFile(_tq(f));
+            try {
+                FinishedManager::getInstance()->remove(isUpload, _tq(f));
+            } catch (const std::exception&) {}
+        }
     }
 }
 
