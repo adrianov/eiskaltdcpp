@@ -10,20 +10,27 @@
 #pragma once
 
 #include "dcpp/stdinc.h"
+#include "dcpp/CriticalSection.h"
 #include "dcpp/QueueManager.h"
+#include "dcpp/TimerManager.h"
 #include "dcpp/UploadManager.h"
 #include "dcpp/Singleton.h"
+
+#include <vector>
 
 /**
  * Silent peer file-list fetch for ShareIndex.
  * Triggers: peer downloaded our full list, or became a source on an active download.
  * Reuses ListCache when share size matches; otherwise downloads at most once per day,
  * with a concurrent queue cap and a short per-peer cooldown.
+ * SourceAdded work is deferred off QueueManager::cs to avoid lock inversion with
+ * DownloadManager (search → addSource → fetch → checkIdle).
  */
 class ReciprocalList :
         public dcpp::Singleton<ReciprocalList>,
         private dcpp::UploadManagerListener,
-        private dcpp::QueueManagerListener
+        private dcpp::QueueManagerListener,
+        private dcpp::TimerManagerListener
 {
     friend class dcpp::Singleton<ReciprocalList>;
 
@@ -38,5 +45,11 @@ private:
     void on(dcpp::UploadManagerListener::Complete, dcpp::Upload *ul) noexcept override;
     void on(dcpp::QueueManagerListener::SourceAdded, dcpp::QueueItem *item,
             const dcpp::HintedUser &user) noexcept override;
+    void on(dcpp::TimerManagerListener::Second, uint64_t) noexcept override;
+
+    void queueFetch(const dcpp::HintedUser &peer);
     void maybeFetch(const dcpp::HintedUser &peer);
+
+    dcpp::CriticalSection pendingCs;
+    std::vector<dcpp::HintedUser> pending;
 };

@@ -80,21 +80,37 @@ void ReciprocalList::start()
 {
     UploadManager::getInstance()->addListener(this);
     QueueManager::getInstance()->addListener(this);
+    TimerManager::getInstance()->addListener(this);
 }
 
 void ReciprocalList::stop()
 {
+    if (TimerManager::getInstance())
+        TimerManager::getInstance()->removeListener(this);
     if (QueueManager::getInstance())
         QueueManager::getInstance()->removeListener(this);
     if (UploadManager::getInstance())
         UploadManager::getInstance()->removeListener(this);
 }
 
+void ReciprocalList::queueFetch(const HintedUser &peer)
+{
+    if (!peer.user)
+        return;
+    Lock l(pendingCs);
+    for (const auto &p : pending) {
+        if (p.user && p.user->getCID() == peer.user->getCID())
+            return;
+    }
+    pending.push_back(peer);
+}
+
 void ReciprocalList::on(UploadManagerListener::Complete, Upload *ul) noexcept
 {
     if (!ul || ul->getType() != Transfer::TYPE_FULL_LIST)
         return;
-    maybeFetch(ul->getHintedUser());
+    // Upload Complete may run under UploadManager locks; defer like SourceAdded.
+    queueFetch(ul->getHintedUser());
 }
 
 void ReciprocalList::on(QueueManagerListener::SourceAdded, QueueItem *item,
@@ -103,7 +119,19 @@ void ReciprocalList::on(QueueManagerListener::SourceAdded, QueueItem *item,
     // Finished items still fire SourceAdded when alternate sources appear; skip those.
     if (!item || item->isSet(QueueItem::FLAG_USER_LIST) || item->isFinished())
         return;
-    maybeFetch(user);
+    // SourceAdded often runs under QueueManager::cs; defer before re-entering QM/CM/DM.
+    queueFetch(user);
+}
+
+void ReciprocalList::on(TimerManagerListener::Second, uint64_t) noexcept
+{
+    vector<HintedUser> work;
+    {
+        Lock l(pendingCs);
+        work.swap(pending);
+    }
+    for (const auto &peer : work)
+        maybeFetch(peer);
 }
 
 void ReciprocalList::maybeFetch(const HintedUser &peer)
@@ -121,7 +149,6 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
     const string listFile = ListCache::findListFile(listBase);
 
     // Valid cache: addList → ListCached → ShareIndexListListener (ingest if stale).
-    // Do not touch SQLite here — this runs under QueueManager callbacks.
     if (ListCache::matchesUserShare(peer, listBase)) {
         markPeerChecked(peer.user->getCID());
         if (listFile.empty())
@@ -151,6 +178,8 @@ void ReciprocalList::stop() {}
 void ReciprocalList::on(dcpp::UploadManagerListener::Complete, dcpp::Upload *) noexcept {}
 void ReciprocalList::on(dcpp::QueueManagerListener::SourceAdded, dcpp::QueueItem *,
                         const dcpp::HintedUser &) noexcept {}
+void ReciprocalList::on(dcpp::TimerManagerListener::Second, uint64_t) noexcept {}
+void ReciprocalList::queueFetch(const dcpp::HintedUser &) {}
 void ReciprocalList::maybeFetch(const dcpp::HintedUser &) {}
 
 #endif

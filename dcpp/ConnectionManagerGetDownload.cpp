@@ -80,6 +80,7 @@ bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const
 
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     dcassert((bool)aUser.user);
+    bool checkIdle = false;
     {
         Lock l(cs);
 
@@ -118,11 +119,14 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
 
         if(cqi) {
             cqi->setUser(aUser);
-            DownloadManager::getInstance()->checkIdle(aUser.user);
+            checkIdle = true;
         } else {
             getCQI(aUser, true);
         }
     }
+    // Outside ConnectionManager::cs — checkIdle takes DownloadManager::cs.
+    if(checkIdle)
+        DownloadManager::getInstance()->checkIdle(aUser.user);
 }
 
 } // namespace dcpp

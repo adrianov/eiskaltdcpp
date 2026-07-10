@@ -18,23 +18,30 @@
 
 namespace dcpp {
 
+namespace {
+
+struct DropCandidate {
+    string path;
+    UserPtr user;
+    bool isUserList;
+};
+
+} // namespace
+
 void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
-    typedef vector<pair<string, UserPtr> > TargetList;
-    TargetList dropTargets;
+    DownloadList tickList;
+    vector<DropCandidate> dropCheck;
+    vector<pair<string, UserPtr> > dropTargets;
 
     {
         Lock l(cs);
 
-        DownloadList tickList;
         for(auto i: downloads) {
             if(i->getPos() > 0) {
                 tickList.push_back(i);
                 i->tick();
             }
         }
-
-        if(!tickList.empty())
-            fire(DownloadManagerListener::Tick(), tickList);
 
         if((uint32_t)(aTick / 1000) % SETTING(AUTODROP_INTERVAL) == 0) {
             for(auto d: downloads) {
@@ -46,20 +53,30 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept 
                 bool speedTooLow = timeElapsedOk && timeInactiveOk && bytesDownloaded > 0 ?
                             bytesDownloaded / timeElapsed * 1000 < (uint32_t)SETTING(AUTODROP_SPEED) : false;
                 bool isUserList = d->getType() == Transfer::TYPE_FULL_LIST;
-                bool onlineSourcesOk = isUserList ?
-                            true : QueueManager::getInstance()->countOnlineSources(d->getPath()) >= SETTING(AUTODROP_MINSOURCES);
                 bool filesizeOk = !isUserList && d->getSize() >= ((int64_t)SETTING(AUTODROP_FILESIZE)) * 1024;
                 bool dropIt = (isUserList && BOOLSETTING(AUTODROP_FILELISTS)) ||
                         (filesizeOk && BOOLSETTING(AUTODROP_ALL));
-                if(speedTooLow && onlineSourcesOk && dropIt) {
+                if(speedTooLow && dropIt) {
                     if(BOOLSETTING(AUTODROP_DISCONNECT) && isUserList) {
                         d->getUserConnection().disconnect();
                     } else {
-                        dropTargets.emplace_back(d->getPath(), d->getUser());
+                        dropCheck.push_back({d->getPath(), d->getUser(), isUserList});
                     }
                 }
             }
         }
+    }
+
+    // Tick UI and QueueManager must not run under DownloadManager::cs — TransferView
+    // calls QueueManager while search/queue threads may call checkIdle (needs this lock).
+    if(!tickList.empty())
+        fire(DownloadManagerListener::Tick(), tickList);
+
+    for(auto& c: dropCheck) {
+        bool onlineSourcesOk = c.isUserList ?
+                    true : QueueManager::getInstance()->countOnlineSources(c.path) >= SETTING(AUTODROP_MINSOURCES);
+        if(onlineSourcesOk)
+            dropTargets.emplace_back(c.path, c.user);
     }
     for(auto& i: dropTargets) {
         QueueManager::getInstance()->removeSource(i.first, i.second, QueueItem::Source::FLAG_SLOW_SOURCE);
