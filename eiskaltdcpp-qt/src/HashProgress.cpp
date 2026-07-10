@@ -52,12 +52,8 @@ HashProgress::HashProgress(QWidget *parent):
     setWindowModality(Qt::ApplicationModal);
     setAttribute( Qt::WA_QuitOnClose, false ); // Very important, wo this line app exits then hide
 
-#if defined(USE_PROGRESS_BARS)
     progressIndicator->hide();
     this->adjustSize();
-#else
-    progress->setFormat(QString());
-#endif
 
     HashManager::getInstance()->setPriority(Thread::NORMAL);
 
@@ -134,12 +130,6 @@ void HashProgress::timerTick(){
         status->setText(QString(tr("-.-- files/h, %1 files left")).arg((uint32_t)files));
         speed->setText(tr("-.-- B/s, %1 left").arg(WulforUtil::formatBytes(bytes)));
         eta = tr("-:--:--");
-
-#if !defined(USE_PROGRESS_BARS)
-        progressIndicator->setText(tr("%1% %2 left")
-                                   .arg(QString::number(0))
-                                   .arg(eta));
-#endif
     }
     else {
         double filestat = (((double)(startFiles - files)) * 60 * 60 * 1000) / diff;
@@ -159,13 +149,7 @@ void HashProgress::timerTick(){
             eta = _q(Text::toT(Util::formatSeconds((int64_t)(ss))));
         }
 
-#if defined(USE_PROGRESS_BARS)
         progress->setFormat(tr("%p% %1 left").arg(eta));
-#else
-        progressIndicator->setText(tr("%1% %2 left")
-                                   .arg(QString::number((100*(startBytes - bytes))/startBytes))
-                                   .arg(eta));
-#endif
     }
 
     if(!files) {

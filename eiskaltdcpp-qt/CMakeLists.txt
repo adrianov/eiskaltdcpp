@@ -111,6 +111,7 @@ set(QT_EXTRA_SOURCES
     src/MainAppUnix.cpp
     src/MainAppXdg.cpp
     src/MainWindowArena.cpp
+    src/MainWindowAbout.cpp
     src/MainWindowStatus.cpp
     src/SearchFrameContext.cpp
     src/SearchFrameContextDl.cpp
@@ -538,10 +539,6 @@ if (APPLE)
     find_library (COCOA_LIBRARY Cocoa)
     list (APPEND LIBS ${COCOA_LIBRARY})
 endif (APPLE)
-
-if (USE_PROGRESS_BARS)
-    add_definitions (-DUSE_PROGRESS_BARS)
-endif (USE_PROGRESS_BARS)
 
 if (FREE_SPACE_BAR_C)
     add_definitions (-DFREE_SPACE_BAR_C)

@@ -46,18 +46,10 @@ void MainWindow::initStatusBar(){
     d->msgLabel->setHeightRef(d->statusLabel);
 
 #if (defined FREE_SPACE_BAR_C)
-#if defined(USE_PROGRESS_BARS)
     d->progressFreeSpace = new QProgressBar(this);
     d->progressFreeSpace->setMaximum(100);
     d->progressFreeSpace->setMinimum(0);
     d->progressFreeSpace->setAlignment(Qt::AlignHCenter);
-#else
-    d->progressFreeSpace = new QLabel(this);
-    d->progressFreeSpace->setTextFormat(Qt::PlainText);
-    d->progressFreeSpace->setText(tr("Space free"));
-    d->progressFreeSpace->setAlignment(Qt::AlignRight);
-#endif
-
     d->progressFreeSpace->setMinimumWidth(100);
     d->progressFreeSpace->setMaximumWidth(250);
     d->progressFreeSpace->setFixedHeight(18);

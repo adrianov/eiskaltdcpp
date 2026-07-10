@@ -158,12 +158,5 @@ inline QString stripBracketedStatusPrefix(const QString &text)
 inline void paintProgressCell(QPainter *painter, const QStyleOptionViewItem &option,
                               double percent, const QString &text, const QPalette *barPalette = nullptr)
 {
-#if defined(USE_PROGRESS_BARS)
     paintStyledProgressBar(painter, option, percent, text, barPalette);
-#else
-    QStyleOptionViewItem plain = option;
-    plain.text = text;
-    plain.displayAlignment = Qt::AlignCenter;
-    QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &plain, painter);
-#endif
 }

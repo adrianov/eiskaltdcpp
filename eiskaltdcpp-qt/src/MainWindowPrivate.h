@@ -55,11 +55,7 @@ public:
     QLabel *statusTRLabel = nullptr;
     StatusBarLogLabel *msgLabel = nullptr;
 
-#if defined(USE_PROGRESS_BARS)
     QProgressBar *progressFreeSpace = nullptr;
-#else
-    QLabel *progressFreeSpace = nullptr;
-#endif
     QProgressBar *progressHashing = nullptr;
     HashProgress *_progress_dialog = nullptr;
 
