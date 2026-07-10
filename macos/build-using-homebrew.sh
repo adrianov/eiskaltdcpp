@@ -13,7 +13,7 @@
 # Build dependencies and useful tools:
 # export HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK=1
 # brew install ccache coreutils cmake
-# brew install aspell jsoncpp libidn2 lua miniupnpc qt@5
+# brew install aspell jsoncpp libidn2 lua miniupnpc qt@5 duckdb
 #
 # Additional tools:
 # brew install wget htop

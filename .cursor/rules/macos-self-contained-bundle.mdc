@@ -1,0 +1,30 @@
+---
+description: macOS app must be self-contained — bundle Homebrew dylibs into the .app so it runs without Homebrew.
+alwaysApply: true
+---
+
+# Self-contained macOS package
+
+The shipped `EiskaltDC++.app` (and DMG) must run on a Mac **without Homebrew** (or any build-machine library path).
+
+## Rules
+
+- **Do not rely on `/opt/homebrew` or `/usr/local` at runtime.** Linking against Homebrew for the *build* is fine; the *installed* app must not `dlopen` or load dylibs from those prefixes.
+- When adding a new shared library dependency (e.g. DuckDB, OpenSSL, Qt plugins, aspell):
+  1. Ensure packaging copies it into the bundle (`Contents/Frameworks` or `Contents/MacOS`).
+  2. Rewrite install names / rpaths (`install_name_tool`, `macdeployqt`, or CMake `fixup_bundle`) so the binary loads `@rpath` / `@executable_path/...` copies.
+  3. Recursively bundle **transitive** dylibs the new lib needs.
+- Prefer extending the existing install path: Qt5 uses `macdeployqt` in `eiskaltdcpp-qt/CMakeLists.txt`; non-Qt libs may need an explicit copy + `install_name_tool` step in that `APPLE` install block or `macos/build-using-homebrew.sh`.
+- After packaging, verify with something like:
+  - `otool -L EiskaltDC++.app/Contents/MacOS/EiskaltDC++` — no absolute Homebrew paths
+  - run the `.app` with `PATH=/usr/bin:/bin` and Homebrew unlinked or absent from `DYLD_*`
+
+## Anti-patterns
+
+```text
+# BAD — works on the build Mac only
+target_link_libraries(... /opt/homebrew/lib/libduckdb.dylib)
+# …and ship the .app without copying libduckdb into the bundle
+
+# GOOD — link at build time, then bundle + fixup so @rpath resolves inside the .app
+```
