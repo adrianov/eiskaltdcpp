@@ -46,6 +46,16 @@ void ShareIndex::drainWriteQueue()
         case OpenDb:
             open();
             break;
+        case MatchQueue: {
+            dcpp::UserList users = job.users;
+            {
+                QMutexLocker lock(&writeMutex);
+                const dcpp::UserList pending = takeMatchUsers();
+                users.insert(users.end(), pending.begin(), pending.end());
+            }
+            matchQueueSync(users);
+            break;
+        }
         case IngestList:
             ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
             break;

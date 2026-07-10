@@ -85,6 +85,16 @@ void ShareIndex::ingestList(const UserPtr &user, const QString &listPath,
     enqueueWrite(job);
 }
 
+void ShareIndex::matchQueue(const UserList &users)
+{
+    if (users.empty())
+        return;
+    WriteJob job;
+    job.kind = MatchQueue;
+    job.users = users;
+    enqueueWrite(job);
+}
+
 void ShareIndex::upsertFromSearch(const QVariantMap &map)
 {
     WriteJob job;

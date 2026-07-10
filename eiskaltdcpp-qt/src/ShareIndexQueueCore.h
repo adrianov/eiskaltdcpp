@@ -15,10 +15,10 @@
 #include <QMutex>
 #include <QQueue>
 
-/** Single-writer job queue for ShareIndex (OpenDb → list ingest → hub SR). */
+/** Serialized ShareIndex jobs, including online-user queue matching. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { OpenDb, IngestList, UpsertSearch, BumpShowHits };
+enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, BumpShowHits };
 
 struct WriteJob {
     WriteKind kind = IngestList;
@@ -28,6 +28,7 @@ struct WriteJob {
     QString nick;
     QVariantMap map;
     QList<qint64> ids;
+    dcpp::UserList users;
 };
 
 extern QMutex writeMutex;
@@ -41,6 +42,7 @@ bool takeNextJob(WriteJob &job);
 void dropOldestHubJob();
 void enqueueWrite(WriteJob job);
 QList<QVariantMap> takeHubUpserts();
+dcpp::UserList takeMatchUsers();
 
 } // namespace ShareIndexWriteQueue
 

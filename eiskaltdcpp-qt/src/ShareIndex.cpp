@@ -127,6 +127,8 @@ void ShareIndex::upsertFromSearch(const QVariantMap &) {}
 
 void ShareIndex::ingestList(const UserPtr &, const QString &, const QString &, const QString &) {}
 
+void ShareIndex::matchQueue(const UserList &) {}
+
 qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QString &, const QString &)
 {
     return 0;

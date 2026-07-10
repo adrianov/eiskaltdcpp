@@ -180,6 +180,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexInsert.cpp
     src/ShareIndexQueue.cpp
     src/ShareIndexQueueCore.cpp
+    src/ShareIndexQueueMatch.cpp
     src/ShareIndexEnqueue.cpp
     src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp

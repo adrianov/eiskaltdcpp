@@ -54,6 +54,8 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con)
     }
 
     ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_cid ON share_entries(cid)");
+    ShareIndexDb::execOk(con,
+            "CREATE INDEX IF NOT EXISTS share_entries_cid_tth ON share_entries(cid, tth)");
     ShareIndexDb::execOk(con, "CREATE INDEX IF NOT EXISTS share_entries_ext ON share_entries(ext)");
     // Trim / cap eviction by age only (no show_hits / updated_at index).
     ShareIndexDb::execOk(con,

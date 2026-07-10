@@ -94,7 +94,8 @@ void ShareIndexListListener::on(QueueManagerListener::ListFromCache, const Hinte
     emit openShare(user.user, _q(listPath), _q(initialDir));
 }
 
-void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUser &,
-                                const std::string &) noexcept
+void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUser &user,
+                                const std::string &listPath) noexcept
 {
+    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
 }

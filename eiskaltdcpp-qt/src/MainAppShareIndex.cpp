@@ -13,7 +13,62 @@
 #include "ReciprocalList.h"
 #include "ShareIndexListListener.h"
 
+#include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
+#include "dcpp/TimerManager.h"
+
+#include <memory>
+
+using namespace dcpp;
+
+namespace {
+
+/** Batches hub user arrivals before matching their saved shares to the queue. */
+class ShareIndexOnline : private ClientManagerListener, private TimerManagerListener
+{
+public:
+    void start()
+    {
+        ClientManager::getInstance()->addListener(this);
+        TimerManager::getInstance()->addListener(this);
+    }
+
+    void stop()
+    {
+        TimerManager::getInstance()->removeListener(this);
+        ClientManager::getInstance()->removeListener(this);
+    }
+
+private:
+    void on(ClientManagerListener::UserConnected, const UserPtr &user) noexcept override
+    {
+        if (!user)
+            return;
+        Lock l(cs);
+        pending[user->getCID()] = user;
+    }
+
+    void on(TimerManagerListener::Second, uint64_t) noexcept override
+    {
+        UserList users;
+        {
+            Lock l(cs);
+            users.reserve(pending.size());
+            for (const auto &entry : pending)
+                users.push_back(entry.second);
+            pending.clear();
+        }
+        if (!users.empty() && ShareIndex::getInstance())
+            ShareIndex::getInstance()->matchQueue(users);
+    }
+
+    CriticalSection cs;
+    unordered_map<CID, UserPtr> pending;
+};
+
+std::unique_ptr<ShareIndexOnline> onlineMatcher;
+
+} // namespace
 
 void startShareIndex()
 {
@@ -26,10 +81,16 @@ void startShareIndex()
     ReciprocalList::getInstance()->start();
     ShareIndexListListener::newInstance();
     ShareIndexListListener::getInstance()->start();
+    onlineMatcher.reset(new ShareIndexOnline());
+    onlineMatcher->start();
 }
 
 void stopShareIndex()
 {
+    if (onlineMatcher) {
+        onlineMatcher->stop();
+        onlineMatcher.reset();
+    }
     if (ShareIndex::getInstance())
         ShareIndex::getInstance()->stopWrites();
     ShareIndexListListener::deleteInstance();

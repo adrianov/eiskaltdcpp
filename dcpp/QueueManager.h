@@ -44,6 +44,12 @@ class QueueManager : public Singleton<QueueManager>, public Speaker<QueueManager
         private SearchManagerListener, private ClientManagerListener
 {
 public:
+    struct SourceMatch {
+        SourceMatch(const TTHValue& tth_, int64_t size_) : tth(tth_), size(size_) { }
+        TTHValue tth;
+        int64_t size;
+    };
+
     void add(const string& aTarget, int64_t aSize, const TTHValue& root); // NOTE: freedcpp
 
     /** Add a file to the queue. */
@@ -64,6 +70,10 @@ public:
 
     int matchListing(const DirectoryListing& dl) noexcept;
     void matchAllListings();
+    /** Unfinished queue roots used for indexed source discovery. */
+    vector<TTHValue> getQueuedTTHs() noexcept;
+    /** Add verified TTH+size matches through the normal queue and connection path. */
+    void matchSources(const HintedUser& user, const vector<SourceMatch>& matches) noexcept;
 
     bool getTTH(const string& name, TTHValue& tth) noexcept;
 

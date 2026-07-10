@@ -37,6 +37,20 @@ QList<QVariantMap> takeHubUpserts()
     return maps;
 }
 
+dcpp::UserList takeMatchUsers()
+{
+    dcpp::UserList users;
+    for (int i = 0; i < writeQueue.size(); ) {
+        if (writeQueue.at(i).kind == MatchQueue) {
+            users.insert(users.end(), writeQueue.at(i).users.begin(), writeQueue.at(i).users.end());
+            writeQueue.removeAt(i);
+            continue;
+        }
+        ++i;
+    }
+    return users;
+}
+
 void dropOldestHubJob()
 {
     for (int i = 0; i < writeQueue.size(); ++i) {
@@ -49,7 +63,7 @@ void dropOldestHubJob()
 
 bool takeNextJob(WriteJob &job)
 {
-    static const WriteKind kOrder[] = { OpenDb, IngestList, UpsertSearch, BumpShowHits };
+    static const WriteKind kOrder[] = { OpenDb, MatchQueue, IngestList, UpsertSearch, BumpShowHits };
     for (WriteKind kind : kOrder) {
         for (int i = 0; i < writeQueue.size(); ++i) {
             if (writeQueue.at(i).kind == kind) {

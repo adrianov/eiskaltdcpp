@@ -56,6 +56,46 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     return wantConnection;
 }
 
+vector<TTHValue> QueueManager::getQueuedTTHs() noexcept {
+    unordered_set<TTHValue> roots;
+    Lock l(cs);
+    for(const auto& item: fileQueue.getQueue()) {
+        QueueItem* qi = item.second;
+        if(!qi->isFinished() && !qi->isSet(QueueItem::FLAG_USER_LIST))
+            roots.insert(qi->getTTH());
+    }
+    return vector<TTHValue>(roots.begin(), roots.end());
+}
+
+void QueueManager::matchSources(const HintedUser& user,
+                                const vector<SourceMatch>& matches) noexcept {
+    if(!user.user || matches.empty())
+        return;
+
+    unordered_map<TTHValue, int64_t> indexed;
+    for(const auto& match: matches)
+        indexed.emplace(match.tth, match.size);
+
+    bool wantConnection = false;
+    {
+        Lock l(cs);
+        for(const auto& item: fileQueue.getQueue()) {
+            QueueItem* qi = item.second;
+            const auto match = indexed.find(qi->getTTH());
+            if(qi->isFinished() || qi->isSet(QueueItem::FLAG_USER_LIST)
+                    || match == indexed.end() || match->second != qi->getSize()
+                    || qi->isSource(user))
+                continue;
+            try {
+                wantConnection |= addSource(qi, user, QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
+            } catch(const Exception&) { }
+        }
+    }
+
+    if(wantConnection && user.user->isOnline())
+        ConnectionManager::getInstance()->getDownloadConnection(user);
+}
+
 void QueueManager::removeSource(const string& aTarget, const UserPtr& aUser, int reason, bool removeConn /* = true */) noexcept {
     bool isRunning = false;
     bool removeCompletely = false;
