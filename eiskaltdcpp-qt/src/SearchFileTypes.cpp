@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "SearchFileTypes.h"
+#include "AppTheme.h"
 #include "WulforUtil.h"
 
 #include "dcpp/stdinc.h"
@@ -61,6 +62,9 @@ void fillCombo(QComboBox *combo) {
 
     for (int i = 0; i < icons.size() && i < combo->count(); i++)
         combo->setItemIcon(i, WICON(icons.at(i)));
+
+    // Icon combos often ignore stylesheet color; re-apply after items change.
+    AppTheme::applyInputPalette(combo);
 }
 
 QStringList extensionsFor(int typeIndex, const QString &typeName) {

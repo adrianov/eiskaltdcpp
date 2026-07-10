@@ -32,6 +32,14 @@ public:
     static qreal controlRadius();
     static QColor inputBackground();
     static QColor inputBorder(bool focused);
+
+    /** Common palette derived once and shared by every themed input control. */
+    struct InputColors { QColor bg, text, muted, selBg, selFg; };
+    static InputColors inputColors();
+    static QColor readableColor(const QColor &bg, const QColor &preferred);
+
+    /** App-wide QComboBox rules; covers combos created at any time. */
+    static QString comboStyleSheet();
     static void applyInputPalette(QWidget *widget);
     static void applyControlButton(QAbstractButton *button);
     static void applyProgressBar(QProgressBar *bar);

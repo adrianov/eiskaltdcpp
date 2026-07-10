@@ -72,6 +72,11 @@ void AppTheme::applyProgressBar(QProgressBar *bar){
 }
 
 void AppTheme::apply(){
+    // App-wide sheet reaches combos created after this sweep (hub/search frames).
+    const QString comboCss = comboStyleSheet();
+    if (qApp->styleSheet() != comboCss)
+        qApp->setStyleSheet(comboCss);
+
     const auto widgets = qApp->allWidgets();
     for (QWidget *w : widgets) {
         if (qobject_cast<ChatEdit*>(w) || qobject_cast<LineEdit*>(w) || qobject_cast<QComboBox*>(w))
