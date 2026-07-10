@@ -26,12 +26,22 @@ void DownloadManager::on(AdcCommand::SND, UserConnection* aSource, const AdcComm
         dcdebug("DM::onFileLength Bad state, ignoring\n");
         return;
     }
+    if(cmd.getParameters().size() < 4) {
+        aSource->disconnect();
+        return;
+    }
 
+    Download* download = aSource->getDownload();
+    if(!download) {
+        aSource->disconnect();
+        return;
+    }
     const string& type = cmd.getParam(0);
     int64_t start = Util::toInt64(cmd.getParam(2));
     int64_t bytes = Util::toInt64(cmd.getParam(3));
 
-    if(type != Transfer::names[aSource->getDownload()->getType()]) {
+    if(type != Transfer::names[download->getType()] ||
+            cmd.getParam(1) != download->getCommand(false).getParam(1)) {
         aSource->disconnect();
         return;
     }

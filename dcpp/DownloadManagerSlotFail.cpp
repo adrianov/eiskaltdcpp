@@ -109,6 +109,9 @@ void DownloadManager::on(AdcCommand::STA, UserConnection* aSource, const AdcComm
         case AdcCommand::ERROR_FILE_NOT_AVAILABLE:
             fileNotAvailable(aSource);
             return;
+        case AdcCommand::ERROR_FILE_PART_NOT_AVAILABLE:
+            failDownload(aSource, cmd.getParam(1));
+            return;
         case AdcCommand::ERROR_SLOTS_FULL: {
             size_t queuePos = 0;
             string qp;
@@ -118,6 +121,7 @@ void DownloadManager::on(AdcCommand::STA, UserConnection* aSource, const AdcComm
             return;
         }
         }
+        break;
     case AdcCommand::SEV_SUCCESS:
         dcdebug("Unknown success message %s %s", err.c_str(), cmd.getParam(1).c_str());
         return;

@@ -81,10 +81,15 @@ bool UploadManager::prepareFile(UserConnection& aSource, const string& aType, co
 
                 start = aStartPos;
                 int64_t sz = f->getSize();
+                if(start > sz) {
+                    aSource.fileNotAvail();
+                    delete f;
+                    return false;
+                }
                 size = (aBytes == -1) ? sz - start : aBytes;
                 fileSize = sz;
 
-                if((start + size) > sz) {
+                if(size > sz - start) {
                     aSource.fileNotAvail();
                     delete f;
                     return false;

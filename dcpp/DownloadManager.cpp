@@ -77,8 +77,7 @@ void DownloadManager::addConnection(UserConnectionPtr conn) {
         return;
     }
 
-    // TLS is required for ADC transfers only; NMDC transfers are usually unencrypted
-    if(SETTING(REQUIRE_TLS) && !conn->isSet(UserConnection::FLAG_NMDC) && !conn->isSecure()) {
+    if(SETTING(REQUIRE_TLS) && !conn->isSecure()) {
         LogManager::getInstance()->message(str(F_("Download rejected from %1%: TLS required but connection is not encrypted") % ClientManager::getInstance()->getNickOrCid(conn->getHintedUser())));
         conn->error("Secure connection required!");
         QueueManager::getInstance()->removeSource(conn->getUser(), QueueItem::Source::FLAG_UNENCRYPTED);

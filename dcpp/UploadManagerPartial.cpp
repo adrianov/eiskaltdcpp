@@ -27,50 +27,27 @@ int UploadManager::openPartialFile(UserConnection& aSource, const string& aFile,
 
     TTHValue fileHash(aFile.substr(4));
     string target;
-
-    if (QueueManager::getInstance()->isChunkDownloaded(fileHash, aStartPos, aBytes, target, fileSize)) {
-        sourceFile = target;
-        try {
-            File* f = new File(sourceFile, File::READ, File::OPEN | File::SHARED);
-
-            start = aStartPos;
-            fileSize = f->getSize();
-            size = (aBytes == -1) ? fileSize - start : aBytes;
-
-            if ((start + size) > fileSize) {
-                aSource.fileNotAvail();
-                delete f;
-                return -1;
-            }
-
-            f->setPos(start);
-            is = f;
-            if ((start + size) < fileSize)
-                is = new LimitedInputStream<true>(is, size);
-
-            type = Transfer::TYPE_FILE;
-            return 1;
-        } catch (const Exception&) {
-            aSource.fileNotAvail();
-            delete is;
-            return -1;
-        }
+    if (!QueueManager::getInstance()->isChunkDownloaded(fileHash, aStartPos, aBytes, target, fileSize)) {
+        target = FinishedManager::getInstance()->getTarget(fileHash.toBase32());
+        if (target.empty() || !Util::fileExists(target))
+            return 0;
     }
 
-    target = FinishedManager::getInstance()->getTarget(fileHash.toBase32());
-    if (target.empty() || !Util::fileExists(target))
-        return 0;
-
     sourceFile = target;
+    File* f = nullptr;
     try {
-        File* f = new File(sourceFile, File::READ, File::OPEN | File::SHARED);
-
+        f = new File(sourceFile, File::READ, File::OPEN | File::SHARED);
         start = aStartPos;
         int64_t sz = f->getSize();
+        if (start > sz) {
+            aSource.fileNotAvail();
+            delete f;
+            return -1;
+        }
         size = (aBytes == -1) ? sz - start : aBytes;
         fileSize = sz;
 
-        if ((start + size) > sz) {
+        if (size > sz - start) {
             aSource.fileNotAvail();
             delete f;
             return -1;
@@ -85,7 +62,8 @@ int UploadManager::openPartialFile(UserConnection& aSource, const string& aFile,
         return 1;
     } catch (const Exception&) {
         aSource.fileNotAvail();
-        delete is;
+        delete f;
+        is = nullptr;
         return -1;
     }
 }

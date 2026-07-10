@@ -58,6 +58,10 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
         dcdebug("UM::onGET Bad state, ignoring\n");
         return;
     }
+    if(c.getParameters().size() < 4) {
+        aSource->fileNotAvail("Invalid request");
+        return;
+    }
 
     const string& type = c.getParam(0);
     const string& fname = c.getParam(1);
