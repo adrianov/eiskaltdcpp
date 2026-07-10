@@ -13,25 +13,23 @@
 #include <ctime>
 #include <string>
 
+#include "CID.h"
 #include "HintedUser.h"
 
 namespace dcpp {
 
 using std::string;
 
-/** Saved user file list reuse when hub share size (SS) is unchanged. */
+/** Per-user file list cache metadata in PATH_USER_LOCAL/ListCache.xml. */
 class ListCache {
 public:
-    static string findListFile(const string& listBase);
-    static int64_t readShareSize(const string& listBase);
-    static void saveShareSize(const string& listBase, int64_t shareSize);
-    static bool matchesUserShare(const HintedUser& user, const string& listBase);
+    static void load();
 
-    /** Unix time of last successful full-list download; -1 if unknown. */
-    static time_t readFetchTime(const string& listBase);
-    static void saveFetchTime(const string& listBase, time_t when = time(nullptr));
+    static string findListFile(const string& listBase);
+    static bool matchesUserShare(const HintedUser& user, const string& listBase);
+    static void saveListMeta(const CID& cid, int64_t shareSize, time_t when = time(nullptr));
     /** True when a successful fetch was recorded less than 24 hours ago (auto-refresh cooldown). */
-    static bool fetchedWithinDay(const string& listBase);
+    static bool fetchedWithinDay(const CID& cid);
 };
 
 } // namespace dcpp

@@ -28,7 +28,6 @@
 #include "FinishedItem.h"
 #include "FinishedManager.h"
 #include "HashManager.h"
-#include "ListCache.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
 #include "QueueAutoSearch.h"
@@ -115,10 +114,6 @@ QueueManager::~QueueManager() {
         std::for_each(filelists.begin(), std::set_difference(filelists.begin(), filelists.end(),
                                                              protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()), &File::deleteFile);
 
-        filelists = File::findFiles(path, "*.sharesize");
-        std::sort(filelists.begin(), filelists.end());
-        std::for_each(filelists.begin(), std::set_difference(filelists.begin(), filelists.end(),
-                                                             protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()), &File::deleteFile);
     }
 }
 

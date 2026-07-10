@@ -19,6 +19,7 @@ set(DCPP_EXTRA_SOURCES
     ClientSearch.cpp
     HubSearchDenied.cpp
     ListCache.cpp
+    ListCacheStore.cpp
     QueueAutoSearch.cpp
     SearchQuery.cpp
     SearchManagerUdp.cpp

@@ -157,8 +157,8 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
         return;
     }
 
-    // Share size changed (or no .sharesize): refresh at most once per day if a list exists.
-    if (!listFile.empty() && ListCache::fetchedWithinDay(listBase)) {
+    // Share size changed (or no cached meta): refresh at most once per day if a list exists.
+    if (!listFile.empty() && ListCache::fetchedWithinDay(peer.user->getCID())) {
         markPeerChecked(peer.user->getCID());
         return;
     }

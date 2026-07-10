@@ -108,10 +108,8 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
                         if(d->getType() == Transfer::TYPE_FULL_LIST) {
                             dir = q->getTempTarget();
                             q->addSegment(Segment(0, q->getSize()));
-                            const string listBase = getListPath(d->getHintedUser());
-                            ListCache::saveShareSize(listBase,
+                            ListCache::saveListMeta(d->getUser()->getCID(),
                                 ClientManager::getInstance()->getBytesShared(d->getUser()));
-                            ListCache::saveFetchTime(listBase);
                         } else if(d->getType() == Transfer::TYPE_FILE) {
                             q->addSegment(d->getSegment());
                         }

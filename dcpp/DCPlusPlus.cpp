@@ -29,6 +29,7 @@
 #include "FavoriteManager.h"
 #include "FinishedManager.h"
 #include "HashManager.h"
+#include "ListCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
 #include "IncomingPortCheck.h"
@@ -134,6 +135,7 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     if(f != NULL)
         (*f)(p, _("Users"));
     ClientManager::getInstance()->loadUsers();
+    ListCache::load();
 }
 
 void shutdown() {
