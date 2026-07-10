@@ -13,11 +13,15 @@
 
 namespace dcpp {
 
+class Identity;
 class OnlineUser;
 
 namespace PeerConnectFilter {
 
-/** Skip search ghosts (empty tag, connection, and share; or hub bots). */
+/** Peers.cn.ru Pikachu/Pikachundr clone swarm (fixed ~137 GiB share or empty). */
+bool isPikachuGhost(const Identity& id);
+
+/** Skip search ghosts (empty tag/share, hub bots, or Peers.cn.ru Pikachundr clone swarm). */
 bool isViablePeer(const OnlineUser& ou);
 
 /** Passive StrgDC++/Flylink-style clients expect $RevConnectToMe first. */

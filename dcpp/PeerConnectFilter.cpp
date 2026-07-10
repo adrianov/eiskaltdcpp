@@ -39,11 +39,38 @@ bool isRevConnectFamily(const string& c) {
         || Util::findSubString(l, "apexdc") != string::npos;
 }
 
+/** Inetra Peers network clients (peers.cn.ru): Pikachu / Pikachundr. */
+bool isPikachuFamily(const string& c) {
+    if(c.empty())
+        return false;
+    string l = Text::toLower(c);
+    return Util::findSubString(l, "pikachundr") != string::npos
+        || Util::findSubString(l, "pikachu") != string::npos;
+}
+
 } // namespace
+
+/**
+ * Peers.cn.ru clone farm: tens of thousands of Pikachundr accounts advertise the
+ * same ~137 GiB share and random nicks; file lists are empty. Real Pikachu 1.0.7
+ * peers use distinct share sizes (e.g. ~24 GiB) and remain viable.
+ */
+bool isPikachuGhost(const Identity& id) {
+    if(!isPikachuFamily(clientTag(id)))
+        return false;
+    const int64_t share = id.getBytesShared();
+    if(share <= 0)
+        return true;
+    // Dominant swarm size observed on peers.cn.ru (147102629888 bytes).
+    return share == 147102629888LL;
+}
 
 bool isViablePeer(const OnlineUser& ou) {
     const Identity& id = ou.getIdentity();
     const UserPtr& u = ou.getUser();
+
+    if(u->isSet(User::BOT) || isPikachuGhost(id))
+        return false;
 
     if(hasClientTag(clientTag(id)))
         return true;
@@ -51,9 +78,6 @@ bool isViablePeer(const OnlineUser& ou) {
     // Tagless MyINFO (e.g. hmn.pp.ru) still carries connection type and share size.
     if(!id.getConnection().empty() || id.getBytesShared() > 0)
         return true;
-
-    if(u->isSet(User::BOT))
-        return false;
 
     return false;
 }
