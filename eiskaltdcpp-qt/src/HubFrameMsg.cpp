@@ -11,6 +11,7 @@
 #include "HubFramePrivate.h"
 #include "AppTheme.h"
 #include "Antispam.h"
+#include "PmSpamFilter.h"
 #include "MainWindow.h"
 #include "Notification.h"
 #include "Secretary.h"
@@ -213,6 +214,12 @@ void HubFrame::newPm(const VarMap &map){
 
     addPM(map["CID"].toString(), full_message, true, map["NICK"].toString(), !quiet);
 
+    if (!map["ECHO"].toBool()){
+        auto it = d->pm.find(map["CID"].toString());
+        if (it != d->pm.end())
+            it.value()->noteIncoming(map["MSG"].toString());
+    }
+
     if (Secretary::getInstance())
         Secretary::getInstance()->corePrivateMsg(map["NICK"].toString(), full_message, map["MSG"].toString(), _q(d->client->getIp()));
 }
@@ -257,6 +264,9 @@ void HubFrame::on(ClientListener::Message, Client*, const ChatMessage &message) 
         bool isInSandBox = false;
         bool isEcho      = (message.from->getUser() == ClientManager::getInstance()->getMe());
         bool hasPMWindow = d->pm.contains(_q(id.toBase32()));//PMWindow is created
+
+        if (!isEcho && PmSpamFilter::getInstance() && PmSpamFilter::getInstance()->isSpam(msg))
+            return;
 
         if (AntiSpam::getInstance())
             isInSandBox = AntiSpam::getInstance()->isInSandBox(_q(id.toBase32()));

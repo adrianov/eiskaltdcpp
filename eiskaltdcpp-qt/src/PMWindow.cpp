@@ -18,17 +18,14 @@
 #include "EmoticonDialog.h"
 #include "FlowLayout.h"
 #include "ArenaWidgetManager.h"
+#include "PmSpamFilter.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/ClientManager.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/User.h"
 
-#include <QTextBlock>
 #include <QTextDocument>
-#include <QKeyEvent>
-#include <QMouseEvent>
-#include <QEvent>
 #include <QCloseEvent>
 #include <QMenu>
 #include <QAction>
@@ -104,7 +101,9 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
     toolButton_HIDE->setIcon(WICON(WulforUtil::eiEDITDELETE));
 
     arena_menu = new QMenu(tr("Private message"));
+    QAction *mark_spam = new QAction(WICON(WulforUtil::eiSPAM), tr("Mark as Spam"), arena_menu);
     QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), arena_menu);
+    arena_menu->addAction(mark_spam);
     arena_menu->addAction(close_wnd);
 
     {
@@ -122,6 +121,7 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
         textEdit_CHAT->setPalette(p);
     }
 
+    connect(mark_spam, SIGNAL(triggered()), this, SLOT(slotMarkSpam()));
     connect(close_wnd, SIGNAL(triggered()), this, SLOT(slotClose()));
     connect(pushButton_HUB, SIGNAL(clicked()), this, SLOT(slotHub()));
     connect(pushButton_SHARE, SIGNAL(clicked()), this, SLOT(slotShare()));
@@ -154,136 +154,16 @@ void PMWindow::slotClose() {
     ArenaWidgetManager::getInstance()->rem(this);
 }
 
-bool PMWindow::eventFilter(QObject *obj, QEvent *e){
-    if (e->type() == QEvent::KeyRelease){
-        QKeyEvent *k_e = reinterpret_cast<QKeyEvent*>(e);
+void PMWindow::noteIncoming(const QString &msg){
+    if (!msg.isEmpty())
+        incomingMsgs << msg;
+}
 
-        if ((static_cast<QTextEdit*>(obj) == plainTextEdit_INPUT) &&
-            (k_e->key() == Qt::Key_Enter || k_e->key() == Qt::Key_Return) &&
-            (k_e->modifiers() == Qt::NoModifier))
-        {
-            return true;
-        }
-        else if (static_cast<LineEdit*>(obj) == lineEdit_FIND && k_e->key() == Qt::Key_Escape){
-            lineEdit_FIND->clear();
-            slotHideSearchBar();
-            return true;
-        }
-    }
-    else if (e->type() == QEvent::KeyPress){
-        QKeyEvent *k_e = reinterpret_cast<QKeyEvent*>(e);
+void PMWindow::slotMarkSpam(){
+    if (PmSpamFilter::getInstance())
+        PmSpamFilter::getInstance()->addAll(incomingMsgs);
 
-        const bool controlModifier = (k_e->modifiers() == Qt::ControlModifier);
-
-        if (static_cast<QTextEdit*>(obj) == plainTextEdit_INPUT)
-        {
-            const bool useCtrlEnter = WBGET(WB_USE_CTRL_ENTER);
-            const bool keyEnter = (k_e->key() == Qt::Key_Enter || k_e->key() == Qt::Key_Return);
-            const bool shiftModifier = (k_e->modifiers() == Qt::ShiftModifier);
-
-            if ((useCtrlEnter && keyEnter && controlModifier) ||
-                (!useCtrlEnter && keyEnter && !controlModifier && !shiftModifier))
-            {
-                const QString msg = plainTextEdit_INPUT->toPlainText();
-
-                HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->getHub(hubUrl));
-
-                if (fr) {
-                    if (!fr->parseForCmd(msg, this))
-                        sendMessage(msg, false, false);
-                }
-                else {
-                    sendMessage(msg, false, false);
-                }
-
-                plainTextEdit_INPUT->setPlainText("");
-
-                return true;
-            }
-        }
-
-        if (controlModifier){
-            if (k_e->key() == Qt::Key_Equal || k_e->key() == Qt::Key_Plus){
-                textEdit_CHAT->zoomIn();
-
-                return true;
-            }
-            else if (k_e->key() == Qt::Key_Minus){
-                textEdit_CHAT->zoomOut();
-
-                return true;
-            }
-        }
-    }
-    else if (e->type() == QEvent::MouseButtonRelease){
-        QMouseEvent *m_e = reinterpret_cast<QMouseEvent*>(e);
-
-        if ((static_cast<QWidget*>(obj) == textEdit_CHAT->viewport()) && (m_e->button() == Qt::LeftButton)){
-            QString pressedParagraph = textEdit_CHAT->anchorAt(textEdit_CHAT->mapFromGlobal(QCursor::pos()));
-
-            WulforUtil::getInstance()->openUrl(pressedParagraph);
-        }
-    }
-    else if (e->type() == QEvent::MouseMove && (static_cast<QWidget*>(obj) == textEdit_CHAT->viewport())){
-        QString str = textEdit_CHAT->anchorAt(textEdit_CHAT->mapFromGlobal(QCursor::pos()));
-
-        if (!str.isEmpty())
-            textEdit_CHAT->viewport()->setCursor(Qt::PointingHandCursor);
-        else
-            textEdit_CHAT->viewport()->setCursor(Qt::IBeamCursor);
-    }
-    else if (e->type() == QEvent::MouseButtonDblClick){
-        HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->getHub(hubUrl));
-        bool cursoratnick = false;
-        QString nick = "",nickstatus="",nickmessage="";
-        QString cid = "";
-        QTextCursor cursor = textEdit_CHAT->textCursor();
-
-        QString pressedParagraph = cursor.block().text();
-        int positionCursor = cursor.columnNumber();
-        int l = pressedParagraph.indexOf(" <");
-        int r = pressedParagraph.indexOf("> ");
-        if (l < r)
-            nickmessage = pressedParagraph.mid(l+2, r-l-2);
-        else {
-            int l1 = pressedParagraph.indexOf(" * ");
-            //qDebug() << positionCursor << " " << l1 << " " << l << " " << r;
-            if (l1 > -1 ) {
-                QString pressedParagraphstatus = pressedParagraph.remove(0,l1+3).simplified();
-                //qDebug() << pressedParagraphstatus;
-                int r1 = pressedParagraphstatus.indexOf(" ");
-                //qDebug() << r1;
-                nickstatus = pressedParagraphstatus.mid(0, r1);
-                //qDebug() << nickstatus;
-            }
-        }
-        if ((!nickmessage.isEmpty() || !nickstatus.isEmpty())&& fr){
-            //qDebug() << nickstatus;
-            //qDebug() << nickmessage;
-            nick = nickmessage + nickstatus;
-            //qDebug() << nick;
-            cid = fr->getCIDforNick(nick);
-        }
-        if ((positionCursor < r) && (positionCursor > l))
-            cursoratnick = true;
-
-        if (!cid.isEmpty()){
-            if (WIGET(WI_CHAT_DBLCLICK_ACT) == 1 && fr && cursoratnick)
-                    fr->browseUserFiles(cid, false);
-            else if (WIGET(WI_CHAT_DBLCLICK_ACT) == 2 && fr && cursoratnick)
-                    fr->addPM(cid, "");
-            else if (textEdit_CHAT->anchorAt(textEdit_CHAT->mapFromGlobal(QCursor::pos())).startsWith("user://")){
-                if(!plainTextEdit_INPUT->textCursor().position())
-                    plainTextEdit_INPUT->textCursor().insertText(nick + WSGET(WS_CHAT_SEPARATOR) + " ");
-                else
-                    plainTextEdit_INPUT->textCursor().insertText(nick + " ");
-
-                plainTextEdit_INPUT->setFocus();
-            }
-        }
-    }
-
-    return QWidget::eventFilter(obj, e);
+    slotClose();
 }
 
 void PMWindow::closeEvent(QCloseEvent *c_e){

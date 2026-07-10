@@ -13,6 +13,8 @@
 #include "ArenaWidget.h"
 #include "HubFrame.h"
 
+#include <QStringList>
+
 class QKeyEvent;
 class QEvent;
 class QObject;
@@ -74,6 +76,7 @@ private Q_SLOTS:
     void slotFindForward() { findText(QTextDocument::FindFlags()); }
     void slotFindBackward(){ findText(QTextDocument::FindBackward); }
     void slotClose();
+    void slotMarkSpam();
 
 Q_SIGNALS:
     void privateMessageClosed(QString);
@@ -89,6 +92,7 @@ private:
     void addStatusMessage(const QString &);
     void addOutput(QString, bool markUnread = true);
     void addUserData(const QString &);
+    void noteIncoming(const QString &);
 
     void updateStyles();
 
@@ -101,6 +105,7 @@ private:
     QString hubUrl;
     QString nick_;
     QMenu *arena_menu;
+    QStringList incomingMsgs;
 
     QStringList out_messages;
     int out_messages_index;
