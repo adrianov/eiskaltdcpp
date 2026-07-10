@@ -177,6 +177,10 @@ private:
     SearchItem *rootItem;
     /** */
     QHash<QString, SearchItem*> tths;
+    /** Directories grouped by path + name (same manner as TTH for files). */
+    QHash<QString, SearchItem*> dirs;
+
+    static QString dirGroupKey(const QString &path, const QString &file);
 
     void reset();
 };

@@ -9,6 +9,10 @@
 
 #include "SearchModel.h"
 
+QString SearchModel::dirGroupKey(const QString &path, const QString &file) {
+    return path + QLatin1Char('\0') + file;
+}
+
 void SearchModel::clearModel(){
     blockSignals(true);
 
@@ -16,6 +20,7 @@ void SearchModel::clearModel(){
     rootItem->childItems.clear();
 
     tths.clear();
+    dirs.clear();
 
     blockSignals(false);
 
@@ -39,8 +44,15 @@ void SearchModel::removeItem(const SearchItem *item){
 
     p->childItems.removeAt(row);
 
-    if (tths[item->data(COLUMN_SF_TTH).toString()] == item)
+    if (tths.value(item->data(COLUMN_SF_TTH).toString()) == item)
         tths.remove(item->data(COLUMN_SF_TTH).toString());
+
+    if (item->isDir) {
+        const QString key = dirGroupKey(item->data(COLUMN_SF_PATH).toString(),
+                                        item->data(COLUMN_SF_FILENAME).toString());
+        if (dirs.value(key) == item)
+            dirs.remove(key);
+    }
 
     endRemoveRows();
 
@@ -55,20 +67,26 @@ bool SearchModel::okToFind(const SearchItem *item){
     if (!item)
         return false;
 
-    if (!rootItem->childItems.contains(const_cast<SearchItem*>(item))){
-        QString tth = item->data(COLUMN_SF_TTH).toString();
+    if (rootItem->childItems.contains(const_cast<SearchItem*>(item)))
+        return true;
 
-        SearchItem *tth_root = tths.value(tth);//try to find item by tth
-
-        for (const auto &i : tth_root->childItems){
+    if (SearchItem *tthRoot = tths.value(item->data(COLUMN_SF_TTH).toString())) {
+        for (const auto &i : tthRoot->childItems) {
             if (item == i)
                 return true;
         }
     }
-    else {
-        return true;
+
+    if (item->isDir) {
+        const QString key = dirGroupKey(item->data(COLUMN_SF_PATH).toString(),
+                                        item->data(COLUMN_SF_FILENAME).toString());
+        if (SearchItem *dirRoot = dirs.value(key)) {
+            for (const auto &i : dirRoot->childItems) {
+                if (item == i)
+                    return true;
+            }
+        }
     }
 
     return false;
 }
-

@@ -61,14 +61,17 @@ bool SearchModel::addResult
     if (size > 0)
         ext = file_info.suffix().toUpper();
 
-    SearchItem * parent = nullptr;
+    SearchItem *parent = rootItem;
+    const QString dirKey = dirGroupKey(path, file);
 
     if (!isDir && tths.contains(tth)) {
         parent = tths[tth];
         if (parent->exists(cid))
             return false;
-    } else {
-        parent = rootItem;
+    } else if (isDir && dirs.contains(dirKey)) {
+        parent = dirs[dirKey];
+        if (parent->exists(cid))
+            return false;
     }
 
     QList<QVariant> item_data;
@@ -85,32 +88,33 @@ bool SearchModel::addResult
     item->isDir = isDir;
     item->cid = cid;
 
-    if (parent == rootItem && !isDir)
-        tths.insert(tth, item);
-    else {
-        if (sortColumn == COLUMN_SF_COUNT){
-            parent->appendChild(item);
+    if (parent == rootItem) {
+        if (!isDir)
+            tths.insert(tth, item);
+        else
+            dirs.insert(dirKey, item);
 
-            sort(sortColumn, sortOrder);
+        emit layoutAboutToBeChanged();
 
-            return true;
-        }
+        auto it = insertSortedSearchItem(sortColumn, sortOrder, parent->childItems, item);
+        parent->childItems.insert(it, item);
 
-        beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
-        {
-             parent->appendChild(item);
-        }
-        endInsertRows();
+        emit layoutChanged();
 
         return true;
     }
 
-    emit layoutAboutToBeChanged();
+    if (sortColumn == COLUMN_SF_COUNT){
+        parent->appendChild(item);
 
-    auto it = insertSortedSearchItem(sortColumn, sortOrder, parent->childItems, item);
-    parent->childItems.insert(it, item);
+        sort(sortColumn, sortOrder);
 
-    emit layoutChanged();
+        return true;
+    }
+
+    beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
+    parent->appendChild(item);
+    endInsertRows();
 
     return true;
 }
