@@ -26,8 +26,12 @@ ShareIndex::IndexStats ShareIndex::indexStats()
     if (!db.isOpen())
         return stats;
 
+    // O(1) meta counter (triggers in ensureCap) — never COUNT(*) here.
+    // Includes dirs; compact UI rounding makes that negligible.
     QSqlQuery q(db);
-    if (q.exec("SELECT count(*) FROM share_entries WHERE is_dir = 0") && q.next())
+    q.prepare(QStringLiteral(
+        "SELECT value FROM share_index_meta WHERE key = 'entry_count'"));
+    if (q.exec() && q.next())
         stats.files = q.value(0).toLongLong();
 
     const QFileInfo dbInfo(dbFile);

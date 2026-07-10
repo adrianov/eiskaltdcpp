@@ -79,8 +79,9 @@ public:
     /** +1 show_hits for rows displayed from local Search (queued write). */
     void recordSearchShows(const QList<qint64> &ids);
 
+    /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
     struct IndexStats {
-        qint64 files = 0;
+        qint64 files = 0;   // share_index_meta.entry_count (files + dirs)
         qint64 dbBytes = 0;
     };
     IndexStats indexStats();
