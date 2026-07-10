@@ -132,9 +132,9 @@ private:
     friend struct LuaManager;
     friend class ScriptInstance;
 
-    virtual void on(ClientConnected, Client* aClient) noexcept;
-    virtual void on(ClientDisconnected, Client* aClient) noexcept;
-    virtual void on(Second, uint64_t /* ticks */) noexcept;
+    void on(ClientConnected, Client* aClient) noexcept override;
+    void on(ClientDisconnected, Client* aClient) noexcept override;
+    void on(Second, uint64_t /* ticks */) noexcept override;
 
 
 };
