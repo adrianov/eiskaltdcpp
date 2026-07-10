@@ -103,8 +103,10 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
     Lock l(cs);
 
     ConnectionQueueItem::Ptr dlCqi = nullptr;
-    if(aSource->getUser())
-        dlCqi = findDownloadCqi(aSource->getUser());
+    if(aSource->getUser()) {
+        auto i = find(downloads.begin(), downloads.end(), aSource->getUser());
+        dlCqi = i != downloads.end() ? *i : findDownloadCqi(aSource->getHintedUser());
+    }
 
     const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;

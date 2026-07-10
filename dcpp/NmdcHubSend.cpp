@@ -41,9 +41,13 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     checkstate();
     dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
     string nick = fromUtf8(aUser.getIdentity().getNick());
-    ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
     bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(secureMode, aUser);
     string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+    if(port.empty()) {
+        PeerConnectLog::skip(aUser.getIdentity().getNick(), getHubUrl(), _("not listening for connections"));
+        return;
+    }
+    ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
     const string detail = getLocalIp() + ":" + port + (secure ? " TLS" : "");
     PeerConnectLog::nmdcSend(aUser, "$ConnectToMe", detail);
     send("$ConnectToMe " + nick + " " + getLocalIp() + ":" + port + (secure ? "S" : "") + "|");

@@ -58,7 +58,6 @@ void ConnectionManager::on(AdcCommand::SUP, UserConnection* aSource, const AdcCo
             defFeatures.push_back("AD" + UserConnection::FEATURE_ZLIB_GET);
         }
         aSource->sup(defFeatures);
-        aSource->inf(false);
     } else {
         aSource->inf(true);
     }
@@ -106,9 +105,20 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
         aSource->disconnect();
         return;
     }
+    if(cid.size() != 39) {
+        aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_FIELD, "INF ID invalid").addParam("FB", "ID"));
+        aSource->disconnect();
+        return;
+    }
 
+    const CID peerCid(cid);
+    if(aSource->getUser() && !(aSource->getUser()->getCID() == peerCid)) {
+        aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_FIELD, "INF ID mismatch").addParam("FB", "ID"));
+        rejectConnection(aSource, _("ADC peer CID does not match requested user"));
+        return;
+    }
     if(!aSource->getUser()) {
-        aSource->setUser(ClientManager::getInstance()->findUser(CID(cid)));
+        aSource->setUser(ClientManager::getInstance()->findUser(peerCid));
 
         if(!aSource->getUser()) {
             PeerConnectLog::incomingReject(cid, _("ADC INF ID not found on hub"));
@@ -151,6 +161,16 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
                 down = true;
             }
         }
+    }
+
+    if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
+        const bool expected = consumeAdc(token, aSource->getUser());
+        if(!down && !expected) {
+            rejectConnection(aSource, _("unexpected ADC connection token"));
+            return;
+        }
+        // The connecting party sends INF first; answer after validating its identity and token.
+        aSource->inf(false);
     }
 
     if(down) {

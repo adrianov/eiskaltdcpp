@@ -13,13 +13,54 @@
 
 #include "ClientManager.h"
 #include "DownloadManager.h"
+#include "ListCache.h"
 #include "PeerConnectFilter.h"
-
-#include <unordered_set>
 
 namespace dcpp {
 
 namespace {
+
+bool knownDifferent(ClientManager* cm, const HintedUser& a, const HintedUser& b, const char* field) {
+    const string first = cm->getField(a.user->getCID(), a.hint, field);
+    const string second = cm->getField(b.user->getCID(), b.hint, field);
+    return !first.empty() && !second.empty() && first != second;
+}
+
+bool sameNick(ClientManager* cm, const HintedUser& a, const HintedUser& b) {
+    const StringList first = cm->getNicks(a);
+    const StringList second = cm->getNicks(b);
+    return !first.empty() && !second.empty() &&
+            Util::stricmp(first[0].c_str(), second[0].c_str()) == 0;
+}
+
+/** Treat cross-hub NMDC identities as aliases unless stronger metadata disagrees. */
+bool samePeer(const HintedUser& a, const HintedUser& b) {
+    if(a.user == b.user || a.user->getCID() == b.user->getCID())
+        return true;
+    if(!a.user->isSet(User::NMDC) || !b.user->isSet(User::NMDC))
+        return false;
+    if(!a.hint.empty() && a.hint == b.hint)
+        return false;
+
+    auto* cm = ClientManager::getInstance();
+    const int64_t aShare = Util::toInt64(cm->getField(a.user->getCID(), a.hint, "SS"));
+    const int64_t bShare = Util::toInt64(cm->getField(b.user->getCID(), b.hint, "SS"));
+    if(aShare > 0 && aShare == bShare && sameNick(cm, a, b))
+        return true;
+    if(aShare <= 0 || bShare <= 0 || aShare != bShare)
+        return false;
+    if(knownDifferent(cm, a, b, "TA") || knownDifferent(cm, a, b, "DE"))
+        return false;
+
+    const string aIp = Util::normalizeIpv4(cm->getField(a.user->getCID(), a.hint, "I4"));
+    const string bIp = Util::normalizeIpv4(cm->getField(b.user->getCID(), b.hint, "I4"));
+    if(!aIp.empty() && !bIp.empty() && aIp != bIp)
+        return false;
+
+    const int64_t aList = ListCache::fileSize(a.user->getCID());
+    const int64_t bList = ListCache::fileSize(b.user->getCID());
+    return aList < 0 || bList < 0 || aList == bList;
+}
 
 void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other) {
     if(!keep || !other || keep == other)
@@ -36,28 +77,19 @@ void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other
 
 } // namespace
 
-ConnectionQueueItem* ConnectionManager::findDownloadCqi(const UserPtr& user) {
-    auto i = find(downloads.begin(), downloads.end(), user);
-    if(i != downloads.end())
-        return *i;
-
-    const CID& cid = user->getCID();
+ConnectionQueueItem* ConnectionManager::findDownloadCqi(const HintedUser& user) {
+    ConnectionQueueItem* match = nullptr;
     for(auto& cqi : downloads) {
-        if(cqi->getUser().user->getCID() == cid)
-            return cqi;
+        if(!samePeer(user, cqi->getUser()))
+            continue;
+        if(!match || (match->getState() != ConnectionQueueItem::ACTIVE &&
+                (cqi->getState() == ConnectionQueueItem::ACTIVE ||
+                 cqi->getState() == ConnectionQueueItem::CONNECTING ||
+                 (match->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS &&
+                  cqi->getState() == ConnectionQueueItem::WAITING))))
+            match = cqi;
     }
-
-    StringList nicks = ClientManager::getInstance()->getNicks(HintedUser(user, Util::emptyString));
-    if(nicks.empty())
-        return nullptr;
-
-    std::unordered_set<CID> sameNick;
-    ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
-    for(auto& cqi : downloads) {
-        if(sameNick.count(cqi->getUser().user->getCID()))
-            return cqi;
-    }
-    return nullptr;
+    return match;
 }
 
 bool ConnectionManager::slotWaitActive(const ConnectionQueueItem* cqi) const {
@@ -80,53 +112,36 @@ bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const
 
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     dcassert((bool)aUser.user);
-    bool checkIdle = false;
+    if(aUser.user->isSet(User::NMDC) && Util::toInt64(ClientManager::getInstance()->getField(
+            aUser.user->getCID(), aUser.hint, "SS")) <= 0)
+        return;
+
+    UserPtr idleUser;
     {
         Lock l(cs);
-
-        StringList nicks = ClientManager::getInstance()->getNicks(aUser);
-        std::unordered_set<CID> sameNick;
-        if(!nicks.empty())
-            ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
-
-        ConnectionQueueItem* cqi = findDownloadCqi(aUser.user);
-        if(!cqi && !sameNick.empty()) {
-            for(auto& item : downloads) {
-                if(sameNick.count(item->getUser().user->getCID())) {
-                    cqi = item;
-                    break;
-                }
-            }
-        }
-
-        if(!sameNick.empty()) {
+        ConnectionQueueItem* cqi = findDownloadCqi(aUser);
+        if(cqi) {
             ConnectionQueueItem::List stale;
             for(auto& item : downloads) {
-                if(item == cqi)
-                    continue;
-                if(item->getUser().user == aUser.user)
-                    continue;
-                if(item->getUser().user->getCID() == aUser.user->getCID())
-                    continue;
-                if(sameNick.count(item->getUser().user->getCID()))
+                if(item != cqi && item->getState() != ConnectionQueueItem::ACTIVE &&
+                        item->getState() != ConnectionQueueItem::CONNECTING &&
+                        samePeer(aUser, item->getUser()))
                     stale.push_back(item);
             }
             for(auto& item : stale) {
                 mergeQueueState(cqi, item);
                 putCQI(item);
             }
-        }
-
-        if(cqi) {
-            cqi->setUser(aUser);
-            checkIdle = true;
+            if(cqi->getState() == ConnectionQueueItem::WAITING)
+                cqi->setUser(aUser);
+            idleUser = cqi->getUser().user;
         } else {
             getCQI(aUser, true);
         }
     }
     // Outside ConnectionManager::cs — checkIdle takes DownloadManager::cs.
-    if(checkIdle)
-        DownloadManager::getInstance()->checkIdle(aUser.user);
+    if(idleUser)
+        DownloadManager::getInstance()->checkIdle(idleUser);
 }
 
 } // namespace dcpp

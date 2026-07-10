@@ -22,7 +22,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
     {
         Lock l(cs);
 
-        auto* cqi = findDownloadCqi(uc->getUser());
+        auto* cqi = findDownloadCqi(uc->getHintedUser());
         if(cqi) {
             if(slotWaitActive(cqi)) {
                 putConnection(uc);

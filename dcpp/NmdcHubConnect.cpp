@@ -49,6 +49,11 @@ void NmdcHub::onConnectToMe(const string& param) {
         port = param.substr(j+1, i-j-1);
     }
 
+    if(port.empty()) {
+        PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe ignored: empty port")));
+        return;
+    }
+
     bool secure = false;
     if(port[port.size() - 1] == 'S') {
         port.erase(port.size() - 1);
@@ -57,12 +62,19 @@ void NmdcHub::onConnectToMe(const string& param) {
         }
     }
 
+    if(port.empty()) {
+        PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe ignored: empty port")));
+        return;
+    }
+
     if(BOOLSETTING(ALLOW_NATT)) {
         if(port[port.size() - 1] == 'N') {
             if(senderNick.empty())
                 return;
 
             port.erase(port.size() - 1);
+            if(port.empty())
+                return;
 
             ConnectionManager::getInstance()->nmdcConnect(server, port, sock->getLocalPort(),
                                                           BufferedSocket::NAT_CLIENT, getMyNick(), getHubUrl(), getEncoding(), secure);
@@ -72,6 +84,8 @@ void NmdcHub::onConnectToMe(const string& param) {
             return;
         } else if(port[port.size() - 1] == 'R') {
             port.erase(port.size() - 1);
+            if(port.empty())
+                return;
 
             ConnectionManager::getInstance()->nmdcConnect(server, port, sock->getLocalPort(),
                                                           BufferedSocket::NAT_SERVER, getMyNick(), getHubUrl(), getEncoding(), secure);
@@ -79,10 +93,6 @@ void NmdcHub::onConnectToMe(const string& param) {
         }
     }
 
-    if(port.empty()) {
-        PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe ignored: empty port")));
-        return;
-    }
     PeerConnectLog::nmdcRecv(getHubUrl(), str(F_("$ConnectToMe from %1%:%2%") % server % port));
     ConnectionManager::getInstance()->nmdcConnect(server, port, getMyNick(), getHubUrl(), getEncoding(), secure);
 }

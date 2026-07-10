@@ -101,7 +101,7 @@ void AdcHub::handle(AdcCommand::NAT, AdcCommand& c) noexcept {
     const string& token = c.getParam(2);
 
     bool secure = false;
-    if(protocol == CLIENT_PROTOCOL) {
+    if(protocol == CLIENT_PROTOCOL && !SETTING(REQUIRE_TLS)) {
         // Nothing special
     } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
         secure = true;
@@ -133,7 +133,7 @@ void AdcHub::handle(AdcCommand::RNT, AdcCommand& c) noexcept {
     const string& token = c.getParam(2);
 
     bool secure = false;
-    if(protocol == CLIENT_PROTOCOL) {
+    if(protocol == CLIENT_PROTOCOL && !SETTING(REQUIRE_TLS)) {
         // Nothing special
     } else if(protocol == SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk()) {
         secure = true;
@@ -181,6 +181,7 @@ void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool sec
             return;
         }
         PeerConnectLog::adcSend(user, "CTM", port + (secure ? " TLS" : ""));
+        ConnectionManager::getInstance()->adcExpect(token, user.getUser());
         send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token));
     } else {
         PeerConnectLog::adcSend(user, "RCM", secure ? "TLS" : "ADC");

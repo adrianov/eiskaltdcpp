@@ -52,6 +52,7 @@ public:
     void nmdcConnect(const string& aServer, const string& aPort, const string& localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, const string& encoding, bool secure);
     void adcConnect(const OnlineUser& aUser, const string& aPort, const string& aToken, bool secure);
     void adcConnect(const OnlineUser& aUser, const string& aPort, const string& localPort, BufferedSocket::NatRoles natRole, const string& aToken, bool secure);
+    void adcExpect(const string& token, const UserPtr& user);
 
     void getDownloadConnection(const HintedUser& aUser);
     void force(const UserPtr& aUser);
@@ -104,6 +105,7 @@ private:
     StringList adcFeatures;
 
     ExpectedMap expectedConnections;
+    std::unordered_multimap<string, std::pair<UserPtr, uint64_t>> adcExpected;
 
     uint32_t floodCounter;
     unordered_set<string> hubsBlockingCC;
@@ -128,11 +130,12 @@ private:
 
     ConnectionQueueItem* getCQI(const HintedUser& user, bool download);
     void putCQI(ConnectionQueueItem* cqi);
-    ConnectionQueueItem* findDownloadCqi(const UserPtr& user);
+    ConnectionQueueItem* findDownloadCqi(const HintedUser& user);
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
     bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
 
     bool checkKeyprint(UserConnection *aSource);
+    bool consumeAdc(const string& token, const UserPtr& user);
 
     void accept(const Socket& sock, bool secure) noexcept;
 

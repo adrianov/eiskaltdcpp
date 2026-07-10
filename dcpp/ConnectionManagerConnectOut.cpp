@@ -57,6 +57,7 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
 
     UserConnection* uc = getConnection(false, secure);
     uc->setToken(aToken);
+    uc->setUser(aUser.getUser());
     uc->setEncoding(Text::utf8);
     uc->setState(UserConnection::STATE_CONNECT);
 #ifdef WITH_DHT

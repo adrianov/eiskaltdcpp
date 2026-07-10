@@ -104,6 +104,25 @@ void ConnectionManager::putConnection(UserConnection* aConn) {
     userConnections.erase(remove(userConnections.begin(), userConnections.end(), aConn), userConnections.end());
 }
 
+void ConnectionManager::adcExpect(const string& token, const UserPtr& user) {
+    if(token.empty() || !user)
+        return;
+    Lock l(cs);
+    adcExpected.emplace(token, make_pair(user, GET_TICK()));
+}
+
+bool ConnectionManager::consumeAdc(const string& token, const UserPtr& user) {
+    Lock l(cs);
+    auto range = adcExpected.equal_range(token);
+    for(auto i = range.first; i != range.second; ++i) {
+        if(i->second.first == user) {
+            adcExpected.erase(i);
+            return true;
+        }
+    }
+    return false;
+}
+
 void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
     Lock l(cs);
 
@@ -111,6 +130,12 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcep
         if((j->getLastActivity() + 180*1000) < aTick) {
             j->disconnect(true);
         }
+    }
+    for(auto i = adcExpected.begin(); i != adcExpected.end();) {
+        if(i->second.second + 180*1000 < aTick)
+            i = adcExpected.erase(i);
+        else
+            ++i;
     }
 }
 

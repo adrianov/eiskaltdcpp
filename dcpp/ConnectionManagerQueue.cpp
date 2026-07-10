@@ -70,6 +70,20 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
         for(auto& cqi: downloads) {
 
             if(cqi->getState() != ConnectionQueueItem::ACTIVE) {
+                if(cqi->getUser().user->isSet(User::NMDC) && Util::toInt64(
+                        ClientManager::getInstance()->getField(cqi->getUser().user->getCID(),
+                        cqi->getUser().hint, "SS")) <= 0) {
+                    removed.push_back(cqi);
+                    continue;
+                }
+                if(cqi->getState() == ConnectionQueueItem::WAITING) {
+                    auto* alias = findDownloadCqi(cqi->getUser());
+                    if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
+                            alias->getState() == ConnectionQueueItem::CONNECTING)) {
+                        removed.push_back(cqi);
+                        continue;
+                    }
+                }
                 if(!cqi->getUser().user->isOnline()) {
                     removed.push_back(cqi);
                     continue;
