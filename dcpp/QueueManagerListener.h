@@ -56,6 +56,8 @@ public:
     typedef X<19> ListCached;
     /** Fired only when a source was added (not on remove / passive drop). */
     typedef X<20> SourceAdded;
+    /** Fired after a source is removed (reason is QueueItem::Source::FLAG_*). */
+    typedef X<21> SourceRemoved;
 
     virtual void on(Added, QueueItem*) noexcept { }
     virtual void on(Finished, QueueItem*, const string&, int64_t) noexcept { }
@@ -66,6 +68,7 @@ public:
     virtual void on(SearchStringUpdated, QueueItem*) noexcept { }
     virtual void on(PartialList, const HintedUser&, const string&) noexcept { }
     virtual void on(SourceAdded, QueueItem*, const HintedUser&) noexcept { }
+    virtual void on(SourceRemoved, QueueItem*, const UserPtr&, int) noexcept { }
 
     virtual void on(RecheckStarted, const string&) noexcept { }
     virtual void on(RecheckNoFile, const string&) noexcept { }

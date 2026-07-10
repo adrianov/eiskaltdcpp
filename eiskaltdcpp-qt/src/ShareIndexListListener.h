@@ -42,4 +42,6 @@ private:
             const std::string& listPath, const std::string& initialDir) noexcept override;
     void on(dcpp::QueueManagerListener::ListCached, const dcpp::HintedUser&,
             const std::string& listPath) noexcept override;
+    void on(dcpp::QueueManagerListener::SourceRemoved, dcpp::QueueItem*,
+            const dcpp::UserPtr&, int reason) noexcept override;
 };

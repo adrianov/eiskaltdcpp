@@ -99,3 +99,18 @@ void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUs
 {
     enqueueListIngest(user.user, _q(listPath), _q(user.hint));
 }
+
+void ShareIndexListListener::on(QueueManagerListener::SourceRemoved, QueueItem *item,
+                                const UserPtr &user, int reason) noexcept
+{
+    if (!item || !user || reason != QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
+        return;
+    if (item->isSet(QueueItem::FLAG_USER_LIST))
+        return;
+    if (!ShareIndex::getInstance())
+        return;
+
+    ShareIndex::getInstance()->removeTth(
+        _q(user->getCID().toBase32()),
+        _q(item->getTTH().toBase32()));
+}

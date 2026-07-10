@@ -95,4 +95,25 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
     return loaded && !isStopping();
 }
 
+void ShareIndex::removeTthSync(const QString &cid, const QString &tth)
+{
+    if (cid.isEmpty() || tth.isEmpty() || isStopping())
+        return;
+    duckdb::Connection *con = threadConn();
+    if (!con) {
+        setLastError(QStringLiteral("threadConn not open"));
+        return;
+    }
+    QString err;
+    auto res = ShareIndexDb::query2(
+        *con,
+        "DELETE FROM share_entries WHERE cid = ? AND tth = ?",
+        ShareIndexDb::strVal(cid), ShareIndexDb::strVal(tth), &err);
+    if (!res || res->HasError()) {
+        setLastError(err.isEmpty() && res ? QString::fromStdString(res->GetError()) : err);
+        return;
+    }
+    refreshEntryCount(*con);
+}
+
 #endif

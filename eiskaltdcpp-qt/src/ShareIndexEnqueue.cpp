@@ -95,6 +95,17 @@ void ShareIndex::matchQueue(const UserList &users)
     enqueueWrite(job);
 }
 
+void ShareIndex::removeTth(const QString &cid, const QString &tth)
+{
+    if (cid.isEmpty() || tth.isEmpty())
+        return;
+    WriteJob job;
+    job.kind = RemoveTth;
+    job.cid = cid;
+    job.tth = tth;
+    enqueueWrite(job);
+}
+
 void ShareIndex::upsertFromSearch(const QVariantMap &map)
 {
     WriteJob job;

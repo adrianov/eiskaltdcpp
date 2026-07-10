@@ -65,6 +65,8 @@ public:
                     const QString &hubUrl, const QString &nick);
     /** Match queued TTHs against saved lists owned by newly online users. */
     void matchQueue(const dcpp::UserList &users);
+    /** Drop stale (cid, tth) rows after File Not Available. */
+    void removeTth(const QString &cid, const QString &tth);
 
     /** Force re-index one list (ignores mtime skip); returns wall ms. CLI/bench. */
     qint64 forceIngestListMs(const dcpp::UserPtr &user, const QString &listPath,
@@ -132,6 +134,7 @@ private:
                         const QString &hubUrl, const QString &nick,
                         bool force = false);
     void matchQueueSync(const dcpp::UserList &users);
+    void removeTthSync(const QString &cid, const QString &tth);
     /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchSync(const QVariantMap &map);

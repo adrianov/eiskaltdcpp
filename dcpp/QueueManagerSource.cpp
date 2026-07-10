@@ -18,6 +18,7 @@
 namespace dcpp {
 
 namespace {
+/** Keep source without tree below this size (must match Download.cpp). */
 const int64_t MAX_SIZE_WO_TREE = 20 * 1024 * 1024;
 }
 
@@ -131,6 +132,7 @@ void QueueManager::removeSource(const string& aTarget, const UserPtr& aUser, int
         }
         q->removeSource(aUser, reason);
 
+        fire(QueueManagerListener::SourceRemoved(), q, aUser, reason);
         fire(QueueManagerListener::SourcesUpdated(), q);
         setDirty();
     }
@@ -156,6 +158,7 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
             } else {
                 userQueue.remove(qi, aUser);
                 qi->removeSource(aUser, reason);
+                fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
                 fire(QueueManagerListener::SourcesUpdated(), qi);
                 setDirty();
             }
@@ -170,6 +173,7 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
                 userQueue.remove(qi, aUser);
                 isRunning = true;
                 qi->removeSource(aUser, reason);
+                fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
                 fire(QueueManagerListener::StatusUpdated(), qi);
                 fire(QueueManagerListener::SourcesUpdated(), qi);
                 setDirty();
