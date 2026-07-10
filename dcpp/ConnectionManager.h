@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "CID.h"
 #include "BufferedSocket.h"
 #include "ConnectionManagerListener.h"
 #include "ConnectionQueueItem.h"
@@ -58,6 +59,13 @@ public:
     void getDownloadConnection(const HintedUser& aUser);
     void force(const UserPtr& aUser);
     void onUpnpReady();
+
+    /** False while a per-user outgoing-connect cooldown is active (survives CQI churn). */
+    bool allowOutgoingConnect(const UserPtr& user) const;
+    /** Arm cooldown after CTM/RCM or a failed attempt; ms is a minimum floor. */
+    void noteOutgoingConnect(const UserPtr& user, int minBackoffMs);
+    /** Clear strikes after a real download starts (peer granted a slot). */
+    void clearOutgoingStrikes(const UserPtr& user);
 
     void disconnect(const UserPtr& user); // disconnect all transfers for the user
     void disconnect(const UserPtr& user, int isDownload);
@@ -108,6 +116,13 @@ private:
     ExpectedMap expectedConnections;
     std::unordered_multimap<string, std::pair<UserPtr, uint64_t>> adcExpected;
 
+    /** Next allowed outgoing connect tick + strike count (CID-keyed, CQI-independent). */
+    struct ConnectCooldown {
+        uint64_t until = 0;
+        int strikes = 0;
+    };
+    unordered_map<CID, ConnectCooldown> connectCooldown;
+
     uint32_t floodCounter;
     unordered_set<string> hubsBlockingCC;
 
@@ -134,6 +149,10 @@ private:
     ConnectionQueueItem* findDownloadCqi(const HintedUser& user);
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
     bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
+    bool connectCooldownActive(const UserPtr& user) const;
+    void noteConnectCooldown(const UserPtr& user, int minBackoffMs);
+    void clearConnectCooldown(const UserPtr& user);
+    static void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other);
 
     bool checkKeyprint(UserConnection *aSource);
     bool consumeAdc(const string& token, const UserPtr& user);

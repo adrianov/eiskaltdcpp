@@ -16,6 +16,7 @@
 #include "CryptoManager.h"
 #include "format.h"
 #include "LogManager.h"
+#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectTls.h"
 #include "version.h"
@@ -153,38 +154,44 @@ void AdcHub::connect(const OnlineUser& user, const string& token, bool reverseCo
 void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool secure, bool reverseConnect) {
     if(state != STATE_NORMAL)
         return;
+    auto* cm = ConnectionManager::getInstance();
+    const string& nick = user.getIdentity().getNick();
+    if(!cm->allowOutgoingConnect(user.getUser())) {
+        PeerConnectLog::skip(nick, getHubUrl(), _("connect cooldown (recent CTM/RCM)"));
+        return;
+    }
 
     const string* proto;
     if(secure) {
         if(user.getUser()->isSet(User::NO_ADCS_0_10_PROTOCOL)) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("user does not support ADCS"));
-            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: user does not support ADCS") %
-                user.getIdentity().getNick()));
+            PeerConnectLog::skip(nick, getHubUrl(), _("user does not support ADCS"));
+            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: user does not support ADCS") % nick));
             return;
         }
         proto = &SECURE_CLIENT_PROTOCOL_TEST;
     } else {
         if(user.getUser()->isSet(User::NO_ADC_1_0_PROTOCOL) || SETTING(REQUIRE_TLS)) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("TLS/ADC required but user does not support it"));
-            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: TLS/ADC required but user does not support it") %
-                user.getIdentity().getNick()));
+            PeerConnectLog::skip(nick, getHubUrl(), _("TLS/ADC required but user does not support it"));
+            LogManager::getInstance()->message(str(F_("Connect to %1% skipped: TLS/ADC required but user does not support it") % nick));
             return;
         }
         proto = &CLIENT_PROTOCOL;
     }
 
     if(isActive() && !reverseConnect) {
-        const string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+        const string port = secure ? cm->getSecurePort() : cm->getPort();
         if(port.empty()) {
-            PeerConnectLog::skip(user.getIdentity().getNick(), getHubUrl(), _("not listening for connections"));
+            PeerConnectLog::skip(nick, getHubUrl(), _("not listening for connections"));
             LogManager::getInstance()->message(str(F_("Not listening for connections - please restart %1%") % APPNAME));
             return;
         }
         PeerConnectLog::adcSend(user, "CTM", port + (secure ? " TLS" : ""));
-        ConnectionManager::getInstance()->adcExpect(token, user.getUser());
+        cm->adcExpect(token, user.getUser());
+        cm->noteOutgoingConnect(user.getUser(), PeerConnectFilter::connectBackoffMs(0));
         send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token));
     } else {
         PeerConnectLog::adcSend(user, "RCM", secure ? "TLS" : "ADC");
+        cm->noteOutgoingConnect(user.getUser(), PeerConnectFilter::connectBackoffMs(0));
         send(AdcCommand(AdcCommand::CMD_RCM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(token));
     }
 }

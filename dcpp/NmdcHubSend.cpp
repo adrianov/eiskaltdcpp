@@ -15,6 +15,7 @@
 #include "ChatMessage.h"
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
+#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectTls.h"
 #include "SearchManager.h"
@@ -41,6 +42,10 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     checkstate();
     dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
     const string& utf8Nick = aUser.getIdentity().getNick();
+    if(!ConnectionManager::getInstance()->allowOutgoingConnect(aUser.getUser())) {
+        PeerConnectLog::skip(utf8Nick, getHubUrl(), _("connect cooldown (recent $ConnectToMe)"));
+        return;
+    }
     string nick = fromUtf8(utf8Nick);
     bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(secureMode, aUser);
     string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
@@ -50,6 +55,8 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     }
     // Expect key is UTF-8 hub identity; wire $MyNick may use hub encoding.
     ConnectionManager::getInstance()->nmdcExpect(utf8Nick, getMyNick(), getHubUrl());
+    ConnectionManager::getInstance()->noteOutgoingConnect(aUser.getUser(),
+            PeerConnectFilter::connectBackoffMs(0));
     const string detail = getLocalIp() + ":" + port + (secure ? " TLS" : "");
     PeerConnectLog::nmdcSend(aUser, "$ConnectToMe", detail);
     send("$ConnectToMe " + nick + " " + getLocalIp() + ":" + port + (secure ? "S" : "") + "|");
@@ -58,7 +65,13 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
 void NmdcHub::revConnectToMe(const OnlineUser& aUser) {
     checkstate();
     dcdebug("NmdcHub::revConnectToMe %s\n", aUser.getIdentity().getNick().c_str());
+    if(!ConnectionManager::getInstance()->allowOutgoingConnect(aUser.getUser())) {
+        PeerConnectLog::skip(aUser.getIdentity().getNick(), getHubUrl(), _("connect cooldown (recent $ConnectToMe)"));
+        return;
+    }
     const string target = fromUtf8(aUser.getIdentity().getNick());
+    ConnectionManager::getInstance()->noteOutgoingConnect(aUser.getUser(),
+            PeerConnectFilter::connectBackoffMs(0));
     PeerConnectLog::nmdcSend(aUser, "$RevConnectToMe", fromUtf8(getMyNick()));
     send("$RevConnectToMe " + fromUtf8(getMyNick()) + " " + target + "|");
 }

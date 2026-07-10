@@ -52,7 +52,8 @@ void ConnectionManager::putCQI(ConnectionQueueItem* cqi) {
 void ConnectionManager::onUpnpReady() {
     Lock l(cs);
     for(auto& cqi : downloads) {
-        if(cqi->getState() != ConnectionQueueItem::ACTIVE)
+        // Do not wipe slot-wait / error backoff when UPnP remaps.
+        if(cqi->getState() != ConnectionQueueItem::ACTIVE && !queueBackoffActive(cqi))
             cqi->setLastAttempt(0);
     }
 }
@@ -80,6 +81,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     auto* alias = findDownloadCqi(cqi->getUser());
                     if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
                             alias->getState() == ConnectionQueueItem::CONNECTING)) {
+                        mergeQueueState(alias, cqi);
                         removed.push_back(cqi);
                         continue;
                     }
@@ -112,6 +114,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
                     if(cqi->getLastAttempt() + 50 * 1000 < aTick) {
                         cqi->setErrors(cqi->getErrors() + 1);
+                        cqi->setLastAttempt(aTick);
+                        noteConnectCooldown(cqi->getUser().user,
+                                PeerConnectFilter::connectBackoffMs(cqi->getErrors()));
                         if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
                             markQueueGiveUp(cqi, cqi->getErrors(), false);
                         } else {

@@ -12,6 +12,7 @@
 #include "DownloadManager.h"
 
 #include "ClientManager.h"
+#include "ConnectionManager.h"
 #include "Download.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
@@ -107,6 +108,7 @@ void DownloadManager::on(UserConnectionListener::Send, UserConnection* aSource) 
     if(aSource->getState() != UserConnection::STATE_SND || !aSource->getDownload())
         return;
 
+    ConnectionManager::getInstance()->clearOutgoingStrikes(aSource->getUser());
     Download* d = aSource->getDownload();
     startData(aSource, d->getStartPos(), d->getSize(),
               aSource->isSet(UserConnection::FLAG_SUPPORTS_ZLIB_GET) && BOOLSETTING(COMPRESS_TRANSFERS));

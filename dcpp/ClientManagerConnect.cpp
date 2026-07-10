@@ -59,6 +59,10 @@ bool ClientManager::connect(const HintedUser& user, const string& token, bool re
     }
 
     if(u) {
+        if(!ConnectionManager::getInstance()->allowOutgoingConnect(u->getUser())) {
+            PeerConnectLog::skip(getNickOrCid(user), user.hint, _("connect cooldown (recent $ConnectToMe)"));
+            return false;
+        }
         u->getClient().connect(*u, token, reverseConnect, secureMode);
         return true;
     }
