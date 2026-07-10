@@ -119,7 +119,7 @@ void NmdcHub::onRevConnectToMe(const string& param) {
     } else if(BOOLSETTING(ALLOW_NATT) && u->getUser()->isSet(User::NAT_TRAVERSAL)) {
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
         bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(PeerConnectTls::AUTO, *u);
-        ConnectionManager::getInstance()->nmdcExpect(fromUtf8(u->getIdentity().getNick()), getMyNick(), getHubUrl());
+        ConnectionManager::getInstance()->nmdcExpect(u->getIdentity().getNick(), getMyNick(), getHubUrl());
         send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");

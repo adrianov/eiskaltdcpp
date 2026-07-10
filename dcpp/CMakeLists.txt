@@ -20,6 +20,7 @@ set(DCPP_EXTRA_SOURCES
     HubSearchDenied.cpp
     ListCache.cpp
     ListCacheStore.cpp
+    ExpectedMap.cpp
     QueueAutoSearch.cpp
     SearchQuery.cpp
     SearchManagerUdp.cpp
@@ -29,6 +30,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerListMatch.cpp
     QueueManagerLoad.cpp
     QueueManagerPut.cpp
+    QueueManagerPutFinish.cpp
     QueueManagerSave.cpp
     QueueManagerSource.cpp
     QueueManagerUserQueue.cpp

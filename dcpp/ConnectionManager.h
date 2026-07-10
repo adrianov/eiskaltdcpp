@@ -26,6 +26,7 @@
 #include "ConnectionManagerListener.h"
 #include "ConnectionQueueItem.h"
 #include "CriticalSection.h"
+#include "ExpectedMap.h"
 #include "NonCopyable.h"
 #include "Singleton.h"
 #include "TimerManager.h"

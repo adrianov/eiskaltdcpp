@@ -17,19 +17,51 @@
 
 namespace dcpp {
 
+namespace {
+
+bool nickMatchesHub(const string& utf8Nick, const CID& cid, const string& hubUrl) {
+    if(utf8Nick.empty() || hubUrl.empty())
+        return false;
+    if(ClientManager::getInstance()->makeCid(utf8Nick, hubUrl) == cid)
+        return true;
+    // Hub-private nicks only — never match another hub's identity.
+    for(const auto& hubNick : ClientManager::getInstance()->getNicks(cid, hubUrl, true)) {
+        if(nickWireMatch(utf8Nick, hubNick))
+            return true;
+    }
+    return false;
+}
+
+} // namespace
+
 void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSource, const string& aNick) noexcept {
     if(aSource->getState() != UserConnection::STATE_SUPNICK) {
         dcdebug("CM::onMyNick %p sent nick twice\n", (void*)aSource);
         return;
     }
 
-    dcassert(!aNick.empty());
+    if(aNick.empty()) {
+        PeerConnectLog::incomingReject(Util::emptyString, _("empty $MyNick"));
+        putConnection(aSource);
+        return;
+    }
+
     dcdebug("ConnectionManager::onMyNick %p, %s\n", (void*)aSource, aNick.c_str());
 
     if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
-        pair<string, string> i = expectedConnections.remove(aNick);
+        // Exact wire match (ASCII / legacy hub-encoded keys), then encoding-aware UTF-8.
+        StringPair i = expectedConnections.removeExact(aNick);
         if(i.second.empty()) {
-            dcassert(i.first.empty());
+            i = expectedConnections.removeIf([&](const string& utf8Key, const string& hubUrl) {
+                const string enc = ClientManager::getInstance()->findHubEncoding(hubUrl);
+                const string wireUtf8 = Text::toUtf8(aNick, enc);
+                if(nickWireMatch(wireUtf8, utf8Key) || wireUtf8 == utf8Key)
+                    return true;
+                // Peer sent hub-encoded bytes while key is UTF-8.
+                return Text::fromUtf8(utf8Key, enc) == aNick;
+            });
+        }
+        if(i.second.empty()) {
             dcdebug("Unknown incoming connection from %s\n", aNick.c_str());
             PeerConnectLog::incomingReject(aNick, _("unexpected nick (not awaiting this user)"));
             putConnection(aSource);
@@ -40,51 +72,50 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
         aSource->setEncoding(ClientManager::getInstance()->findHubEncoding(i.second));
     }
 
-    // Hub user list / CID use UTF-8 (NmdcHubLine toUtf8); $MyNick on the wire uses hub encoding.
+    // Hub user list / CID use UTF-8; $MyNick on the wire uses hub encoding.
     const string nick = Text::toUtf8(aNick, aSource->getEncoding());
+    if(nick.empty()) {
+        PeerConnectLog::incomingReject(aNick, _("empty $MyNick after encoding"));
+        putConnection(aSource);
+        return;
+    }
+
     const CID wireCid = ClientManager::getInstance()->makeCid(nick, aSource->getHubUrl());
     const string& hubUrl = aSource->getHubUrl();
 
-    ConnectionQueueItem::Ptr matchedCqi;
-    ConnectionQueueItem::List pending;
     {
+        // One lock for match + bind: CQIs may be deleted by the timer thread.
         Lock l(cs);
+        ConnectionQueueItem::Ptr matchedCqi = nullptr;
         for(auto& cqi: downloads) {
-            if(cqi->getState() == ConnectionQueueItem::CONNECTING ||
-                    cqi->getState() == ConnectionQueueItem::WAITING)
-                pending.push_back(cqi);
-        }
-    }
-
-    for(auto& cqi: pending) {
-        // CID is hub-scoped for NMDC; never attach another hub's download queue item.
-        if(cqi->getUser().user->getCID() == wireCid) {
-            matchedCqi = cqi;
-            break;
-        }
-    }
-
-    if(!matchedCqi) {
-        for(auto& cqi: pending) {
-            if(!cqi->getUser().hint.empty() && !hubUrl.empty() &&
-                    cqi->getUser().hint != hubUrl)
+            if(cqi->getState() != ConnectionQueueItem::CONNECTING &&
+                    cqi->getState() != ConnectionQueueItem::WAITING)
                 continue;
-            for(const auto& hubNick : ClientManager::getInstance()->getNicks(
-                    cqi->getUser().user->getCID(), hubUrl)) {
-                if(nickWireMatch(nick, hubNick)) {
+            // CID encodes nick+hub, so equality alone is hub-correct (hint may be empty).
+            if(cqi->getUser().user->getCID() == wireCid) {
+                matchedCqi = cqi;
+                break;
+            }
+        }
+        if(!matchedCqi) {
+            for(auto& cqi: downloads) {
+                if(cqi->getState() != ConnectionQueueItem::CONNECTING &&
+                        cqi->getState() != ConnectionQueueItem::WAITING)
+                    continue;
+                // Nick fallback stays hub-scoped: never attach another hub's queue item.
+                const string& hint = cqi->getUser().hint;
+                if(!hint.empty() && !hubUrl.empty() && hint != hubUrl)
+                    continue;
+                if(nickMatchesHub(nick, cqi->getUser().user->getCID(), hubUrl)) {
                     matchedCqi = cqi;
                     break;
                 }
             }
-            if(matchedCqi)
-                break;
         }
-    }
-
-    if(matchedCqi) {
-        Lock l(cs);
-        aSource->setUser(matchedCqi->getUser());
-        aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
+        if(matchedCqi) {
+            aSource->setUser(matchedCqi->getUser());
+            aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
+        }
     }
 
     if(!aSource->getUser()) {

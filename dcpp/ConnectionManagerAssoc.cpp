@@ -25,11 +25,16 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 
         auto* cqi = findDownloadCqi(uc->getHintedUser());
         if(cqi) {
-            if(slotWaitActive(cqi)) {
+            // Never bind a download to a CQI from another hub (wrong file list / identity).
+            if(uc->getUser() && uc->getUser()->isSet(User::NMDC) &&
+                    !cqi->getUser().hint.empty() && !uc->getHubUrl().empty() &&
+                    cqi->getUser().hint != uc->getHubUrl()) {
+                cqi = nullptr;
+            } else if(slotWaitActive(cqi)) {
                 putConnection(uc);
                 return;
-            }
-            if(cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING) {
+            } else if(cqi->getState() == ConnectionQueueItem::WAITING ||
+                    cqi->getState() == ConnectionQueueItem::CONNECTING) {
                 cqi->setState(ConnectionQueueItem::ACTIVE);
                 cqi->setSlotWaits(0);
                 cqi->setErrors(0);
