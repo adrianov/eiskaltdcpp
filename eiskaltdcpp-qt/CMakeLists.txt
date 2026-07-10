@@ -100,6 +100,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersParams.cpp
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp
+    src/HubFrameClient.cpp
     src/HubFrameLinkMagnet.cpp
     src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
