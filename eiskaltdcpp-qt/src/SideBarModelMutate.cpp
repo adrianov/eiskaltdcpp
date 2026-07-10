@@ -61,6 +61,8 @@ void SideBarModel::removeWidget(ArenaWidget *awgt){
     {
         SideBarItem *root  = roots[awgt->role()];
         SideBarItem *child = items[awgt];
+        const int row = child->row();
+        const ArenaWidget::Role role = awgt->role();
 
         items.remove(awgt);
         redrawCache.remove(awgt);
@@ -74,6 +76,15 @@ void SideBarModel::removeWidget(ArenaWidget *awgt){
             delete child;
         }
         endRemoveRows();
+
+        // Prefer the next Search sibling over history when closing a Search.
+        if (role == ArenaWidget::Search && root->childCount() > 0) {
+            historyPurge(awgt);
+            const int nextRow = qMin(row, root->childCount() - 1);
+            if (ArenaWidget *next = root->child(nextRow)->getWidget())
+                emit mapWidget(next);
+            break;
+        }
 
         if (!historyAtTop(awgt))
             historyPurge(awgt);
