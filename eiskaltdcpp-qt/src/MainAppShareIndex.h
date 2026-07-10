@@ -11,4 +11,3 @@
 
 void startShareIndex();
 void stopShareIndex();
-void startShareIndexBackfill();

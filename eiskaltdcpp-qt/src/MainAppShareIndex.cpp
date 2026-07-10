@@ -36,8 +36,3 @@ void stopShareIndex()
     ReciprocalList::deleteInstance();
     ShareIndex::deleteInstance();
 }
-
-void startShareIndexBackfill()
-{
-    ShareIndex::getInstance()->ingestCachedLists();
-}

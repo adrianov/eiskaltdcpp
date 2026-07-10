@@ -15,16 +15,10 @@
 #include <QMutex>
 #include <QQueue>
 
-/**
- * Single-writer job queue for ShareIndex.
- *
- * One file list = one IngestList job (no monolithic backfill loop).
- * Priority: OpenDb → interactive list → hub SR → show-hits → backfill list.
- * Enqueueing an interactive list sets abortBackfill so a huge load/walk yields.
- */
+/** Single-writer job queue for ShareIndex (OpenDb → list ingest → hub SR). */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { OpenDb, IngestList, UpsertSearch, BumpShowHits, ScanCached };
+enum WriteKind { OpenDb, IngestList, UpsertSearch, BumpShowHits };
 
 struct WriteJob {
     WriteKind kind = IngestList;
@@ -34,22 +28,15 @@ struct WriteJob {
     QString nick;
     QVariantMap map;
     QList<qint64> ids;
-    bool backfill = false;
 };
 
 extern QMutex writeMutex;
 extern QQueue<WriteJob> writeQueue;
 extern bool writeWorkerRunning;
 extern QAtomicInt writeStopping;
-/** Set when an interactive IngestList is queued; backfill load/walk/write checks this. */
-extern QAtomicInt abortBackfill;
 extern const int kHubQueueCap;
 
 bool isStopping();
-bool shouldAbortBackfill();
-void requestAbortBackfill();
-void clearAbortBackfill();
-
 bool takeNextJob(WriteJob &job);
 void dropOldestHubJob();
 void enqueueWrite(WriteJob job);

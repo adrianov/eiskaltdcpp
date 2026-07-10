@@ -91,13 +91,7 @@ static void runShareIndexIngest(const QStringList &terms)
 
     ShareIndex::newInstance();
     ShareIndex::getInstance()->open();
-    // Sync path: finishCli before the Qt event loop; write-queue workers never run.
-    // Full FileLists backfill can take a long time; skip when only searching an existing index.
-    const bool searchOnly = terms.contains(QStringLiteral("--search-only"));
-    QStringList queryTerms = terms;
-    queryTerms.removeAll(QStringLiteral("--search-only"));
-    if (!searchOnly)
-        ShareIndex::getInstance()->ingestCachedListsNow();
+    const QStringList queryTerms = terms;
     if (!ShareIndex::getInstance()->lastError().isEmpty())
         std::cerr << "Ingest error: " << ShareIndex::getInstance()->lastError().toStdString() << std::endl;
 

@@ -13,7 +13,7 @@
 
 namespace {
 
-const qint64 kMaxEntries = 5000000;
+const qint64 kMaxHubEntries = 5000000;
 
 bool upsertMeta(duckdb::Connection &con, const QString &key, qint64 value, QString *err)
 {
@@ -89,8 +89,12 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
 
 void ShareIndex::pruneExcess(duckdb::Connection &con)
 {
-    const qint64 count = metaValue(con, QStringLiteral("entry_count"), 0);
-    const qint64 excess = count - kMaxEntries;
+    // File-list rows mirror lists cached on disk and are replaced per user;
+    // only hub-search rows grow without bound, so the cap applies to them.
+    auto cnt = con.Query("SELECT count(*)::BIGINT FROM share_entries WHERE source = 2");
+    if (cnt->HasError() || cnt->RowCount() == 0)
+        return;
+    const qint64 excess = ShareIndexDb::qi64(cnt->GetValue(0, 0)) - kMaxHubEntries;
     if (excess <= 0)
         return;
 

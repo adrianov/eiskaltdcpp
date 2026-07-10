@@ -44,23 +44,9 @@ void enqueueWrite(WriteJob job)
         writeQueue.prepend(job);
     } else if (job.kind == IngestList) {
         for (const WriteJob &p : writeQueue) {
-            if (p.kind == IngestList && p.listPath == job.listPath) {
-                // Upgrade a queued backfill slot to interactive.
-                if (!job.backfill) {
-                    for (int i = 0; i < writeQueue.size(); ++i) {
-                        if (writeQueue[i].kind == IngestList
-                                && writeQueue[i].listPath == job.listPath) {
-                            writeQueue[i].backfill = false;
-                            break;
-                        }
-                    }
-                    requestAbortBackfill();
-                }
+            if (p.kind == IngestList && p.listPath == job.listPath)
                 return;
-            }
         }
-        if (!job.backfill)
-            requestAbortBackfill();
         writeQueue.enqueue(job);
     } else if (job.kind == UpsertSearch) {
         int hubJobs = 0;
@@ -70,12 +56,6 @@ void enqueueWrite(WriteJob job)
         }
         if (hubJobs >= kHubQueueCap)
             dropOldestHubJob();
-        writeQueue.enqueue(job);
-    } else if (job.kind == ScanCached) {
-        for (const WriteJob &p : writeQueue) {
-            if (p.kind == ScanCached)
-                return;
-        }
         writeQueue.enqueue(job);
     } else {
         writeQueue.enqueue(job);
@@ -102,20 +82,7 @@ void ShareIndex::ingestList(const UserPtr &user, const QString &listPath,
     job.listPath = listPath;
     job.hubUrl = hubUrl;
     job.nick = nick;
-    job.backfill = false;
     enqueueWrite(job);
-}
-
-void ShareIndex::ingestCachedLists()
-{
-    WriteJob job;
-    job.kind = ScanCached;
-    enqueueWrite(job);
-}
-
-void ShareIndex::ingestCachedListsNow()
-{
-    ingestCachedListsSync();
 }
 
 void ShareIndex::upsertFromSearch(const QVariantMap &map)
@@ -151,7 +118,6 @@ void ShareIndex::waitWritesIdle()
 void ShareIndex::stopWrites()
 {
     writeStopping.storeRelease(1);
-    requestAbortBackfill();
     {
         QMutexLocker lock(&writeMutex);
         writeQueue.clear();

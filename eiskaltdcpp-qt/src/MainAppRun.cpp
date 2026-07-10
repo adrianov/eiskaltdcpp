@@ -147,7 +147,6 @@ int runApplication(EiskaltApp &app)
     ArenaWidgetFactory().create< dcpp::Singleton, QueuedUsers >();
 
     MainWindow::getInstance()->autoconnect();
-    startShareIndexBackfill();
     MainWindow::getInstance()->parseCmdLine(app.arguments());
 
     if (!WBGET(WB_MAINWINDOW_HIDE) || !WBGET(WB_TRAY_ENABLED))

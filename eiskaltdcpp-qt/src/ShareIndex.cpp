@@ -21,7 +21,6 @@ ShareIndex::ShareIndex() : opened(0)
 {
 #ifdef USE_QT_SQLITE
     ShareIndexWriteQueue::writeStopping.storeRelease(0);
-    ShareIndexWriteQueue::clearAbortBackfill();
 #endif
 }
 
@@ -132,10 +131,6 @@ qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QSt
 {
     return 0;
 }
-
-void ShareIndex::ingestCachedLists() {}
-
-void ShareIndex::ingestCachedListsNow() {}
 
 void ShareIndex::waitWritesIdle() {}
 

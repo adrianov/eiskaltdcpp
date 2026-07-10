@@ -66,8 +66,6 @@ void ShareIndexListListener::stop()
 void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
                                 const std::string &dir, int64_t) noexcept
 {
-    // Only FLAG_USER_LIST. Hooking every download Finished was aborting backfill
-    // on each file and preventing any list write from committing.
     if (item && item->isAnySet(QueueItem::FLAG_USER_LIST)) {
         const HintedUser hinted = hintedFromQueue(item);
         const QString listName = _q(item->getListName());
@@ -93,12 +91,10 @@ void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
 void ShareIndexListListener::on(QueueManagerListener::ListFromCache, const HintedUser &user,
                                 const std::string &listPath, const std::string &initialDir) noexcept
 {
-    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
     emit openShare(user.user, _q(listPath), _q(initialDir));
 }
 
-void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUser &user,
-                                const std::string &listPath) noexcept
+void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUser &,
+                                const std::string &) noexcept
 {
-    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
 }

@@ -68,12 +68,6 @@ public:
     qint64 forceIngestListMs(const dcpp::UserPtr &user, const QString &listPath,
                              const QString &hubUrl, const QString &nick);
 
-    /** Index all *.xml / *.xml.bz2 under the FileLists directory (queued). */
-    void ingestCachedLists();
-
-    /** Index all cached file lists on the calling thread (CLI; no write queue). */
-    void ingestCachedListsNow();
-
     void upsertFromSearch(const QVariantMap &map);
 
     /** Block until all queued writes finish (CLI / tests). */
@@ -130,18 +124,13 @@ private:
                      const QString &cid, const QString &hubUrl,
                      const QString &nick, const QString &hubName,
                      const QString &ip, QSet<QString> &seen,
-                     QList<QVariantMap> &out,
-                     bool backfill = false);
+                     QList<QVariantMap> &out);
 
     void ingestListSync(const dcpp::UserPtr &user, const QString &listPath,
                         const QString &hubUrl, const QString &nick,
-                        bool force = false, bool backfill = false);
+                        bool force = false);
     /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
-    bool writeListRows(const QString &cid, const QList<QVariantMap> &rows, bool backfill = false);
-    void ingestCachedListsSync();
-    void scanCachedListsSync();
-    void enqueueBackfillList(const dcpp::UserPtr &user, const QString &listPath,
-                             const QString &nick);
+    bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchSync(const QVariantMap &map);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
     void recordSearchShowsSync(const QList<qint64> &ids);

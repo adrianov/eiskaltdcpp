@@ -15,7 +15,7 @@
 
 using namespace ShareIndexWriteQueue;
 
-bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &rows, bool backfill)
+bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &rows)
 {
     if (rows.isEmpty()) {
         duckdb::Connection *con = threadConn();
@@ -34,10 +34,9 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
     }
 
     bool loaded = false;
-    // Smaller chunks: commit + HUD update sooner; abort can yield between chunks.
     const int chunk = 20000;
     for (int offset = 0; offset < rows.size(); ) {
-        if (isStopping() || (backfill && shouldAbortBackfill()))
+        if (isStopping())
             break;
 
         duckdb::Connection *con = threadConn();
@@ -52,8 +51,6 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
         }
 
         if (offset == 0) {
-            // A complete file list is authoritative for this user. Removing all
-            // rows also prevents collisions with earlier hub-search entries.
             auto del = ShareIndexDb::query1(
                 *con, "DELETE FROM share_entries WHERE cid = ?",
                 ShareIndexDb::strVal(cid));
@@ -80,7 +77,6 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
             break;
         }
 
-        // Visible progress after each chunk.
         refreshEntryCount(*con);
 
         if (offset >= rows.size())
@@ -96,7 +92,7 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
         if (loaded && !isStopping())
             reclaimFreePages(*con);
     }
-    return loaded && !isStopping() && !(backfill && shouldAbortBackfill());
+    return loaded && !isStopping();
 }
 
 #endif

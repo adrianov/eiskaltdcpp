@@ -12,11 +12,10 @@
 #ifdef USE_QT_SQLITE
 
 #include "ShareIndexQueueCore.h"
+#include "WulforUtil.h"
 #include "dcpp/DirectoryListing.h"
 #include "dcpp/Util.h"
-#include "WulforUtil.h"
 
-#include <QDir>
 #include <utility>
 
 using namespace dcpp;
@@ -42,12 +41,9 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
                              const QString &cid, const QString &hubUrl,
                              const QString &nick, const QString &hubName,
                              const QString &ip, QSet<QString> &seen,
-                             QList<QVariantMap> &out,
-                             bool backfill)
+                             QList<QVariantMap> &out)
 {
     if (!dir)
-        return;
-    if (backfill && shouldAbortBackfill())
         return;
 
     if (dir != listing.getRoot() && !dir->getName().empty()) {
@@ -67,7 +63,7 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
     }
 
     for (auto &f : dir->files) {
-        if (isStopping() || (backfill && shouldAbortBackfill()))
+        if (isStopping())
             return;
         if (!f || f->getName().empty())
             continue;
@@ -93,46 +89,9 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
     }
 
     for (auto &sub : dir->directories) {
-        if (isStopping() || (backfill && shouldAbortBackfill()))
-            return;
-        walkListing(listing, sub, cid, hubUrl, nick, hubName, ip, seen, out, backfill);
-    }
-}
-
-/** CLI: ingest every cached list on this thread (no write worker). */
-void ShareIndex::ingestCachedListsSync()
-{
-    open();
-    if (!isOpen())
-        return;
-
-    const QString listDir = _q(Util::getListPath());
-    QDir dir(listDir);
-    if (!dir.exists())
-        return;
-
-    const QStringList names = dir.entryList(QStringList() << "*.xml.bz2" << "*.xml", QDir::Files);
-    for (const QString &fn : names) {
         if (isStopping())
             return;
-
-        const QString fullPath = dir.absoluteFilePath(fn);
-        const UserPtr user = DirectoryListing::getUserFromFilename(_tq(fullPath));
-        if (!user)
-            continue;
-
-        QString base = fn;
-        if (base.endsWith(QLatin1String(".xml.bz2"), Qt::CaseInsensitive))
-            base.chop(8);
-        else if (base.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive))
-            base.chop(4);
-        QString nick;
-        const int dot = base.lastIndexOf(QLatin1Char('.'));
-        if (dot > 0)
-            nick = base.left(dot);
-
-        setLastError(QString());
-        ingestListSync(user, fullPath, QString(), nick, false, false);
+        walkListing(listing, sub, cid, hubUrl, nick, hubName, ip, seen, out);
     }
 }
 

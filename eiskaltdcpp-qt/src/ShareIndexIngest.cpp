@@ -56,14 +56,14 @@ qint64 ShareIndex::forceIngestListMs(const UserPtr &user, const QString &listPat
     QElapsedTimer timer;
     timer.start();
     waitWritesIdle();
-    ingestListSync(user, listPath, hubUrl, nick, true, false);
+    ingestListSync(user, listPath, hubUrl, nick, true);
     releaseThreadDb();
     return timer.elapsed();
 }
 
 void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
                                 const QString &hubUrl, const QString &nick,
-                                bool force, bool backfill)
+                                bool force)
 {
     if (!user || listPath.isEmpty())
         return;
@@ -113,11 +113,6 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
             useNick = wu->getNicks(user->getCID(), useHubUrl);
     }
 
-    if (backfill && shouldAbortBackfill()) {
-        enqueueBackfillList(user, listPath, useNick);
-        return;
-    }
-
     DirectoryListing listing(HintedUser(user, _tq(useHubUrl)));
     try {
         listing.loadFile(_tq(listPath));
@@ -132,26 +127,17 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
     }
 
-    if (isStopping() || (backfill && shouldAbortBackfill())) {
-        if (backfill && !isStopping())
-            enqueueBackfillList(user, listPath, useNick);
+    if (isStopping())
         return;
-    }
 
     QList<QVariantMap> rows;
     QSet<QString> seen;
     walkListing(listing, listing.getRoot(), cid, useHubUrl, useNick, useHubName, useIp,
-                seen, rows, backfill);
-    if (isStopping() || (backfill && shouldAbortBackfill())) {
-        if (backfill && !isStopping())
-            enqueueBackfillList(user, listPath, useNick);
+                seen, rows);
+    if (isStopping())
         return;
-    }
-    if (!writeListRows(cid, rows, backfill)) {
-        if (backfill && shouldAbortBackfill() && !isStopping())
-            enqueueBackfillList(user, listPath, useNick);
+    if (!writeListRows(cid, rows))
         return;
-    }
     if (isStopping())
         return;
     rememberListMeta(cid, listPath, rows.size());
