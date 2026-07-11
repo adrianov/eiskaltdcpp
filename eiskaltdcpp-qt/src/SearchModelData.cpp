@@ -8,11 +8,8 @@
  ***************************************************************************/
 
 #include "SearchModel.h"
-#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "AppTheme.h"
-
-using namespace dcpp;
 
 QVariant SearchModel::data(const QModelIndex &index, int role) const
 {
@@ -46,30 +43,18 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
 
             break;
         }
-        case Qt::ForegroundRole:
+        case Qt::BackgroundRole:
         {
-            if (item->isDir)
+            if (item->isDir || item->localPath().isEmpty())
                 break;
-
-            const QString localPath = SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString());
-            if (!localPath.isEmpty()) {
-                static QColor c;
-                c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
-                c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
-                return c;
-            }
-            break;
+            // Row wash + default text: readable on light and dark themes.
+            return AppTheme::sharedFileHighlight();
         }
-        case Qt::BackgroundColorRole:
-            break;
         case Qt::ToolTipRole:
         {
-            if (item->isDir)
-                break;
-
-            const QString localPath = SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString());
-            if (!localPath.isEmpty())
-                return tr("File already exists: %1").arg(localPath);
+            const QString path = item->localPath();
+            if (!path.isEmpty())
+                return tr("File already exists: %1").arg(path);
             break;
         }
         default: break;

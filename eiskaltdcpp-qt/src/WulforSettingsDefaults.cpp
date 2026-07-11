@@ -121,7 +121,7 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WB_SIMPLE_SHARE_MODE,     static_cast<int>(true));
     settings.setValue(WI_APP_UNIT_BASE,         1024);
     settings.setValue(WI_APP_AUTOAWAY_INTERVAL, 60);
-    settings.setValue(WI_APP_SHARED_FILES_ALPHA, 127);
+    settings.setValue(WI_APP_SHARED_FILES_ALPHA, 56);
     settings.setValue(WI_CHAT_MAXPARAGRAPHS,    1000);
     settings.setValue(WI_DEF_MAGNET_ACTION,     0);
     settings.setValue(WI_CHAT_WIDTH,            -1);

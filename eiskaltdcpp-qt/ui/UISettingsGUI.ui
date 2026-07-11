@@ -808,7 +808,7 @@ them is usually available only to operators</string>
           <item row="0" column="2">
            <widget class="QLabel" name="label_15">
             <property name="text">
-             <string>Transparency</string>
+             <string>Tint strength</string>
             </property>
            </widget>
           </item>

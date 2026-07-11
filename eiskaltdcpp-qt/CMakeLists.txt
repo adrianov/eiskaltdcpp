@@ -89,6 +89,7 @@ set(QT_EXTRA_SOURCES
     src/AppThemeInputs.cpp
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
+    src/FileBrowserModelData.cpp
     src/FileBrowserModelSort.cpp
     src/FavoriteUsersActions.cpp
     src/FinishedTransfersInit.cpp

@@ -115,7 +115,7 @@ void WulforSettings::fillOldConfigMaps() {
     intmap.insert(WB_SIMPLE_SHARE_MODE,     static_cast<int>(false));
     intmap.insert(WI_APP_UNIT_BASE,         1024);
     intmap.insert(WI_APP_AUTOAWAY_INTERVAL, 60);
-    intmap.insert(WI_APP_SHARED_FILES_ALPHA, 127);
+    intmap.insert(WI_APP_SHARED_FILES_ALPHA, 56);
     intmap.insert(WI_CHAT_MAXPARAGRAPHS,    1000);
     intmap.insert(WI_DEF_MAGNET_ACTION,     0);
     intmap.insert(WI_CHAT_WIDTH,            -1);

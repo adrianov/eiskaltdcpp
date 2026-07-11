@@ -10,7 +10,6 @@
 #include "FileBrowserModel.h"
 #include "FileBrowserModelSort.h"
 #include "WulforUtil.h"
-#include "AppTheme.h"
 
 #if QT_VERSION >= 0x050000
 #include <QtWidgets>
@@ -21,15 +20,8 @@
 #include <QFileInfo>
 #include <QList>
 #include <QStringList>
-#include <QPalette>
-#include <QColor>
-#include <QIcon>
-#include <QPixmap>
-#include <QFontMetrics>
-#include <QSize>
 #include <QFile>
 
-#include "dcpp/ShareManager.h"
 #include "dcpp/UploadManager.h"
 
 using namespace dcpp;
@@ -79,173 +71,6 @@ int FileBrowserModel::columnCount(const QModelIndex &parent) const
         return static_cast<FileBrowserItem*>(parent.internalPointer())->columnCount();
     else
         return rootItem->columnCount();
-}
-
-QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid())
-        return QVariant();
-
-    FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
-    QString path = "";//virtual path
-    QStringList dirs = createRemotePath(item).split("\\");
-
-    if (dirs.size() >= 2){
-        dirs.removeFirst();
-
-        path = "/" + dirs.join("/");
-    }
-    else
-        path = "";
-
-    switch(role) {
-        case Qt::DecorationRole:
-        {
-            if (item->dir && index.column() == COLUMN_FILEBROWSER_NAME)
-                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
-            else if (index.column() == COLUMN_FILEBROWSER_NAME)
-                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()), 16);
-        }
-        case Qt::DisplayRole:
-        {
-            if (restrict_map.contains(path) && index.column() == COLUMN_FILEBROWSER_NAME){
-                QString ret = tr("%1 [%2 Gb]").arg(item->data(index.column()).toString()).arg(restrict_map[path]);
-
-                return ret;
-            }
-
-            return item->data(index.column());
-        }
-        case Qt::TextAlignmentRole:
-        {
-            bool align_right = (index.column() == COLUMN_FILEBROWSER_ESIZE) || (index.column() == COLUMN_FILEBROWSER_SIZE);
-
-            if (align_right)
-                return Qt::AlignRight;
-            else
-                return Qt::AlignLeft;
-        }
-        case Qt::ForegroundRole:
-        {
-            if (item->dir || ownList)
-                break;
-
-            TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
-
-            if (ShareManager::getInstance()->isTTHShared(t)){
-                static QColor c;
-
-                c.setNamedColor(AppTheme::chatColor(WS_APP_SHARED_FILES_COLOR));
-                c.setAlpha(WIGET(WI_APP_SHARED_FILES_ALPHA));
-
-                return c;
-            }
-
-            break;
-        }
-        case Qt::BackgroundColorRole:
-        {
-            if (item->isDuplicate){
-                QPalette pal = qApp->palette();
-
-                return pal.highlight().color();
-            }
-        }
-        case Qt::ToolTipRole:
-        {
-            if (item->isDuplicate && item->file){
-                const QString &tth = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                auto it = hash.find(tth);
-
-                if (it == hash.end())
-                    break;
-
-                dcpp::DirectoryListing::File *file = const_cast<dcpp::DirectoryListing::File*>(it.value());
-                dcpp::DirectoryListing::Directory *parentDir = file->getParent();
-
-                if (!parentDir)
-                    break;
-
-                QString path = "";
-
-                do {
-                    path = _q(parentDir->getName()) + "/" + path;
-                    parentDir = parentDir->getParent();
-                } while (parentDir->getParent());
-
-                return tr("File marked as a duplicate of another file: %1").arg(path+_q(file->getName()));
-            }
-            
-            QString tooltip = "";
-            
-            if (item->dir){
-                tooltip = item->data(COLUMN_FILEBROWSER_NAME).toString();
-            }
-            
-            if (item->file){
-                DirectoryListing::File *f = item->file;
-                
-                if (!f->mediaInfo.video_info.empty() || !f->mediaInfo.audio_info.empty()){
-                    MediaInfo &mi = f->mediaInfo;
-
-                    tooltip = tr("<b>Media Info:</b><br/>");
-                    if (!f->mediaInfo.video_info.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Video:</b> %1<br/>").arg(_q(mi.video_info));
-                    if (!f->mediaInfo.audio_info.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Audio:</b> %1<br/>").arg(_q(mi.audio_info));
-                    if (f->mediaInfo.bitrate > 0)
-                        tooltip += tr("&nbsp;&nbsp;<b>Bitrate:</b> %1<br/>").arg(mi.bitrate);
-                    if (!f->mediaInfo.resolution.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Resolution:</b> %1<br/><br/>").arg(_q(mi.resolution));
-                }
-            }
-
-            TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
-            ShareManager *SM = ShareManager::getInstance();
-
-            if (!ownList){
-                try{
-                    QString toolTip = _q(SM->toReal(SM->toVirtual(t)));
-
-                    return tooltip + tr("File already exists: %1").arg(toolTip);
-                }catch( ... ){};
-            }
-
-            if (!tooltip.isEmpty())
-                return tooltip;
-            
-            break;
-        }
-        case Qt::FontRole:
-        {
-            if (restrict_map.contains(path) && index.column() == COLUMN_FILEBROWSER_NAME){
-                QFont f;
-                f.setBold(true);
-
-                return f;
-            }
-
-            break;
-        }
-        default:
-            break;
-    }
-
-    return QVariant();
-}
-
-QVariant FileBrowserModel::headerData(int section, Qt::Orientation orientation,
-                               int role) const
-{
-    QList<QVariant> rootData;
-    rootData << tr("Name") << tr("Size") << tr("Exact size") << QString("TTH")
-             << tr("Bitrate") << tr("Resolution") << tr("Video") << tr("Audio")
-             << tr("Downloaded") << tr("Shared");
-
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return rootData.at(section);
-
-    return QVariant();
 }
 
 QModelIndex FileBrowserModel::index(int row, int column, const QModelIndex &parent)
