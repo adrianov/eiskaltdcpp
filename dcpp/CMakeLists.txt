@@ -99,6 +99,7 @@ set(DCPP_EXTRA_SOURCES
     UserConnectionSpeed.cpp
     UtilIp.cpp
     UtilDisk.cpp
+    UtilUrl.cpp
     QueueManagerDisk.cpp
     SettingsManagerDefaults.cpp
     SettingsManagerHublist.cpp
@@ -215,7 +216,7 @@ if (PERL_REGEX)
 endif (PERL_REGEX)
 
 if (USE_IDN2)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/Util.cpp
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/UtilUrl.cpp
                  PROPERTY COMPILE_DEFINITIONS USE_IDN2 APPEND)
 endif(USE_IDN2)
 

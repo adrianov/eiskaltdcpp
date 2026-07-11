@@ -450,9 +450,15 @@ public:
 
     static void parseIpPort(const string &aIpPort, string &ip, std::string &port);
 
-    static bool isAdcUrl(const string& aHubURL);
-    static bool isAdcsUrl(const string& aHubURL);
-    static bool isNmdcUrl(const string& aHubURL);
+    static bool isAdcUrl(const string& aHubURL) {
+        return strnicmp("adc://", aHubURL.c_str(), 6) == 0;
+    }
+    static bool isAdcsUrl(const string& aHubURL) {
+        return strnicmp("adcs://", aHubURL.c_str(), 7) == 0;
+    }
+    static bool isNmdcUrl(const string& aHubURL) {
+        return strnicmp("dchub://", aHubURL.c_str(), 8) == 0;
+    }
 
 private:
     /** In local mode, all config and temp files are kept in the same dir as the executable */

@@ -30,7 +30,6 @@
 #endif
 
 #include <cmath>
-#include <array>
 
 #include "CID.h"
 #include "ClientManager.h"
@@ -57,10 +56,6 @@
 #include "CID.h"
 
 #include "FastAlloc.h"
-
-#ifdef USE_IDN2
-#include <idn2.h>
-#endif
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <mach-o/dyld.h> // _NSGetExecutablePath()
@@ -546,160 +541,6 @@ string Util::getShortTimeString(time_t t) {
     return Text::toUtf8(buf);
 }
 
-void Util::sanitizeUrl(string& url) {
-    // Trim spaces and special characters
-    static const std::array<char, 7> special_chars = { ' ', '<', '>', '"', '\t', '\r', '\n' };
-    for(const auto &ch : special_chars) {
-        while(url[0] == ch)
-            url.erase(0, 1);
-        while(url[url.length() - 1] == ch) {
-            url.erase(url.length()-1);
-        }
-    }
-}
-
-string Util::trimCopy(const string &aLine) {
-    string out = aLine;
-    sanitizeUrl(out);
-    return out;
-}
-
-/**
- * Decodes a URL the best it can...
- * Default ports:
- * http:// -> port 80
- * dchub:// -> port 411
- */
-void Util::decodeUrl(const string& url, string& protocol, string& host, string& port, string& path, string& query, string& fragment) {
-    auto fragmentEnd = url.size();
-    auto fragmentStart = url.rfind('#');
-
-    size_t queryEnd;
-    if(fragmentStart == string::npos) {
-        queryEnd = fragmentStart = fragmentEnd;
-    } else {
-        dcdebug("f");
-        queryEnd = fragmentStart;
-        fragmentStart++;
-    }
-
-    auto queryStart = url.rfind('?', queryEnd);
-    size_t fileEnd;
-
-    if(queryStart == string::npos) {
-        fileEnd = queryStart = queryEnd;
-    } else {
-        dcdebug("q");
-        fileEnd = queryStart;
-        queryStart++;
-    }
-
-    auto protoStart = 0;
-    auto protoEnd = url.find("://", protoStart);
-
-    auto authorityStart = protoEnd == string::npos ? protoStart : protoEnd + 3;
-    auto authorityEnd = url.find_first_of("/#?", authorityStart);
-
-    size_t fileStart;
-    if(authorityEnd == string::npos) {
-        authorityEnd = fileStart = fileEnd;
-    } else {
-        dcdebug("a");
-        fileStart = authorityEnd;
-    }
-
-    protocol = (protoEnd == string::npos ? Util::emptyString : url.substr(protoStart, protoEnd - protoStart));
-
-    if(authorityEnd > authorityStart) {
-        dcdebug("x");
-        size_t portStart = string::npos;
-        if(url[authorityStart] == '[') {
-            // IPv6?
-            auto hostEnd = url.find(']');
-            if(hostEnd == string::npos) {
-                return;
-            }
-
-            host = url.substr(authorityStart + 1, hostEnd - authorityStart - 1);
-            if(hostEnd + 1 < url.size() && url[hostEnd + 1] == ':') {
-                portStart = hostEnd + 2;
-            }
-        } else {
-            size_t hostEnd;
-            portStart = url.find(':', authorityStart);
-            if(portStart != string::npos && portStart > authorityEnd) {
-                portStart = string::npos;
-            }
-
-            if(portStart == string::npos) {
-                hostEnd = authorityEnd;
-            } else {
-                hostEnd = portStart;
-                portStart++;
-            }
-
-            dcdebug("h");
-            host = url.substr(authorityStart, hostEnd - authorityStart);
-        }
-
-        if(portStart == string::npos) {
-            if(protocol == "http") {
-                port = "80";
-            } else if(protocol == "https") {
-                port = "443";
-            } else if(protocol == "dchub"  || protocol.empty()) {
-                port = "411";
-            }
-        } else {
-            dcdebug("p");
-            port = url.substr(portStart, authorityEnd - portStart);
-        }
-    }
-
-    dcdebug("\n");
-    path = url.substr(fileStart, fileEnd - fileStart);
-    query = url.substr(queryStart, queryEnd - queryStart);
-    fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);
-
-#ifdef USE_IDN2
-    //printf("%s\n",host.c_str());
-    char *p;
-    if (idn2_to_ascii_8z(host.c_str(), &p, IDN2_NONTRANSITIONAL) == IDN2_OK) {
-        host = string(p);
-    }
-    free(p);
-    //printf ("ACE label (length %d): '%s'\n", strlen (p), p);
-    //printf ("%s\n", host.c_str());
-#endif
-    //printf("protocol:%s\n host:%s\n port:%d\n path:%s\n query:%s\n fragment:%s\n", protocol.c_str(), host.c_str(), port, path.c_str(), query.c_str(), fragment.c_str());
-}
-
-map<string, string> Util::decodeQuery(const string& query) {
-    map<string, string> ret;
-    size_t start = 0;
-    while(start < query.size()) {
-        auto eq = query.find('=', start);
-        if(eq == string::npos) {
-            break;
-        }
-
-        auto param = eq + 1;
-        auto end = query.find('&', param);
-
-        if(end == string::npos) {
-            end = query.size();
-        }
-
-        if(eq > start && end > param) {
-            ret[query.substr(start, eq-start)] = query.substr(param, end - param);
-        }
-
-        start = end + 1;
-    }
-
-    return ret;
-}
-
 string Util::getAwayMessage() {
     return (formatTime(awayMsg.empty() ? SETTING(DEFAULT_AWAY_MESSAGE) : awayMsg, awayTime)) + " <" APPNAME " v" VERSIONSTRING ">";
 }
@@ -944,39 +785,6 @@ int Util::strncmp(const wchar_t *a, const wchar_t *b, size_t n) {
         --n, ++a, ++b;
     }
     return n == 0 ? 0 : ((int)(*a)) - ((int)(*b));
-}
-
-string Util::encodeURI(const string& aString, bool reverse) {
-    // reference: rfc2396
-    string tmp = aString;
-    if(reverse) {
-        string::size_type idx;
-        for(idx = 0; idx < tmp.length(); ++idx) {
-            if(tmp.length() > idx + 2 && tmp[idx] == '%' && isxdigit(tmp[idx+1]) && isxdigit(tmp[idx+2])) {
-                tmp[idx] = fromHexEscape(tmp.substr(idx+1,2));
-                tmp.erase(idx+1, 2);
-            } else { // reference: rfc1630, magnet-uri draft
-                if(tmp[idx] == '+')
-                    tmp[idx] = ' ';
-            }
-        }
-    } else {
-        const string disallowed = ";/?:@&=+$," // reserved
-                "<>#%\" "    // delimiters
-                "{}|\\^[]`"; // unwise
-        string::size_type idx, loc;
-        for(idx = 0; idx < tmp.length(); ++idx) {
-            if(tmp[idx] == ' ') {
-                tmp[idx] = '+';
-            } else {
-                if(tmp[idx] <= 0x1F || tmp[idx] >= 0x7f || (loc = disallowed.find_first_of(tmp[idx])) != string::npos) {
-                    tmp.replace(idx, 1, toHexEscape(tmp[idx]));
-                    idx+=2;
-                }
-            }
-        }
-    }
-    return tmp;
 }
 
 /**
@@ -1292,21 +1100,10 @@ string Util::formatAdditionalInfo(const string& aIp, bool sIp, bool sCC) {
         bool showIp = BOOLSETTING(USE_IP) || sIp;
         bool showCc = (BOOLSETTING(GET_USER_COUNTRY) || sCC) && !cc.empty();
 
-        if(showIp) {
-            int ll = 15 - aIp.size();
-            if (ll >0) {
-                string tmp = " "; size_t sz=tmp.size();
-                tmp.resize(sz+ll-1,' ');
-                ret = "[" + tmp + aIp + "] ";
-            } else
-                ret = "[" + aIp + "] ";
-        }
-        //printf("%s\n",ret.c_str());
-        if(showCc) {
+        if(showIp)
+            ret = "[" + aIp + "] ";
+        if(showCc)
             ret += "[" + cc + "] ";
-            //printf("%s\n",ret.c_str());
-        }
-        //printf("%s\n",ret.c_str());
     }
     return Text::toT(ret);
 }
@@ -1329,18 +1126,6 @@ bool Util::fileExists(const string &aFile) {
     struct stat stFileInfo;
     return (stat(aFile.c_str(),&stFileInfo) == 0);
 #endif
-}
-
-bool Util::isAdcUrl(const string& aHubURL) {
-    return Util::strnicmp("adc://", aHubURL.c_str(), 6) == 0;
-}
-
-bool Util::isAdcsUrl(const string& aHubURL) {
-    return Util::strnicmp("adcs://", aHubURL.c_str(), 7) == 0;
-}
-
-bool Util::isNmdcUrl(const string& aHubURL) {
-    return Util::strnicmp("dchub://", aHubURL.c_str(), 8) == 0;
 }
 
 size_t CaseStringHash::operator()(const string &s) const {
