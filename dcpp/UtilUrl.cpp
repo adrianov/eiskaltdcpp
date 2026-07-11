@@ -25,13 +25,14 @@
 namespace dcpp {
 
 void Util::sanitizeUrl(string& url) {
+    if(url.empty())
+        return;
     static const std::array<char, 7> special_chars = { ' ', '<', '>', '"', '\t', '\r', '\n' };
     for(const auto &ch : special_chars) {
-        while(url[0] == ch)
+        while(!url.empty() && url.front() == ch)
             url.erase(0, 1);
-        while(url[url.length() - 1] == ch) {
-            url.erase(url.length()-1);
-        }
+        while(!url.empty() && url.back() == ch)
+            url.erase(url.length() - 1);
     }
 }
 
