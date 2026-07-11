@@ -14,15 +14,30 @@
 #include <QPalette>
 #include <QSet>
 
+/** Minimum lightness gap so chat text stays readable (white-on-white, etc.). */
+static const int kChatContrast = 50;
+
 static QColor paletteText(){
     return qApp->palette().color(QPalette::Text);
 }
 
-static bool hasChatContrast(const QColor &fg){
+static QColor effectiveChatBackground(){
+    QColor clr = AppTheme::chatBackground();
+    if (!WulforSettings::getInstance()->getBool("hubframe/change-chat-background-color", false))
+        return clr;
+
+    QColor custom;
+    custom.setNamedColor(WulforSettings::getInstance()->getStr("hubframe/chat-background-color"));
+    if (custom.isValid() && !AppTheme::isLegacyBackground(custom))
+        return custom;
+    return clr;
+}
+
+static bool hasChatContrast(const QColor &fg, const QColor &bg = QColor()){
     if (!fg.isValid())
         return false;
-    // PlaceholderText is often near-white on light macOS themes.
-    return qAbs(fg.lightness() - AppTheme::chatBackground().lightness()) >= 90;
+    const QColor against = bg.isValid() ? bg : effectiveChatBackground();
+    return qAbs(fg.lightness() - against.lightness()) >= kChatContrast;
 }
 
 static QColor paletteSecondary(){
@@ -36,6 +51,13 @@ static QColor paletteSecondary(){
 
     // Readable muted gray on light chat backgrounds (not washed-out PlaceholderText).
     return QColor(0x6C, 0x6C, 0x70);
+}
+
+QColor AppTheme::readableChatColor(const QColor &preferred){
+    const QColor bg = effectiveChatBackground();
+    if (hasChatContrast(preferred, bg))
+        return preferred;
+    return readableColor(bg, preferred);
 }
 
 bool AppTheme::isLegacyDefault(const QString &colorName){
@@ -70,6 +92,26 @@ QColor AppTheme::linkColor(){
 
 QColor AppTheme::sharedFileColor(){
     return successColor();
+}
+
+QColor AppTheme::sharedFileHighlight(){
+    QColor c;
+    const QString stored = WulforSettings::getInstance()->getStr(WS_APP_SHARED_FILES_COLOR);
+    if (stored.isEmpty() || isLegacyDefault(stored))
+        c = successColor();
+    else
+        c.setNamedColor(stored);
+    if (!c.isValid())
+        c = successColor();
+
+    // Soft wash keeps default text readable; strength comes from settings alpha.
+    int alpha = WulforSettings::getInstance()->getInt(WI_APP_SHARED_FILES_ALPHA, 56);
+    if (alpha < 0)
+        alpha = 0;
+    else if (alpha > 255)
+        alpha = 255;
+    c.setAlpha(alpha);
+    return c;
 }
 
 QColor AppTheme::findHighlightColor(){
@@ -118,15 +160,30 @@ static QColor defaultChatColor(const QString &key){
 }
 
 QString AppTheme::chatColor(const QString &settingKey){
+    // Highlight / list colors are backgrounds or non-chat surfaces — do not clamp.
+    if (settingKey == WS_CHAT_FIND_COLOR || settingKey == WS_APP_SHARED_FILES_COLOR) {
+        const QString stored = WulforSettings::getInstance()->getStr(settingKey);
+        if (stored.isEmpty() || isLegacyDefault(stored))
+            return defaultChatColor(settingKey).name();
+        return stored;
+    }
+
     if (settingKey == WS_CHAT_TIME_COLOR)
-        return paletteSecondary().name();
+        return readableChatColor(paletteSecondary()).name();
 
     if (settingKey == WS_CHAT_MSG_COLOR)
-        return paletteText().name();
+        return readableChatColor(paletteText()).name();
 
     const QString stored = WulforSettings::getInstance()->getStr(settingKey);
+    QColor color;
     if (stored.isEmpty() || isLegacyDefault(stored))
-        return defaultChatColor(settingKey).name();
+        color = defaultChatColor(settingKey);
+    else {
+        color.setNamedColor(stored);
+        // Dark-theme leftovers (e.g. #ffffff op/bot) → theme default for this background.
+        if (!hasChatContrast(color))
+            color = defaultChatColor(settingKey);
+    }
 
-    return stored;
+    return readableChatColor(color).name();
 }

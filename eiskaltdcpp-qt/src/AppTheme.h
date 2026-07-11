@@ -46,10 +46,14 @@ public:
     static void paintControlBorder(QPainter *painter, const QRectF &rect, bool focused);
 
     static QString chatColor(const QString &settingKey);
+    /** Prefer preferred when it contrasts with the chat background; else black/white. */
+    static QColor readableChatColor(const QColor &preferred);
     static QColor errorColor();
     static QColor successColor();
     static QColor linkColor();
     static QColor sharedFileColor();
+    /** Soft row tint for files already in the local share (search / file browser). */
+    static QColor sharedFileHighlight();
     static QColor findHighlightColor();
     static QColor chatBackground();
     static bool isLegacyDefault(const QString &colorName);

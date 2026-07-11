@@ -8,11 +8,13 @@
 ***************************************************************************/
 
 #include "HubFrame.h"
+#include "AppTheme.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 
 #include "dcpp/HashManager.h"
 
+#include <QColor>
 #include <QFileInfo>
 #include <QRegExp>
 #include <QUrl>
@@ -113,7 +115,9 @@ bool hubFrameTryBbCode(QString &input, QString &output)
         QRegExp exp("\\[color=(\\w+|#.{6,6})\\]((.*))\\[/color\\].*");
         QString chunk = input.left(input.indexOf("[/color]") + 8);
         if (exp.exactMatch(chunk) && exp.captureCount() == 3){
-            output += "<font color=\"" + exp.cap(1) + "\">"
+            QColor bbColor;
+            bbColor.setNamedColor(exp.cap(1));
+            output += "<font color=\"" + AppTheme::readableChatColor(bbColor).name() + "\">"
                     + HubFrame::LinkParser::parseForLinks(exp.cap(2), false) + "</font>";
             input.remove(0, chunk.length());
             return true;
