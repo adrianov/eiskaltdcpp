@@ -117,14 +117,13 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept{
-    Q_UNUSED(reason)
-
     clearUploadUiThrottle(uploadTickKey(ul));
 
     VarMap params;
     getParams(params, ul);
     const UploadUiState s = uploadState(ul);
-    applyUploadMetrics(params, s, tr("Upload failed"));
+    const QString stat = reason.empty() ? tr("Upload failed") : _q(reason);
+    applyUploadMetrics(params, s, stat);
     applyUploadSpeed(params, ul, s);
     params["DOWN"] = false;
     params["FAIL"] = false;
