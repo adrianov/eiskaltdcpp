@@ -36,8 +36,7 @@ bool SearchFrame::contextMoreActions(Menu::Action act, const QModelIndexList &li
         {
             for (const auto &i : list){
                 SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
-                if (!item->isDir)
-                    SearchLocalPath::openFile(item->data(COLUMN_SF_TTH).toString());
+                SearchLocalPath::openFile(item->localPath());
             }
             break;
         }
@@ -45,8 +44,7 @@ bool SearchFrame::contextMoreActions(Menu::Action act, const QModelIndexList &li
         {
             for (const auto &i : list){
                 SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
-                if (!item->isDir)
-                    SearchLocalPath::openDirectory(item->data(COLUMN_SF_TTH).toString());
+                SearchLocalPath::openDirectory(item->localPath());
             }
             break;
         }

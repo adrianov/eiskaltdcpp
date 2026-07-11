@@ -81,6 +81,8 @@ public:
     int row() const;
     SearchItem *parent() const;
     bool exists(const QString &user_cid) const;
+    /** Cached share/finished path for this TTH; empty if not local. */
+    QString localPath() const;
 
     unsigned count;
 
@@ -93,6 +95,8 @@ private:
 
     QList<QVariant> itemData;
     SearchItem *parentItem;
+    mutable bool localChecked = false;
+    mutable QString localCached;
 };
 
 class SearchModel : public QAbstractItemModel

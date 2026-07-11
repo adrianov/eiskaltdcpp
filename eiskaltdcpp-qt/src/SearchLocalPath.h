@@ -17,7 +17,7 @@ namespace SearchLocalPath {
 /** Real path if the TTH is in the share or a finished download still on disk. */
 QString resolve(const QString &tth);
 
-bool openFile(const QString &tth);
-bool openDirectory(const QString &tth);
+bool openFile(const QString &path);
+bool openDirectory(const QString &path);
 
 } // namespace SearchLocalPath

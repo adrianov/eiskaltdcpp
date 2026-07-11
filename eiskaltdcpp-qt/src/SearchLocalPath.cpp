@@ -42,10 +42,9 @@ static QString fromFinished(const QString &tth)
         return QString();
 
     const string path = FinishedManager::getInstance()->getTarget(_tq(tth));
-    if (!path.empty() && File::getSize(path) > -1)
-        return _q(path);
-
-    return QString();
+    if (path.empty() || File::getSize(path) <= -1)
+        return QString();
+    return _q(path);
 }
 
 QString resolve(const QString &tth)
@@ -56,17 +55,15 @@ QString resolve(const QString &tth)
     return fromFinished(tth);
 }
 
-bool openFile(const QString &tth)
+bool openFile(const QString &path)
 {
-    const QString path = resolve(tth);
     if (path.isEmpty())
         return false;
     return QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 }
 
-bool openDirectory(const QString &tth)
+bool openDirectory(const QString &path)
 {
-    const QString path = resolve(tth);
     if (path.isEmpty())
         return false;
     return WulforUtil::revealPath(path);

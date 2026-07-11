@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "SearchModel.h"
+#include "SearchLocalPath.h"
 
 SearchItem::SearchItem(const QList<QVariant> &data, SearchItem *parent) :
     count(0),
@@ -67,6 +68,16 @@ bool SearchItem::exists(const QString &user_cid) const {
             return true;
     }
     return false;
+}
+
+QString SearchItem::localPath() const {
+    if (localChecked)
+        return localCached;
+
+    localChecked = true;
+    if (!isDir)
+        localCached = SearchLocalPath::resolve(data(COLUMN_SF_TTH).toString());
+    return localCached;
 }
 
 SearchListException::SearchListException() :

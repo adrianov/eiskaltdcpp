@@ -12,7 +12,6 @@
 #include "SearchModel.h"
 #include "SearchBlacklist.h"
 #include "SearchBlacklistDialog.h"
-#include "SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "Magnet.h"
 #include "ArenaWidgetFactory.h"
@@ -56,7 +55,7 @@ void SearchFrame::slotContextMenu(const QPoint &){
         if (!hubs.contains(host))
             hubs.push_back(host);
 
-        if (!item->isDir && !SearchLocalPath::resolve(item->data(COLUMN_SF_TTH).toString()).isEmpty())
+        if (!item->localPath().isEmpty())
             canOpenLocal = true;
     }
 

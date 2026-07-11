@@ -93,9 +93,9 @@ void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
     SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
 
     if (!item->isDir) {
-        const QString tth = item->data(COLUMN_SF_TTH).toString();
-        if (!SearchLocalPath::resolve(tth).isEmpty()) {
-            SearchLocalPath::openDirectory(tth);
+        const QString path = item->localPath();
+        if (!path.isEmpty()) {
+            SearchLocalPath::openDirectory(path);
             return;
         }
     }
