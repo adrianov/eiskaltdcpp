@@ -107,6 +107,7 @@ protected:
             diskPruned = true;
             pruneMissingFiles();
         }
+        QMetaObject::invokeMethod(treeView, "scrollToBottom", Qt::QueuedConnection);
     }
 
 private:
