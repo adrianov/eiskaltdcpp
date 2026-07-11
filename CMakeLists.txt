@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 3.10)
 project (eiskaltdcpp)
 
 set (PROJECT_NAME "EiskaltDC++")
-set (APP_VERSION "2.4.2+devel") # Main program version (displayed in UI)
-set (CONF_VERSION "2.0402") # Config version (for updating of DCPlusPlus.xml)
-set (SO_VERSION "2.4") # Library version (incremented after changes in API or ABI)
+set (APP_VERSION "2.5.0+devel") # Main program version (displayed in UI)
+set (CONF_VERSION "2.0500") # Config version (for updating of DCPlusPlus.xml)
+set (SO_VERSION "2.5") # Library version (incremented after changes in API or ABI)
 
 if (WIN32 OR APPLE OR HAIKU)
     set (PROJECT_NAME_GLOBAL "${PROJECT_NAME}") # Package name is the same as project name
