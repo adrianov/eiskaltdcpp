@@ -21,8 +21,8 @@ static QColor paletteText(){
     return qApp->palette().color(QPalette::Text);
 }
 
-static QColor effectiveChatBackground(){
-    QColor clr = AppTheme::chatBackground();
+QColor AppTheme::effectiveChatBackground(){
+    QColor clr = chatBackground();
     if (!WulforSettings::getInstance()->getBool("hubframe/change-chat-background-color", false))
         return clr;
 
@@ -36,7 +36,7 @@ static QColor effectiveChatBackground(){
 static bool hasChatContrast(const QColor &fg, const QColor &bg = QColor()){
     if (!fg.isValid())
         return false;
-    const QColor against = bg.isValid() ? bg : effectiveChatBackground();
+    const QColor against = bg.isValid() ? bg : AppTheme::effectiveChatBackground();
     return qAbs(fg.lightness() - against.lightness()) >= kChatContrast;
 }
 
@@ -54,7 +54,7 @@ static QColor paletteSecondary(){
 }
 
 QColor AppTheme::readableChatColor(const QColor &preferred){
-    const QColor bg = effectiveChatBackground();
+    const QColor bg = AppTheme::effectiveChatBackground();
     if (hasChatContrast(preferred, bg))
         return preferred;
     return readableColor(bg, preferred);

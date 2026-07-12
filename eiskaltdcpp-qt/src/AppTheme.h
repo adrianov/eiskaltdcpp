@@ -56,6 +56,13 @@ public:
     static QColor sharedFileHighlight();
     static QColor findHighlightColor();
     static QColor chatBackground();
+    /** Chat Base color: palette or custom setting when enabled. */
+    static QColor effectiveChatBackground();
+    /**
+     * Restore contrast for baked-in chat HTML after a light/dark switch
+     * (QEvent::PaletteChange / ThemeChange). See AppThemeChatDoc.cpp.
+     */
+    static void refreshChatViews();
     static bool isLegacyDefault(const QString &colorName);
     static bool isLegacyBackground(const QColor &color);
 };

@@ -87,6 +87,7 @@ set(QT_EXTRA_SOURCES
     src/AppThemeControls.cpp
     src/AppThemeCombo.cpp
     src/AppThemeInputs.cpp
+    src/AppThemeChatDoc.cpp
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp

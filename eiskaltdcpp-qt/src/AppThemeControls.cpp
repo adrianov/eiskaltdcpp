@@ -90,4 +90,7 @@ void AppTheme::apply(){
                 applyControlButton(btn);
         }
     }
+
+    // Chat HTML bakes <font color> at append time; remap when the system theme flips.
+    refreshChatViews();
 }
