@@ -25,24 +25,66 @@ bool hasTable(duckdb::Connection &con, const char *table)
     return !res->HasError() && res->RowCount() > 0;
 }
 
+bool hasColumn(duckdb::Connection &con, const char *table, const char *column)
+{
+    auto res = con.Query(std::string(
+        "SELECT 1 FROM information_schema.columns WHERE table_catalog = current_database() "
+        "AND table_schema = 'main' AND table_name = '")
+        + table + "' AND column_name = '" + column + "' LIMIT 1");
+    return !res->HasError() && res->RowCount() > 0;
+}
+
+bool nullableColumn(duckdb::Connection &con, const char *table, const char *column)
+{
+    auto res = con.Query(std::string(
+        "SELECT 1 FROM information_schema.columns WHERE table_catalog = current_database() "
+        "AND table_schema = 'main' AND table_name = '")
+        + table + "' AND column_name = '" + column
+        + "' AND is_nullable = 'YES' LIMIT 1");
+    return !res->HasError() && res->RowCount() > 0;
+}
+
+/** Current schema: canonical names and file identity by TTH alone. */
+bool schemaCurrent(duckdb::Connection &con)
+{
+    if (!hasTable(con, "share_locations")
+            || !hasColumn(con, "share_files", "name")
+            || !hasColumn(con, "share_files", "path")
+            || !hasColumn(con, "share_files", "ext")
+            || !hasColumn(con, "share_files", "name_cf")
+            || !hasColumn(con, "share_files", "path_cf")
+            || !nullableColumn(con, "share_locations", "name")
+            || !nullableColumn(con, "share_locations", "path")
+            || !nullableColumn(con, "share_locations", "ext")
+            || !nullableColumn(con, "share_locations", "name_cf")
+            || !nullableColumn(con, "share_locations", "path_cf"))
+        return false;
+    if (!hasTable(con, "share_index_meta"))
+        return false;
+    auto res = ShareIndexDb::query1(
+        con, "SELECT value FROM share_index_meta WHERE key=?",
+        ShareIndexDb::strVal(QStringLiteral("schema_files_tth")));
+    return res && !res->HasError() && res->RowCount() > 0
+            && ShareIndexDb::qi64(res->GetValue(0, 0)) == 1;
+}
+
 } // namespace
 
-/** Replace the former flat share_entries DB with an empty normalized schema.
-    A full row rewrite of multi-GB indexes blocks the write worker (and thus
-    search stats / list ingest) for hours; cached file lists re-ingest.
+/** Replace outdated DBs with an empty current schema. Full multi-GB rewrites
+    would block the write worker; cached lists re-ingest instead.
 
-    If share_locations already exists (normalized DB), only drop a leftover
-    share_entries table — never wipe an already-migrated index. An older
-    SQLite build can recreate an empty share_entries beside DuckDB tables. */
+    Handles flat share_entries, DBs without share_files.name, and composites
+    UNIQUE(tth, size). Never wipe an already-current index — only drop a
+    leftover share_entries. */
 bool ShareIndex::compactLegacyDb()
 {
     duckdb::Connection *con = threadConn();
     if (!con)
         return false;
-    if (!hasTable(*con, "share_entries"))
-        return true;
 
-    if (hasTable(*con, "share_locations")) {
+    if (schemaCurrent(*con)) {
+        if (!hasTable(*con, "share_entries"))
+            return true;
         QString err;
         if (!ShareIndexDb::execOk(*con, "DROP TABLE IF EXISTS share_entries", &err)) {
             setLastError(err);
@@ -50,6 +92,15 @@ bool ShareIndex::compactLegacyDb()
         }
         return true;
     }
+
+    const bool hasCore = hasTable(*con, "share_entries")
+            || hasTable(*con, "share_locations")
+            || hasTable(*con, "share_files")
+            || hasTable(*con, "share_users");
+    const bool hasMeta = hasTable(*con, "share_list_meta")
+            || hasTable(*con, "share_index_meta");
+    if (!hasCore && !hasMeta)
+        return true;
 
     const QString newFile = dbFile + QStringLiteral(".compact");
     QFile::remove(newFile);

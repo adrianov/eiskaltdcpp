@@ -22,7 +22,7 @@ QString sqlText(const QVariant &v)
 } // namespace
 
 /** Stage one file-list chunk, normalize shared file/user data, then append
-    scalar locations. walkListing has already deduplicated natural keys. */
+    locations. Equal file strings become NULL (use share_files). */
 bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap> &rows)
 {
     try {
@@ -30,7 +30,8 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
                 "CREATE TEMP TABLE IF NOT EXISTS share_stage ("
                 "cid TEXT, hub_url TEXT, tth TEXT, path TEXT, name TEXT, "
                 "name_cf TEXT, path_cf TEXT, ext TEXT, is_dir INTEGER, size BIGINT, "
-                "nick TEXT, hub_name TEXT, ip TEXT, source INTEGER, created_at TEXT)")
+                "nick TEXT, hub_name TEXT, ip TEXT, source INTEGER, created_at TEXT,"
+                "seq BIGINT)")
                 || !ShareIndexDb::execOk(con, "DELETE FROM share_stage"))
             return false;
 
@@ -38,7 +39,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
         app.ClearColumns();
         const char *cols[] = {
             "cid", "hub_url", "tth", "path", "name", "name_cf", "path_cf", "ext",
-            "is_dir", "size", "nick", "hub_name", "ip", "source", "created_at"
+            "is_dir", "size", "nick", "hub_name", "ip", "source", "created_at", "seq"
         };
         for (const char *c : cols)
             app.AddColumn(c);
@@ -49,6 +50,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
         };
 
         const QString stamp = nowStamp();
+        qint64 seq = 0;
         for (const QVariantMap &row : rows) {
             const bool isDir = row.value("is_dir").toBool();
             const QString cid = sqlText(row.value("cid"));
@@ -75,6 +77,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             appendStr(sqlText(row.value("ip")));
             app.Append(int32_t(SourceFileList));
             appendStr(stamp);
+            app.Append(int64_t(seq++));
             app.EndRow();
         }
         app.Close();
@@ -90,17 +93,26 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             "FROM (SELECT * FROM share_stage LIMIT 1) s "
             "WHERE u.cid=s.cid AND u.hub_url=s.hub_url",
             "INSERT INTO share_files "
-            "SELECT base + row_number() OVER (), fresh.tth, fresh.size FROM ("
-            "SELECT DISTINCT s.tth, s.size FROM share_stage s "
-            "LEFT JOIN share_files f ON f.tth=s.tth AND f.size=s.size "
-            "WHERE s.is_dir=0 AND s.tth!='' AND f.file_id IS NULL) fresh "
-            "CROSS JOIN (SELECT coalesce(max(file_id), 0) AS base FROM share_files)",
+            "SELECT base + row_number() OVER (), tth, size, name, path, ext, name_cf, path_cf "
+            "FROM ("
+            "SELECT s.tth, s.size, s.name, s.path, s.ext, s.name_cf, s.path_cf, "
+            "row_number() OVER (PARTITION BY s.tth ORDER BY s.seq) AS rn "
+            "FROM share_stage s LEFT JOIN share_files f ON f.tth=s.tth "
+            "WHERE s.is_dir=0 AND s.tth!='' AND f.file_id IS NULL"
+            ") fresh CROSS JOIN (SELECT coalesce(max(file_id), 0) AS base FROM share_files) "
+            "WHERE rn = 1",
             "INSERT INTO share_locations "
-            "SELECT u.user_id, f.file_id, s.path, s.name, s.ext, s.is_dir, "
+            "SELECT u.user_id, f.file_id, "
+            "CASE WHEN f.file_id IS NULL OR s.path != f.path THEN s.path END, "
+            "CASE WHEN f.file_id IS NULL OR s.name != f.name THEN s.name END, "
+            "CASE WHEN f.file_id IS NULL OR s.ext != f.ext THEN s.ext END, "
+            "s.is_dir, "
             "CASE WHEN f.file_id IS NULL THEN s.size ELSE NULL END, "
-            "s.source, s.created_at, s.name_cf, s.path_cf "
+            "s.source, s.created_at, "
+            "CASE WHEN f.file_id IS NULL OR s.name_cf != f.name_cf THEN s.name_cf END, "
+            "CASE WHEN f.file_id IS NULL OR s.path_cf != f.path_cf THEN s.path_cf END "
             "FROM share_stage s LEFT JOIN share_files f "
-            "ON f.tth=s.tth AND f.size=s.size "
+            "ON f.tth=s.tth "
             "JOIN share_users u ON u.cid=s.cid AND u.hub_url=s.hub_url"
         };
         for (const char *statement : sql) {

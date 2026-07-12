@@ -18,9 +18,10 @@ using namespace dcpp;
 namespace {
 
 static const char *kSelectCols =
-    "SELECT e.name, coalesce(f.size,e.local_size,0), coalesce(f.tth,''), e.path, "
+    "SELECT coalesce(e.name,f.name), coalesce(f.size,e.local_size,0), "
+    "coalesce(f.tth,''), coalesce(e.path,f.path), "
     "u.nick, u.free_slots, u.all_slots, u.ip, u.hub_name, u.hub_url, "
-    "u.cid, e.is_dir, e.ext FROM share_locations e "
+    "u.cid, e.is_dir, coalesce(e.ext,f.ext) FROM share_locations e "
     "JOIN share_users u ON u.user_id=e.user_id "
     "LEFT JOIN share_files f ON f.file_id=e.file_id ";
 
@@ -57,7 +58,7 @@ QString ShareIndex::filterSql(const SearchFilter &filter, duckdb::vector<duckdb:
             ph << "?";
             binds.push_back(ShareIndexDb::strVal(e.toUpper()));
         }
-        parts << QString("e.ext IN (%1)").arg(ph.join(','));
+        parts << QString("coalesce(e.ext,f.ext) IN (%1)").arg(ph.join(','));
     }
 
     if (filter.size > 0 && filter.sizeMode != SearchManager::SIZE_DONTCARE) {
@@ -133,7 +134,8 @@ QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFi
     duckdb::vector<duckdb::Value> binds;
     QString sql = QString(kSelectCols) + "WHERE 1=1";
     for (const QString &tok : tokens) {
-        sql += " AND (contains(e.name_cf, ?) OR contains(e.path_cf, ?))";
+        sql += " AND (contains(coalesce(e.name_cf,f.name_cf), ?) "
+               "OR contains(coalesce(e.path_cf,f.path_cf), ?))";
         binds.push_back(ShareIndexDb::strVal(tok));
         binds.push_back(ShareIndexDb::strVal(tok));
     }

@@ -85,6 +85,11 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
             return false;
         }
     }
+    QString err;
+    if (!upsertMeta(con, QStringLiteral("schema_files_tth"), 1, &err)) {
+        setLastError(err);
+        return false;
+    }
     return true;
 }
 

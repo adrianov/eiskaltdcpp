@@ -19,10 +19,17 @@ QString sqlText(const QVariant &v)
     return s.isNull() ? QStringLiteral("") : s;
 }
 
+duckdb::Value sameNull(const QString &value, const QString &canonical, bool useCanon)
+{
+    if (useCanon && value == canonical)
+        return ShareIndexDb::nullVal();
+    return ShareIndexDb::strVal(value);
+}
+
 } // namespace
 
-/** Normalize one result, then UPDATE-else-INSERT its scalar location.
-    Keeps created_at and file-list source; empty ip / NULL slots keep old. */
+/** Normalize one result, then UPDATE-else-INSERT its location.
+    File strings equal to share_files become NULL; dirs stay concrete. */
 bool ShareIndex::upsertRow(duckdb::Connection &con, const QVariantMap &row, int source)
 {
     const bool isDir = row.value("is_dir").toBool();
@@ -30,94 +37,44 @@ bool ShareIndex::upsertRow(duckdb::Connection &con, const QVariantMap &row, int 
     const QString cid = sqlText(row.value("cid"));
     const QString path = sqlText(row.value("path"));
     const QString name = sqlText(row.value("name"));
+    const QString nameCf = name.toCaseFolded();
+    const QString pathCf = path.toCaseFolded();
     const QString ext = row.contains("ext") ? sqlText(row.value("ext")) : fileExt(name, isDir);
-    const QString ip = sqlText(row.value("ip"));
     if (cid.isEmpty() || name.isEmpty())
         return false;
 
     const bool byTth = !isDir && !tth.isEmpty();
     const qint64 size = row.value("size").toLongLong();
-    const QString hubUrl = sqlText(row.value("hub_url"));
     const QString stamp = nowStamp();
     QString err;
-    duckdb::vector<duckdb::Value> user;
-    user.push_back(ShareIndexDb::strVal(cid));
-    user.push_back(ShareIndexDb::strVal(hubUrl));
-    user.push_back(ShareIndexDb::strVal(row.value("nick")));
-    user.push_back(ShareIndexDb::strVal(row.value("hub_name")));
-    user.push_back(row.contains("free_slots") ? ShareIndexDb::i32Val(row.value("free_slots"))
-                                              : ShareIndexDb::nullVal());
-    user.push_back(row.contains("all_slots") ? ShareIndexDb::i32Val(row.value("all_slots"))
-                                             : ShareIndexDb::nullVal());
-    user.push_back(ShareIndexDb::strVal(ip));
-    user.push_back(ShareIndexDb::strVal(stamp));
-    user.push_back(ShareIndexDb::strVal(cid));
-    user.push_back(ShareIndexDb::strVal(hubUrl));
-    if (!ShareIndexDb::queryMat(con,
-            "INSERT INTO share_users "
-            "SELECT (SELECT coalesce(max(user_id),0)+1 FROM share_users), ?,?,?,?,?,?,?,? "
-            "WHERE NOT EXISTS (SELECT 1 FROM share_users WHERE cid=? AND hub_url=?)",
-            user, &err)) {
-        setLastError(err);
+
+    const qint64 userId = ensureUserId(con, row, stamp);
+    if (userId < 0)
         return false;
-    }
-    duckdb::vector<duckdb::Value> updateUser;
-    for (int i = 2; i <= 6; ++i)
-        updateUser.push_back(user[i]);
-    updateUser.push_back(user[6]);
-    updateUser.push_back(user[7]);
-    updateUser.push_back(ShareIndexDb::strVal(cid));
-    updateUser.push_back(ShareIndexDb::strVal(hubUrl));
-    if (!ShareIndexDb::queryMat(con,
-            "UPDATE share_users SET nick=?, hub_name=?, "
-            "free_slots=COALESCE(?,free_slots), all_slots=COALESCE(?,all_slots), "
-            "ip=CASE WHEN ?='' THEN ip ELSE ? END, updated_at=? WHERE cid=? AND hub_url=?",
-            updateUser, &err)) {
-        setLastError(err);
-        return false;
-    }
-    auto userRow = ShareIndexDb::query2(con,
-        "SELECT user_id FROM share_users WHERE cid=? AND hub_url=?",
-        ShareIndexDb::strVal(cid), ShareIndexDb::strVal(hubUrl), &err);
-    if (!userRow || userRow->RowCount() == 0) {
-        setLastError(err.isEmpty() ? QStringLiteral("user id") : err);
-        return false;
-    }
-    const qint64 userId = ShareIndexDb::qi64(userRow->GetValue(0, 0));
 
     qint64 fileId = 0;
+    QString cName, cPath, cExt, cNameCf, cPathCf;
     if (byTth) {
-        duckdb::vector<duckdb::Value> addFile;
-        addFile.push_back(ShareIndexDb::strVal(tth));
-        addFile.push_back(ShareIndexDb::i64Val(size));
-        addFile.push_back(ShareIndexDb::strVal(tth));
-        addFile.push_back(ShareIndexDb::i64Val(size));
-        if (!ShareIndexDb::queryMat(con,
-                "INSERT INTO share_files "
-                "SELECT (SELECT coalesce(max(file_id),0)+1 FROM share_files), ?, ? "
-                "WHERE NOT EXISTS (SELECT 1 FROM share_files WHERE tth=? AND size=?)",
-                addFile, &err)) {
-            setLastError(err);
+        fileId = ensureFileId(con, tth, size, name, path, ext,
+                              &cName, &cPath, &cExt, &cNameCf, &cPathCf);
+        if (fileId < 0)
             return false;
-        }
-        auto found = ShareIndexDb::query2(con,
-            "SELECT file_id FROM share_files WHERE tth=? AND size=?",
-            ShareIndexDb::strVal(tth), ShareIndexDb::i64Val(size), &err);
-        if (!found || found->RowCount() == 0) {
-            setLastError(err.isEmpty() ? QStringLiteral("file id") : err);
-            return false;
-        }
-        fileId = ShareIndexDb::qi64(found->GetValue(0, 0));
     }
+
+    const duckdb::Value vPath = sameNull(path, cPath, byTth);
+    const duckdb::Value vName = sameNull(name, cName, byTth);
+    const duckdb::Value vNameCf = sameNull(nameCf, cNameCf, byTth);
+    const duckdb::Value vPathCf = sameNull(pathCf, cPathCf, byTth);
+    const duckdb::Value vExt = sameNull(ext, cExt, byTth);
 
     duckdb::vector<duckdb::Value> binds;
     binds.push_back(ShareIndexDb::i64Val(userId));
     binds.push_back(byTth ? ShareIndexDb::i64Val(fileId) : ShareIndexDb::nullVal());
-    binds.push_back(ShareIndexDb::strVal(path));
-    binds.push_back(ShareIndexDb::strVal(name));
-    binds.push_back(ShareIndexDb::strVal(name.toCaseFolded()));
-    binds.push_back(ShareIndexDb::strVal(path.toCaseFolded()));
-    binds.push_back(ShareIndexDb::strVal(ext));
+    binds.push_back(vPath);
+    binds.push_back(vName);
+    binds.push_back(vNameCf);
+    binds.push_back(vPathCf);
+    binds.push_back(vExt);
     binds.push_back(byTth ? ShareIndexDb::nullVal() : ShareIndexDb::i64Val(size));
     binds.push_back(ShareIndexDb::i64Val(source));
     binds.push_back(ShareIndexDb::i64Val(source));
@@ -149,15 +106,15 @@ bool ShareIndex::upsertRow(duckdb::Connection &con, const QVariantMap &row, int 
     duckdb::vector<duckdb::Value> ins;
     ins.push_back(ShareIndexDb::i64Val(userId));
     ins.push_back(byTth ? ShareIndexDb::i64Val(fileId) : ShareIndexDb::nullVal());
-    ins.push_back(ShareIndexDb::strVal(path));
-    ins.push_back(ShareIndexDb::strVal(name));
-    ins.push_back(ShareIndexDb::strVal(ext));
+    ins.push_back(vPath);
+    ins.push_back(vName);
+    ins.push_back(vExt);
     ins.push_back(ShareIndexDb::i64Val(isDir ? 1 : 0));
     ins.push_back(byTth ? ShareIndexDb::nullVal() : ShareIndexDb::i64Val(size));
     ins.push_back(ShareIndexDb::i64Val(source));
     ins.push_back(ShareIndexDb::strVal(stamp));
-    ins.push_back(ShareIndexDb::strVal(name.toCaseFolded()));
-    ins.push_back(ShareIndexDb::strVal(path.toCaseFolded()));
+    ins.push_back(vNameCf);
+    ins.push_back(vPathCf);
     auto res = ShareIndexDb::queryMat(con,
         "INSERT INTO share_locations ("
         "user_id, file_id, path, name, ext, is_dir, local_size, source, created_at,"

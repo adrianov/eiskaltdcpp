@@ -11,8 +11,7 @@
 
 #ifdef USE_QT_SQLITE
 
-/** Normalized share-index schema. Names and paths stay scalar because each
-    location is independently searchable and returned to the UI. */
+/** Files keep first-found name/path; locations store NULL when equal. */
 bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix)
 {
     QString err;
@@ -21,7 +20,12 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             "file_id BIGINT PRIMARY KEY,"
             "tth TEXT NOT NULL,"
             "size BIGINT NOT NULL,"
-            "UNIQUE(tth, size))", &err)
+            "name TEXT NOT NULL,"
+            "path TEXT NOT NULL,"
+            "ext TEXT NOT NULL DEFAULT '',"
+            "name_cf TEXT NOT NULL,"
+            "path_cf TEXT NOT NULL,"
+            "UNIQUE(tth))", &err)
             || !ShareIndexDb::execOk(con,
             "CREATE TABLE IF NOT EXISTS " + prefix + "share_users ("
             "user_id BIGINT PRIMARY KEY,"
@@ -38,15 +42,15 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             "CREATE TABLE IF NOT EXISTS " + prefix + "share_locations ("
             "user_id BIGINT NOT NULL,"
             "file_id BIGINT,"
-            "path TEXT NOT NULL,"
-            "name TEXT NOT NULL,"
-            "ext TEXT NOT NULL DEFAULT '',"
+            "path TEXT,"
+            "name TEXT,"
+            "ext TEXT,"
             "is_dir INTEGER NOT NULL DEFAULT 0,"
             "local_size BIGINT,"
             "source INTEGER NOT NULL,"
             "created_at TEXT NOT NULL,"
-            "name_cf TEXT NOT NULL DEFAULT '',"
-            "path_cf TEXT NOT NULL DEFAULT ''"
+            "name_cf TEXT,"
+            "path_cf TEXT"
             ")", &err)) {
         setLastError(err);
         return false;

@@ -153,6 +153,35 @@ bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *er
             *error = "ext filter false positive";
         return false;
     }
+
+    f.extensions.clear();
+    f.terms = QStringList() << "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    f.isHash = true;
+    hits = idx.searchFts(con, f);
+    if (hits.isEmpty() || hits.first().value("TTH").toString() != f.terms.first()) {
+        if (error)
+            *error = "TTH search";
+        return false;
+    }
+
+    f.isHash = false;
+    f.terms = QStringList() << "breaking";
+    f.dirsOnly = true;
+    hits = idx.searchFts(con, f);
+    if (hits.isEmpty() || !hits.first().value("ISDIR").toBool()) {
+        if (error)
+            *error = "directory-only search";
+        return false;
+    }
+
+    f.dirsOnly = false;
+    f.filesOnly = true;
+    hits = idx.searchFts(con, f);
+    if (hits.isEmpty() || hits.first().value("ISDIR").toBool()) {
+        if (error)
+            *error = "file-only search";
+        return false;
+    }
     return true;
 }
 

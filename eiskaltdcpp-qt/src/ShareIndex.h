@@ -99,6 +99,7 @@ public:
 #ifdef USE_QT_SQLITE
     friend bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
     friend bool shareIndexSmokeMigrate(const QString &path, QString *error);
+    friend bool shareIndexSmokeWrites(ShareIndex &idx, duckdb::Connection &con, QString *error);
     friend void shareIndexRunWriteWorker();
 #endif
 
@@ -109,13 +110,18 @@ private:
 #ifdef USE_QT_SQLITE
     bool ensureSchema(duckdb::Connection &con, const std::string &prefix = std::string());
     bool ensureCap(duckdb::Connection &con);
-    /** Replace a legacy flat share_entries DB with an empty normalized schema. */
+    /** Replace outdated share-index schemas with an empty current schema. */
     bool compactLegacyDb();
     duckdb::Connection *threadConn();
     void disconnectThreadDb();
     void setLastError(const QString &err);
 
     bool upsertRow(duckdb::Connection &con, const QVariantMap &row, int source);
+    qint64 ensureUserId(duckdb::Connection &con, const QVariantMap &row, const QString &stamp);
+    qint64 ensureFileId(duckdb::Connection &con, const QString &tth, qint64 size,
+                        const QString &name, const QString &path, const QString &ext,
+                        QString *cName, QString *cPath, QString *cExt,
+                        QString *cNameCf, QString *cPathCf);
     bool appendListRows(duckdb::Connection &con, const QList<QVariantMap> &rows);
     QList<QVariantMap> searchFts(duckdb::Connection &con, const SearchFilter &filter);
     QList<QVariantMap> rowsFromResult(duckdb::MaterializedQueryResult &res);
