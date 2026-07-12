@@ -38,7 +38,7 @@ public:
     static InputColors inputColors();
     static QColor readableColor(const QColor &bg, const QColor &preferred);
 
-    /** App-wide QComboBox rules; covers combos created at any time. */
+    /** App-wide combo / checkbox / radio rules; covers widgets created later. */
     static QString comboStyleSheet();
     static void applyInputPalette(QWidget *widget);
     static void applyControlButton(QAbstractButton *button);
