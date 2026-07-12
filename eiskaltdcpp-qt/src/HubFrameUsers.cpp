@@ -19,6 +19,7 @@
 #include "dcpp/Exception.h"
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/LogManager.h"
+#include "dcpp/OnlineUser.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/UploadManager.h"
 
@@ -181,6 +182,19 @@ void HubFrame::grantSlot(const QString& id){
     }
 
     MainWindow::getInstance()->setStatusMessage(message);
+}
+
+void HubFrame::silenceUser(const QString& id){
+    Q_D(HubFrame);
+
+    if (id.isEmpty() || !d->client)
+        return;
+
+    OnlineUser *ou = ClientManager::getInstance()->findOnlineUser(CID(_tq(id)), d->client->getHubUrl(), false);
+    if (!ou || ou->getUser() == ClientManager::getInstance()->getMe())
+        return;
+
+    ou->getIdentity().setNoChat(!ou->getIdentity().noChat());
 }
 
 void HubFrame::addUserToFav(const QString& id){

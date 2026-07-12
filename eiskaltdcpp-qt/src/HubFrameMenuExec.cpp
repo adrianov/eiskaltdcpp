@@ -16,6 +16,7 @@
 #include "dcpp/Client.h"
 #include "dcpp/ClientManager.h"
 #include "dcpp/FavoriteManager.h"
+#include "dcpp/OnlineUser.h"
 #include "dcpp/UserCommand.h"
 
 #include <QCursor>
@@ -23,6 +24,18 @@
 #include <QVariant>
 
 using namespace dcpp;
+
+namespace {
+
+bool userSilenced(Client *client, const QString &cid){
+    if (!client || cid.isEmpty())
+        return false;
+
+    OnlineUser *ou = ClientManager::getInstance()->findOnlineUser(CID(_tq(cid)), client->getHubUrl(), false);
+    return ou && ou->getIdentity().noChat();
+}
+
+} // namespace
 
 QMenu *HubFrameMenu::buildAntispamMenu(bool showIcon){
     if (!AntiSpam::getInstance())
@@ -125,6 +138,11 @@ HubFrameMenu::Action HubFrameMenu::execChatMenu(Client *client, const QString &c
         title->setText(QObject::tr("[User went offline]"));
 
     menu->addAction(title);
+
+    if (silenceAction)
+        silenceAction->setText(userSilenced(client, cid)
+                               ? QObject::tr("Unsilence user")
+                               : QObject::tr("Silence user"));
 
     if (pmw){
         menu->addActions(pm_actions);

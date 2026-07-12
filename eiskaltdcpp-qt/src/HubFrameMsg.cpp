@@ -344,6 +344,9 @@ void HubFrame::on(ClientListener::Message, Client*, const ChatMessage &message) 
         if (d->chatDisabled)
             return;
 
+        if (user->getIdentity().noChat())
+            return;
+
         if (AntiSpam::getInstance() && AntiSpam::getInstance()->isInBlack(_q(user->getIdentity().getNick())))
             return;
 

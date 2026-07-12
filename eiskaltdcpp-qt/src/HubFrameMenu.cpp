@@ -38,7 +38,7 @@ HubFrameMenu *HubFrameMenu::getInstance(){
     return instance;
 }
 
-HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr))
+HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr)), silenceAction(nullptr)
 {
     WulforUtil *WU = WulforUtil::getInstance();
 
@@ -54,6 +54,7 @@ HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr))
     QAction *fav_del     = new QAction(WU->getPixmap(WulforUtil::eiFAVREM), QObject::tr("Remove from Favorites"), nullptr);
     QAction *grant_slot  = new QAction(WU->getPixmap(WulforUtil::eiEDITADD), QObject::tr("Grant slot"), nullptr);
     QAction *rem_queue   = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), QObject::tr("Remove from Queue"), nullptr);
+    silenceAction        = new QAction(WU->getPixmap(WulforUtil::eiFILTER), QObject::tr("Silence user"), nullptr);
 
     // Chat actions
     QAction *sep1        = new QAction(nullptr);
@@ -95,7 +96,8 @@ HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr))
             << fav_add
             << fav_del
             << grant_slot
-            << rem_queue;
+            << rem_queue
+            << silenceAction;
 
     pm_actions << copy_text
             << copy_nick
@@ -105,7 +107,8 @@ HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr))
             << fav_add
             << fav_del
             << grant_slot
-            << rem_queue;
+            << rem_queue
+            << silenceAction;
 
     ul_actions << browse
             << private_msg
@@ -143,6 +146,7 @@ HubFrameMenu::HubFrameMenu() : menu(new QMenu(nullptr))
     chat_actions_map.insert(select_all, SelectAllChat);
     chat_actions_map.insert(zoom_in, ZoomInChat);
     chat_actions_map.insert(zoom_out, ZoomOutChat);
+    chat_actions_map.insert(silenceAction, SilenceUser);
 
     chat_actions_map.insert(copy_data_nick,  CopyNick);
     chat_actions_map.insert(copy_data_cmnt,  CopyComment);

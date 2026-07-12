@@ -182,6 +182,7 @@ private Q_SLOTS:
     void slotCopyHubIP();
 
     void grantSlot(const QString&);
+    void silenceUser(const QString&);
     void addUserToFav(const QString&);
     void delUserFromFav(const QString&);
     void changeFavStatus(const QString&);

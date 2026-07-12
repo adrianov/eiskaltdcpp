@@ -38,6 +38,7 @@ public:
         FavoriteRem,
         GrantSlot,
         RemoveQueue,
+        SilenceUser,
         UserCommands,
 
         /** Additional actions for chat */
@@ -80,6 +81,7 @@ private:
     Action resolveSelection(QAction *res, QMenu *antispam_menu, dcpp::Client *client, const QString &cid);
 
     QMenu *menu;
+    QAction *silenceAction;
     QList<QAction*> actions;           // actions list for menu
     QList<QAction*> pm_actions;        // actions list for menu in PMWindow
     QList<QAction*> ul_actions;        // actions list for menu in user list
