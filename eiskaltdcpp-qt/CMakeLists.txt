@@ -110,6 +110,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp
     src/HubFrameClient.cpp
+    src/HubFrameChatMenu.cpp
     src/HubFrameLinkMagnet.cpp
     src/HubFrameLinkParser.cpp
     src/HubFrameMenu.cpp
@@ -153,6 +154,9 @@ set(QT_EXTRA_SOURCES
     src/SearchItem.cpp
     src/ReciprocalList.cpp
     src/ShareIndexListListener.cpp
+    src/SettingsConnectionInit.cpp
+    src/SettingsConnectionPorts.cpp
+    src/SettingsConnectionSave.cpp
     src/SettingsGUIColor.cpp
     src/SettingsGUIInit.cpp
     src/SettingsGUIInitBasic.cpp
@@ -191,6 +195,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexIngest.cpp
     src/ShareIndexIngestWrite.cpp
     src/ShareIndexInsert.cpp
+    src/ShareIndexEnsure.cpp
     src/ShareIndexMigrate.cpp
     src/ShareIndexQueue.cpp
     src/ShareIndexQueueCore.cpp
@@ -204,6 +209,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
+    src/ShareIndexSmokeWrite.cpp
     src/ShareIndexSmokeMigrate.cpp
     src/ShareIndexSmokeSearch.cpp
     src/ShareIndexUpsert.cpp
@@ -583,8 +589,11 @@ if (LUA_SCRIPT)
 endif (LUA_SCRIPT)
 
 if (USE_MINIUPNP)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/SettingsConnection.cpp
-                 PROPERTY COMPILE_DEFINITIONS USE_MINIUPNP )
+    set_property(SOURCE
+        ${PROJECT_SOURCE_DIR}/src/SettingsConnection.cpp
+        ${PROJECT_SOURCE_DIR}/src/SettingsConnectionInit.cpp
+        ${PROJECT_SOURCE_DIR}/src/SettingsConnectionSave.cpp
+        PROPERTY COMPILE_DEFINITIONS USE_MINIUPNP)
 endif()
 
 if (FORCE_XDG)
