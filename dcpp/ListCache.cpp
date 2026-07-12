@@ -11,6 +11,7 @@
 #include "ListCache.h"
 
 #include "ClientManager.h"
+#include "DirectoryListing.h"
 #include "File.h"
 #include "ListCacheStore.h"
 #include "Util.h"
@@ -46,23 +47,28 @@ bool ListCache::matchesShare(const UserPtr& user) {
     return ClientManager::getInstance()->getBytesShared(user) == saved;
 }
 
-bool ListCache::isPlausibleList(int64_t shareSize, int64_t listSize) {
-    if(listSize < 0)
+bool ListCache::isPlausibleList(int64_t listSize) {
+    return listSize > 0;
+}
+
+bool ListCache::listHasEntries(const HintedUser& user, const string& listPath) {
+    try {
+        DirectoryListing dl(user);
+        dl.loadFile(listPath);
+        const DirectoryListing::Directory* root = dl.getRoot();
+        return root && (!root->files.empty() || !root->directories.empty());
+    } catch(const Exception&) {
         return false;
-    // Stub/empty bz2 FileListing is ~198 bytes; anything under 512 with a large share is bogus.
-    constexpr int64_t kMinRealShare = 64 * 1024 * 1024;
-    constexpr int64_t kEmptyListMax = 512;
-    if(shareSize > kMinRealShare && listSize < kEmptyListMax)
-        return false;
-    return true;
+    }
 }
 
 bool ListCache::matchesUserShare(const HintedUser& user, const string& listBase) {
-    if(!matchesShare(user.user) || findListFile(listBase).empty())
+    if(!matchesShare(user.user))
         return false;
-    const int64_t share = ListCacheStore::shareSize(user.user->getCID());
-    const int64_t listBytes = ListCacheStore::fileSize(user.user->getCID());
-    return isPlausibleList(share, listBytes);
+    const string path = findListFile(listBase);
+    if(path.empty())
+        return false;
+    return isPlausibleList(File::getSize(path)) && listHasEntries(user, path);
 }
 
 int64_t ListCache::fileSize(const CID& cid) {
