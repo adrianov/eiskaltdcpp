@@ -36,23 +36,23 @@ static QString fromShare(const QString &tth)
     return QString();
 }
 
-static QString fromFinished(const QString &tth)
+static QString fromFinished(const QString &tth, qint64 size)
 {
     if (tth.isEmpty())
         return QString();
 
     const string path = FinishedManager::getInstance()->getTarget(_tq(tth));
-    if (path.empty() || File::getSize(path) <= -1)
+    if (path.empty() || File::getSize(path) != size)
         return QString();
     return _q(path);
 }
 
-QString resolve(const QString &tth)
+QString resolve(const QString &tth, qint64 size)
 {
     const QString shared = fromShare(tth);
     if (!shared.isEmpty())
         return shared;
-    return fromFinished(tth);
+    return fromFinished(tth, size);
 }
 
 bool openFile(const QString &path)

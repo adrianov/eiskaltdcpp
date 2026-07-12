@@ -17,6 +17,7 @@
 
 #include "dcpp/SearchManager.h"
 #include "dcpp/ShareManager.h"
+#include "dcpp/QueueItem.h"
 #include "dcpp/Client.h"
 #include "dcpp/Util.h"
 #include "dcpp/Text.h"
@@ -146,4 +147,22 @@ void SearchFrame::slotStopSearch(){
 
     d->stop = true;
     d->waitingResults = false;
+}
+
+void SearchFrame::on(QueueManagerListener::Finished, QueueItem *qi, const string&, int64_t) noexcept {
+    if (!qi || qi->isSet(QueueItem::FLAG_USER_LIST))
+        return;
+
+    emit coreDownloadFinished(_q(qi->getTTH().toBase32()));
+}
+
+void SearchFrame::on(QueueManagerListener::FileMoved, const string&) noexcept {
+    emit coreDownloadFinished(QString());
+}
+
+void SearchFrame::slotDownloadFinished(const QString &tth){
+    Q_D(SearchFrame);
+
+    if (d->model)
+        d->model->refreshLocal(tth);
 }

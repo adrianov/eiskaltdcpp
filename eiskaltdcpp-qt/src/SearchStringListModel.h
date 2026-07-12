@@ -9,15 +9,22 @@
 
 #pragma once
 
+#include <QStringListModel>
+#include <QList>
 #include <QString>
 
-/** Resolve a search-result TTH to a local file (own share or finished download). */
-namespace SearchLocalPath {
+/** Checkable hub list model for the search side panel. */
+class SearchStringListModel: public QStringListModel {
+public:
+    SearchStringListModel(QObject *parent = nullptr): QStringListModel(parent) {}
+    virtual ~SearchStringListModel() {}
 
-/** Real path if the TTH is shared or a complete finished download still exists. */
-QString resolve(const QString &tth, qint64 size);
+    QVariant data(const QModelIndex &index, int role) const;
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
+    Qt::ItemFlags flags(const QModelIndex &) const {
+        return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable);
+    }
 
-bool openFile(const QString &path);
-bool openDirectory(const QString &path);
-
-} // namespace SearchLocalPath
+private:
+    QList<QString> checked;
+};

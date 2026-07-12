@@ -83,6 +83,8 @@ public:
     bool exists(const QString &user_cid) const;
     /** Cached share/finished path for this TTH; empty if not local. */
     QString localPath() const;
+    /** Drop cached path so the next localPath() lookup runs again. */
+    void clearLocalPath();
 
     unsigned count;
 
@@ -163,6 +165,8 @@ public:
 
     /** */
     void repaint();
+    /** Re-resolve one TTH, or all TTHs after an asynchronous file move. */
+    void refreshLocal(const QString &tth);
 
 public Q_SLOTS:
     /** */

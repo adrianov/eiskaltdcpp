@@ -17,6 +17,7 @@
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/SearchManager.h"
+#include "dcpp/QueueManager.h"
 #include "dcpp/SettingsManager.h"
 
 #include <QHeaderView>
@@ -78,6 +79,7 @@ SearchFrame::SearchFrame(QWidget *parent): QWidget(parent), d_ptr(new SearchFram
        d-> str_model->setData(d->str_model->index(i, 0), Qt::Checked, Qt::CheckStateRole);
 
     SearchManager::getInstance()->addListener(this);
+    QueueManager::getInstance()->addListener(this);
 }
 
 SearchFrame::~SearchFrame(){
@@ -103,6 +105,7 @@ SearchFrame::~SearchFrame(){
 void SearchFrame::closeEvent(QCloseEvent *e){
     SearchManager::getInstance()->removeListener(this);
     ClientManager::getInstance()->removeListener(this);
+    QueueManager::getInstance()->removeListener(this);
 
     save();
 

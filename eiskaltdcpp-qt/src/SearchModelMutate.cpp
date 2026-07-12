@@ -63,6 +63,36 @@ void SearchModel::setFilterRole(int role){
     filterRole = role;
 }
 
+void SearchModel::refreshLocal(const QString &tth){
+    if (tth.isEmpty()) {
+        for (SearchItem *item : tths) {
+            item->clearLocalPath();
+            for (SearchItem *child : item->childItems)
+                child->clearLocalPath();
+        }
+        emit layoutChanged();
+        return;
+    }
+
+    SearchItem *item = tths.value(tth);
+    if (!item)
+        return;
+
+    item->clearLocalPath();
+    for (SearchItem *child : item->childItems)
+        child->clearLocalPath();
+
+    const QModelIndex idx = createIndexForItem(item);
+    if (idx.isValid())
+        emit dataChanged(idx, idx.sibling(idx.row(), columnCount() - 1));
+
+    for (SearchItem *child : item->childItems) {
+        const QModelIndex c = createIndexForItem(child);
+        if (c.isValid())
+            emit dataChanged(c, c.sibling(c.row(), columnCount() - 1));
+    }
+}
+
 bool SearchModel::okToFind(const SearchItem *item){
     if (!item)
         return false;

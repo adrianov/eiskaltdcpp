@@ -76,6 +76,7 @@ void SearchFrame::init(){
     connect(this, SIGNAL(coreClientDisconnected(QString)), this, SLOT(onHubRemoved(QString)),Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientUpdated(QString)),      this, SLOT(onHubChanged(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreSR(VarMap)),                  this, SLOT(queueResult(VarMap)), Qt::QueuedConnection);
+    connect(this, SIGNAL(coreDownloadFinished(QString)),   this, SLOT(slotDownloadFinished(QString)), Qt::QueuedConnection);
 
     d->resultFlush = new QTimer(this);
     d->resultFlush->setSingleShot(true);

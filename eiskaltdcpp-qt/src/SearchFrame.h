@@ -16,18 +16,17 @@
 #include <QMenu>
 #include <QCloseEvent>
 #include <QMetaType>
-#include <QStringListModel>
-
-#include <memory>
 
 #include "ui_UISearchFrame.h"
 #include "ArenaWidget.h"
+#include "SearchStringListModel.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/SearchResult.h"
 #include "dcpp/SearchManager.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/ClientManagerListener.h"
+#include "dcpp/QueueManagerListener.h"
 #include "dcpp/Singleton.h"
 
 using namespace dcpp;
@@ -35,24 +34,12 @@ using namespace dcpp;
 class SearchItem;
 class SearchFramePrivate;
 
-class SearchStringListModel: public QStringListModel{
-public:
-    SearchStringListModel(QObject *parent = nullptr): QStringListModel(parent){}
-    virtual ~SearchStringListModel(){}
-
-    QVariant data(const QModelIndex &index, int role) const;
-    bool setData(const QModelIndex &index, const QVariant &value, int role);
-    Qt::ItemFlags flags(const QModelIndex &) const { return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable); }
-
-private:
-   QList<QString> checked;
-};
-
 class SearchFrame : public QWidget,
                     public ArenaWidget,
                     private Ui::SearchFrame,
                     private SearchManagerListener,
-                    private ClientManagerListener
+                    private ClientManagerListener,
+                    private QueueManagerListener
 {
     Q_OBJECT
     Q_INTERFACES(ArenaWidget)
@@ -147,6 +134,7 @@ Q_SIGNALS:
     void coreClientConnected(const QString &info);
     void coreClientUpdated(const QString &info);
     void coreClientDisconnected(const QString &info);
+    void coreDownloadFinished(const QString &tth);
 
 private Q_SLOTS:
     void slotFilter();
@@ -169,6 +157,7 @@ private Q_SLOTS:
     void queueResult(const VarMap &map);
     void flushResults();
     void setIndexStats(const QString &text);
+    void slotDownloadFinished(const QString &tth);
 
 private:
     void init();
@@ -190,6 +179,8 @@ private:
     virtual void on(ClientConnected, Client* c) noexcept;
     virtual void on(ClientUpdated, Client* c) noexcept;
     virtual void on(ClientDisconnected, Client* c) noexcept;
+    virtual void on(QueueManagerListener::Finished, QueueItem*, const string&, int64_t) noexcept;
+    virtual void on(QueueManagerListener::FileMoved, const string&) noexcept;
 
     Q_DECLARE_PRIVATE (SearchFrame)
     SearchFramePrivate* d_ptr;
