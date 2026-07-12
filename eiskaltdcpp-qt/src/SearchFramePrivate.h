@@ -67,4 +67,6 @@ public:
     /** Coalesce hub SR UI inserts (ShareIndex upsert stays per-result). */
     QList<SearchFrame::VarMap> pendingResults;
     QTimer *resultFlush = nullptr;
+    /** True while a queued empty-TTH local refresh is waiting to run. */
+    bool localRefreshPending = false;
 };

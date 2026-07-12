@@ -158,6 +158,7 @@ private Q_SLOTS:
     void flushResults();
     void setIndexStats(const QString &text);
     void slotDownloadFinished(const QString &tth);
+    void slotLocalRefreshAll();
 
 private:
     void init();

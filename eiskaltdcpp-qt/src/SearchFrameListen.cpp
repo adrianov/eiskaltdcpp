@@ -163,6 +163,25 @@ void SearchFrame::on(QueueManagerListener::FileMoved, const string&) noexcept {
 void SearchFrame::slotDownloadFinished(const QString &tth){
     Q_D(SearchFrame);
 
+    if (!d->model)
+        return;
+
+    if (tth.isEmpty()) {
+        // FileMoved has no TTH; coalesce already-queued empties into one refresh.
+        if (d->localRefreshPending)
+            return;
+        d->localRefreshPending = true;
+        QMetaObject::invokeMethod(this, "slotLocalRefreshAll", Qt::QueuedConnection);
+        return;
+    }
+
+    d->model->refreshLocal(tth);
+}
+
+void SearchFrame::slotLocalRefreshAll(){
+    Q_D(SearchFrame);
+
+    d->localRefreshPending = false;
     if (d->model)
-        d->model->refreshLocal(tth);
+        d->model->refreshLocal(QString());
 }

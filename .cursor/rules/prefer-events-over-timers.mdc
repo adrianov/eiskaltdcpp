@@ -1,0 +1,23 @@
+---
+description: Prefer queued events or flags over QTimer when coalescing or deferring work.
+alwaysApply: true
+---
+
+# Prefer events/queues over timers
+
+Do **not** reach for `QTimer` (or sleep-based delays) to coalesce bursts, defer UI work, or “debounce” core listener storms when the Qt event queue can do the same job.
+
+## Prefer
+
+- A **pending flag** plus one `QMetaObject::invokeMethod(..., Qt::QueuedConnection)` (or a dedicated signal with `Qt::QueuedConnection`) so many arrivals collapse into a single later slot.
+- Existing queues already drained by a flush slot (batch lists, pending maps) when the work is naturally batchable.
+- Immediate, targeted updates when the event carries enough identity (e.g. a TTH) and the model can update one row cheaply.
+
+## Avoid
+
+- Single-shot timers whose only purpose is “wait a bit then refresh everything.”
+- Artificial intervals that hide races instead of ordering work on the event loop.
+
+## When a timer is appropriate
+
+Use a timer only when the delay itself is part of the product behavior (progress ticks, search countdown, periodic status, user-visible timeouts)—not as a substitute for coalescing queued work.
