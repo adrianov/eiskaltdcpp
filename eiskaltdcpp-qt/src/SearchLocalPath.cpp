@@ -38,7 +38,8 @@ static QString fromShare(const QString &tth)
 
 static QString fromFinished(const QString &tth, qint64 size)
 {
-    if (tth.isEmpty())
+    // size <= 0 is not authoritative (missing ESIZE / dirs); avoid matching a 0-byte file.
+    if (tth.isEmpty() || size <= 0)
         return QString();
 
     const string path = FinishedManager::getInstance()->getTarget(_tq(tth));
