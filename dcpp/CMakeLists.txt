@@ -95,6 +95,7 @@ set(DCPP_EXTRA_SOURCES
     LogManagerTrim.cpp
     ProcessExit.cpp
     SocketSocks.cpp
+    SocketResolve.cpp
     UserConnectionLine.cpp
     UserConnectionChunk.cpp
     UserConnectionSpeed.cpp

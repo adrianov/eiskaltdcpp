@@ -50,7 +50,10 @@ void Socket::socksConnect(const string& aAddr, const string& aPort, uint32_t tim
         connStr.insert(connStr.end(), aAddr.begin(), aAddr.end());
     } else {
         connStr.push_back(1);
-        const unsigned long addr = inet_addr(resolve(aAddr).c_str());
+        const string resolved = resolve(aAddr);
+        if(resolved.empty())
+            throw SocketException(str(F_("Unable to resolve %1%") % aAddr));
+        const unsigned long addr = inet_addr(resolved.c_str());
         const uint8_t* paddr = (uint8_t*)&addr;
         connStr.insert(connStr.end(), paddr, paddr + 4);
     }
