@@ -9,13 +9,23 @@ export HOMEBREW=${HOMEBREW:-$(brew --prefix)}
 export OSX_ARCHITECTURES=${OSX_ARCHITECTURES:-arm64}
 export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-26.0}
 
+# Apple Clang rejects -fuse-ld=mold (often set for Linux). Use stock clang.
+unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+export CC=clang
+export CXX=clang++
+
+# Drop a poisoned in-tree cache from a previous configure in the source root.
+rm -rf "$root/CMakeCache.txt" "$root/CMakeFiles"
+
 mkdir -p "$build"
 cd "$build"
 
 cmake "$root" \
     -DCMAKE_TOOLCHAIN_FILE="$root/macos/homebrew-toolchain.cmake" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_INSTALL_PREFIX="$dist"
+    -DCMAKE_INSTALL_PREFIX="$dist" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++
 
 make -j"$(sysctl -n hw.ncpu)"
 make install
