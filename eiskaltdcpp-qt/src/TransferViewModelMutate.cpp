@@ -111,6 +111,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
 
     TransferViewItem *item = nullptr;
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item)) {
+        // Uploads come from CM::Added only; do not revive after CM::Removed.
+        if (!vbol(params["DOWN"]))
+            return;
         addConnection(params);
         if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
             return;

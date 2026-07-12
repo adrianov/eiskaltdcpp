@@ -40,7 +40,23 @@ void clearUploadUiThrottle(const QString &key) {
     uploadTickTimes.remove(key);
 }
 
+void clearUploadUiThrottleByCid(const QString &cid) {
+    if (cid.isEmpty() || uploadTickTimes.isEmpty())
+        return;
+    const QString prefix = cid + QLatin1Char('|');
+    for (auto it = uploadTickTimes.begin(); it != uploadTickTimes.end(); ) {
+        if (it.key().startsWith(prefix))
+            it = uploadTickTimes.erase(it);
+        else
+            ++it;
+    }
+}
+
 } // namespace
+
+void TransferView::clearUploadThrottle(const QString &cid) {
+    clearUploadUiThrottleByCid(cid);
+}
 
 void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) noexcept{
     VarMap params;
@@ -114,21 +130,4 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     params["FAIL"] = false;
 
     emit coreUMComplete(params);
-}
-
-void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept{
-    clearUploadUiThrottle(uploadTickKey(ul));
-
-    VarMap params;
-    getParams(params, ul);
-    const UploadUiState s = uploadState(ul);
-    const QString stat = reason.empty() ? tr("Upload failed") : _q(reason);
-    applyUploadMetrics(params, s, stat);
-    applyUploadSpeed(params, ul, s);
-    params["DOWN"] = false;
-    params["FAIL"] = false;
-    params["SPEED"] = 0.0;
-    params["TLEFT"] = qlonglong(-1);
-
-    emit coreUMFailed(params);
 }

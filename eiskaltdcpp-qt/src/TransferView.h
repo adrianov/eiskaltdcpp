@@ -110,7 +110,6 @@ Q_SIGNALS:
     void coreUMStarting(VarMap);
     void coreUMTick(VarMap);
     void coreUMComplete(VarMap);
-    void coreUMFailed(VarMap);
 
     void coreUpdateParents();
     void coreUpdateTransferPosition(VarMap, qint64);
@@ -159,7 +158,6 @@ protected:
     virtual void on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) noexcept;
     virtual void on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList& uls) noexcept;
     virtual void on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) noexcept;
-    virtual void on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept;
 
 private Q_SLOTS:
     void slotContextMenu(const QPoint&);
@@ -182,6 +180,7 @@ private:
 
     void getParams(VarMap&, const dcpp::ConnectionQueueItem*);
     void getParams(VarMap&, const dcpp::Transfer*);
+    void clearUploadThrottle(const QString &cid);
 
     void init();
 

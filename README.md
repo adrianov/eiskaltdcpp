@@ -38,7 +38,7 @@ Currently supported features (not full list):
 * Lists of downloaded and uploaded files (with file-type filter on finished downloads, same types as Search); ability to save logs of downloads.
 * Lists of public and favorite hubs. Public hubs lists have multiple sources; favorite hubs are extremely flexible in configuration features.
 * Lists of favorite users (they will receive extra slot for downloading files, etc.).
-* List of active transfers (downloads/uploads), including the queue of users waiting for the slot (user may temporary grant extra slot for them).
+* List of active transfers (downloads/uploads), including the queue of users waiting for the slot (user may temporary grant extra slot for them). Failed uploads leave the list when the connection closes (they no longer stick as “Connection closed” / “Connection reset by peer”).
 * Flexible settings for downloading files (lists of destination directories, directory for incomplete downloads, limitation of number of simultaneous downloads, compressed transfers, check of check sums, etc.). Incomplete files with download progress are preferred over not-started items within the same queue priority. TTH tree (`tthl`) is requested only for large files (≥ 20 MiB) or when multiple sources need block segments; smaller single-source downloads use the TTH root alone.
 * Indicator of free space on disk where main downloads directory is located.
 * Support of IP filter and basic antispam. Private-message sidebar **Mark as Spam** stores message bodies and silently discards identical future PMs.

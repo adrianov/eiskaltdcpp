@@ -58,6 +58,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Removed, dcpp::Connection
     getParams(params, cqi);
     if (cqi->getDownload())
         TransferViewMetrics::clearDownloadUiThrottleByCid(vstr(params["CID"]));
+    else
+        clearUploadThrottle(vstr(params["CID"]));
 
     emit coreCMRemoved(params);
 }

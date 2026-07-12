@@ -129,8 +129,8 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
             failDownloadQueue(dlCqi, aSource, aError, protocolError);
         } else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
             auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
-            dcassert(i != uploads.end());
-            putCQI(*i);
+            if(i != uploads.end())
+                putCQI(*i);
         }
     } else if(dlCqi && aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
         failDownloadQueue(dlCqi, aSource, aError, protocolError);
