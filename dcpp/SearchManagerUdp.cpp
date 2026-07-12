@@ -14,6 +14,7 @@
 
 #include "AdcCommand.h"
 #include "ClientManager.h"
+#include "IncomingPortCheck.h"
 #include "SearchResult.h"
 #include "StringTokenizer.h"
 #include "Text.h"
@@ -172,6 +173,9 @@ int SearchManager::UdpQueue::run() {
 }
 
 void SearchManager::onData(const uint8_t* buf, size_t aLen, const string& remoteIp) {
+    if(!remoteIp.empty() && !port.empty())
+        IncomingPortCheck::getInstance()->noteOpen("UDP", port);
+
     string x((char*)buf, aLen);
     queue.addResult(x, remoteIp);
 }

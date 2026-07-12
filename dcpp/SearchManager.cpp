@@ -22,6 +22,7 @@
 #include "SearchManager.h"
 #include "SearchQuery.h"
 #include "format.h"
+#include "IncomingPortCheck.h"
 #include "LogManager.h"
 #include "ClientManager.h"
 
@@ -106,6 +107,7 @@ void SearchManager::disconnect() noexcept {
         queue.shutdown();
         socket->disconnect();
         port.clear();
+        IncomingPortCheck::getInstance()->clearKind("UDP");
 
         join();
 

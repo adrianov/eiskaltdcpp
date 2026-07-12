@@ -14,6 +14,7 @@
 #include "ConnectionManager.h"
 #include "HttpConnection.h"
 #include "LogManager.h"
+#include "Util.h"
 #include "format.h"
 
 #include <regex>
@@ -34,7 +35,50 @@ void IncomingPortCheck::start() {
     if(busy.exchange(true))
         return;
 
+    {
+        Lock l(cs);
+        lastResult.erase("TCP");
+        lastResult.erase("TLS");
+        lastPort.erase("TCP");
+        lastPort.erase("TLS");
+    }
+    fire(IncomingPortCheckListener::PortResult(), string(), string(),
+         static_cast<int>(Result::Unknown));
+
     Thread::start();
+}
+
+IncomingPortCheck::Result IncomingPortCheck::getResult(const string& kind) const {
+    Lock l(cs);
+    auto i = lastResult.find(kind);
+    return i == lastResult.end() ? Result::Unknown : i->second;
+}
+
+string IncomingPortCheck::getPort(const string& kind) const {
+    Lock l(cs);
+    auto i = lastPort.find(kind);
+    return i == lastPort.end() ? Util::emptyString : i->second;
+}
+
+void IncomingPortCheck::noteOpen(const string& kind, const string& port) {
+    {
+        Lock l(cs);
+        if(lastResult[kind] == Result::Open && lastPort[kind] == port)
+            return;
+        lastResult[kind] = Result::Open;
+        lastPort[kind] = port;
+    }
+    fire(IncomingPortCheckListener::PortResult(), kind, port, static_cast<int>(Result::Open));
+}
+
+void IncomingPortCheck::clearKind(const string& kind) {
+    {
+        Lock l(cs);
+        lastResult.erase(kind);
+        lastPort.erase(kind);
+    }
+    fire(IncomingPortCheckListener::PortResult(), kind, string(),
+         static_cast<int>(Result::Unknown));
 }
 
 int IncomingPortCheck::run() noexcept {
@@ -57,6 +101,7 @@ int IncomingPortCheck::run() noexcept {
         report(tls, "TLS", probe(tls));
 
     busy = false;
+    fire(IncomingPortCheckListener::Finished());
     return 0;
 }
 
@@ -111,6 +156,14 @@ IncomingPortCheck::Result IncomingPortCheck::parseBody(const string& body) {
 }
 
 void IncomingPortCheck::report(const string& port, const string& label, Result result) {
+    {
+        Lock l(cs);
+        lastResult[label] = result;
+        lastPort[label] = port;
+    }
+
+    fire(IncomingPortCheckListener::PortResult(), label, port, static_cast<int>(result));
+
     auto msg = [&](const char* fmt) {
         LogManager::getInstance()->message(string("Connectivity: ") + str(F_(fmt) % label % port));
     };
