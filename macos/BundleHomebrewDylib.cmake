@@ -34,6 +34,9 @@ if (_bundle_rc)
   message(FATAL_ERROR "BundleHomebrewDylib: copy failed (${_bundle_rc})")
 endif ()
 
+# Homebrew Cellar dylibs are often mode 444; preserve that and xattr -cr / install_name_tool fail.
+execute_process(COMMAND chmod 755 "${_bundle_dest}")
+
 execute_process(COMMAND install_name_tool -id "${_bundle_id}" "${_bundle_dest}"
   RESULT_VARIABLE _bundle_rc
   ERROR_VARIABLE _bundle_err)
