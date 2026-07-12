@@ -32,6 +32,16 @@ void NmdcHub::onLine(const string& aLine) noexcept {
     if(aLine.empty())
         return;
 
+    // Flylink hubs sometimes prepend null/control bytes before a real command.
+    if(static_cast<unsigned char>(aLine[0]) < 32) {
+        size_t start = 1;
+        while(start < aLine.size() && static_cast<unsigned char>(aLine[start]) < 32)
+            ++start;
+        if(start < aLine.size())
+            onLine(aLine.substr(start));
+        return;
+    }
+
     if(aLine[0] != '$') {
         if(state != STATE_NORMAL && Util::findSubString(aLine, "banned") != string::npos)
             setAutoReconnect(false);
@@ -39,6 +49,9 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         string line = toUtf8(aLine);
         if(line[0] != '<') {
             const string text = unescape(line);
+            // Corrupted framing or embedded protocol (e.g. nulls + "$Search …") — drop.
+            if(hasControlChars(text) || text.find("$Search") != string::npos)
+                return;
             stopInfectedConnect(text);
             noteSecureCtmRejected(text);
             noteSearchDenied(*this, text);
@@ -48,11 +61,16 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 
         string::size_type i = line.find('>', 2);
         if(i == string::npos) {
+            // Malformed "<…$Search…" with no nick close — was shown as status.
+            if(hasControlChars(line) || line.find('$') != string::npos)
+                return;
             fire(ClientListener::StatusMessage(), this, unescape(line));
             return;
         }
 
         string nick = line.substr(1, i - 1);
+        if(!isNickLike(nick))
+            return;
         if((line.length() - 1) <= i) {
             fire(ClientListener::StatusMessage(), this, unescape(line));
             return;

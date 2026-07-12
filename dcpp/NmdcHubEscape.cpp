@@ -14,6 +14,24 @@
 
 namespace dcpp {
 
+bool NmdcHub::isNickLike(const string& nick) {
+    if(nick.empty() || nick.size() > 64)
+        return false;
+    for(unsigned char c : nick) {
+        if(c <= 32 || c == ':' || c == '|' || c == '$' || c == '<' || c == '>')
+            return false;
+    }
+    return true;
+}
+
+bool NmdcHub::hasControlChars(const string& s) {
+    for(unsigned char c : s) {
+        if(c < 32)
+            return true;
+    }
+    return false;
+}
+
 string NmdcHub::validateMessage(string tmp, bool reverse) {
     string::size_type i = 0;
 

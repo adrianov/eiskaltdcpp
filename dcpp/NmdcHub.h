@@ -74,6 +74,8 @@ public:
     void send(const AdcCommand&) override { dcassert(0); }
 
     static string validateMessage(string tmp, bool reverse);
+    static bool isNickLike(const string& nick);
+    static bool hasControlChars(const string& s);
 
 private:
     friend class ClientManager;

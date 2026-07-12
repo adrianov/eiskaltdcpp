@@ -20,16 +20,6 @@ namespace dcpp {
 
 namespace {
 
-bool isNickLike(const string& nick) {
-    if(nick.empty() || nick.size() > 64)
-        return false;
-    for(unsigned char c : nick) {
-        if(c <= 32 || c == ':' || c == '|' || c == '$' || c == '<' || c == '>')
-            return false;
-    }
-    return true;
-}
-
 string trimCopy(string s) {
     while(!s.empty() && s.front() == ' ')
         s.erase(0, 1);
@@ -79,7 +69,7 @@ void NmdcHub::stopInfectedConnect(const string& message, const string& aNick) {
             return;
     }
 
-    if(!isNickLike(nick))
+    if(!NmdcHub::isNickLike(nick))
         return;
 
     OnlineUser* u = findUser(nick);
