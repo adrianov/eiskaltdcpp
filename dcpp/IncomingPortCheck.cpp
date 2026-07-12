@@ -14,8 +14,9 @@
 #include "ConnectionManager.h"
 #include "HttpConnection.h"
 #include "LogManager.h"
-#include "Text.h"
 #include "format.h"
+
+#include <regex>
 
 namespace dcpp {
 
@@ -94,15 +95,17 @@ IncomingPortCheck::Result IncomingPortCheck::fetchPort(const string& port, const
 }
 
 IncomingPortCheck::Result IncomingPortCheck::parseBody(const string& body) {
-    const string lower = Text::toLower(body);
-    if(Util::findSubString(lower, "\"reachable\":true") != string::npos)
+    // Pretty or compact JSON; \s matches spaces and newlines in the body.
+    static const std::regex openRe(
+        R"re("reachable"\s*:\s*true|"status"\s*:\s*"open")re",
+        std::regex::icase);
+    static const std::regex closedRe(
+        R"re("reachable"\s*:\s*false|"status"\s*:\s*"(?:closed|timeout)")re",
+        std::regex::icase);
+
+    if(std::regex_search(body, openRe))
         return Result::Open;
-    if(Util::findSubString(lower, "\"reachable\":false") != string::npos)
-        return Result::Closed;
-    if(Util::findSubString(lower, "\"status\":\"open\"") != string::npos)
-        return Result::Open;
-    if(Util::findSubString(lower, "\"status\":\"closed\"") != string::npos ||
-       Util::findSubString(lower, "\"status\":\"timeout\"") != string::npos)
+    if(std::regex_search(body, closedRe))
         return Result::Closed;
     return Result::Unknown;
 }
