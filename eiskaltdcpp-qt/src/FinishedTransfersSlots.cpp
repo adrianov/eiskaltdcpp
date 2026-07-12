@@ -97,8 +97,9 @@ void FinishedTransfers<isUpload>::slotFilterText(const QString &text) {
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::slotFileTypeChanged(int index) {
+    const int typeId = (index >= 0) ? comboBox_FILETYPES->itemData(index).toInt() : -1;
     const QString name = (index >= 0) ? comboBox_FILETYPES->itemText(index) : QString();
-    proxy->setExtFilter(SearchFileTypes::extensionsFor(index, name));
+    proxy->setExtFilter(SearchFileTypes::extensionsFor(typeId, name));
 }
 
 template <bool isUpload>
@@ -109,7 +110,7 @@ void FinishedTransfers<isUpload>::slotSettingsChanged(const QString &key, const 
         lineEdit_FILTER->setToolTip(tr("Filter by name, path, or user"));
         comboBox_FILETYPES->setToolTip(tr("Filter by file type"));
         const int cur = comboBox_FILETYPES->currentIndex();
-        SearchFileTypes::fillCombo(comboBox_FILETYPES);
+        SearchFileTypes::fillCombo(comboBox_FILETYPES, false);
         if (cur >= 0 && cur < comboBox_FILETYPES->count())
             comboBox_FILETYPES->setCurrentIndex(cur);
     }

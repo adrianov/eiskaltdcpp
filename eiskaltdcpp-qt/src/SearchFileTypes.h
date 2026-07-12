@@ -17,11 +17,15 @@ class QComboBox;
 /** Shared SearchManager file-type combo and extension lists (SEGA / settings). */
 namespace SearchFileTypes {
 
-/** Fill combo with predefined + custom types and icons (same as Search form). */
-void fillCombo(QComboBox *combo);
+/**
+ * Fill combo with predefined + custom types and icons.
+ * When forSearch is false, omit TTH (useless for local ext filters).
+ * Each item stores SearchManager type id in Qt::UserRole (TYPE_LAST for custom).
+ */
+void fillCombo(QComboBox *combo, bool forSearch = true);
 
 /**
- * Extensions for a combo index (uppercase, no leading dot).
+ * Extensions for a SearchManager type index (uppercase, no leading dot).
  * Empty list means no extension filter (Any / Directory / TTH / unknown).
  * For custom types (index >= TYPE_LAST), pass the combo item text as typeName.
  */

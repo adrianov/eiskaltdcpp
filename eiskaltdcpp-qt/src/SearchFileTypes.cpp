@@ -33,36 +33,44 @@ static QStringList toExtList(const StringList &exts) {
     return out;
 }
 
-void fillCombo(QComboBox *combo) {
+static WulforUtil::Icons iconForType(int type) {
+    static const WulforUtil::Icons icons[SearchManager::TYPE_LAST] = {
+        WulforUtil::eiFILETYPE_UNKNOWN,
+        WulforUtil::eiFILETYPE_MP3,
+        WulforUtil::eiFILETYPE_ARCHIVE,
+        WulforUtil::eiFILETYPE_DOCUMENT,
+        WulforUtil::eiFILETYPE_APPLICATION,
+        WulforUtil::eiFILETYPE_PICTURE,
+        WulforUtil::eiFILETYPE_VIDEO,
+        WulforUtil::eiFOLDER_BLUE,
+        WulforUtil::eiFIND,
+        WulforUtil::eiFILETYPE_ARCHIVE
+    };
+    if (type >= 0 && type < SearchManager::TYPE_LAST)
+        return icons[type];
+    return WulforUtil::eiFILETYPE_UNKNOWN;
+}
+
+void fillCombo(QComboBox *combo, bool forSearch) {
     if (!combo)
         return;
 
     combo->clear();
 
-    QStringList filetypes;
-    for (int i = SearchManager::TYPE_ANY; i < SearchManager::TYPE_LAST; i++)
-        filetypes << _q(SearchManager::getTypeStr(i));
-
-    const SettingsManager::SearchTypes &searchTypes = SettingsManager::getInstance()->getSearchTypes();
-    for (const auto &i : searchTypes) {
-        const string &type = i.first;
-        if (!(type.size() == 1 && type[0] >= '1' && type[0] <= '7'))
-            filetypes << _q(type);
+    for (int i = SearchManager::TYPE_ANY; i < SearchManager::TYPE_LAST; i++) {
+        if (!forSearch && i == SearchManager::TYPE_TTH)
+            continue;
+        combo->addItem(WICON(iconForType(i)), _q(SearchManager::getTypeStr(i)), i);
     }
 
-    combo->addItems(filetypes);
+    const SettingsManager::SearchTypes &searchTypes = SettingsManager::getInstance()->getSearchTypes();
+    for (const auto &entry : searchTypes) {
+        const string &type = entry.first;
+        if (!(type.size() == 1 && type[0] >= '1' && type[0] <= '7'))
+            combo->addItem(_q(type), SearchManager::TYPE_LAST);
+    }
+
     combo->setCurrentIndex(0);
-
-    QList<WulforUtil::Icons> icons;
-    icons << WulforUtil::eiFILETYPE_UNKNOWN  << WulforUtil::eiFILETYPE_MP3
-          << WulforUtil::eiFILETYPE_ARCHIVE  << WulforUtil::eiFILETYPE_DOCUMENT
-          << WulforUtil::eiFILETYPE_APPLICATION << WulforUtil::eiFILETYPE_PICTURE
-          << WulforUtil::eiFILETYPE_VIDEO    << WulforUtil::eiFOLDER_BLUE
-          << WulforUtil::eiFIND              << WulforUtil::eiFILETYPE_ARCHIVE;
-
-    for (int i = 0; i < icons.size() && i < combo->count(); i++)
-        combo->setItemIcon(i, WICON(icons.at(i)));
-
     // Icon combos often ignore stylesheet color; re-apply after items change.
     AppTheme::applyInputPalette(combo);
 }

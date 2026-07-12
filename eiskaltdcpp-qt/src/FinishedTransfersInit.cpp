@@ -68,7 +68,7 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
     QObject::connect(this, SIGNAL(coreEndBulkLoad()), model, SLOT(endBulkLoad()), Qt::QueuedConnection);
 
     QObject::connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
-    SearchFileTypes::fillCombo(comboBox_FILETYPES);
+    SearchFileTypes::fillCombo(comboBox_FILETYPES, false);
 
     QObject::connect(comboBox, SIGNAL(activated(int)), this, SLOT(slotTypeChanged(int)));
     QObject::connect(pushButton, SIGNAL(clicked()), this, SLOT(slotClear()));
