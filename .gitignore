@@ -1,6 +1,8 @@
 # CMake / local build outputs
 build*/
 dist/
+/CMakeCache.txt
+/CMakeFiles/
 
 # IDE
 CMakeLists.txt.user*
