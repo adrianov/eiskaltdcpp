@@ -71,7 +71,8 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
         }
     }
 
-    if (metaValue(con, QStringLiteral("entry_count")) < 0) {
+    // Recount when missing or stuck at 0 (stale meta after a partial migrate).
+    if (metaValue(con, QStringLiteral("entry_count")) <= 0) {
         QString err;
         auto res = con.Query("SELECT count(*)::BIGINT FROM share_locations");
         if (res->HasError() || res->RowCount() == 0) {

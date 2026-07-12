@@ -29,7 +29,11 @@ bool hasTable(duckdb::Connection &con, const char *table)
 
 /** Replace the former flat share_entries DB with an empty normalized schema.
     A full row rewrite of multi-GB indexes blocks the write worker (and thus
-    search stats / list ingest) for hours; cached file lists re-ingest. */
+    search stats / list ingest) for hours; cached file lists re-ingest.
+
+    If share_locations already exists (normalized DB), only drop a leftover
+    share_entries table — never wipe an already-migrated index. An older
+    SQLite build can recreate an empty share_entries beside DuckDB tables. */
 bool ShareIndex::compactLegacyDb()
 {
     duckdb::Connection *con = threadConn();
@@ -37,6 +41,15 @@ bool ShareIndex::compactLegacyDb()
         return false;
     if (!hasTable(*con, "share_entries"))
         return true;
+
+    if (hasTable(*con, "share_locations")) {
+        QString err;
+        if (!ShareIndexDb::execOk(*con, "DROP TABLE IF EXISTS share_entries", &err)) {
+            setLastError(err);
+            return false;
+        }
+        return true;
+    }
 
     const QString newFile = dbFile + QStringLiteral(".compact");
     QFile::remove(newFile);

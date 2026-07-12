@@ -29,6 +29,16 @@ ShareIndex::IndexStats ShareIndex::indexStats()
     if (!res->HasError() && res->RowCount() > 0)
         stats.files = ShareIndexDb::qi64(res->GetValue(0, 0));
 
+    // Meta can read 0 while rows exist (failed refresh / interrupted migrate).
+    if (stats.files <= 0) {
+        auto any = con->Query("SELECT 1 FROM share_locations LIMIT 1");
+        if (!any->HasError() && any->RowCount() > 0) {
+            auto cnt = con->Query("SELECT count(*)::BIGINT FROM share_locations");
+            if (!cnt->HasError() && cnt->RowCount() > 0)
+                stats.files = ShareIndexDb::qi64(cnt->GetValue(0, 0));
+        }
+    }
+
     const QFileInfo dbInfo(dbFile);
     if (dbInfo.exists())
         stats.dbBytes = dbInfo.size();
