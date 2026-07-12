@@ -18,6 +18,7 @@
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
 #include "dcpp/FavoriteManager.h"
+#include "dcpp/ClientManagerListener.h"
 
 #include "ArenaWidget.h"
 #include "WulforUtil.h"
@@ -30,6 +31,7 @@ class PublicHubs :
         public  dcpp::Singleton<PublicHubs>,
         public  ArenaWidget,
         public  dcpp::FavoriteManagerListener,
+        public  dcpp::ClientManagerListener,
         private Ui::UIPublicHubs
 {
 Q_OBJECT
@@ -55,14 +57,19 @@ protected:
     virtual void on(LoadedFromCache, const std::string& l, const std::string& d) noexcept;
     virtual void on(Corrupted, const std::string& l) noexcept;
 
+    virtual void on(ClientConnected, dcpp::Client*) noexcept;
+    virtual void on(ClientDisconnected, dcpp::Client*) noexcept;
+
 private Q_SLOTS:
     void slotFilter();
     void slotContextMenu();
     void slotHeaderMenu();
     void slotHubChanged(int);
+    void slotCountryChanged(int);
     void slotFilterColumnChanged();
     void slotDoubleClicked(const QModelIndex&);
     void slotSettingsChanged(const QString&, const QString&);
+    void slotClientChanged();
 
     void setStatus(const QString&);
     void onFinished(const QString&);
@@ -72,12 +79,14 @@ Q_SIGNALS:
     void coreDownloadFailed (const QString&);
     void coreDownloadFinished(const QString&);
     void coreCacheLoaded(const QString&);
+    void coreClientChanged();
 
 private:
     PublicHubs(QWidget *parent = nullptr);
     ~PublicHubs();
 
     void updateList();
+    void fillCountries();
 
     dcpp::HubEntryList entries;
     PublicHubModel *model;

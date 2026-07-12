@@ -8,13 +8,11 @@
 ***************************************************************************/
 
 #include "PublicHubs.h"
-#include "MainWindow.h"
 #include "WulforSettings.h"
 #include "AutoToolTip.h"
 
-#include <QApplication>
-#include <QClipboard>
-#include <QItemSelectionModel>
+#include "dcpp/ClientManager.h"
+
 #include <QHeaderView>
 #include <QKeyEvent>
 
@@ -32,10 +30,12 @@ PublicHubs::PublicHubs(QWidget *parent) :
     treeView->setModel(model);
     treeView->setItemDelegate(new AutoToolTipDelegate(treeView));
     WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_PUBLICHUBS_STATE, QByteArray()).toByteArray());
+    treeView->sortByColumn(COLUMN_PHUB_USERS, Qt::DescendingOrder);
 
     lineEdit_FILTER->installEventFilter(this);
 
     FavoriteManager::getInstance()->addListener(this);
+    ClientManager::getInstance()->addListener(this);
 
     QString hubs = _q(SettingsManager::getInstance()->get(SettingsManager::HUBLIST_SERVERS));
 
@@ -50,7 +50,7 @@ PublicHubs::PublicHubs(QWidget *parent) :
     frame->hide();
 
     entries = FavoriteManager::getInstance()->getPublicHubs();
-
+    fillCountries();
     updateList();
 
     if(FavoriteManager::getInstance()->isDownloading()) {
@@ -68,12 +68,14 @@ PublicHubs::PublicHubs(QWidget *parent) :
     connect(this, SIGNAL(coreDownloadFailed(QString)),   this, SLOT(setStatus(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDownloadFinished(QString)), this, SLOT(onFinished(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreCacheLoaded(QString)),      this, SLOT(onFinished(QString)), Qt::QueuedConnection);
+    connect(this, SIGNAL(coreClientChanged()),           this, SLOT(slotClientChanged()), Qt::QueuedConnection);
 
     connect(treeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu()));
     connect(treeView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotDoubleClicked(QModelIndex)));
     connect(treeView->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu()));
     connect(toolButton_CLOSEFILTER, SIGNAL(clicked()), this, SLOT(slotFilter()));
     connect(comboBox_HUBS, SIGNAL(activated(int)), this, SLOT(slotHubChanged(int)));
+    connect(comboBox_COUNTRY, SIGNAL(currentIndexChanged(int)), this, SLOT(slotCountryChanged(int)));
     connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
     
     ArenaWidget::setState( ArenaWidget::Flags(ArenaWidget::state() | ArenaWidget::Singleton | ArenaWidget::Hidden) );
@@ -88,6 +90,7 @@ PublicHubs::~PublicHubs(){
     delete proxy;
 
     FavoriteManager::getInstance()->removeListener(this);
+    ClientManager::getInstance()->removeListener(this);
 }
 
 bool PublicHubs::eventFilter(QObject *obj, QEvent *e){
@@ -114,150 +117,13 @@ void PublicHubs::setStatus(const QString &stat){
     label_STATUS->setText(stat);
 }
 
-void PublicHubs::updateList(){
-    if (!model)
-        return;
-
-    model->clearModel();
-    QList<QVariant> data;
-
-    for (auto &i : entries) {
-        HubEntry *entry = const_cast<HubEntry*>(&i);
-        data.clear();
-
-        data << _q(entry->getName())         << _q(entry->getDescription())  << entry->getUsers()
-             << _q(entry->getServer())       << _q(entry->getCountry())      << (qlonglong)entry->getShared()
-             << (qint64)entry->getMinShare() << (qint64)entry->getMinSlots() << (qint64)entry->getMaxHubs()
-             << (qint64)entry->getMaxUsers() << static_cast<double>(entry->getReliability()) << _q(entry->getRating());
-
-        model->addResult(data, entry);
-    }
-}
-
 void PublicHubs::onFinished(const QString &stat){
     setStatus(stat);
 
     entries = FavoriteManager::getInstance()->getPublicHubs();
 
+    fillCountries();
     updateList();
-}
-
-void PublicHubs::slotContextMenu(){
-    QItemSelectionModel *sel_model = treeView->selectionModel();
-    QModelIndexList indexes = sel_model->selectedRows(0);
-
-    if (indexes.isEmpty())
-        return;
-
-    if (proxy)
-        std::transform(indexes.begin(), indexes.end(), indexes.begin(), [&](QModelIndex i) { return proxy->mapToSource(i); });
-
-    WulforUtil *WU = WulforUtil::getInstance();
-
-    QMenu *m = new QMenu();
-    QAction *connect = new QAction(WU->getPixmap(WulforUtil::eiCONNECT), tr("Connect"), m);
-    QAction *add_fav = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add to favorites"), m);
-    QAction *copy    = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy &address to clipboard"), m);
-
-    m->addActions(QList<QAction*>() << connect << add_fav << copy);
-
-    QAction *ret = m->exec(QCursor::pos());
-
-    m->deleteLater();
-
-    if (ret == connect){
-        PublicHubItem * item = nullptr;
-        MainWindow *MW = MainWindow::getInstance();
-
-        for (const auto &i : indexes){
-            item = reinterpret_cast<PublicHubItem*>(i.internalPointer());
-
-            if (item)
-                MW->newHubFrame(item->data(COLUMN_PHUB_ADDRESS).toString(), "");
-
-            item = nullptr;
-        }
-    }
-    else if (ret == add_fav){
-        PublicHubItem * item = nullptr;
-
-        for (const auto &i : indexes){
-            item = reinterpret_cast<PublicHubItem*>(i.internalPointer());
-
-            if (item && item->entry){
-                try{
-                    FavoriteManager::getInstance()->addFavorite(*item->entry);
-                }
-                catch (const std::exception&){}
-            }
-
-            item = nullptr;
-        }
-    }
-    else if (ret == copy){
-        PublicHubItem * item = nullptr;
-        QString out = "";
-
-        for (const auto &i : indexes){
-            item = reinterpret_cast<PublicHubItem*>(i.internalPointer());
-
-            if (item)
-                out += item->data(COLUMN_PHUB_ADDRESS).toString() + "\n";
-
-            item = nullptr;
-        }
-
-        if (!out.isEmpty())
-            qApp->clipboard()->setText(out, QClipboard::Clipboard);
-    }
-}
-
-void PublicHubs::slotHeaderMenu(){
-    WulforUtil::headerMenu(treeView);
-}
-
-void PublicHubs::slotDoubleClicked(const QModelIndex &index){
-    if (!index.isValid())
-        return;
-
-    QModelIndex i = proxy? proxy->mapToSource(index) : index;
-
-    PublicHubItem * item = reinterpret_cast<PublicHubItem*>(i.internalPointer());
-    MainWindow *MW = MainWindow::getInstance();
-
-    if (item)
-        MW->newHubFrame(item->data(COLUMN_PHUB_ADDRESS).toString(), "");
-}
-
-void PublicHubs::slotFilter(){
-    if (frame->isVisible()){
-        treeView->setModel(model);
-
-        disconnect(lineEdit_FILTER, SIGNAL(textChanged(QString)), proxy, SLOT(setFilterFixedString(QString)));
-
-        delete proxy;
-        proxy = nullptr;
-    }
-    else {
-        proxy = new PublicHubProxyModel();
-        proxy->setDynamicSortFilter(true);
-        proxy->setFilterFixedString(lineEdit_FILTER->text());
-        proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
-        proxy->setFilterKeyColumn(comboBox_FILTER->currentIndex());
-        proxy->setSourceModel(model);
-
-        treeView->setModel(proxy);
-
-        connect(lineEdit_FILTER, SIGNAL(textChanged(QString)), proxy, SLOT(setFilterFixedString(QString)));
-        connect(comboBox_FILTER, SIGNAL(currentIndexChanged(int)), this, SLOT(slotFilterColumnChanged()));
-
-        lineEdit_FILTER->setFocus();
-
-        if (!lineEdit_FILTER->text().isEmpty())
-            lineEdit_FILTER->selectAll();
-    }
-
-    frame->setVisible(!frame->isVisible());
 }
 
 void PublicHubs::slotHubChanged(int pos){
@@ -265,17 +131,16 @@ void PublicHubs::slotHubChanged(int pos){
     FavoriteManager::getInstance()->refresh();
 }
 
-void PublicHubs::slotFilterColumnChanged(){
-    if (proxy)
-        proxy->setFilterKeyColumn(comboBox_FILTER->currentIndex());
-
-    if (comboBox_FILTER->hasFocus())
-        lineEdit_FILTER->setFocus();
+void PublicHubs::slotSettingsChanged(const QString &key, const QString&){
+    if (key == WS_TRANSLATION_FILE) {
+        retranslateUi(this);
+        fillCountries();
+    }
 }
 
-void PublicHubs::slotSettingsChanged(const QString &key, const QString&){
-    if (key == WS_TRANSLATION_FILE)
-        retranslateUi(this);
+void PublicHubs::slotClientChanged(){
+    if (model)
+        model->refreshConnected();
 }
 
 void PublicHubs::on(DownloadStarting, const std::string& l) noexcept{
@@ -299,4 +164,12 @@ void PublicHubs::on(Corrupted, const string& l) noexcept {
         emit coreDownloadFailed(tr("Cached hub list is corrupted or unsupported"));
     else
         emit coreDownloadFailed(tr("Downloaded hub list is corrupted or unsupported (%1)").arg(_q(l)));
+}
+
+void PublicHubs::on(ClientConnected, Client*) noexcept{
+    emit coreClientChanged();
+}
+
+void PublicHubs::on(ClientDisconnected, Client*) noexcept{
+    emit coreClientChanged();
 }

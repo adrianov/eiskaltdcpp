@@ -93,6 +93,9 @@ public:
     /** Clear the model and redraw it*/
     void clearModel();
 
+    /** Repaint connected-hub row backgrounds after connect/disconnect. */
+    void refreshConnected();
+
 private:
 
     PublicHubItem *rootItem;

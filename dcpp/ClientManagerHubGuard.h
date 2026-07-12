@@ -19,6 +19,8 @@ namespace ClientManagerHubGuard {
 
 bool sameHubUrl(const string& a, const string& b);
 bool hasActiveHub(const string& url, const Client* exclude);
+/** True if a connected hub matches url (host/port) or, when non-empty, hub name. */
+bool hasActiveHub(const string& url, const string& name, const Client* exclude);
 
 } // namespace ClientManagerHubGuard
 

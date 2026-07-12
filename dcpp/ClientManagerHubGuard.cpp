@@ -44,12 +44,18 @@ bool sameHubUrl(const string& a, const string& b) {
 }
 
 bool hasActiveHub(const string& url, const Client* exclude) {
+    return hasActiveHub(url, Util::emptyString, exclude);
+}
+
+bool hasActiveHub(const string& url, const string& name, const Client* exclude) {
     auto cm = ClientManager::getInstance();
     auto lock = cm->lock();
     for(auto c: cm->getClients()) {
         if(c == exclude || !c->isConnected())
             continue;
         if(sameHubUrl(c->getHubUrl(), url))
+            return true;
+        if(!name.empty() && Util::stricmp(c->getHubName().c_str(), name.c_str()) == 0)
             return true;
     }
     return false;

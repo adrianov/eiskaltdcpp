@@ -92,6 +92,11 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp
     src/FileBrowserModelSort.cpp
+    src/PublicHubItem.cpp
+    src/PublicHubModelData.cpp
+    src/PublicHubModelSort.cpp
+    src/PublicHubsActions.cpp
+    src/PublicHubsFilter.cpp
     src/FavoriteUsersActions.cpp
     src/FinishedTransfersInit.cpp
     src/FinishedTransfersItem.cpp
