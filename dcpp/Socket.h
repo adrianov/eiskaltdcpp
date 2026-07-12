@@ -84,22 +84,13 @@ public:
     /**
      * Connects a socket to an address/ip, closing any other connections made with
      * this instance.
-     * @param aAddr Server address, in dns or xxx.xxx.xxx.xxx format.
-     * @param aPort Server port.
      * @throw SocketException If any connection error occurs.
      */
     virtual void connect(const string& aIp, const string &aPort, const string &localPort = Util::emptyString);
-    /**
-     * Same as connect(), but through the SOCKS5 server
-     */
+    /** Same as connect(), but through the SOCKS5 server */
     void socksConnect(const string& aIp, const string &aPort, uint32_t timeout = 0);
 
-    /**
-     * Sends data, will block until all data has been sent or an exception occurs
-     * @param aBuffer Buffer with data
-     * @param aLen Data length
-     * @throw SocketExcpetion Send failed.
-     */
+    /** Sends data, blocks until all sent or an exception occurs. */
     void writeAll(const void* aBuffer, int aLen, uint32_t timeout = 0);
     virtual int write(const void* aBuffer, int aLen);
     int write(const string& aData) { return write(aData.data(), (int)aData.length()); }
@@ -112,29 +103,10 @@ public:
     virtual bool waitConnected(uint32_t millis);
     virtual bool waitAccepted(uint32_t millis);
 
-    /**
-     * Reads zero to aBufLen characters from this socket,
-     * @param aBuffer A buffer to store the data in.
-     * @param aBufLen Size of the buffer.
-     * @return Number of bytes read, 0 if disconnected and -1 if the call would block.
-     * @throw SocketException On any failure.
-     */
+    /** @return bytes read, 0 if disconnected, -1 if would block. */
     virtual int read(void* aBuffer, int aBufLen);
-    /**
-     * Reads zero to aBufLen characters from this socket,
-     * @param aBuffer A buffer to store the data in.
-     * @param aBufLen Size of the buffer.
-     * @param aIP Remote IP address
-     * @return Number of bytes read, 0 if disconnected and -1 if the call would block.
-     * @throw SocketException On any failure.
-     */
     virtual int read(void* aBuffer, int aBufLen, sockaddr_in& remote);
-    /**
-     * Reads data until aBufLen bytes have been read or an error occurs.
-     * If the socket is closed, or the timeout is reached, the number of bytes read
-     * actually read is returned.
-     * On exception, an unspecified amount of bytes might have already been read.
-     */
+    /** Read until aBufLen bytes, timeout, or close; may leave unread bytes on exception. */
     int readAll(void* aBuffer, int aBufLen, uint32_t timeout = 0);
 
     virtual int wait(uint32_t millis, int waitFor);
@@ -151,7 +123,6 @@ public:
 
     Protocol getNextProtocol() noexcept;
 
-    // Low level interface
     virtual void create(int aType = TYPE_TCP);
 
     /** Binds a socket to a certain local port and possibly IP. */
@@ -167,7 +138,7 @@ public:
     virtual string getCipherName() const noexcept { return Util::emptyString; }
     virtual ByteVector getKeyprint() const noexcept { return ByteVector(); }
 
-    /** When socks settings are updated, this has to be called... */
+    /** Call when socks settings are updated. */
     static void socksUpdated();
     string getIfaceI4 (const string &iface);
 
@@ -189,6 +160,7 @@ protected:
 
     static string udpServer;
     static string udpPort;
+    static int getLastError();
 
 private:
     Socket(const Socket&);
@@ -196,7 +168,6 @@ private:
 
     void socksAuth(uint32_t timeout);
 
-    static int getLastError();
     static int checksocket(int ret);
     static int check(int ret, bool blockOk = false);
 

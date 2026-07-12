@@ -19,140 +19,59 @@
 #include "SSLSocket.h"
 
 #include "format.h"
-#include "CryptoManager.h"
-#include "LogManager.h"
-#include "SettingsManager.h"
 
 #include <openssl/err.h>
 
 namespace dcpp {
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-static const unsigned char alpn_protos_nmdc[] = {
-	4, 'n', 'm', 'd', 'c',
-};
-static const unsigned char alpn_protos_adc[] = {
-	3, 'a', 'd', 'c',
-};
-#endif
-
 SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) : ctx(context), ssl(0), nextProto(proto) {
-
-}
-
-void SSLSocket::connect(const string& aIp, const string& aPort) {
-    Socket::connect(aIp, aPort);
-
-    waitConnected(0);
-}
-
-#if OPENSSL_VERSION_NUMBER < 0x10002000L
-static inline int SSL_is_server(SSL *s)
-{
-    return s->server;
-}
-#endif
-
-bool SSLSocket::waitConnected(uint32_t millis) {
-    if(!ssl) {
-        if(!Socket::waitConnected(millis)) {
-            return false;
-        }
-        ssl.reset(SSL_new(ctx));
-        if(!ssl)
-            checkSSL(-1);
-
-        checkSSL(SSL_set_fd(ssl, sock));
-    }
-
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-    if (nextProto == Socket::PROTO_NMDC) {
-        SSL_set_alpn_protos(ssl, alpn_protos_nmdc, sizeof(alpn_protos_nmdc));
-    } else if (nextProto == Socket::PROTO_ADC) {
-        SSL_set_alpn_protos(ssl, alpn_protos_adc, sizeof(alpn_protos_adc));
-    }
-#endif
-
-    if(SSL_is_init_finished(ssl)) {
-        return true;
-    }
-
-    while(true) {
-        int ret = SSL_is_server(ssl)?SSL_accept(ssl):SSL_connect(ssl);
-        if(ret == 1) {
-            dcdebug("Connected to SSL server using %s as %s\n",
-                    SSL_get_cipher(ssl), SSL_is_server(ssl) ? "server" : "client");
-
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-            if (SSL_is_server(ssl)) return true;
-
-            const unsigned char* protocol = 0;
-            unsigned int len = 0;
-            SSL_get0_alpn_selected(ssl, &protocol, &len);
-            if (len != 0)
-            {
-                if (len == 3 && !memcmp(protocol, "adc", len))
-                    proto = PROTO_ADC;
-                else if (len == 4 && !memcmp(protocol, "nmdc", len))
-                    proto = PROTO_NMDC;
-                dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
-            }
-#endif
-            return true;
-        }
-        if(!waitWant(ret, millis)) {
-            return false;
-        }
-    }
-}
-
-void SSLSocket::accept(const Socket& listeningSocket) {
-    Socket::accept(listeningSocket);
-
-    waitAccepted(0);
-}
-
-bool SSLSocket::waitAccepted(uint32_t millis) {
-    if(!ssl) {
-        if(!Socket::waitAccepted(millis)) {
-            return false;
-        }
-        ssl.reset(SSL_new(ctx));
-        if(!ssl)
-            checkSSL(-1);
-
-        checkSSL(SSL_set_fd(ssl, sock));
-    }
-
-    if(SSL_is_init_finished(ssl)) {
-        return true;
-    }
-
-    while(true) {
-        int ret = SSL_accept(ssl);
-        if(ret == 1) {
-            dcdebug("Connected to SSL client using %s\n", SSL_get_cipher(ssl));
-            return true;
-        }
-        if(!waitWant(ret, millis)) {
-            return false;
-        }
-    }
 }
 
 bool SSLSocket::waitWant(int ret, uint32_t millis) {
-    int err = SSL_get_error(ssl, ret);
-    switch(err) {
+    switch(SSL_get_error(ssl, ret)) {
     case SSL_ERROR_WANT_READ:
         return wait(millis, Socket::WAIT_READ) == WAIT_READ;
     case SSL_ERROR_WANT_WRITE:
         return wait(millis, Socket::WAIT_WRITE) == WAIT_WRITE;
-        // Check if this is a fatal error...
-    default: checkSSL(ret);
+    default:
+        checkSSL(ret);
     }
-    dcdebug("SSL: Unexpected fallthrough");
-    // There was no error?
     return true;
+}
+
+int SSLSocket::checkSSL(int ret) {
+    if(!ssl)
+        return -1;
+    if(ret > 0)
+        return ret;
+
+    // https://www.openssl.org/docs/manmaster/man3/SSL_get_error.html
+    const int err = SSL_get_error(ssl, ret);
+    switch(err) {
+    case SSL_ERROR_NONE:
+    case SSL_ERROR_WANT_READ:
+    case SSL_ERROR_WANT_WRITE:
+        return -1;
+    case SSL_ERROR_ZERO_RETURN:
+        throw SocketException(_("Connection closed"));
+    case SSL_ERROR_SYSCALL: {
+        // Empty queue ⇒ EOF or errno (reset, broken pipe, …) — not a libssl reason code.
+        ssl.reset();
+        const unsigned long e = ERR_get_error();
+        if(e != 0) {
+            char errbuf[256];
+            throw SSLSocketException(str(F_("SSL Error: %1% (%2%, %3%)") % ERR_error_string(e, errbuf) % ret % err));
+        }
+        if(ret == 0 || getLastError() == 0)
+            throw SocketException(_("Connection closed"));
+        throw SocketException(getLastError());
+    }
+    default: {
+        ssl.reset();
+        char errbuf[256];
+        throw SSLSocketException(str(F_("SSL Error: %1% (%2%, %3%)") % ERR_error_string(ERR_get_error(), errbuf) % ret % err));
+    }
+    }
 }
 
 int SSLSocket::read(void* aBuffer, int aBufLen) {
@@ -163,7 +82,6 @@ int SSLSocket::read(void* aBuffer, int aBufLen) {
 
     if(len > 0) {
         stats.totalDown += len;
-        //dcdebug("In(s): %.*s\n", len, (char*)aBuffer);
     }
     return len;
 }
@@ -175,34 +93,6 @@ int SSLSocket::write(const void* aBuffer, int aLen) {
     int ret = checkSSL(SSL_write(ssl, aBuffer, aLen));
     if(ret > 0) {
         stats.totalUp += ret;
-        //dcdebug("Out(s): %.*s\n", ret, (char*)aBuffer);
-    }
-    return ret;
-}
-
-int SSLSocket::checkSSL(int ret) {
-    if(!ssl) {
-        return -1;
-    }
-    if(ret <= 0) {
-        /* inspired by boost.asio (asio/ssl/detail/impl/engine.ipp, function engine::perform) and
-           the SSL_get_error doc at <https://www.openssl.org/docs/ssl/SSL_get_error.html>. */
-        auto err = SSL_get_error(ssl, ret);
-        switch(err) {
-        case SSL_ERROR_NONE:        // Fallthrough - YaSSL doesn't for example return an openssl compatible error on recv fail
-        case SSL_ERROR_WANT_READ:   // Fallthrough
-        case SSL_ERROR_WANT_WRITE:
-            return -1;
-        case SSL_ERROR_ZERO_RETURN:
-            throw SocketException(_("Connection closed"));
-        default:
-        {
-            ssl.reset();
-            // @todo replace 80 with MAX_ERROR_SZ or whatever's appropriate for yaSSL in some nice way...
-            char errbuf[80];
-            throw SSLSocketException(str(F_("SSL Error: %1% (%2%, %3%)") % ERR_error_string(err, errbuf) % ret % err));
-        }
-        }
     }
     return ret;
 }
@@ -260,6 +150,7 @@ void SSLSocket::close() noexcept {
     if(ssl) {
         ssl.reset();
     }
+    serverName.clear();
     Socket::shutdown();
     Socket::close();
 }

@@ -10,6 +10,7 @@ set(DCPP_EXTRA_SOURCES
     DirectoryListingLoader.cpp
     DirectoryListingDir.cpp
     IncomingPortCheck.cpp
+    SSLSocketHandshake.cpp
     ClientConnect.cpp
     ClientReconnect.cpp
     ClientManagerConnect.cpp

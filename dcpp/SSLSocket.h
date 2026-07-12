@@ -52,21 +52,21 @@ class SSLSocket : public Socket
 public:
     virtual ~SSLSocket() { }
 
-    virtual void accept(const Socket& listeningSocket);
-    virtual void connect(const string& aIp, const string &aPort);
-    virtual int read(void* aBuffer, int aBufLen);
-    virtual int write(const void* aBuffer, int aLen);
-    virtual int wait(uint32_t millis, int waitFor);
-    virtual void shutdown() noexcept;
-    virtual void close() noexcept;
+    void accept(const Socket& listeningSocket) override;
+    void connect(const string& aIp, const string& aPort, const string& localPort = Util::emptyString) override;
+    int read(void* aBuffer, int aBufLen) override;
+    int write(const void* aBuffer, int aLen) override;
+    int wait(uint32_t millis, int waitFor) override;
+    void shutdown() noexcept override;
+    void close() noexcept override;
 
-    virtual bool isSecure() const noexcept { return true; }
-    virtual bool isTrusted() const noexcept;
-    virtual string getCipherName() const noexcept;
-    virtual ByteVector getKeyprint() const noexcept;
+    bool isSecure() const noexcept override { return true; }
+    bool isTrusted() const noexcept override;
+    string getCipherName() const noexcept override;
+    ByteVector getKeyprint() const noexcept override;
 
-    virtual bool waitConnected(uint32_t millis);
-    virtual bool waitAccepted(uint32_t millis);
+    bool waitConnected(uint32_t millis) override;
+    bool waitAccepted(uint32_t millis) override;
 
 private:
     friend class CryptoManager;
@@ -78,6 +78,7 @@ private:
     SSL_CTX* ctx;
     ssl::SSL ssl;
     Socket::Protocol nextProto;
+    string serverName; // hostname for SNI (before DNS resolve)
 
     int checkSSL(int ret);
     bool waitWant(int ret, uint32_t millis);
