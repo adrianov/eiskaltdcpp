@@ -42,5 +42,8 @@ if [ ! -d "$aspell/dict" ]; then
     rm -rf "$tmp"
 fi
 
+# Any post-sign edit of Mach-O / sealed resources causes CODESIGNING Invalid Page at launch.
+xattr -cr "$app" 2>/dev/null || true
 codesign --force --deep --sign - "$app"
+codesign --verify --deep --strict "$app"
 open "$app"

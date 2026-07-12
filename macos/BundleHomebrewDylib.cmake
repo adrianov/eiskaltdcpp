@@ -45,6 +45,7 @@ if (_bundle_rc)
 endif ()
 
 # Ad-hoc signature blocks install_name_tool on Apple Silicon.
+# Leaving a stale signature after Mach-O edits causes CODESIGNING / Invalid Page at launch.
 execute_process(COMMAND codesign --remove-signature "${_bundle_bin}" ERROR_QUIET)
 execute_process(COMMAND codesign --remove-signature "${_bundle_dest}" ERROR_QUIET)
 
@@ -76,7 +77,18 @@ execute_process(COMMAND install_name_tool
   -add_rpath "@executable_path/../Frameworks" "${_bundle_bin}"
   ERROR_QUIET)
 
-execute_process(COMMAND codesign -s - --force --deep "${_bundle_app}" ERROR_QUIET)
+execute_process(COMMAND codesign -s - --force --deep "${_bundle_app}"
+  RESULT_VARIABLE _sign_rc
+  ERROR_VARIABLE _sign_err)
+if (_sign_rc)
+  message(FATAL_ERROR "BundleHomebrewDylib: codesign failed (${_sign_rc}): ${_sign_err}")
+endif ()
+execute_process(COMMAND codesign --verify --deep --strict "${_bundle_app}"
+  RESULT_VARIABLE _verify_rc
+  ERROR_VARIABLE _verify_err)
+if (_verify_rc)
+  message(FATAL_ERROR "BundleHomebrewDylib: codesign verify failed: ${_verify_err}")
+endif ()
 
 execute_process(COMMAND otool -L "${_bundle_bin}"
   OUTPUT_VARIABLE _bundle_otool2
