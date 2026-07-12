@@ -58,7 +58,7 @@ void fillCombo(QComboBox *combo, bool forSearch) {
     combo->clear();
 
     for (int i = SearchManager::TYPE_ANY; i < SearchManager::TYPE_LAST; i++) {
-        if (!forSearch && i == SearchManager::TYPE_TTH)
+        if (!forSearch && (i == SearchManager::TYPE_DIRECTORY || i == SearchManager::TYPE_TTH))
             continue;
         combo->addItem(WICON(iconForType(i)), _q(SearchManager::getTypeStr(i)), i);
     }

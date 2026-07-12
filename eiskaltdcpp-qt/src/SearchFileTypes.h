@@ -19,7 +19,7 @@ namespace SearchFileTypes {
 
 /**
  * Fill combo with predefined + custom types and icons.
- * When forSearch is false, omit TTH (useless for local ext filters).
+ * When forSearch is false, omit Directory/TTH (useless for local ext filters).
  * Each item stores SearchManager type id in Qt::UserRole (TYPE_LAST for custom).
  */
 void fillCombo(QComboBox *combo, bool forSearch = true);
