@@ -21,171 +21,44 @@
 #include <gtk/gtk.h>
 #include <glib/gi18n.h>
 #include <dcpp/stdinc.h>
+#include <dcpp/ConnectionManager.h>
 #include <dcpp/DCPlusPlus.h>
-#include "bacon-message-connection.hh"
 #include "settingsmanager.hh"
 #include "wulformanager.hh"
-#include "WulforUtil.hh"
+#include "wulforStartup.hh"
 #include <iostream>
-#include <signal.h>
 
 #define GUI_LOCALE_DIR LOCALE_DIR
-
 #define GUI_PACKAGE "eiskaltdcpp-gtk"
-
-#include "VersionGlobal.h"
 
 #ifdef ENABLE_STACKTRACE
 #include "extra/stacktrace.h"
-#endif // ENABLE_STACKTRACE
-
-void printHelp()
-{
-    printf(_(
-               "Usage:\n"
-               "  eiskaltdcpp-gtk <magnet link> <dchub://link> <adc(s)://link>\n"
-               "  eiskaltdcpp-gtk <Key>\n"
-               "EiskaltDC++ is a cross-platform program that uses the Direct Connect and ADC protocols.\n"
-               "\n"
-               "Keys:\n"
-               "  -h, --help\t Show this message\n"
-               "  -V, --version\t Show version string\n"
-               )
-           );
-}
-
-void printVersion()
-{
-    printf("%s version: %s\n", eiskaltdcppAppNameString.c_str(), eiskaltdcppVersionString.c_str());
-    printf("GTK+ version: %d.%d.%d\n", gtk_major_version, gtk_minor_version, gtk_micro_version);
-    printf("Glib version: %d.%d.%d\n", glib_major_version, glib_minor_version, glib_micro_version);
-}
-
-BaconMessageConnection *connection = NULL;
-
-void receiver(const char *link, gpointer data)
-{
-    (void)data;
-    g_return_if_fail(link != NULL);
-    WulforManager::get()->onReceived_gui(link);
-}
-
-void callBack(void *, const std::string &a)
-{
-    std::cout << _("Loading: ") << a << std::endl;
-}
-
-void catchSIG(int sigNum) {
-    psignal(sigNum, _("Catching signal "));
-
-#ifdef ENABLE_STACKTRACE
-    printBacktrace(sigNum);
-#endif // ENABLE_STACKTRACE
-
-    raise(SIGINT);
-
-    std::abort();
-}
-
-template <int sigNum = 0, int ... Params>
-void catchSignals() {
-    if (!sigNum)
-        return;
-
-    psignal(sigNum, _("Installing handler for"));
-
-    signal(sigNum, catchSIG);
-
-    catchSignals<Params ... >();
-}
-
-void installHandlers(){
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = SIG_IGN;
-
-    if (sigaction(SIGPIPE, &sa, NULL) == -1)
-        printf(_("Cannot handle SIGPIPE\n"));
-    else {
-        sigset_t set;
-        sigemptyset (&set);
-        sigaddset (&set, SIGPIPE);
-        pthread_sigmask(SIG_BLOCK, &set, NULL);
-    }
-
-    catchSignals<SIGSEGV, SIGABRT, SIGBUS, SIGTERM>();
-
-    printf(_("Signal handlers installed.\n"));
-}
+#endif
 
 int main(int argc, char *argv[])
 {
+    const int argResult = parseGtkArgs(argc, argv);
+    if (argResult == 0)
+        return 0;
 
-    for (int i = 0; i < argc; i++){
-        if (!strcmp(argv[i],"--help") || !strcmp(argv[i],"-h")){
-            printHelp();
-            exit(0);
-        }
-        else if (!strcmp(argv[i],"--version") || !strcmp(argv[i],"-V")){
-            printVersion();
-            exit(0);
-        }
-    }
-
-    // Initialize i18n support
     bindtextdomain(GUI_PACKAGE, GUI_LOCALE_DIR);
     textdomain(GUI_PACKAGE);
     bind_textdomain_codeset(GUI_PACKAGE, "UTF-8");
 
-    connection = bacon_message_connection_new(GUI_PACKAGE);
-
-    dcdebug(connection ? "eiskaltdcpp-gtk: connection yes...\n" : "eiskaltdcpp-gtk: connection no...\n");
-
-    // Check if profile is locked
-    if (WulforUtil::profileIsLocked())
-    {
-        if (!bacon_message_connection_get_is_server(connection))
-        {
-            dcdebug("eiskaltdcpp-gtk: is client...\n");
-
-            if (argc > 1)
-            {
-                dcdebug("eiskaltdcpp-gtk: send %s\n", argv[1]);
-                bacon_message_connection_send(connection, argv[1]);
-            }
-        }
-
-        bacon_message_connection_free(connection);
-
+    const int session = startGtkSession(argc, argv);
+    if (session == 0)
         return 0;
-    }
-
-    if (bacon_message_connection_get_is_server(connection))
-    {
-        dcdebug("eiskaltdcpp-gtk: is server...\n");
-        bacon_message_connection_set_callback(connection, receiver, NULL);
-    }
-
-    // Start the DC++ client core
-    dcpp::startup(callBack, NULL);
-
-    dcpp::TimerManager::getInstance()->start();
-
-#if !GLIB_CHECK_VERSION(2,32,0)
-    g_thread_init(NULL);
-#endif
-    gdk_threads_init();
-    gtk_init(&argc, &argv);
-    g_set_application_name("EiskaltDC++ Gtk");
-
-    installHandlers();
 
     WulforSettingsManager::newInstance();
     WulforManager::start(argc, argv);
     gdk_threads_enter();
     gtk_main();
-    bacon_message_connection_free(connection);
+    freeGtkSessionConnection();
     gdk_threads_leave();
+
+    // Close hubs/peers before UI teardown uses graceless hub disconnect.
+    dcpp::ConnectionManager::getInstance()->shutdown();
+
     WulforManager::stop();
     WulforSettingsManager::deleteInstance();
 

@@ -36,6 +36,16 @@ endif (USE_LIBNOTIFY)
 
 include_directories (${PROJECT_BINARY_DIR})
 aux_source_directory (${PROJECT_SOURCE_DIR}/src gtk_srcs)
+# Explicit units (also from aux_source_directory). Keeps splits visible; appends if scan is stale.
+set (GTK_EXTRA_SOURCES
+    wulforStartup.cc)
+foreach (_src ${GTK_EXTRA_SOURCES})
+    set (_path ${PROJECT_SOURCE_DIR}/src/${_src})
+    list (FIND gtk_srcs ${_path} _idx)
+    if (_idx EQUAL -1)
+        list (APPEND gtk_srcs ${_path})
+    endif ()
+endforeach ()
 file (GLOB gtk_hdrs ${PROJECT_SOURCE_DIR}/src/*.hh)
 file (GLOB gtk_ui ${PROJECT_SOURCE_DIR}/ui/*.ui)
 
@@ -105,7 +115,7 @@ if (HAVE_IFADDRS_H)
 endif (HAVE_IFADDRS_H)
 
 if (ENABLE_STACKTRACE)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/wulfor.cc PROPERTY COMPILE_DEFINITIONS ENABLE_STACKTRACE)
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/wulfor.cc ${PROJECT_SOURCE_DIR}/src/wulforStartup.cc PROPERTY COMPILE_DEFINITIONS ENABLE_STACKTRACE)
 endif (ENABLE_STACKTRACE)
 
 if (APPLE)
