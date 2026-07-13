@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
+#include "NaturalCompareQt.h"
 
 #include <algorithm>
 #include <QList>
@@ -28,6 +29,10 @@ private:
     bool static AttrCmp(const TransferViewItem * l, const TransferViewItem * r) {
         return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
     }
+    template <int i>
+    bool static NaturalAttrCmp(const TransferViewItem * l, const TransferViewItem * r) {
+        return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
+    }
     template <int column>
     bool static NumCmp(const TransferViewItem * l, const TransferViewItem * r) {
         return Cmp(l->data(column).toULongLong(), r->data(column).toULongLong());
@@ -46,7 +51,7 @@ typename Compare<order>::AttrComp Compare<order>::attrs[10] = {
     AttrCmp<COLUMN_TRANSFER_FLAGS>,
     NumCmp<COLUMN_TRANSFER_SIZE>,
     NumCmp<COLUMN_TRANSFER_TLEFT>,
-    AttrCmp<COLUMN_TRANSFER_FNAME>,
+    NaturalAttrCmp<COLUMN_TRANSFER_FNAME>,
     AttrCmp<COLUMN_TRANSFER_HOST>,
     AttrCmp<COLUMN_TRANSFER_IP>,
     AttrCmp<COLUMN_TRANSFER_ENCRYPTION>

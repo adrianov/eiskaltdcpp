@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "SearchModelSort.h"
+#include "NaturalCompareQt.h"
 
 #include <algorithm>
 
@@ -40,6 +41,10 @@ struct Compare {
         bool static AttrCmp(const SearchItem * l, const SearchItem * r) {
             return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
         }
+        template <int i>
+        bool static NaturalAttrCmp(const SearchItem * l, const SearchItem * r) {
+            return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
+        }
         template <typename T, T (SearchItem::*attr)>
         bool static AttrCmp(const SearchItem * l, const SearchItem * r) {
             return Cmp(l->*attr, r->*attr);
@@ -56,12 +61,12 @@ struct Compare {
 
 template <Qt::SortOrder order>
 typename Compare<order>::AttrComp Compare<order>::attrs[13] = { NumCmp<COLUMN_SF_COUNT>,
-                                                                AttrCmp<COLUMN_SF_FILENAME>,
+                                                                NaturalAttrCmp<COLUMN_SF_FILENAME>,
                                                                 AttrCmp<COLUMN_SF_EXTENSION>,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
                                                                 AttrCmp<COLUMN_SF_TTH>,
-                                                                AttrCmp<COLUMN_SF_PATH>,
+                                                                NaturalAttrCmp<COLUMN_SF_PATH>,
                                                                 AttrCmp<COLUMN_SF_NICK>,
                                                                 NumCmp<COLUMN_SF_FREESLOTS>,
                                                                 NumCmp<COLUMN_SF_ALLSLOTS>,

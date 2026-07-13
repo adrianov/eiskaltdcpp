@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "FinishedTransfersModelSort.h"
+#include "NaturalCompareQt.h"
 
 #include <algorithm>
 
@@ -25,9 +26,9 @@ struct FileCompare {
         static AttrComp getAttrComp(int column) {
             switch (column){
                 case COLUMN_FINISHED_NAME:
-                    return AttrCmp<COLUMN_FINISHED_NAME>;
+                    return NaturalAttrCmp<COLUMN_FINISHED_NAME>;
                 case COLUMN_FINISHED_PATH:
-                    return AttrCmp<COLUMN_FINISHED_PATH>;
+                    return NaturalAttrCmp<COLUMN_FINISHED_PATH>;
                 case COLUMN_FINISHED_TIME:
                     return AttrCmp<COLUMN_FINISHED_TIME>;
                 case COLUMN_FINISHED_USER:
@@ -39,7 +40,7 @@ struct FileCompare {
                 case COLUMN_FINISHED_CRC32:
                     return NumCmp<COLUMN_FINISHED_CRC32>;
                 case COLUMN_FINISHED_TARGET:
-                    return AttrCmp<COLUMN_FINISHED_TARGET>;
+                    return NaturalAttrCmp<COLUMN_FINISHED_TARGET>;
                 case COLUMN_FINISHED_FULL:
                     return NumCmp<COLUMN_FINISHED_FULL>;
                 default:
@@ -49,6 +50,10 @@ struct FileCompare {
         template <int i>
         static bool AttrCmp(const FinishedTransfersItem *l, const FinishedTransfersItem *r) {
             return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
+        }
+        template <int i>
+        static bool NaturalAttrCmp(const FinishedTransfersItem *l, const FinishedTransfersItem *r) {
+            return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
         }
         template <int i>
         static bool NumCmp(const FinishedTransfersItem *l, const FinishedTransfersItem *r) {

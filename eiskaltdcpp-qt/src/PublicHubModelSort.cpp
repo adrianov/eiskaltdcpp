@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "PublicHubModelSort.h"
+#include "NaturalCompareQt.h"
 
 namespace {
 
@@ -40,7 +41,7 @@ private:
             case COLUMN_PHUB_DESC:
                  return AttrCmp<COLUMN_PHUB_DESC>;
             case COLUMN_PHUB_NAME:
-                 return AttrCmp<COLUMN_PHUB_NAME>;
+                 return NaturalAttrCmp<COLUMN_PHUB_NAME>;
             case COLUMN_PHUB_RATING:
                  return AttrCmp<COLUMN_PHUB_RATING>;
             default:
@@ -50,6 +51,10 @@ private:
     template <int i>
     bool static AttrCmp(const PublicHubItem * l, const PublicHubItem * r) {
         return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
+    }
+    template <int i>
+    bool static NaturalAttrCmp(const PublicHubItem * l, const PublicHubItem * r) {
+        return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
     }
     template <int column>
     bool static NumCmp(const PublicHubItem * l, const PublicHubItem * r) {

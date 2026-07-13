@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "DownloadQueueModelSort.h"
+#include "NaturalCompareQt.h"
 
 #include <set>
 
@@ -31,6 +32,12 @@ struct Compare {
                 return (l->dir);
             return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
         }
+        template <int i>
+        bool static NaturalAttrCmp(const DownloadQueueItem * l, const DownloadQueueItem * r) {
+            if (l->dir != r->dir)
+                return (l->dir);
+            return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
+        }
         template <int column>
         bool static NumCmp(const DownloadQueueItem * l, const DownloadQueueItem * r) {
             if (l->dir != r->dir)
@@ -44,13 +51,13 @@ struct Compare {
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[11] = { Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_NAME>,
+typename Compare<order>::AttrComp Compare<order>::attrs[11] = { Compare<order>::NaturalAttrCmp<COLUMN_DOWNLOADQUEUE_NAME>,
                                                                 Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_DOWN>,
                                                                 Compare<order>::NumCmp<COLUMN_DOWNLOADQUEUE_ESIZE>,
                                                                 Compare<order>::NumCmp<COLUMN_DOWNLOADQUEUE_DOWN>,
                                                                 Compare<order>::NumCmp<COLUMN_DOWNLOADQUEUE_PRIO>,
                                                                 Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_USER>,
-                                                                Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_PATH>,
+                                                                Compare<order>::NaturalAttrCmp<COLUMN_DOWNLOADQUEUE_PATH>,
                                                                 Compare<order>::NumCmp<COLUMN_DOWNLOADQUEUE_ESIZE>,
                                                                 Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_ERR>,
                                                                 Compare<order>::AttrCmp<COLUMN_DOWNLOADQUEUE_ADDED>,

@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "FileBrowserModelSort.h"
+#include "NaturalCompareQt.h"
 
 namespace {
 
@@ -29,6 +30,12 @@ struct Compare {
                 return (l->dir != nullptr);
             return Cmp(QString::localeAwareCompare(l->data(i).toString(), r->data(i).toString()), 0);
         }
+        template <int i>
+        bool static NaturalAttrCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
+            if ((l->dir && !r->dir) || (!l->dir && r->dir))
+                return (l->dir != nullptr);
+            return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
+        }
         template <int column>
         bool static NumCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
             if ((l->dir && !r->dir) || (!l->dir && r->dir))
@@ -42,7 +49,7 @@ struct Compare {
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[NUM_OF_COLUMNS] = {  AttrCmp<COLUMN_FILEBROWSER_NAME>,
+typename Compare<order>::AttrComp Compare<order>::attrs[NUM_OF_COLUMNS] = {  NaturalAttrCmp<COLUMN_FILEBROWSER_NAME>,
                                                                 NumCmp<COLUMN_FILEBROWSER_ESIZE>,
                                                                 NumCmp<COLUMN_FILEBROWSER_ESIZE>,
                                                                 AttrCmp<COLUMN_FILEBROWSER_TTH>,

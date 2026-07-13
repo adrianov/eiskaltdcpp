@@ -10,6 +10,7 @@
 #include "ShareBrowser.h"
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
+#include "FileBrowserModelSort.h"
 #include "MainWindow.h"
 #include "ShareBrowserSearch.h"
 #include "ArenaWidgetManager.h"
@@ -19,7 +20,6 @@
 #include "dcpp/ClientManager.h"
 
 #include <QMessageBox>
-#include <QSortFilterProxyModel>
 
 using namespace dcpp;
 
@@ -131,7 +131,7 @@ void ShareBrowser::slotFilter(){
         proxy = nullptr;
     }
     else {
-        proxy = new QSortFilterProxyModel(nullptr);
+        proxy = new FileBrowserFilterProxy();
         proxy->setDynamicSortFilter(true);
         proxy->setFilterFixedString(lineEdit_FILTER->text());
         proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
