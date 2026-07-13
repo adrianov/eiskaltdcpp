@@ -35,7 +35,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(),
                                                tr("Downloaded "), tr("Uploaded ")))
             p.remove("STAT");
-        if (p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos)
+        // Uploads store absolute file offsets in DPOS — hold high-water between segments.
+        // Downloads use segment-relative DPOS; blocking a reset double-counts with parent fpos.
+        if (!vbol(p["DOWN"]) && p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos)
             p.remove("DPOS");
     }
 
@@ -53,8 +55,13 @@ void TransferViewModel::updateTransfer(const VarMap &params){
 
     if (p.contains("DPOS"))
         item->dpos = vlng(p["DPOS"]);
-    if (vbol(p["DOWN"]) || p.contains("PERC"))
-        item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
+    if (p.contains("PERC")) {
+        const double next = qBound(0.0, vdbl(p["PERC"]), 100.0);
+        if (vbol(p["FAIL"]) || !sameTarget)
+            item->percent = next;
+        else
+            item->percent = TransferDisplay::highWaterPercent(item->percent, next);
+    }
 
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
@@ -103,7 +110,7 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         return;
 
     if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
-        item->parent()->dpos = vlng(p["FPOS"]);
+        item->parent()->fpos = vlng(p["FPOS"]);
 
     const QModelIndex idx = createIndexForItem(item);
     if (idx.isValid()) {

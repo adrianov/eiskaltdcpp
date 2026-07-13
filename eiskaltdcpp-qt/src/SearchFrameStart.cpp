@@ -18,6 +18,7 @@
 #include "dcpp/StringTokenizer.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/SearchManager.h"
+#include "dcpp/ClientManager.h"
 #include "dcpp/Util.h"
 
 #include <QMenu>
@@ -33,6 +34,9 @@ void SearchFrame::slotStartSearch(){
     }
 
     Q_D(SearchFrame);
+
+    // Drop prior hub queries from this tab before a new one.
+    ClientManager::getInstance()->cancelSearch((void*)this);
 
     d->stop = false;
 
@@ -55,25 +59,10 @@ void SearchFrame::slotStartSearch(){
         return;
 #endif
 
-    QString str_size = lineEdit_SIZE->text();
-    double lsize = Util::toDouble(Text::fromT(str_size.toStdString()));
-
-    switch (comboBox_SIZE->currentIndex()){
-        case 1:
-            lsize *= 1024.0;
-
-            break;
-        case 2:
-            lsize *= (1024.0*1024.0);
-
-            break;
-        case 3:
-            lsize *= (1024.0*1024.0*1024.0);
-
-            break;
-    }
-
-    quint64 llsize = (quint64)lsize;
+    quint64 llsize = 0;
+    int sizeModeInt = SearchManager::SIZE_DONTCARE;
+    readSizeFilter(llsize, sizeModeInt);
+    const SearchManager::SizeModes searchMode = static_cast<SearchManager::SizeModes>(sizeModeInt);
 
     rememberSearch(s);
 
@@ -96,11 +85,6 @@ void SearchFrame::slotStartSearch(){
         d->token = _q(Util::toString(Util::rand()));
     }
 
-    SearchManager::SizeModes searchMode((SearchManager::SizeModes)comboBox_SIZETYPE->currentIndex());
-
-    if(!llsize || lineEdit_SIZE->text().isEmpty())
-        searchMode = SearchManager::SIZE_DONTCARE;
-
     int ftype = comboBox_FILETYPES->currentIndex();
 
     d->isHash = (ftype == SearchManager::TYPE_TTH);
@@ -111,9 +95,13 @@ void SearchFrame::slotStartSearch(){
     if (d->resultFlush)
         d->resultFlush->stop();
     d->pendingResults.clear();
+    treeView_RESULTS->clearSelection();
     d->model->clearModel();
 
     d->dropped = d->filtered = d->results = 0;
+
+    d->viewFilterPending = false;
+    applyViewFiltersNow();
 
     string ftypeStr;
     if (ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_LAST)
@@ -181,8 +169,6 @@ void SearchFrame::slotStartSearch(){
     }
 
     d->arena_title = tr("Search - %1").arg(s);
-
-    lineEdit_SEARCHSTR->setEnabled(false);
 
     MW->redrawToolPanel();
 }

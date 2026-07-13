@@ -12,6 +12,7 @@
 #include "SearchFrameLocal.h"
 #include "SearchFileTypes.h"
 #include "SearchModel.h"
+#include "SearchProxyModel.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "MainWindow.h"
@@ -33,19 +34,14 @@ void SearchFrame::init(){
 
     d->model = new SearchModel(nullptr);
     d->str_model = new SearchStringListModel(this);
-
-    for (int i = 0; i < d->model->columnCount(); i++)
-        comboBox_FILTERCOLUMNS->addItem(d->model->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString());
-
-    comboBox_FILTERCOLUMNS->setCurrentIndex(COLUMN_SF_FILENAME);
+    d->proxy = new SearchProxyModel(this);
+    d->proxy->setSourceModel(d->model);
 
     frame_FILTER->setVisible(false);
 
     pushButton_STOP->hide();
 
-    toolButton_CLOSEFILTER->setIcon(WICON(WulforUtil::eiEDITDELETE));
-
-    treeView_RESULTS->setModel(d->model);
+    treeView_RESULTS->setModel(d->proxy);
     treeView_RESULTS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RESULTS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -70,8 +66,6 @@ void SearchFrame::init(){
     lineEdit_SEARCHSTR->setMenu(m);
     lineEdit_SEARCHSTR->setPixmap(WICON_SIZE(WulforUtil::eiEDITADD, 16));
 
-    lineEdit_FILTER->installEventFilter(this);
-
     connect(this, SIGNAL(coreClientConnected(QString)),    this, SLOT(onHubAdded(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientDisconnected(QString)), this, SLOT(onHubRemoved(QString)),Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientUpdated(QString)),      this, SLOT(onHubChanged(QString)), Qt::QueuedConnection);
@@ -95,16 +89,17 @@ void SearchFrame::init(){
     connect(GlobalTimer::getInstance(), SIGNAL(second()), this, SLOT(slotTimer()));
     connect(pushButton_SIDEPANEL, SIGNAL(clicked()), this, SLOT(slotToggleSidePanel()));
     connect(lineEdit_SEARCHSTR, SIGNAL(returnPressed()), this, SLOT(slotStartSearch()));
-    connect(lineEdit_SIZE,      SIGNAL(returnPressed()), this, SLOT(slotStartSearch()));
-    connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), lineEdit_SEARCHSTR, SLOT(setFocus()));
-    connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), lineEdit_SEARCHSTR, SLOT(selectAll()));
-    connect(toolButton_CLOSEFILTER, SIGNAL(clicked()), this, SLOT(slotFilter()));
-    connect(comboBox_FILTERCOLUMNS, SIGNAL(currentIndexChanged(int)), lineEdit_FILTER, SLOT(selectAll()));
-    connect(comboBox_FILTERCOLUMNS, SIGNAL(currentIndexChanged(int)), this, SLOT(slotChangeProxyColumn(int)));
+    connect(lineEdit_SEARCHSTR, SIGNAL(textChanged(QString)), this, SLOT(slotApplyViewFilters()));
+    connect(lineEdit_SIZE, SIGNAL(textChanged(QString)), this, SLOT(slotApplyViewFilters()));
+    connect(comboBox_SIZE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
+    connect(comboBox_SIZETYPE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
+    connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
 
     connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
 
     load();
+
+    applyViewFiltersNow();
 
     setAttribute(Qt::WA_DeleteOnClose);
 

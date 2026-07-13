@@ -101,6 +101,9 @@ void SearchFrame::addResult(const QVariantMap &map){
 }
 
 void SearchFrame::addResultsPacked(const QVariant &packed){
+    Q_D(SearchFrame);
+    if (d->stop)
+        return;
     addResults(packed.value<QList<VarMap> >());
 }
 
@@ -113,7 +116,7 @@ void SearchFrame::queueResult(const VarMap &map){
 
 void SearchFrame::flushResults(){
     Q_D(SearchFrame);
-    if (d->pendingResults.isEmpty())
+    if (d->stop || d->pendingResults.isEmpty())
         return;
     const QList<VarMap> batch = d->pendingResults;
     d->pendingResults.clear();

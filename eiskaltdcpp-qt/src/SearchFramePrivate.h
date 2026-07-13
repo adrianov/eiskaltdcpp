@@ -19,6 +19,7 @@
 
 #include "SearchFrame.h"
 #include "SearchModel.h"
+#include "SearchProxyModel.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Client.h"
@@ -69,4 +70,6 @@ public:
     QTimer *resultFlush = nullptr;
     /** True while a queued empty-TTH local refresh is waiting to run. */
     bool localRefreshPending = false;
+    /** True while a queued view-filter apply is waiting to run. */
+    bool viewFilterPending = false;
 };

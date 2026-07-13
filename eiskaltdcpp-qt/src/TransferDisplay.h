@@ -38,4 +38,19 @@ inline bool isProgressStat(const QString &stat, const QString &downloadedPrefix,
     return stat.startsWith(downloadedPrefix) || stat.startsWith(uploadedPrefix);
 }
 
+/** High-water mark: multi-segment/source ticks can briefly under-count. */
+inline double highWaterPercent(double shown, double next)
+{
+    if (next < 0.0)
+        next = 0.0;
+    else if (next > 100.0)
+        next = 100.0;
+    return next < shown ? shown : next;
+}
+
+inline qlonglong highWaterBytes(qlonglong shown, qlonglong next)
+{
+    return next < shown ? shown : next;
+}
+
 } // namespace TransferDisplay

@@ -113,8 +113,8 @@ void ShareBrowser::slotLayoutUpdated(){
 
     QModelIndex index = selected.at(0);
 
-    treeView_LPANE->clearSelection();
-    treeView_LPANE->selectionModel()->select(index, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
+    treeView_LPANE->selectionModel()->setCurrentIndex(index,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void ShareBrowser::slotHeaderMenu(){
@@ -159,13 +159,7 @@ void ShareBrowser::slotStartSearch(){
 }
 
 void ShareBrowser::slotSearchJumpTo(FileBrowserItem *tree_item){
-    if (!tree_item)
-        return;
-
-    QModelIndex tree_index = tree_model->createIndexForItem(tree_item);
-
-    treeView_LPANE->selectionModel()->select(tree_index, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(tree_index, QAbstractItemView::PositionAtCenter);
+    selectLeftFolder(tree_item);
 }
 
 void ShareBrowser::slotSettingsChanged(const QString &key, const QString&){

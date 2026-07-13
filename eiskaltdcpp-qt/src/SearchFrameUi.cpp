@@ -14,6 +14,7 @@
 #include "WulforUtil.h"
 
 #include "dcpp/SearchManager.h"
+#include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
 
 #include <QHeaderView>
@@ -69,6 +70,11 @@ void SearchFrame::fastSearch(const QString &text, bool isTTH){
 
 void SearchFrame::slotClear(){
     Q_D(SearchFrame);
+
+    d->stop = true;
+    d->waitingResults = false;
+    d->currentSearch.clear();
+    ClientManager::getInstance()->cancelSearch((void*)this);
 
     if (d->resultFlush)
         d->resultFlush->stop();

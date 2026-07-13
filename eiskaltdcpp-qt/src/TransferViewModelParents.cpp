@@ -40,7 +40,8 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     qint64 bestQueuePos = 0;
     double speed = 0.0;
     qint64 totalSize = vlng(p->data(COLUMN_TRANSFER_SIZE));
-    qlonglong progressPos = p->download ? p->dpos : 0;
+    // Downloads: committed fpos + in-flight segment bytes (never reuse aggregate dpos as base).
+    qlonglong progressPos = p->download ? p->fpos : 0;
 
     for (const auto &i : p->childItems){
         if (!i->fail) {
@@ -65,11 +66,13 @@ void TransferViewModel::updateParent(TransferViewItem *p){
             progressPos = i->dpos;
     }
 
-    if (!p->download && totalSize > 0 && progressPos > totalSize)
+    if (totalSize > 0 && progressPos > totalSize)
         progressPos = totalSize;
 
-    if (!p->download || progressPos <= totalSize)
-        p->dpos = progressPos;
+    // High-water mark: segment/source races can briefly under-count.
+    if (!p->finished)
+        progressPos = TransferDisplay::highWaterBytes(p->dpos, progressPos);
+    p->dpos = progressPos;
 
     if (totalSize > 0)
         p->updateColumn(COLUMN_TRANSFER_SIZE, totalSize);
@@ -121,7 +124,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     if (!p->finished)
         p->updateColumn(COLUMN_TRANSFER_STATS, stat);
 
-    p->percent = p->percent == 100.0? 100.0 : progress;
+    p->percent = p->finished ? progress : TransferDisplay::highWaterPercent(p->percent, progress);
 }
 
 void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){
@@ -134,13 +137,30 @@ void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){
                       vbol(params["DOWN"]) ? QString() : vstr(params["HOST"])))
         return;
 
-    if (!item->finished){
-        item->dpos = pos;
+    if (item->finished)
+        return;
 
-        const QModelIndex idx = createIndexForItem(item);
-        if (idx.isValid()) {
-            emit dataChanged(index(idx.row(), 0, idx.parent()),
-                             index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+    // Downloads: file-level position belongs on the parent (GTK-style), not as child
+    // segment dpos — absolute child dpos made parent FPOS+Σdpos jump on every tick.
+    if (vbol(params["DOWN"])) {
+        TransferViewItem *group = item->parent();
+        if (group && group != rootItem && rootItem->childItems.contains(group)) {
+            group->dpos = TransferDisplay::highWaterBytes(group->dpos, pos);
+            updateParent(group);
+            const QModelIndex pidx = createIndexForItem(group);
+            if (pidx.isValid()) {
+                emit dataChanged(index(pidx.row(), 0, pidx.parent()),
+                                 index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
+            }
         }
+        return;
+    }
+
+    item->dpos = pos;
+
+    const QModelIndex idx = createIndexForItem(item);
+    if (idx.isValid()) {
+        emit dataChanged(index(idx.row(), 0, idx.parent()),
+                         index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
     }
 }

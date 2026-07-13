@@ -28,11 +28,6 @@
 
 using namespace dcpp;
 
-void SearchProxyModel::sort(int column, Qt::SortOrder order){
-    if (sourceModel())
-        sourceModel()->sort(column, order);
-}
-
 SearchModel::SearchModel(QObject *parent):
         QAbstractItemModel(parent),
         filterRole(SearchFrame::None),
@@ -61,10 +56,6 @@ int SearchModel::columnCount(const QModelIndex &parent) const
         return static_cast<SearchItem*>(parent.internalPointer())->columnCount();
     else
         return rootItem->columnCount();
-}
-
-void SearchModel::repaint(){
-    emit layoutChanged();
 }
 
 Qt::ItemFlags SearchModel::flags(const QModelIndex &index) const
@@ -153,14 +144,26 @@ void SearchModel::sort(int column, Qt::SortOrder order) {
         return;
 
     emit layoutAboutToBeChanged();
+    const QModelIndexList oldIndexes = persistentIndexList();
 
     try {
         sortSearchItems(column, order, rootItem->childItems);
     }
-    catch (SearchListException &e){
-        sort(COLUMN_SF_FILENAME, order);
+    catch (SearchListException &) {
+        sortColumn = COLUMN_SF_FILENAME;
+        sortSearchItems(COLUMN_SF_FILENAME, order, rootItem->childItems);
     }
 
+    QModelIndexList newIndexes;
+    newIndexes.reserve(oldIndexes.size());
+    for (const QModelIndex &idx : oldIndexes) {
+        auto *item = static_cast<SearchItem*>(idx.internalPointer());
+        if (!item || item == rootItem)
+            newIndexes << QModelIndex();
+        else
+            newIndexes << createIndex(item->row(), idx.column(), item);
+    }
+    changePersistentIndexList(oldIndexes, newIndexes);
     emit layoutChanged();
 }
 

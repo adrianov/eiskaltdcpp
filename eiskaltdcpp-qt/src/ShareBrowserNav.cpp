@@ -60,7 +60,8 @@ void ShareBrowser::goUp(QTreeView *view){
     FileBrowserItem *tree_item = tree_model->createRootForPath(paths.join("\\"));
     QModelIndex tree_index = tree_model->createIndexForItem(tree_item);
 
-    treeView_LPANE->selectionModel()->select(tree_index, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
+    treeView_LPANE->selectionModel()->setCurrentIndex(tree_index,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     treeView_LPANE->scrollTo(tree_index, QAbstractItemView::PositionAtCenter);
 
     treeView_RPANE->setFocus();
@@ -124,8 +125,8 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
     if (tree_model->canFetchMore(parent_index))
         tree_model->fetchMore(parent_index);
 
-    treeView_LPANE->selectionModel()->clear();
-    treeView_LPANE->selectionModel()->select(parent_index, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
+    treeView_LPANE->selectionModel()->setCurrentIndex(parent_index,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     treeView_LPANE->scrollTo(parent_index, QAbstractItemView::PositionAtCenter);
 }
 

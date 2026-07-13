@@ -115,8 +115,9 @@ public:
     const QPixmap &getPixmap();
     ArenaWidget::Role role() const { return ArenaWidget::Search; }
 
-    void requestFilter() { slotFilter(); }
     void requestFocus() { lineEdit_SEARCHSTR->setFocus(); }
+    /** Ctrl+F: focus the search box (live substring filter). */
+    void requestFilter() { requestFocus(); }
 
 public Q_SLOTS:
     void searchAlternates(const QString &);
@@ -127,7 +128,6 @@ public Q_SLOTS:
 
 protected:
     virtual void closeEvent(QCloseEvent*);
-    virtual bool eventFilter(QObject *, QEvent *);
 
 Q_SIGNALS:
     void coreSR(const VarMap&);
@@ -137,7 +137,6 @@ Q_SIGNALS:
     void coreDownloadFinished(const QString &tth);
 
 private Q_SLOTS:
-    void slotFilter();
     void slotClear();
     void slotTimer();
     void slotResultDoubleClicked(const QModelIndex&);
@@ -146,7 +145,10 @@ private Q_SLOTS:
     void slotToggleSidePanel();
     void slotStartSearch();
     void slotStopSearch();
-    void slotChangeProxyColumn(int);
+    /** Queue live view filter apply (coalesces typing bursts). */
+    void slotApplyViewFilters();
+    /** Apply pending view filters once. */
+    void flushViewFilters();
     void slotClose();
     void slotSettingsChanged(const QString &key, const QString &value);
     void onHubAdded(const QString &info);
@@ -176,6 +178,10 @@ private:
     void addToFav(const QString&);
     void grant(const VarMap&);
     void removeSource(const VarMap&);
+    /** Read size widgets into bytes + SizeModes (DONTCARE when empty/zero). */
+    void readSizeFilter(quint64 &size, int &mode) const;
+    /** Apply search-box terms, size, and type to the proxy now. */
+    void applyViewFiltersNow();
     virtual void on(SearchManagerListener::SR, const SearchResultPtr& aResult) noexcept;
     virtual void on(ClientConnected, Client* c) noexcept;
     virtual void on(ClientUpdated, Client* c) noexcept;

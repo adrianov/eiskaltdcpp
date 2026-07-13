@@ -94,21 +94,20 @@ bool SearchModel::addResult
         else
             dirs.insert(dirKey, item);
 
-        emit layoutAboutToBeChanged();
-
         auto it = insertSortedSearchItem(sortColumn, sortOrder, parent->childItems, item);
+        const int row = static_cast<int>(it - parent->childItems.begin());
+        beginInsertRows(QModelIndex(), row, row);
         parent->childItems.insert(it, item);
-
-        emit layoutChanged();
+        endInsertRows();
 
         return true;
     }
 
     if (sortColumn == COLUMN_SF_COUNT){
+        beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
         parent->appendChild(item);
-
+        endInsertRows();
         sort(sortColumn, sortOrder);
-
         return true;
     }
 

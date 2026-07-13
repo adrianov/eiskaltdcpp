@@ -39,7 +39,6 @@ void SearchFrame::slotTimer(){
     else {
         progressBar->setFormat(QString());
         progressBar->setValue(0);
-        lineEdit_SEARCHSTR->setEnabled(true);
     }
 
     if (d->dropped == d->results && !d->dropped && !d->filtered){

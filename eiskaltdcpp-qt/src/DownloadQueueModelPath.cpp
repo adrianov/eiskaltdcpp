@@ -114,12 +114,13 @@ DownloadQueueItem *DownloadQueueModel::createPath(const QString & path){
                 DownloadQueueItem *item = new DownloadQueueItem(rootData);
                 item->dir = true;
 
+                const QModelIndex parentIdx = createIndexForItem(root);
+                beginInsertRows(parentIdx, root->childCount(), root->childCount());
                 root->appendChild(item);
+                endInsertRows();
 
                 root = item;
             }
-
-            emit layoutChanged();
 
             return root;
         }

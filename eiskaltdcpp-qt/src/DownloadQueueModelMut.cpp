@@ -37,7 +37,12 @@ DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map){
               << map["TTH"];
 
     child = new DownloadQueueItem(childData, droot);
+
+    const QModelIndex parentIdx = createIndexForItem(droot);
+    const int row = droot->childCount();
+    beginInsertRows(parentIdx, row, row);
     droot->appendChild(child);
+    endInsertRows();
 
     Q_D(static DownloadQueueModel);
 
@@ -45,10 +50,11 @@ DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map){
     d->total_size += childData.at(COLUMN_DOWNLOADQUEUE_ESIZE).toULongLong();
 
     emit updateStats(d->total_files, d->total_size);
+    // Expand leaf folder and ancestors so a new row is visible if parents were collapsed.
+    for (QModelIndex idx = parentIdx; idx.isValid(); idx = idx.parent())
+        emit needExpand(idx);
 
     counter++;
-
-    repaint();
 
     if ((counter % 100) == 0)
         QApplication::processEvents();

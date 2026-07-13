@@ -9,12 +9,15 @@
 
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
-#include "SearchModel.h"
+#include "SearchProxyModel.h"
+#include "SearchFileTypes.h"
 #include "SearchFrameLocal.h"
 #include "WulforUtil.h"
+#include "WulforSettings.h"
 #include "ArenaWidgetManager.h"
 
 #include "dcpp/SearchManager.h"
+#include "dcpp/ClientManager.h"
 #include "dcpp/ShareManager.h"
 #include "dcpp/Client.h"
 #include "dcpp/Util.h"
@@ -22,45 +25,67 @@
 
 using namespace dcpp;
 
-void SearchFrame::slotFilter(){
-    Q_D(SearchFrame);
+void SearchFrame::readSizeFilter(quint64 &size, int &mode) const {
+    const QString str_size = lineEdit_SIZE->text();
+    double lsize = Util::toDouble(Text::fromT(str_size.toStdString()));
 
-    if (frame_FILTER->isVisible()){
-        treeView_RESULTS->setModel(d->model);
-
-        disconnect(lineEdit_FILTER, SIGNAL(textChanged(QString)), d->proxy, SLOT(setFilterFixedString(QString)));
-    }
-    else {
-        d->proxy = (d->proxy? d->proxy : (new SearchProxyModel(this)));
-        d->proxy->setDynamicSortFilter(true);
-        d->proxy->setFilterFixedString(lineEdit_FILTER->text());
-        d->proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
-        d->proxy->setFilterKeyColumn(comboBox_FILTERCOLUMNS->currentIndex());
-        d->proxy->setSourceModel(d->model);
-
-        treeView_RESULTS->setModel(d->proxy);
-
-        connect(lineEdit_FILTER, SIGNAL(textChanged(QString)), d->proxy, SLOT(setFilterFixedString(QString)));
-
-        if (!lineEdit_SEARCHSTR->selectedText().isEmpty()){
-            lineEdit_FILTER->setText(lineEdit_SEARCHSTR->selectedText());
-            lineEdit_FILTER->selectAll();
-        }
-
-        lineEdit_FILTER->setFocus();
-
-        if (!lineEdit_FILTER->text().isEmpty())
-            lineEdit_FILTER->selectAll();
+    switch (comboBox_SIZE->currentIndex()){
+        case 1: lsize *= 1024.0; break;
+        case 2: lsize *= (1024.0*1024.0); break;
+        case 3: lsize *= (1024.0*1024.0*1024.0); break;
     }
 
-    frame_FILTER->setVisible(!frame_FILTER->isVisible());
+    size = static_cast<quint64>(lsize);
+    mode = comboBox_SIZETYPE->currentIndex();
+    if (!size || str_size.isEmpty())
+        mode = SearchManager::SIZE_DONTCARE;
 }
 
-void SearchFrame::slotChangeProxyColumn(int col){
+void SearchFrame::slotApplyViewFilters(){
     Q_D(SearchFrame);
+    if (d->viewFilterPending)
+        return;
+    d->viewFilterPending = true;
+    QMetaObject::invokeMethod(this, "flushViewFilters", Qt::QueuedConnection);
+}
 
-    if (d->proxy)
-        d->proxy->setFilterKeyColumn(col);
+void SearchFrame::flushViewFilters(){
+    Q_D(SearchFrame);
+    // Cleared by applyViewFiltersNow() callers (e.g. Search start) to cancel this flush.
+    if (!d->viewFilterPending)
+        return;
+    d->viewFilterPending = false;
+    applyViewFiltersNow();
+}
+
+void SearchFrame::applyViewFiltersNow(){
+    Q_D(SearchFrame);
+    if (!d->proxy)
+        return;
+
+    const QStringList terms =
+            lineEdit_SEARCHSTR->text().trimmed().split(QLatin1Char(' '), WULFOR_SKIP_EMPTY);
+
+    quint64 llsize = 0;
+    int sizeMode = SearchManager::SIZE_DONTCARE;
+    readSizeFilter(llsize, sizeMode);
+
+    const int idx = comboBox_FILETYPES->currentIndex();
+    const int typeId = (idx >= 0) ? comboBox_FILETYPES->itemData(idx).toInt() : SearchManager::TYPE_ANY;
+    const QString typeName = (idx >= 0) ? comboBox_FILETYPES->itemText(idx) : QString();
+
+    bool dirsOnly = false;
+    bool filesOnly = false;
+    QStringList exts;
+    if (typeId == SearchManager::TYPE_DIRECTORY) {
+        dirsOnly = true;
+    } else if (typeId != SearchManager::TYPE_ANY) {
+        // Match search-start semantics: anything but Any/Directory is files-only.
+        filesOnly = true;
+        exts = SearchFileTypes::extensionsFor(typeId, typeName);
+    }
+
+    d->proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts);
 }
 
 void SearchFrame::slotSettingsChanged(const QString &key, const QString &value){
@@ -141,4 +166,5 @@ void SearchFrame::slotStopSearch(){
 
     d->stop = true;
     d->waitingResults = false;
+    ClientManager::getInstance()->cancelSearch((void*)this);
 }

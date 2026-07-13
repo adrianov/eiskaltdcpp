@@ -14,21 +14,13 @@ QString SearchModel::dirGroupKey(const QString &path, const QString &file) {
 }
 
 void SearchModel::clearModel(){
-    blockSignals(true);
-
+    // Notify views/selection before freeing items; deleting first leaves
+    // QItemSelection with dangling indexes and crashes in QTreeView paint.
+    beginResetModel();
     qDeleteAll(rootItem->childItems);
     rootItem->childItems.clear();
-
     tths.clear();
     dirs.clear();
-
-    blockSignals(false);
-
-    reset();
-}
-
-void SearchModel::reset() {
-    beginResetModel();
     endResetModel();
 }
 
@@ -65,15 +57,9 @@ void SearchModel::setFilterRole(int role){
 
 void SearchModel::refreshLocal(const QString &tth){
     if (tth.isEmpty()) {
-        for (SearchItem *item : tths) {
-            item->clearLocalPath();
-            item->clearQueued();
-            for (SearchItem *child : item->childItems) {
-                child->clearLocalPath();
-                child->clearQueued();
-            }
-        }
-        emit layoutChanged();
+        const QList<QString> keys = tths.keys();
+        for (const QString &key : keys)
+            refreshLocal(key);
         return;
     }
 

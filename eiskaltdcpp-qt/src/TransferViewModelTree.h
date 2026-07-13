@@ -53,12 +53,14 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
     group->target = newTarget;
     group->finished = false;
     group->fail = false;
+    group->percent = 0.0;
+    group->smoothTleft = -1;
+    group->fpos = p.contains("FPOS") ? p.value("FPOS").toLongLong() : 0;
+    group->dpos = group->fpos;
     if (p.contains("ESIZE"))
         group->updateColumn(COLUMN_TRANSFER_SIZE, p.value("ESIZE"));
     if (p.contains("FNAME"))
         group->updateColumn(COLUMN_TRANSFER_FNAME, p.value("FNAME"));
-    if (p.contains("FPOS"))
-        group->dpos = p.value("FPOS").toLongLong();
     if (p.contains("USER"))
         group->updateColumn(COLUMN_TRANSFER_USERS, p.value("USER"));
     return true;

@@ -202,6 +202,7 @@ Search::Search():
 
 Search::~Search()
 {
+    ClientManager::getInstance()->cancelSearch((void*)this);
     ClientManager::getInstance()->removeListener(this);
     SearchManager::getInstance()->removeListener(this);
     TimerManager::getInstance()->removeListener(this);
@@ -450,9 +451,12 @@ void Search::search_gui()
     {
         stop = true;
         waitingResults = false;
+        ClientManager::getInstance()->cancelSearch((void*)this);
         gtk_button_set_label(GTK_BUTTON(getWidget("buttonSearch")), _("Search"));
         return;
     }
+
+    ClientManager::getInstance()->cancelSearch((void*)this);
 
     StringList clients;
     GtkTreeIter iter;
@@ -1796,133 +1800,6 @@ void Search::parseSearchResult_gui(SearchResultPtr result, StringMap &resultMap)
     resultMap["Free Slots"] = Util::toString(result->getFreeSlots());
 }
 
-void Search::download_client(string target, string cid, string filename, int64_t size, string tth, string hubUrl)
-{
-    try
-    {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (!user)
-            return;
-
-        // Only files have a TTH
-        if (!tth.empty())
-        {
-            string subdir = Util::getFileName(filename);
-            QueueManager::getInstance()->add(target + subdir, size, TTHValue(tth), HintedUser(user, hubUrl));
-        }
-        else
-        {
-            string dir = WulforUtil::windowsSeparator(filename);
-            QueueManager::getInstance()->addDirectory(dir, HintedUser(user, hubUrl), target);
-        }
-    }
-    catch (const Exception&)
-    {
-    }
-}
-
-void Search::downloadDir_client(string target, string cid, string filename, string hubUrl)
-{
-    try
-    {
-        string dir;
-
-        // If it's a file (directories are assumed to end in '/')
-        if (filename[filename.length() - 1] != PATH_SEPARATOR)
-        {
-            dir = WulforUtil::windowsSeparator(Util::getFilePath(filename));
-        }
-        else
-        {
-            dir = WulforUtil::windowsSeparator(filename);
-        }
-
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (user)
-        {
-            QueueManager::getInstance()->addDirectory(dir, HintedUser(user, hubUrl), target);
-        }
-    }
-    catch (const Exception&)
-    {
-    }
-}
-
-void Search::addSource_client(string source, string cid, int64_t size, string tth, string hubUrl)
-{
-    try
-    {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (!tth.empty() && user)
-        {
-            QueueManager::getInstance()->add(source, size, TTHValue(tth), HintedUser(user, hubUrl));
-        }
-    }
-    catch (const Exception&)
-    {
-    }
-}
-
-void Search::getFileList_client(string cid, string dir, bool match, string hubUrl, bool full)
-{
-    if (!cid.empty())
-    {
-        try
-        {
-            UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-            if (user)
-            {
-                int flags = 0;
-
-                if (match)
-                    flags = QueueItem::FLAG_MATCH_QUEUE;
-                else
-                    flags = QueueItem::FLAG_CLIENT_VIEW;
-
-                if (!full)
-                    flags = QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST;
-
-                QueueManager::getInstance()->addList(HintedUser(user, hubUrl), flags, dir);
-            }
-        }
-        catch (const Exception&)
-        {
-        }
-    }
-}
-
-void Search::grantSlot_client(string cid, string hubUrl)
-{
-    if (!cid.empty())
-    {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (user)
-        {
-            UploadManager::getInstance()->reserveSlot(HintedUser(user, hubUrl));
-        }
-    }
-}
-
-void Search::addFavUser_client(string cid)
-{
-    if (!cid.empty())
-    {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (user)
-            FavoriteManager::getInstance()->addFavoriteUser(user);
-    }
-}
-
-void Search::removeSource_client(string cid)
-{
-    if (!cid.empty())
-    {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-        if (user)
-            QueueManager::getInstance()->removeSource(user, QueueItem::Source::FLAG_REMOVED);
-    }
-}
-
 void Search::on(ClientManagerListener::ClientConnected, Client *client) noexcept
 {
     if (client)
@@ -2142,6 +2019,9 @@ void Search::onClearButtonClicked_gui(GtkWidget *widget, gpointer data)
     (void)widget;
     Search *s = (Search *)data;
     if (!s) return;
+    s->stop = true;
+    s->waitingResults = false;
+    ClientManager::getInstance()->cancelSearch((void*)s);
     gtk_tree_store_clear(s->resultStore);
     s->results.clear();
     gtk_entry_set_text(GTK_ENTRY(s->searchEntry), "");

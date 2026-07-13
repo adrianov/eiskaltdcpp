@@ -52,7 +52,10 @@ public:
     QString cid;
     QString tth;
     QString target;
+    /** Child: segment or file bytes in flight. Parent: displayed aggregate. */
     qlonglong dpos;
+    /** Download parent only: committed queue bytes (FPOS); never store aggregate here. */
+    qlonglong fpos;
     qint64 queuePos;
     double percent;
     qlonglong smoothTleft;

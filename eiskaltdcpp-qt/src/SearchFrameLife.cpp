@@ -24,7 +24,6 @@
 #include <QShortcut>
 #include <QCompleter>
 #include <QMenu>
-#include <QKeyEvent>
 
 using namespace dcpp;
 
@@ -92,8 +91,11 @@ SearchFrame::~SearchFrame(){
     if (d->completer)
         d->completer->deleteLater();
 
-    if (d->proxy)
+    if (d->proxy) {
+        d->proxy->setSourceModel(nullptr);
         d->proxy->deleteLater();
+        d->proxy = nullptr;
+    }
 
     d->arena_menu->deleteLater();
 
@@ -103,6 +105,8 @@ SearchFrame::~SearchFrame(){
 }
 
 void SearchFrame::closeEvent(QCloseEvent *e){
+    ClientManager::getInstance()->cancelSearch((void*)this);
+
     SearchManager::getInstance()->removeListener(this);
     ClientManager::getInstance()->removeListener(this);
     QueueManager::getInstance()->removeListener(this);
@@ -114,22 +118,6 @@ void SearchFrame::closeEvent(QCloseEvent *e){
     QWidget::disconnect(this, nullptr, this, nullptr);
 
     e->accept();
-}
-
-bool SearchFrame::eventFilter(QObject *obj, QEvent *e){
-    if (e->type() == QEvent::KeyRelease){
-        QKeyEvent *k_e = reinterpret_cast<QKeyEvent*>(e);
-
-        if (static_cast<LineEdit*>(obj) == lineEdit_FILTER && k_e->key() == Qt::Key_Escape){
-            lineEdit_FILTER->clear();
-
-            requestFilter();
-
-            return true;
-        }
-    }
-
-    return QWidget::eventFilter(obj, e);
 }
 
 void SearchFrame::load(){

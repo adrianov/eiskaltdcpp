@@ -139,6 +139,7 @@ private Q_SLOTS:
 
 private:
     void continueInit();
+    void selectLeftFolder(FileBrowserItem *);
 
     void load();
     void save();

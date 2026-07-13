@@ -10,6 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
+#include "MainWindow.h"
 #include "WulforUtil.h"
 
 #include "dcpp/QueueManager.h"
@@ -31,11 +32,12 @@ void SearchFrame::download(const SearchFrame::VarMap &params){
     hubUrl      = params["HOST"].toString().toStdString();
     size        = (int64_t)params["ESIZE"].toLongLong();
 
-    try{
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
+    if (cid.empty())
+        return;
 
-        if (!user)
-            return;
+    try{
+        // getUser: ShareIndex / GC'd peers are not always in the live user map.
+        UserPtr user = ClientManager::getInstance()->getUser(CID(cid));
         // Only files have a TTH
         if (!params["TTH"].toString().isEmpty()){
             string subdir = params["FNAME"].toString().split("\\", WULFOR_SKIP_EMPTY).last().toStdString();
@@ -45,7 +47,9 @@ void SearchFrame::download(const SearchFrame::VarMap &params){
             QueueManager::getInstance()->addDirectory(filename, HintedUser(user, hubUrl), target);
         }
     }
-    catch (const Exception&){}
+    catch (const Exception &e){
+        MainWindow::getInstance()->setStatusMessage(_q(e.getError()));
+    }
 }
 
 void SearchFrame::getFileList(const VarMap &params, bool match){
@@ -57,16 +61,13 @@ void SearchFrame::getFileList(const VarMap &params, bool match){
         return;
 
     try {
-        UserPtr user = ClientManager::getInstance()->findUser(CID(cid));
-
-        if (user){
-            QueueItem::FileFlags flag = match? QueueItem::FLAG_MATCH_QUEUE : QueueItem::FLAG_CLIENT_VIEW;
-
-            QueueManager::getInstance()->addList(HintedUser(user, host), flag, dir);
-        }
+        UserPtr user = ClientManager::getInstance()->getUser(CID(cid));
+        QueueItem::FileFlags flag = match? QueueItem::FLAG_MATCH_QUEUE : QueueItem::FLAG_CLIENT_VIEW;
+        QueueManager::getInstance()->addList(HintedUser(user, host), flag, dir);
     }
-    catch (const Exception&){}
-
+    catch (const Exception &e){
+        MainWindow::getInstance()->setStatusMessage(_q(e.getError()));
+    }
 }
 
 void SearchFrame::addToFav(const QString &cid){

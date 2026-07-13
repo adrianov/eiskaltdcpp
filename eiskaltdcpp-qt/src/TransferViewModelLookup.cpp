@@ -61,7 +61,8 @@ TransferViewItem *TransferViewModel::getParent(const QString &target, const VarM
     p = new TransferViewItem(data, rootItem);
     p->download = download;
     p->target = target;
-    p->dpos = params.value("FPOS").toLongLong();
+    p->fpos = params.value("FPOS").toLongLong();
+    p->dpos = p->fpos;
     rootItem->appendChild(p);
     return p;
 }
