@@ -85,8 +85,6 @@ public:
 
     virtual ~QueueItem() { }
 
-    int countOnlineUsers() const;
-    bool hasOnlineUsers() const { return countOnlineUsers() > 0; }
     void getOnlineUsers(HintedUserList& l) const;
 
     SourceList& getSources() { return sources; }

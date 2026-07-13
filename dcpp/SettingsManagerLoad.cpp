@@ -150,10 +150,6 @@ void SettingsManager::load(string const& aFileName)
             set(AUTODROP_INTERVAL, 1);
         if(SETTING(AUTODROP_ELAPSED) < 1)
             set(AUTODROP_ELAPSED, 1);
-        if(SETTING(AUTO_SEARCH_LIMIT) > 5)
-            set(AUTO_SEARCH_LIMIT, 5);
-        else if(SETTING(AUTO_SEARCH_LIMIT) < 1)
-            set(AUTO_SEARCH_LIMIT, 1);
         if(SETTING(MAX_FILELIST_SIZE) < 1024)
             set(MAX_FILELIST_SIZE, 1024);
 

@@ -27,6 +27,7 @@ set(DCPP_EXTRA_SOURCES
     ListCacheStore.cpp
     ExpectedMap.cpp
     QueueAutoSearch.cpp
+    QueueItemSegment.cpp
     SearchQuery.cpp
     SearchManagerUdp.cpp
     SearchManagerResponse.cpp

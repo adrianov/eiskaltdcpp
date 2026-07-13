@@ -88,6 +88,7 @@ set(QT_EXTRA_SOURCES
     src/AppThemeCombo.cpp
     src/AppThemeInputs.cpp
     src/AppThemeChatDoc.cpp
+    src/AppThemeHighlight.cpp
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp
@@ -144,7 +145,8 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameHistory.cpp
     src/SearchFrameInit.cpp
     src/SearchFrameLife.cpp
-    src/SearchFrameListen.cpp
+    src/SearchFrameFilter.cpp
+    src/SearchFrameQueue.cpp
     src/SearchFrameLocal.cpp
     src/SearchFrameMenu.cpp
     src/SearchFrameStart.cpp
@@ -235,6 +237,10 @@ set(QT_EXTRA_SOURCES
     src/DownloadQueueMenu.cpp
     src/DownloadQueueItems.cpp
     src/DownloadQueueListen.cpp
+    src/DownloadQueueModelData.cpp
+    src/DownloadQueueModelMut.cpp
+    src/DownloadQueueModelPath.cpp
+    src/DownloadQueueModelSort.cpp
     src/TransferDisplay.cpp
 
     src/TransferViewActions.cpp
