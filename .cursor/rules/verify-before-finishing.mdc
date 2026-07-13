@@ -1,0 +1,25 @@
+---
+description: After features or bugfixes, verify completeness and correctness; fix gaps without bloat.
+alwaysApply: true
+---
+
+# Verify before finishing
+
+After implementing a **feature** or resolving an **issue**, do not stop at the first working draft. Before ending the turn, **review the change end-to-end** and close real gaps.
+
+## Review for
+
+- **Completeness** — the requested behavior is covered in all relevant entry points (menus, both panes, own vs remote, uploads vs downloads, etc.), not only the happy path you touched first.
+- **Correctness** — edge cases that the surrounding code already cares about (empty selection, multi-select, parent/child rows, failed path resolution, stale UI after mutation).
+- **Integration** — callers, enable/disable rules, model/list refresh, and any index or on-disk side effects stay consistent.
+- **Regression** — you did not widen an existing action’s scope by accident (e.g. enabling a menu on the wrong pane or model).
+
+## Fix style
+
+- Fix what the review finds **in the same turn** when the gap is real.
+- Prefer **minimal** corrections: reuse existing helpers and patterns; no speculative refactors, extras, or “while we’re here” scope.
+- Skip only cosmetic or hypothetical issues; if you skip a suspected gap, say why briefly.
+
+## Done means
+
+The change matches the request, survives a short adversarial pass against nearby edge cases, and stays as small as a correct fix allows.

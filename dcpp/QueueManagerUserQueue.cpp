@@ -33,6 +33,7 @@ void UserQueue::add(QueueItem* qi) {
 void UserQueue::add(QueueItem* qi, const UserPtr& aUser) {
     auto& l = userQueue[qi->getPriority()][aUser];
 
+    // Partials with progress stay ahead of not-started; getNext picks natural order within each class.
     if(qi->getDownloadedBytes() > 0) {
         l.push_front(qi);
     } else {
