@@ -13,7 +13,8 @@
 
 namespace dcpp {
 
-/** Digit-aware case-insensitive UTF-8 compare; "file1" before "file11". Returns <0, 0, >0. */
+/** Digit-aware case-insensitive UTF-8 compare; "file1" before "file11".
+ *  Paths with / or \\: fewer directory segments first, then natural order. Returns <0, 0, >0. */
 int compareNatural(const string& a, const string& b);
 
 } // namespace dcpp

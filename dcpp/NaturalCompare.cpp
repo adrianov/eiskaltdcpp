@@ -7,7 +7,7 @@
  * (at your option) any later version.
  */
 
-/** Alpha-numeric natural string order for download queue tie-breaks. */
+/** Alpha-numeric natural string order; path depth first when / or \\ present. */
 
 #include "stdinc.h"
 #include "NaturalCompare.h"
@@ -22,6 +22,23 @@ namespace {
 
 bool isDigitByte(unsigned char c) {
     return c >= '0' && c <= '9';
+}
+
+/** Non-empty path segments when / or \\ present; else 0 (plain names keep natural order). */
+size_t pathDepth(const string& s) {
+    size_t depth = 0;
+    bool inSeg = false;
+    bool hasSep = false;
+    for(char c: s) {
+        if(c == '/' || c == '\\') {
+            hasSep = true;
+            inSeg = false;
+        } else if(!inSeg) {
+            inSeg = true;
+            ++depth;
+        }
+    }
+    return hasSep ? depth : 0;
 }
 
 int compareDigitRuns(const char*& a, const char*& b) {
@@ -61,6 +78,12 @@ int compareDigitRuns(const char*& a, const char*& b) {
 } // namespace
 
 int compareNatural(const string& a, const string& b) {
+    // Paths: fewer segments first (/a/b and a/b/ both depth 2); plain names skip this.
+    const size_t depthA = pathDepth(a);
+    const size_t depthB = pathDepth(b);
+    if(depthA != depthB)
+        return depthA < depthB ? -1 : 1;
+
     const char* pa = a.c_str();
     const char* pb = b.c_str();
 

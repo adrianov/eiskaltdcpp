@@ -13,7 +13,7 @@
 
 #include "dcpp/NaturalCompare.h"
 
-/** Same digit-aware order as dcpp::compareNatural for Qt grid Name/File/Path columns. */
+/** Same digit-aware path-depth + natural order as dcpp::compareNatural for Qt grids. */
 inline int compareNaturalQ(const QString &a, const QString &b) {
     return dcpp::compareNatural(a.toStdString(), b.toStdString());
 }
