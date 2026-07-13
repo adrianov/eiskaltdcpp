@@ -89,14 +89,15 @@ void SearchFrame::slotClear(){
 }
 
 void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
-    if (!index.isValid() || !index.internalPointer())
+    if (!index.isValid())
         return;
 
     Q_D(SearchFrame);
 
     QModelIndex i = d->proxy? d->proxy->mapToSource(index) : index;
-
     SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+    if (!item)
+        return;
 
     if (!item->isDir) {
         const QString path = item->localPath();

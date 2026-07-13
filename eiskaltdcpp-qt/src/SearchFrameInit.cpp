@@ -42,6 +42,8 @@ void SearchFrame::init(){
     pushButton_STOP->hide();
 
     treeView_RESULTS->setModel(d->proxy);
+    // Fixed 16px icons — avoid per-row DecorationRole height probes during scroll.
+    treeView_RESULTS->setUniformRowHeights(true);
     treeView_RESULTS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RESULTS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 

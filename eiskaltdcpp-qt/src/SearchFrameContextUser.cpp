@@ -20,6 +20,8 @@
 #include "dcpp/UserCommand.h"
 #include "dcpp/ClientManager.h"
 
+#include <QSet>
+
 using namespace dcpp;
 
 bool SearchFrame::contextUserActions(Menu::Action act, const QModelIndexList &list)
@@ -86,14 +88,23 @@ bool SearchFrame::contextUserActions(Menu::Action act, const QModelIndexList &li
         }
         case Menu::Remove:
         {
-             selection_model->clearSelection();
+            QSet<SearchItem*> selected;
+            for (const auto &i : list)
+                selected.insert(reinterpret_cast<SearchItem*>(i.internalPointer()));
 
-             for (const auto &i : list){
-                SearchItem *item = reinterpret_cast<SearchItem*>(i.internalPointer());
+            selection_model->clearSelection();
 
-                d->model->removeItem(item);
-
-                d->model->repaint();
+            // Skip children of selected parents (parent delete frees them).
+            for (SearchItem *item : selected) {
+                bool covered = false;
+                for (SearchItem *p = item->parent(); p; p = p->parent()) {
+                    if (selected.contains(p)) {
+                        covered = true;
+                        break;
+                    }
+                }
+                if (!covered)
+                    d->model->removeItem(item);
             }
 
             break;

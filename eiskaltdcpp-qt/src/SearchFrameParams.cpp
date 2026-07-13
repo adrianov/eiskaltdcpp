@@ -147,4 +147,5 @@ void SearchFrame::addResults(const QList<VarMap> &maps){
         }
         catch (const SearchListException&){}
     }
+    d->model->flushDeferredSort();
 }

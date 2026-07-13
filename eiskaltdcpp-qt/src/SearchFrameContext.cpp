@@ -39,8 +39,18 @@ void SearchFrame::slotContextMenu(const QPoint &){
     if (list.size() < 1)
         return;
 
-    if (d->proxy)
-        std::transform(list.begin(), list.end(), list.begin(), [&d](QModelIndex i) { return d->proxy->mapToSource(i); } );
+    if (d->proxy) {
+        QModelIndexList mapped;
+        mapped.reserve(list.size());
+        for (const QModelIndex &i : list) {
+            const QModelIndex s = d->proxy->mapToSource(i);
+            if (s.isValid() && s.internalPointer())
+                mapped << s;
+        }
+        list = mapped;
+    }
+    if (list.isEmpty())
+        return;
 
     if (!Menu::getInstance())
         Menu::newInstance();
