@@ -17,11 +17,30 @@
 #include "ZUtils.h"
 #include "AdcCommand.h"
 #include "Upload.h"
+#include "UploadRequestGuard.h"
 #include "UserConnection.h"
 #include "FinishedManager.h"
 #include "File.h"
 
 namespace dcpp {
+
+namespace {
+
+void rejectIdenticalFlood(UserConnection* aSource) {
+    aSource->error(_("Too many identical requests"));
+    aSource->disconnect(true);
+}
+
+bool allowUploadGet(UserConnection* aSource, const string& type, const string& file,
+                    int64_t start, int64_t bytes) {
+    if(UploadRequestGuard::getInstance().allow(aSource->getUser(), aSource->getRemoteIp(),
+                                                type, file, start, bytes))
+        return true;
+    rejectIdenticalFlood(aSource);
+    return false;
+}
+
+} // namespace
 
 void UploadManager::on(UserConnectionListener::Get, UserConnection* aSource, const string& aFile, int64_t aResume) noexcept {
     if(aSource->getState() != UserConnection::STATE_GET) {
@@ -29,7 +48,11 @@ void UploadManager::on(UserConnectionListener::Get, UserConnection* aSource, con
         return;
     }
 
-    if(prepareFile(*aSource, Transfer::names[Transfer::TYPE_FILE], Util::toAdcFile(aFile), aResume, -1)) {
+    const string adcFile = Util::toAdcFile(aFile);
+    if(!allowUploadGet(aSource, Transfer::names[Transfer::TYPE_FILE], adcFile, aResume, -1))
+        return;
+
+    if(prepareFile(*aSource, Transfer::names[Transfer::TYPE_FILE], adcFile, aResume, -1)) {
         if(aResume == 0)
             aSource->resetTransferSpeed();
         aSource->setState(UserConnection::STATE_SEND);
@@ -67,6 +90,9 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
     const string& fname = c.getParam(1);
     int64_t aStartPos = Util::toInt64(c.getParam(2));
     int64_t aBytes = Util::toInt64(c.getParam(3));
+
+    if(!allowUploadGet(aSource, type, fname, aStartPos, aBytes))
+        return;
 
     if(prepareFile(*aSource, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4))) {
         if(aStartPos == 0)

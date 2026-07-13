@@ -17,11 +17,14 @@
 #include "ShareManager.h"
 #include "AdcCommand.h"
 #include "Upload.h"
+#include "UploadRequestGuard.h"
 #include "UserConnection.h"
 
 namespace dcpp {
 
-void UploadManager::on(TimerManagerListener::Minute, uint64_t /* aTick */) noexcept {
+void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
+    UploadRequestGuard::getInstance().prune(aTick);
+
     UserList disconnects;
     {
         Lock l(cs);

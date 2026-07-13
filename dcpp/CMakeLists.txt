@@ -85,6 +85,7 @@ set(DCPP_EXTRA_SOURCES
     UploadManagerPartial.cpp
     UploadManagerGrant.cpp
     UploadManagerAutoSlot.cpp
+    UploadRequestGuard.cpp
     DownloadManagerTransfer.cpp
     ConnectionManagerQueue.cpp
     ConnectionManagerTimer.cpp
