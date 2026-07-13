@@ -69,7 +69,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     if (totalSize > 0 && progressPos > totalSize)
         progressPos = totalSize;
 
-    // High-water mark: segment/source races can briefly under-count.
+    // High-water bytes, then one percent for both bar and status text.
     if (!p->finished)
         progressPos = TransferDisplay::highWaterBytes(p->dpos, progressPos);
     p->dpos = progressPos;
@@ -79,6 +79,8 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
     const double progress = totalSize > 0
         ? qBound(0.0, (double)(p->dpos * 100.0) / totalSize, 100.0) : 0.0;
+    p->percent = progress;
+
     qint64 timeLeft = speed > 0 ? (totalSize - p->dpos) / speed : 0;
 
     speed = TransferDisplay::roundSpeed(speed);
@@ -93,7 +95,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     else if (!p->finished)
         p->updateColumn(COLUMN_TRANSFER_STATS, tr("Uploaded "));
 
-    QString stat = vstr(p->data(COLUMN_TRANSFER_STATS)) + WulforUtil::formatDisplayBytes(p->dpos)
+    const QString stat = vstr(p->data(COLUMN_TRANSFER_STATS)) + WulforUtil::formatDisplayBytes(p->dpos)
                    + QString(" (%1%)").arg(progress, 0, 'f', 1);
 
     QString hubs_str;
@@ -123,8 +125,6 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
     if (!p->finished)
         p->updateColumn(COLUMN_TRANSFER_STATS, stat);
-
-    p->percent = p->finished ? progress : TransferDisplay::highWaterPercent(p->percent, progress);
 }
 
 void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){

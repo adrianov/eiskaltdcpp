@@ -36,9 +36,12 @@ void TransferViewModel::updateTransfer(const VarMap &params){
                                                tr("Downloaded "), tr("Uploaded ")))
             p.remove("STAT");
         // Uploads store absolute file offsets in DPOS — hold high-water between segments.
+        // Drop PERC with DPOS so the bar % stays with the held status text.
         // Downloads use segment-relative DPOS; blocking a reset double-counts with parent fpos.
-        if (!vbol(p["DOWN"]) && p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos)
+        if (!vbol(p["DOWN"]) && p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos) {
             p.remove("DPOS");
+            p.remove("PERC");
+        }
     }
 
     if (p.contains("SPEED"))
@@ -55,13 +58,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
 
     if (p.contains("DPOS"))
         item->dpos = vlng(p["DPOS"]);
-    if (p.contains("PERC")) {
-        const double next = qBound(0.0, vdbl(p["PERC"]), 100.0);
-        if (vbol(p["FAIL"]) || !sameTarget)
-            item->percent = next;
-        else
-            item->percent = TransferDisplay::highWaterPercent(item->percent, next);
-    }
+    // Percent tracks PERC/STAT together — do not high-water separately from status text.
+    if (p.contains("PERC"))
+        item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
 
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
