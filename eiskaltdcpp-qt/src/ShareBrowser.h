@@ -73,12 +73,14 @@ class ShareBrowser : public  QWidget,
             AddToFav,
             AddRestrinction,
             RemoveRestriction,
+            OpenFile,
             OpenUrl,
             DeleteFile,
             None
         };
 
-        Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr), bool treePane = false, bool hasDeletable = false);
+        Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr), bool treePane = false,
+                    bool hasDeletable = false, bool hasFile = false);
 
         QString getTarget() { return target; }
 
@@ -91,6 +93,7 @@ class ShareBrowser : public  QWidget,
         QMenu *down_to;
         QMenu *rest_menu;
         QString target;
+        QAction *open_file;
         QAction *open_url;
         QAction *delete_file;
     };

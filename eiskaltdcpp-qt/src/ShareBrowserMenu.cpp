@@ -48,7 +48,8 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
     QAction *set_rest = new QAction(tr("Add restriction"), rest_menu);
     QAction *rem_rest = new QAction(tr("Remove restriction"), rest_menu);
-    open_url = new QAction(tr("Open directory"), menu);
+    open_file = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open file"), menu);
+    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), menu);
     delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete File"), menu);
     QAction *sep2    = new QAction(menu);
     QAction *sep3    = new QAction(menu);
@@ -63,6 +64,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(add_to_fav, AddToFav);
     actions.insert(set_rest, AddRestrinction);
     actions.insert(rem_rest, RemoveRestriction);
+    actions.insert(open_file, OpenFile);
     actions.insert(open_url, OpenUrl);
     actions.insert(delete_file, DeleteFile);
 
@@ -81,7 +83,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     rest_menu->addActions(QList<QAction*>() << set_rest << rem_rest);
     menu->insertMenu(sep, down_to);
     menu->addMenu(rest_menu);
-    menu->addActions(QList<QAction*>() << open_url << sep4 << delete_file);
+    menu->addActions(QList<QAction*>() << open_file << open_url << sep4 << delete_file);
 }
 
 ShareBrowser::Menu::~Menu(){
@@ -94,7 +96,8 @@ ShareBrowser::Menu::~Menu(){
     down_to = nullptr;
 }
 
-ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, bool treePane, bool hasDeletable){
+ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, bool treePane,
+                                                    bool hasDeletable, bool hasFile){
     qDeleteAll(down_to->actions());
     down_to->clear();
 
@@ -141,6 +144,7 @@ ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, b
 
     const bool own = (user == ClientManager::getInstance()->getMe());
     rest_menu->setEnabled(own && treePane);
+    open_file->setEnabled(own && hasFile);
     open_url->setEnabled(own);
     delete_file->setEnabled(own && hasDeletable);
 

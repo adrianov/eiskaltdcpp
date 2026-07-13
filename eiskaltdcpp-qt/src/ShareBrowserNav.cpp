@@ -11,7 +11,9 @@
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
+#include "SearchLocalPath.h"
 
+#include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
 
 #include <QAbstractItemView>
@@ -28,18 +30,7 @@ void ShareBrowser::goDown(QTreeView *view){
     if (selected.size() > 1 || selected.empty())
         return;
 
-    QModelIndex index = selected.at(0);
-    FileBrowserItem *item = nullptr;
-
-    if (view->model() == proxy)
-        item = static_cast<FileBrowserItem*>(proxy->mapToSource(index).internalPointer());
-    else
-        item = static_cast<FileBrowserItem*>(index.internalPointer());
-
-    if (!item || item->file)
-        return;
-
-    slotRightPaneClicked(index);
+    slotRightPaneClicked(selected.at(0));
 
     treeView_RPANE->setFocus();
 }
@@ -103,7 +94,12 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
         return;
 
     if (item->file){
-        download(item->file, _q(SETTING(DOWNLOAD_DIRECTORY)));
+        if (user == ClientManager::getInstance()->getMe()) {
+            for (const auto &path : listing.getLocalPaths(item->file))
+                SearchLocalPath::openFile(_q(path));
+        } else {
+            download(item->file, _q(SETTING(DOWNLOAD_DIRECTORY)));
+        }
 
         return;
     }
