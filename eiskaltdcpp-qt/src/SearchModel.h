@@ -85,6 +85,10 @@ public:
     QString localPath() const;
     /** Drop cached path so the next localPath() lookup runs again. */
     void clearLocalPath();
+    /** True when this TTH is already in the download queue. */
+    bool isQueued() const;
+    /** Drop cached queue flag so the next isQueued() lookup runs again. */
+    void clearQueued();
 
     unsigned count;
 
@@ -99,6 +103,8 @@ private:
     SearchItem *parentItem;
     mutable bool localChecked = false;
     mutable QString localCached;
+    mutable bool queuedChecked = false;
+    mutable bool queuedCached = false;
 };
 
 class SearchModel : public QAbstractItemModel
@@ -165,7 +171,7 @@ public:
 
     /** */
     void repaint();
-    /** Re-resolve one TTH, or all TTHs after an asynchronous file move. */
+    /** Re-resolve local path and queue state for one TTH, or all after async moves. */
     void refreshLocal(const QString &tth);
 
 public Q_SLOTS:

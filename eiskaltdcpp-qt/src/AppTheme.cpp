@@ -63,7 +63,7 @@ QColor AppTheme::readableChatColor(const QColor &preferred){
 bool AppTheme::isLegacyDefault(const QString &colorName){
     static const QSet<QString> legacy = {
         "#078010", "#000000", "#838383", "#ffff00", "#ac0000",
-        "#2344e7", "#ff0000", "#00ff7f", "#1f8f1f"
+        "#2344e7", "#ff0000", "#00ff7f", "#1f8f1f", "#007aff"
     };
     return legacy.contains(colorName.toLower());
 }
@@ -92,26 +92,6 @@ QColor AppTheme::linkColor(){
 
 QColor AppTheme::sharedFileColor(){
     return successColor();
-}
-
-QColor AppTheme::sharedFileHighlight(){
-    QColor c;
-    const QString stored = WulforSettings::getInstance()->getStr(WS_APP_SHARED_FILES_COLOR);
-    if (stored.isEmpty() || isLegacyDefault(stored))
-        c = successColor();
-    else
-        c.setNamedColor(stored);
-    if (!c.isValid())
-        c = successColor();
-
-    // Soft wash keeps default text readable; strength comes from settings alpha.
-    int alpha = WulforSettings::getInstance()->getInt(WI_APP_SHARED_FILES_ALPHA, 56);
-    if (alpha < 0)
-        alpha = 0;
-    else if (alpha > 255)
-        alpha = 255;
-    c.setAlpha(alpha);
-    return c;
 }
 
 QColor AppTheme::findHighlightColor(){
@@ -156,12 +136,16 @@ static QColor defaultChatColor(const QString &key){
     if (key == WS_APP_SHARED_FILES_COLOR)
         return AppTheme::sharedFileColor();
 
+    if (key == WS_APP_QUEUED_FILES_COLOR)
+        return AppTheme::linkColor();
+
     return paletteText();
 }
 
 QString AppTheme::chatColor(const QString &settingKey){
     // Highlight / list colors are backgrounds or non-chat surfaces — do not clamp.
-    if (settingKey == WS_CHAT_FIND_COLOR || settingKey == WS_APP_SHARED_FILES_COLOR) {
+    if (settingKey == WS_CHAT_FIND_COLOR || settingKey == WS_APP_SHARED_FILES_COLOR
+            || settingKey == WS_APP_QUEUED_FILES_COLOR) {
         const QString stored = WulforSettings::getInstance()->getStr(settingKey);
         if (stored.isEmpty() || isLegacyDefault(stored))
             return defaultChatColor(settingKey).name();

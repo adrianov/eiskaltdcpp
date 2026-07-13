@@ -54,6 +54,7 @@ void WulforSettings::fillOldConfigMaps() {
     strmap.insert(WS_APP_ICONTHEME,         "default");
     strmap.insert(WS_APP_USERTHEME,         "default");
     strmap.insert(WS_APP_SHARED_FILES_COLOR,"#1f8f1f");
+    strmap.insert(WS_APP_QUEUED_FILES_COLOR,"#007aff");
     strmap.insert(WS_NOTIFY_SOUNDS,         "");
     strmap.insert(WS_NOTIFY_SND_CMD,        "");
     strmap.insert(WS_FAVUSERS_STATE,        "");
@@ -116,6 +117,7 @@ void WulforSettings::fillOldConfigMaps() {
     intmap.insert(WI_APP_UNIT_BASE,         1024);
     intmap.insert(WI_APP_AUTOAWAY_INTERVAL, 60);
     intmap.insert(WI_APP_SHARED_FILES_ALPHA, 56);
+    intmap.insert(WI_APP_QUEUED_FILES_ALPHA, 56);
     intmap.insert(WI_CHAT_MAXPARAGRAPHS,    1000);
     intmap.insert(WI_DEF_MAGNET_ACTION,     0);
     intmap.insert(WI_CHAT_WIDTH,            -1);

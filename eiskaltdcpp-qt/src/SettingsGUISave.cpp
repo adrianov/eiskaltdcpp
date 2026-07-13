@@ -120,6 +120,9 @@ void SettingsGUI::ok(){
         WSSET(WS_APP_SHARED_FILES_COLOR, shared_files_color.name());
         WISET(WI_APP_SHARED_FILES_ALPHA, horizontalSlider_SHAREDFILES->value());
 
+        WSSET(WS_APP_QUEUED_FILES_COLOR, queued_files_color.name());
+        WISET(WI_APP_QUEUED_FILES_ALPHA, horizontalSlider_QUEUEDFILES->value());
+
         WBSET("hubframe/change-chat-background-color", checkBox_CHAT_BACKGROUND_COLOR->isChecked());
         if (chat_background_color.isValid())
             WSSET("hubframe/chat-background-color", chat_background_color.name());

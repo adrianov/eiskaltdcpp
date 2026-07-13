@@ -45,16 +45,22 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         }
         case Qt::BackgroundRole:
         {
-            if (item->isDir || item->localPath().isEmpty())
+            if (item->isDir)
                 break;
-            // Row wash + default text: readable on light and dark themes.
-            return AppTheme::sharedFileHighlight();
+            // Local file wins over queued: already-have is the stronger signal.
+            if (!item->localPath().isEmpty())
+                return AppTheme::sharedFileHighlight();
+            if (item->isQueued())
+                return AppTheme::queuedFileHighlight();
+            break;
         }
         case Qt::ToolTipRole:
         {
             const QString path = item->localPath();
             if (!path.isEmpty())
                 return tr("File already exists: %1").arg(path);
+            if (item->isQueued())
+                return tr("Already in download queue");
             break;
         }
         default: break;

@@ -60,6 +60,7 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WS_APP_ICONTHEME,         "default");
     settings.setValue(WS_APP_USERTHEME,         "default");
     settings.setValue(WS_APP_SHARED_FILES_COLOR,"#1f8f1f");
+    settings.setValue(WS_APP_QUEUED_FILES_COLOR,"#007aff");
     settings.setValue(WS_NOTIFY_SOUNDS,         "");
     settings.setValue(WS_NOTIFY_SND_CMD,        "");
     settings.setValue(WS_FAVUSERS_STATE,        "");
@@ -122,6 +123,7 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WI_APP_UNIT_BASE,         1024);
     settings.setValue(WI_APP_AUTOAWAY_INTERVAL, 60);
     settings.setValue(WI_APP_SHARED_FILES_ALPHA, 56);
+    settings.setValue(WI_APP_QUEUED_FILES_ALPHA, 56);
     settings.setValue(WI_CHAT_MAXPARAGRAPHS,    1000);
     settings.setValue(WI_DEF_MAGNET_ACTION,     0);
     settings.setValue(WI_CHAT_WIDTH,            -1);

@@ -46,6 +46,14 @@ void SettingsGUI::slotGetColor()
             p.fill(color);
             toolButton_SHAREDFILES->setIcon(p);
         }
+    } else if (sender() == toolButton_QUEUEDFILES) {
+        QColor color = QColorDialog::getColor(queued_files_color);
+        if (color.isValid()) {
+            queued_files_color = color;
+            color.setAlpha(horizontalSlider_QUEUEDFILES->value());
+            p.fill(color);
+            toolButton_QUEUEDFILES->setIcon(p);
+        }
     } else if (sender() == toolButton_CHAT_BACKGROUND_COLOR) {
         QColor color = QColorDialog::getColor(chat_background_color);
         if (color.isValid()) {
@@ -76,14 +84,23 @@ void SettingsGUI::slotGetColor()
 void SettingsGUI::slotSetTransparency(int value)
 {
     QPixmap p(10, 10);
-    QColor color = (sender() == horizontalSlider_H_COLOR) ? h_color : shared_files_color;
+    QColor color;
+    if (sender() == horizontalSlider_H_COLOR)
+        color = h_color;
+    else if (sender() == horizontalSlider_SHAREDFILES)
+        color = shared_files_color;
+    else
+        color = queued_files_color;
+
     color.setAlpha(value);
     if (color.isValid())
         p.fill(color);
     if (sender() == horizontalSlider_H_COLOR)
         toolButton_H_COLOR->setIcon(p);
-    else
+    else if (sender() == horizontalSlider_SHAREDFILES)
         toolButton_SHAREDFILES->setIcon(p);
+    else
+        toolButton_QUEUEDFILES->setIcon(p);
 }
 
 void SettingsGUI::slotResetTransferColors()

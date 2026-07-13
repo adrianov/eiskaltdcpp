@@ -81,6 +81,12 @@ void SettingsGUI::initColors()
         p.fill(c);
         toolButton_SHAREDFILES->setIcon(p);
 
+        c.setNamedColor(AppTheme::chatColor(WS_APP_QUEUED_FILES_COLOR));
+        queued_files_color = c;
+        c.setAlpha(WIGET(WI_APP_QUEUED_FILES_ALPHA, 56));
+        p.fill(c);
+        toolButton_QUEUEDFILES->setIcon(p);
+
         downloads_clr = qvariant_cast<QColor>(WVGET("transferview/download-bar-color", QColor()));
         uploads_clr = qvariant_cast<QColor>(WVGET("transferview/upload-bar-color", QColor()));
 
@@ -109,6 +115,7 @@ void SettingsGUI::initColors()
 
         horizontalSlider_H_COLOR->setValue(WIGET(WI_CHAT_FIND_COLOR_ALPHA));
         horizontalSlider_SHAREDFILES->setValue(WIGET(WI_APP_SHARED_FILES_ALPHA));
+        horizontalSlider_QUEUEDFILES->setValue(WIGET(WI_APP_QUEUED_FILES_ALPHA, 56));
     }
     {// Fonts tab
         CustomFontModel *model = new CustomFontModel(this);
@@ -129,10 +136,12 @@ void SettingsGUI::initColors()
     connect(comboBox_ICONS, SIGNAL(activated(int)), this, SLOT(slotIconsChanged()));
     connect(toolButton_H_COLOR, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(toolButton_SHAREDFILES, SIGNAL(clicked()), this, SLOT(slotGetColor()));
+    connect(toolButton_QUEUEDFILES, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(toolButton_CHAT_BACKGROUND_COLOR, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(toolButton_DOWNLOADSCLR, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(toolButton_UPLOADSCLR, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(pushButton_RESET, SIGNAL(clicked()), this, SLOT(slotResetTransferColors()));
     connect(horizontalSlider_H_COLOR, SIGNAL(valueChanged(int)), this, SLOT(slotSetTransparency(int)));
     connect(horizontalSlider_SHAREDFILES, SIGNAL(valueChanged(int)), this, SLOT(slotSetTransparency(int)));
+    connect(horizontalSlider_QUEUEDFILES, SIGNAL(valueChanged(int)), this, SLOT(slotSetTransparency(int)));
 }

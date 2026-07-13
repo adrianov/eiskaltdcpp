@@ -67,8 +67,11 @@ void SearchModel::refreshLocal(const QString &tth){
     if (tth.isEmpty()) {
         for (SearchItem *item : tths) {
             item->clearLocalPath();
-            for (SearchItem *child : item->childItems)
+            item->clearQueued();
+            for (SearchItem *child : item->childItems) {
                 child->clearLocalPath();
+                child->clearQueued();
+            }
         }
         emit layoutChanged();
         return;
@@ -79,8 +82,11 @@ void SearchModel::refreshLocal(const QString &tth){
         return;
 
     item->clearLocalPath();
-    for (SearchItem *child : item->childItems)
+    item->clearQueued();
+    for (SearchItem *child : item->childItems) {
         child->clearLocalPath();
+        child->clearQueued();
+    }
 
     const QModelIndex idx = createIndexForItem(item);
     if (idx.isValid())

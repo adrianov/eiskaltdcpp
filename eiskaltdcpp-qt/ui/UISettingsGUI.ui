@@ -829,6 +829,55 @@ them is usually available only to operators</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_queuedFiles">
+         <property name="title">
+          <string>Highlighting of queued files</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_queuedFiles">
+          <property name="margin">
+           <number>1</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_queuedFilesColor">
+            <property name="text">
+             <string>Color</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QToolButton" name="toolButton_QUEUEDFILES">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_queuedFilesAlpha">
+            <property name="text">
+             <string>Tint strength</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSlider" name="horizontalSlider_QUEUEDFILES">
+            <property name="maximum">
+             <number>255</number>
+            </property>
+            <property name="value">
+             <number>127</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_7">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">

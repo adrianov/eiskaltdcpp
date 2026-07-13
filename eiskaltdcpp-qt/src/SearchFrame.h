@@ -180,6 +180,8 @@ private:
     virtual void on(ClientConnected, Client* c) noexcept;
     virtual void on(ClientUpdated, Client* c) noexcept;
     virtual void on(ClientDisconnected, Client* c) noexcept;
+    virtual void on(QueueManagerListener::Added, QueueItem*) noexcept;
+    virtual void on(QueueManagerListener::Removed, QueueItem*) noexcept;
     virtual void on(QueueManagerListener::Finished, QueueItem*, const string&, int64_t) noexcept;
     virtual void on(QueueManagerListener::FileMoved, const string&) noexcept;
 

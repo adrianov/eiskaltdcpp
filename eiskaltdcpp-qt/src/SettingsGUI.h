@@ -50,6 +50,7 @@ private:
     // clean colors (without transparency)
     QColor h_color;
     QColor shared_files_color;
+    QColor queued_files_color;
     QColor chat_background_color;
     QColor downloads_clr;
     QColor uploads_clr;

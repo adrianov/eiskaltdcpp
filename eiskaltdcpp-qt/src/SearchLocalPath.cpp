@@ -12,6 +12,7 @@
 
 #include "dcpp/File.h"
 #include "dcpp/FinishedManager.h"
+#include "dcpp/QueueManager.h"
 #include "dcpp/ShareManager.h"
 
 #include <QDesktopServices>
@@ -54,6 +55,14 @@ QString resolve(const QString &tth, qint64 size)
     if (!shared.isEmpty())
         return shared;
     return fromFinished(tth, size);
+}
+
+bool isQueued(const QString &tth)
+{
+    if (tth.isEmpty())
+        return false;
+    // Same TTH index DONT_DL_ALREADY_QUEUED uses; empty-TTH filelists never reach here.
+    return !QueueManager::getInstance()->getTargets(TTHValue(_tq(tth))).empty();
 }
 
 bool openFile(const QString &path)

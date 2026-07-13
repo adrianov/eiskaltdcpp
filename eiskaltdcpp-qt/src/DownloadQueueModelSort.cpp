@@ -8,9 +8,10 @@
  ***************************************************************************/
 
 #include "DownloadQueueModelSort.h"
+#include "DownloadQueueModelPrivate.h"
 #include "NaturalCompareQt.h"
 
-#include <set>
+#include <algorithm>
 
 namespace {
 
@@ -94,4 +95,31 @@ void sortRecursive(int column, Qt::SortOrder order, DownloadQueueItem *i){
 
 void sortDownloadQueueItems(int column, Qt::SortOrder order, DownloadQueueItem *root) {
     sortRecursive(column, order, root);
+}
+
+void DownloadQueueModel::sort(int column, Qt::SortOrder order) {
+    Q_D(DownloadQueueModel);
+
+    d->sortColumn = column;
+    d->sortOrder = order;
+
+    if (!d->rootItem || d->rootItem->childItems.empty() || column < 0 || column > columnCount()-1)
+        return;
+
+    emit layoutAboutToBeChanged();
+
+    // Remap persistent indexes so expanded dirs keep correct rows after resort.
+    const QModelIndexList oldIndexes = persistentIndexList();
+
+    sortDownloadQueueItems(column, order, d->rootItem);
+
+    QModelIndexList newIndexes;
+    newIndexes.reserve(oldIndexes.size());
+    for (const QModelIndex &idx : oldIndexes) {
+        auto *item = static_cast<DownloadQueueItem*>(idx.internalPointer());
+        newIndexes << (item ? createIndex(item->row(), idx.column(), item) : QModelIndex());
+    }
+
+    changePersistentIndexList(oldIndexes, newIndexes);
+    emit layoutChanged();
 }

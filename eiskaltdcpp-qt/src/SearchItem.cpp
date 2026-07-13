@@ -86,6 +86,21 @@ void SearchItem::clearLocalPath() {
     localCached.clear();
 }
 
+bool SearchItem::isQueued() const {
+    if (queuedChecked)
+        return queuedCached;
+
+    queuedChecked = true;
+    if (!isDir)
+        queuedCached = SearchLocalPath::isQueued(data(COLUMN_SF_TTH).toString());
+    return queuedCached;
+}
+
+void SearchItem::clearQueued() {
+    queuedChecked = false;
+    queuedCached = false;
+}
+
 SearchListException::SearchListException() :
     message("Unknown"), type(Unkn)
 {}
