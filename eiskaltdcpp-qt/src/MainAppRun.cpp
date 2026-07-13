@@ -11,6 +11,7 @@
 #include "MainAppUnix.h"
 
 #include "dcpp/stdinc.h"
+#include "dcpp/ConnectionManager.h"
 #include "dcpp/DCPlusPlus.h"
 #include "dcpp/HashManager.h"
 #include "dcpp/LogManager.h"
@@ -173,7 +174,10 @@ int runApplication(EiskaltApp &app)
 #endif
 
     GlobalTimer::deleteInstance();
-    
+
+    // Close hubs/peers while still fully alive (before hub widgets use disconnect(true)).
+    dcpp::ConnectionManager::getInstance()->shutdown();
+
     ArenaWidgetManager::deleteInstance();
     
     HubManager::getInstance()->release();

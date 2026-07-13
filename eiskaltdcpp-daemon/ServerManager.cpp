@@ -13,6 +13,7 @@
 
 //---------------------------------------------------------------------------
 #include "stdafx.h"
+#include "dcpp/ConnectionManager.h"
 #include "dcpp/DCPlusPlus.h"
 #include "dcpp/format.h"
 #include "dcpp/Util.h"
@@ -61,6 +62,9 @@ bool ServerStart()
 
 void ServerStop()
 {
+    // Graceful hub/peer close before Close() tears clients down with disconnect(true).
+    dcpp::ConnectionManager::getInstance()->shutdown();
+
     ServersS->Close();
     logging(bDaemon, bsyslog, true, "server stops");
     logging(bDaemon, bsyslog, true, "waiting");

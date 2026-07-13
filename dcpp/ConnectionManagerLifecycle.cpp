@@ -10,6 +10,9 @@
 #include "stdinc.h"
 #include "ConnectionManager.h"
 
+#include "Client.h"
+#include "ClientManager.h"
+#include "Thread.h"
 #include "UserConnection.h"
 
 namespace dcpp {
@@ -44,24 +47,65 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
 }
 
 void ConnectionManager::shutdown() {
+    // Idempotent: Qt/GTK/daemon may close peers before destroying hub widgets.
+    if(shuttingDown) {
+        while(true) {
+            {
+                Lock l(cs);
+                if(userConnections.empty())
+                    break;
+            }
+            Thread::sleep(50);
+        }
+        return;
+    }
+
     TimerManager::getInstance()->removeListener(this);
     shuttingDown = true;
     disconnect();
+
     {
         Lock l(cs);
-        for(auto j: userConnections) {
-            j->disconnect(true);
+        for(auto j: userConnections)
+            j->disconnect(false);
+    }
+
+    // Let uploads finish the current send / TLS close without blocking quit forever.
+    const uint64_t graceUntil = GET_TICK() + 3000;
+    while(GET_TICK() < graceUntil) {
+        {
+            Lock l(cs);
+            if(userConnections.empty())
+                break;
         }
+        Thread::sleep(50);
+    }
+
+    {
+        Lock l(cs);
+        for(auto j: userConnections)
+            j->disconnect(true);
     }
     while(true) {
         {
             Lock l(cs);
-            if(userConnections.empty()) {
+            if(userConnections.empty())
                 break;
-            }
         }
         Thread::sleep(50);
     }
+
+    // Leave hubs after peers so upload grace is not cut short by offline kicks.
+    {
+        const Client::List hubs = ClientManager::getInstance()->getClients();
+        for(auto c : hubs) {
+            c->setAutoReconnect(false);
+            c->disconnect(false);
+        }
+    }
+
+    // Brief pause so TCP/TLS close can leave the host before process teardown.
+    Thread::sleep(250);
 }
 
 void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* conn, const StringList& feat) noexcept {
