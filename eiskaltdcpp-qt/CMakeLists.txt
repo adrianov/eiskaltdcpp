@@ -160,6 +160,7 @@ set(QT_EXTRA_SOURCES
     src/SearchModelAdd.cpp
     src/SearchModelData.cpp
     src/SearchModelMutate.cpp
+    src/SearchProxyModel.cpp
     src/SearchItem.cpp
     src/ReciprocalList.cpp
     src/ShareIndexListListener.cpp
@@ -232,6 +233,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserSelect.cpp
     src/ShareBrowserActions.cpp
     src/ShareBrowserInit.cpp
+    src/ShareBrowserSetup.cpp
     src/ShareBrowserContextUser.cpp
     src/ShareBrowserDelete.cpp
     src/DownloadQueueContext.cpp
@@ -784,7 +786,7 @@ if (APPLE)
             set (_MAC_LIBPATH "/opt/homebrew/lib")
         endif (DuckDB_LIBRARY)
         install (CODE "
-                    execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=2
+                    execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=1
                         -libpath=${_MAC_LIBPATH}
                         WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})")
     endif (USE_QT)

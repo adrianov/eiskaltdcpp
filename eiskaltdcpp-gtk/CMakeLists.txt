@@ -38,7 +38,8 @@ include_directories (${PROJECT_BINARY_DIR})
 aux_source_directory (${PROJECT_SOURCE_DIR}/src gtk_srcs)
 # Explicit units (also from aux_source_directory). Keeps splits visible; appends if scan is stale.
 set (GTK_EXTRA_SOURCES
-    wulforStartup.cc)
+    wulforStartup.cc
+    SearchClient.cc)
 foreach (_src ${GTK_EXTRA_SOURCES})
     set (_path ${PROJECT_SOURCE_DIR}/src/${_src})
     list (FIND gtk_srcs ${_path} _idx)

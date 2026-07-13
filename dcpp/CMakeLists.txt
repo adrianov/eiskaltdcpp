@@ -135,6 +135,7 @@ endforeach()
 
 list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/FileReader.cpp)
 list (REMOVE_ITEM dcpp_hdrs ${PROJECT_SOURCE_DIR}/FileReader.h)
+list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/SearchQueueSmoke.cpp)
 
 set (DCPP_SRCS ${dcpp_srcs} PARENT_SCOPE)
 set (DCPP_HDRS ${dcpp_hdrs} PARENT_SCOPE)
@@ -287,6 +288,24 @@ set_target_properties(dcpp PROPERTIES
                       VERSION ${SO_VERSION}
                       SOVERSION ${SO_VERSION}
                       OUTPUT_NAME "eiskaltdcpp")
+
+add_executable(search-queue-smoke ${PROJECT_SOURCE_DIR}/SearchQueueSmoke.cpp)
+target_link_libraries(search-queue-smoke dcpp
+                      ${PTHREADS}
+                      ${BZIP2_LIBRARIES}
+                      ${ZLIB_LIBRARIES}
+                      ${OPENSSL_LIBRARIES}
+                      ${GETTEXT_LIBRARIES}
+                      ${ICONV_LIBRARIES}
+                      ${WIN32_LIBS}
+                      ${APPLE_LIBS}
+                      ${HAIKU_LIBS}
+                      ${LUA_LIBRARIES}
+                      ${DCPP_EXTRA_LINK}
+                      ${PCRE}
+                      ${XATTR_LIBRARIES}
+                      ${IDN2_LIBRARIES}
+                      ${DHT_LIB})
 
 if (APPLE)
     set (LIBDIR ${PROJECT_NAME_GLOBAL}.app/Contents/Frameworks)

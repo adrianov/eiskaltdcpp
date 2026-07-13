@@ -24,6 +24,7 @@ cmake "$root" \
     -DCMAKE_TOOLCHAIN_FILE="$root/macos/homebrew-toolchain.cmake" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_PREFIX="$dist" \
+    -DCMAKE_INSTALL_MESSAGE=NEVER \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++
 
@@ -35,7 +36,7 @@ aspell=$app/Contents/Resources/aspell
 
 if [ ! -d "$aspell/dict" ]; then
     tmp=$(mktemp -d)
-    curl -L -o "$tmp/aspell.zip" \
+    curl -fsSL -o "$tmp/aspell.zip" \
         "https://sourceforge.net/projects/eiskaltdcpp/files/Other/aspell.zip/download"
     unzip -q "$tmp/aspell.zip" -d "$tmp"
     cp -R "$tmp/aspell" "$app/Contents/Resources/"
