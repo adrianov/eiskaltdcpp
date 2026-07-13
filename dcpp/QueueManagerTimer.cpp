@@ -76,16 +76,21 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
         if(BOOLSETTING(AUTO_SEARCH) && (aTick >= nextSearch) && (fileQueue.getSize() > 0)) {
             const AutoSearchPick pick = QueueAutoSearch::pickAlternating(fileQueue.getQueue(),
                 recent, recentNames, nextAutoSearchTTH);
-            if(pick.item) {
+            if(pick.item && !pick.query.empty()) {
                 searchString = pick.query;
                 searchType = pick.type;
                 nextSearch = aTick + (SETTING(AUTO_SEARCH_TIME) * 60000);
                 nextAutoSearchTTH = (pick.type != SearchManager::TYPE_TTH);
                 if(BOOLSETTING(REPORT_ALTERNATES)) {
-                    if(pick.type == SearchManager::TYPE_TTH)
-                        LogManager::getInstance()->message(str(F_("Searching TTH alternates for: %1%") % pick.item->getTargetFileName()));
-                    else
-                        LogManager::getInstance()->message(str(F_("Searching filename alternates for: %1%") % searchString));
+                    string name = pick.item->getTargetFileName();
+                    if(name.empty())
+                        name = pick.item->getTarget();
+                    if(!name.empty()) {
+                        if(pick.type == SearchManager::TYPE_TTH)
+                            LogManager::getInstance()->message(str(F_("Searching TTH alternates for: %1%") % name));
+                        else
+                            LogManager::getInstance()->message(str(F_("Searching filename alternates for: %1%") % name));
+                    }
                 }
             }
         }

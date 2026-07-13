@@ -12,7 +12,6 @@
 #include "QueueAutoSearch.h"
 
 #include "SearchQuery.h"
-#include "SettingsManager.h"
 #include "Util.h"
 
 namespace dcpp {
@@ -34,15 +33,15 @@ static QueueItem* findCandidate(QueueItem* cand, QueueItem::StringIter start, Qu
             continue;
         if(q->getPriority() == QueueItem::PAUSED)
             continue;
-        if(q->countOnlineUsers() >= SETTING(AUTO_SEARCH_LIMIT))
-            continue;
 
         if(mode == QueueAutoSearch::TTH) {
             if(recentHas(recent, q->getTarget()))
                 continue;
         } else {
-            const string& name = q->getTargetFileName();
+            const string name = q->getTargetFileName();
             if(name.empty() || recentHas(recent, name))
+                continue;
+            if(SearchQuery::filenameWords(name).empty())
                 continue;
         }
 
@@ -79,6 +78,8 @@ static AutoSearchPick pick(QueueItem::StringMap& queue, const StringList& recent
     } else {
         result.query = SearchQuery::filenameWords(result.item->getTargetFileName());
         result.type = SearchManager::TYPE_ANY;
+        if(result.query.empty())
+            result.item = nullptr;
     }
     return result;
 }

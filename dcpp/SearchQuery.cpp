@@ -92,6 +92,19 @@ string SearchQuery::filenameWords(const string& aFileName, size_t wordCount) {
             break;
     }
 
+    // Numeric / punct-heavy titles (e.g. "12345.mkv") still need a query.
+    if(result.empty()) {
+        for(const auto& word : tok.getTokens()) {
+            if(word.empty())
+                continue;
+            if(!result.empty())
+                result.push_back(' ');
+            result += word;
+            if(++added >= wordCount)
+                break;
+        }
+    }
+
     return limitHubSearch(result);
 }
 

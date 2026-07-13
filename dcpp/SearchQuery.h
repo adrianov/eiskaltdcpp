@@ -19,7 +19,8 @@ public:
     static constexpr size_t MAX_LEN = 50;
 
     static string limitHubSearch(const string& aString, size_t maxLen = MAX_LEN);
-    /** Up to wordCount letter-bearing name parts; drops real extension and digit/punct-only tokens. */
+    /** Up to wordCount name parts for hub search; prefers letter-bearing tokens,
+     *  otherwise keeps digit tokens. Drops a real file extension. */
     static string filenameWords(const string& aFileName, size_t wordCount = 3);
 };
 
