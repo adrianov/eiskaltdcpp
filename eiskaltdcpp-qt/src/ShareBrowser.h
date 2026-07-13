@@ -74,10 +74,11 @@ class ShareBrowser : public  QWidget,
             AddRestrinction,
             RemoveRestriction,
             OpenUrl,
+            DeleteFile,
             None
         };
 
-        Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr));
+        Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr), bool treePane = false, bool hasDeletable = false);
 
         QString getTarget() { return target; }
 
@@ -91,6 +92,7 @@ class ShareBrowser : public  QWidget,
         QMenu *rest_menu;
         QString target;
         QAction *open_url;
+        QAction *delete_file;
     };
 
 public:
@@ -145,6 +147,7 @@ private:
     void download(dcpp::DirectoryListing::File*, const QString &);
     void contextMoreActions(Menu::Action act, const QModelIndexList &list);
     void contextUserActions(Menu::Action act, const QModelIndexList &list);
+    void deleteOwnItems(const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
 

@@ -49,8 +49,10 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     QAction *set_rest = new QAction(tr("Add restriction"), rest_menu);
     QAction *rem_rest = new QAction(tr("Remove restriction"), rest_menu);
     open_url = new QAction(tr("Open directory"), menu);
+    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete File"), menu);
     QAction *sep2    = new QAction(menu);
     QAction *sep3    = new QAction(menu);
+    QAction *sep4    = new QAction(menu);
 
     actions.insert(down, Download);
     actions.insert(alter, Alternates);
@@ -62,6 +64,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(set_rest, AddRestrinction);
     actions.insert(rem_rest, RemoveRestriction);
     actions.insert(open_url, OpenUrl);
+    actions.insert(delete_file, DeleteFile);
 
     magnet_menu->addActions(QList<QAction*>()
                     << magnet << magnet_web << sep3 << magnet_info);
@@ -70,6 +73,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     sep1->setSeparator(true);
     sep2->setSeparator(true);
     sep3->setSeparator(true);
+    sep4->setSeparator(true);
 
     menu->addActions(QList<QAction*>() << down << sep << alter << copy_name);
     menu->addMenu(magnet_menu);
@@ -77,7 +81,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     rest_menu->addActions(QList<QAction*>() << set_rest << rem_rest);
     menu->insertMenu(sep, down_to);
     menu->addMenu(rest_menu);
-    menu->addAction(open_url);
+    menu->addActions(QList<QAction*>() << open_url << sep4 << delete_file);
 }
 
 ShareBrowser::Menu::~Menu(){
@@ -90,7 +94,7 @@ ShareBrowser::Menu::~Menu(){
     down_to = nullptr;
 }
 
-ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user){
+ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, bool treePane, bool hasDeletable){
     qDeleteAll(down_to->actions());
     down_to->clear();
 
@@ -135,8 +139,10 @@ ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user){
 
     down_to->addAction(browse);
 
-    rest_menu->setEnabled(user == ClientManager::getInstance()->getMe());
-    open_url->setEnabled(user == ClientManager::getInstance()->getMe());
+    const bool own = (user == ClientManager::getInstance()->getMe());
+    rest_menu->setEnabled(own && treePane);
+    open_url->setEnabled(own);
+    delete_file->setEnabled(own && hasDeletable);
 
     QAction *ret = menu->exec(QCursor::pos());
 

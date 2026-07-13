@@ -38,7 +38,23 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
     if (!Menu::getInstance())
         Menu::newInstance();
 
-    Menu::Action act = Menu::getInstance()->exec(view == treeView_LPANE? user : dcpp::UserPtr(nullptr));
+    bool hasDeletable = false;
+    for (const auto &index : list) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        if (!item)
+            continue;
+        if (item->file) {
+            hasDeletable = true;
+            break;
+        }
+        if (item->dir && item->dir != listing.getRoot()
+                && !dynamic_cast<dcpp::DirectoryListing::AdlDirectory*>(item->dir)) {
+            hasDeletable = true;
+            break;
+        }
+    }
+
+    Menu::Action act = Menu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable);
     QString target = _q(SETTING(DOWNLOAD_DIRECTORY));
 
     switch (act){
@@ -104,6 +120,7 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         case Menu::AddRestrinction:
         case Menu::RemoveRestriction:
         case Menu::OpenUrl:
+        case Menu::DeleteFile:
             contextMoreActions(act, list);
             break;
         default: break;

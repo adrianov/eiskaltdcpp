@@ -137,6 +137,7 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
         case Menu::AddRestrinction:
         case Menu::RemoveRestriction:
         case Menu::OpenUrl:
+        case Menu::DeleteFile:
             contextUserActions(act, list);
             break;
         default: break;
