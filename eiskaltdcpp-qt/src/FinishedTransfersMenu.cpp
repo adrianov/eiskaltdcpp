@@ -12,32 +12,8 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCursor>
-#include <QDesktopServices>
-#include <QDir>
 #include <QItemSelectionModel>
 #include <QMenu>
-#include <QUrl>
-
-template <bool isUpload>
-void FinishedTransfers<isUpload>::openFile(QString file)
-{
-    if (!file.startsWith(QChar('/')))
-        file.prepend("/");
-
-    int sep = file.lastIndexOf(QDir::separator());
-    QString name = file.right(sep);
-    QString path = file.left(sep);
-
-    QDir test(path);
-    if (!test.exists(file)){
-        QStringList files = test.entryList(QStringList("*"+name+"*"), QDir::Files, QDir::Name);
-
-        if (files.size() > 0)
-            file = path + QDir::separator() + files.first();
-    }
-
-    QDesktopServices::openUrl(QUrl::fromLocalFile(file));
-}
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::slotItemDoubleClicked(const QModelIndex &proxyIndex)
@@ -72,7 +48,7 @@ void FinishedTransfers<isUpload>::slotItemDoubleClicked(const QModelIndex &proxy
     }
 
     for (const auto &f : files)
-        openFile(f);
+        openOrReveal(f);
 }
 
 template <bool isUpload>
@@ -170,8 +146,6 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     }
 }
 
-template void FinishedTransfers<true>::openFile(QString);
-template void FinishedTransfers<false>::openFile(QString);
 template void FinishedTransfers<true>::slotItemDoubleClicked(const QModelIndex&);
 template void FinishedTransfers<false>::slotItemDoubleClicked(const QModelIndex&);
 template void FinishedTransfers<true>::slotContextMenu();

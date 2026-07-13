@@ -103,6 +103,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersListener.cpp
     src/FinishedTransfersLoad.cpp
     src/FinishedTransfersMenu.cpp
+    src/FinishedTransfersOpen.cpp
     src/FinishedTransfersModelMut.cpp
     src/FinishedTransfersModelView.cpp
     src/FinishedTransfersParams.cpp
@@ -567,7 +568,8 @@ endif (WIN32)
 
 if (APPLE)
     find_library (COCOA_LIBRARY Cocoa)
-    list (APPEND LIBS ${COCOA_LIBRARY})
+    find_library (CORESERVICES_LIBRARY CoreServices)
+    list (APPEND LIBS ${COCOA_LIBRARY} ${CORESERVICES_LIBRARY})
 endif (APPLE)
 
 if (FREE_SPACE_BAR_C)

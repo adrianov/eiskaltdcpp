@@ -125,6 +125,7 @@ private:
     void slotTypeChanged(int index) override;
     void slotClear() override;
     void openFile(QString file);
+    void openOrReveal(QString file);
     void slotItemDoubleClicked(const QModelIndex &proxyIndex) override;
     void slotContextMenu() override;
     void slotHeaderMenu() override;
