@@ -11,13 +11,8 @@
 #include "stdinc.h"
 #include "ConnectionManager.h"
 
-#include "ClientManager.h"
-#include "DownloadManager.h"
-#include "FavoriteManager.h"
 #include "MappingManager.h"
-#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
-#include "QueueManager.h"
 
 namespace dcpp {
 
@@ -55,137 +50,6 @@ void ConnectionManager::onUpnpReady() {
         // Do not wipe slot-wait / error backoff when UPnP remaps.
         if(cqi->getState() != ConnectionQueueItem::ACTIVE && !queueBackoffActive(cqi))
             cqi->setLastAttempt(0);
-    }
-}
-
-void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
-    UserList passiveUsers;
-    ConnectionQueueItem::List removed;
-
-    {
-        Lock l(cs);
-
-        bool attemptDone = false;
-        const bool upnpReady = MappingManager::getInstance()->readyForPeerConnect();
-
-        for(auto& cqi: downloads) {
-
-            if(cqi->getState() != ConnectionQueueItem::ACTIVE) {
-                if(cqi->getUser().user->isSet(User::NMDC) && Util::toInt64(
-                        ClientManager::getInstance()->getField(cqi->getUser().user->getCID(),
-                        cqi->getUser().hint, "SS")) <= 0) {
-                    removed.push_back(cqi);
-                    continue;
-                }
-                if(cqi->getState() == ConnectionQueueItem::WAITING) {
-                    auto* alias = findDownloadCqi(cqi->getUser());
-                    if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
-                            alias->getState() == ConnectionQueueItem::CONNECTING)) {
-                        mergeQueueState(alias, cqi);
-                        removed.push_back(cqi);
-                        continue;
-                    }
-                }
-                if(!cqi->getUser().user->isOnline()) {
-                    removed.push_back(cqi);
-                    continue;
-                }
-
-                if(cqi->getUser().user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive()) {
-                    PeerConnectLog::passiveWait(cqi->getUser());
-                    passiveUsers.push_back(cqi->getUser());
-                    removed.push_back(cqi);
-                    continue;
-                }
-
-                if(cqi->getErrors() == -1) {
-                    continue;
-                }
-
-                if(queueBackoffActive(cqi)) {
-                    continue;
-                }
-
-                if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                    markQueueGiveUp(cqi, cqi->getErrors(), false);
-                    continue;
-                }
-
-                if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
-                    if(cqi->getLastAttempt() + 50 * 1000 < aTick) {
-                        cqi->setErrors(cqi->getErrors() + 1);
-                        cqi->setLastAttempt(aTick);
-                        noteConnectCooldown(cqi->getUser().user,
-                                PeerConnectFilter::connectBackoffMs(cqi->getErrors()));
-                        if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                            markQueueGiveUp(cqi, cqi->getErrors(), false);
-                        } else {
-                            PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-                            fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
-                        }
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    }
-                    continue;
-                }
-
-                if(cqi->getLastAttempt() == 0 || !attemptDone)
-                {
-                    if(!upnpReady)
-                        continue;
-
-                    if(DownloadManager::getInstance()->isWaitingUploadSlot(cqi->getUser().user))
-                        continue;
-
-                    QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
-
-                    if(prio == QueueItem::PAUSED) {
-                        removed.push_back(cqi);
-                        continue;
-                    }
-
-                    bool startDown = DownloadManager::getInstance()->startDownload(prio);
-
-                    if(cqi->getState() == ConnectionQueueItem::WAITING) {
-                        if(startDown) {
-                            cqi->setLastAttempt(aTick);
-                            cqi->setState(ConnectionQueueItem::CONNECTING);
-                            cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
-
-                            if(cqi->getConnectAttempts() >= 3) {
-                                OnlineUser* ou = ClientManager::getInstance()->findBestOnlineUser(
-                                        cqi->getUser().user->getCID(), cqi->getUser().hint,
-                                        FavoriteManager::getInstance()->isPrivate(cqi->getUser().hint));
-                                if(ou && ou->getClient().getHubUrl() != cqi->getUser().hint)
-                                    cqi->setHubHint(ou->getClient().getHubUrl());
-                            }
-
-                            const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(cqi->getUser(), cqi->getConnectAttempts());
-                            PeerConnectLog::queueStart(cqi->getUser());
-                            if(ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), reverseConnect, cqi->getSecureMode())) {
-                                fire(ConnectionManagerListener::StatusChanged(), cqi);
-                                attemptDone = true;
-                            } else {
-                                cqi->setState(ConnectionQueueItem::WAITING);
-                            }
-                        } else {
-                            cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
-                            fire(ConnectionManagerListener::Failed(), cqi, _("All download slots taken"));
-                        }
-                    } else if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && startDown) {
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    }
-                }
-            }
-        }
-
-        for(auto& m : removed) {
-            putCQI(m);
-        }
-
-    }
-
-    for(auto& ui : passiveUsers) {
-        QueueManager::getInstance()->removeSource(ui, QueueItem::Source::FLAG_PASSIVE);
     }
 }
 

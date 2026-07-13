@@ -72,8 +72,18 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
 }
 
 void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
+    // Nothing left to fetch (e.g. file list just finished): drop instead of
+    // slot-wait / Failed UI that would stick as "Connection closed".
+    if(QueueManager::getInstance()->hasDownload(dlCqi->getUser()) == QueueItem::PAUSED) {
+        putCQI(dlCqi);
+        return;
+    }
+
     const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
+
+    if(!tlsMismatch)
+        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
 
     if(slotWait) {
         dlCqi->setSlotWaits(dlCqi->getSlotWaits() + 1);
@@ -120,9 +130,6 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
         if(!protocolError || (tlsMismatch && PeerConnectFilter::shouldLogTimeout(dlCqi->getErrors() + 1)))
             PeerConnectLog::connectionFail(aSource, aError, protocolError);
     }
-
-    if(dlCqi && !tlsMismatch)
-        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
 
     if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
         if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {

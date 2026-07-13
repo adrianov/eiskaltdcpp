@@ -17,11 +17,6 @@
 
 namespace dcpp {
 
-namespace {
-/** Keep source without tree below this size (must match Download.cpp). */
-const int64_t MAX_SIZE_WO_TREE = 20 * 1024 * 1024;
-}
-
 /** Add a source to an existing queue item */
 bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad) {
     bool wantConnection = (qi->getPriority() != QueueItem::PAUSED) && !userQueue.getRunning(aUser);
@@ -112,13 +107,6 @@ void QueueManager::removeSource(const string& aTarget, const UserPtr& aUser, int
         if(q->isSet(QueueItem::FLAG_USER_LIST)) {
             removeCompletely = true;
             goto endCheck;
-        }
-
-        if(reason == QueueItem::Source::FLAG_NO_TREE) {
-            q->getSource(aUser)->setFlag(reason);
-            if (q->getSize() < MAX_SIZE_WO_TREE) {
-                return;
-            }
         }
 
         if(q->isRunning() && userQueue.getRunning(aUser) == q) {
