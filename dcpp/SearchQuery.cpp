@@ -15,6 +15,42 @@
 
 namespace dcpp {
 
+namespace {
+
+/** ASCII letter or any non-ASCII byte (UTF-8 letters, e.g. Cyrillic). */
+bool hasAlpha(const string& word) {
+    for(unsigned char c : word) {
+        if((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c >= 0x80)
+            return true;
+    }
+    return false;
+}
+
+/** Short alnum suffix with a letter (mkv, mp3, 7z) — not season tags or years. */
+bool looksLikeExt(const string& ext) {
+    if(ext.empty() || ext.size() > 5)
+        return false;
+    bool letter = false;
+    for(unsigned char c : ext) {
+        if((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+            letter = true;
+        else if(c < '0' || c > '9')
+            return false;
+    }
+    return letter;
+}
+
+string stripExt(const string& name) {
+    const auto dot = name.rfind('.');
+    if(dot == string::npos || dot == 0)
+        return name;
+    if(!looksLikeExt(name.substr(dot + 1)))
+        return name;
+    return name.substr(0, dot);
+}
+
+} // namespace
+
 string SearchQuery::limitHubSearch(const string& aString, size_t maxLen) {
     if(aString.size() <= maxLen)
         return aString;
@@ -30,13 +66,13 @@ string SearchQuery::limitHubSearch(const string& aString, size_t maxLen) {
 }
 
 string SearchQuery::filenameWords(const string& aFileName, size_t wordCount) {
-    string normalized;
-    normalized.reserve(aFileName.size());
+    const string base = stripExt(aFileName);
 
-    for(char c : aFileName) {
-        if(c == '.' || c == '_' || c == '-')
-            normalized.push_back(' ');
-        else if(c == '\t' || c == '\r' || c == '\n')
+    string normalized;
+    normalized.reserve(base.size());
+
+    for(char c : base) {
+        if(c == '.' || c == '_' || c == '-' || c == '\t' || c == '\r' || c == '\n')
             normalized.push_back(' ');
         else
             normalized.push_back(c);
@@ -47,7 +83,7 @@ string SearchQuery::filenameWords(const string& aFileName, size_t wordCount) {
     size_t added = 0;
 
     for(const auto& word : tok.getTokens()) {
-        if(word.empty())
+        if(word.empty() || !hasAlpha(word))
             continue;
         if(!result.empty())
             result.push_back(' ');
