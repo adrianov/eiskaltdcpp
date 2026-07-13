@@ -214,6 +214,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
+    src/ShareIndexUsers.cpp
     src/ShareIndexCap.cpp
     src/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
@@ -221,6 +222,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexSmokeWrite.cpp
     src/ShareIndexSmokeMigrate.cpp
     src/ShareIndexSmokeSearch.cpp
+    src/ShareIndexSmokeUsers.cpp
     src/ShareIndexUpsert.cpp
     src/ShareIndexWalk.cpp
     src/ShareBrowserContext.cpp
@@ -237,6 +239,9 @@ set(QT_EXTRA_SOURCES
     src/DownloadQueueMenu.cpp
     src/DownloadQueueItems.cpp
     src/DownloadQueueListen.cpp
+    src/DownloadQueueParams.cpp
+    src/DownloadQueueIndex.cpp
+    src/DownloadQueueConnect.cpp
     src/DownloadQueueModelData.cpp
     src/DownloadQueueModelMut.cpp
     src/DownloadQueueModelPath.cpp
