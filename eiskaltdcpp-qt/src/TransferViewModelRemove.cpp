@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
+#include "TransferDisplay.h"
 #include "WulforUtil.h"
 
 #include "dcpp/CID.h"
@@ -42,6 +43,12 @@ bool moreDownloadsFrom(const QString &cid) {
     return QueueManager::getInstance()->hasDownload(user) != QueueItem::PAUSED;
 }
 
+// Progress rows may linger across reconnect; Connecting/Connected must not.
+bool keepAcrossReconnect(const TransferViewItem *item, const QString &dl, const QString &ul) {
+    return item && (item->dpos > 0 || item->percent > 0
+            || TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(), dl, ul));
+}
+
 } // namespace
 
 void TransferViewModel::removeTransfer(const VarMap &params){
@@ -52,20 +59,20 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
 
-    // Same user still has queued files: keep the row for the next Requesting/Added.
     if (download && moreDownloadsFrom(cid)) {
         TransferViewItem *item = nullptr;
-        if (!findTransfer(cid, true, &item) || !item)
+        if (findTransfer(cid, true, &item)
+                && keepAcrossReconnect(item, tr("Downloaded "), tr("Uploaded "))) {
+            item->fail = false;
+            item->finished = false;
+            item->updateColumn(COLUMN_TRANSFER_SPEED, 0);
+            const QModelIndex idx = createIndexForItem(item);
+            if (idx.isValid()) {
+                emit dataChanged(index(idx.row(), 0, idx.parent()),
+                                 index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+            }
             return;
-        item->fail = false;
-        item->finished = false;
-        item->updateColumn(COLUMN_TRANSFER_SPEED, 0);
-        const QModelIndex idx = createIndexForItem(item);
-        if (idx.isValid()) {
-            emit dataChanged(index(idx.row(), 0, idx.parent()),
-                             index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
         }
-        return;
     }
 
     auto i = transfer_hash.find(cid);
@@ -116,8 +123,7 @@ void TransferViewModel::removeQueueTarget(const VarMap &params){
     if (target.isEmpty())
         return;
 
-    // Defer one event-loop turn so Requesting for the next file from the same
-    // connection can reparent the child before this group is destroyed.
+    // Defer so next-file Requesting can reparent before the group is destroyed.
     pendingTargetRemoves.insert(target);
     if (flushTargetsQueued)
         return;
@@ -137,11 +143,15 @@ void TransferViewModel::removeQueueTargetNow(const QString &target){
     if (target.isEmpty())
         return;
 
+    const QString dlPrefix = tr("Downloaded ");
+    const QString ulPrefix = tr("Uploaded ");
+
     TransferViewItem *p = nullptr;
     if (findParent(target, &p)) {
         while (p->childCount() > 0) {
             TransferViewItem *child = p->childItems.last();
-            if (child->download && moreDownloadsFrom(child->cid)) {
+            if (child->download && moreDownloadsFrom(child->cid)
+                    && keepAcrossReconnect(child, dlPrefix, ulPrefix)) {
                 moveTransfer(child, p, rootItem);
                 child->finished = false;
                 continue;
@@ -168,7 +178,8 @@ void TransferViewModel::removeQueueTargetNow(const QString &target){
         TransferViewItem *item = rootItem->child(row);
         if (!item->download || item->target != target)
             continue;
-        if (!item->cid.isEmpty() && moreDownloadsFrom(item->cid)) {
+        if (!item->cid.isEmpty() && moreDownloadsFrom(item->cid)
+                && keepAcrossReconnect(item, dlPrefix, ulPrefix)) {
             item->finished = false;
             continue;
         }
