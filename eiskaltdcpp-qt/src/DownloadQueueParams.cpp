@@ -11,6 +11,7 @@
 
 #include "DownloadQueuePrivate.h"
 #include "WulforUtil.h"
+#include "dcpp/ClientManager.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/Util.h"
 
@@ -18,24 +19,26 @@ using namespace dcpp;
 
 namespace {
 
+QString sourceNick(const HintedUser &usr)
+{
+    if (!usr.user)
+        return QString();
+    const StringList nicks = ClientManager::getInstance()->getNicks(usr.user->getCID(), usr.hint);
+    return nicks.empty() ? QString() : _q(nicks[0]);
+}
+
 void fillUserSourceMaps(const QueueItem *item, QMap<QString, QString> &sources, QMap<QString, QString> &badSources)
 {
     for (const auto &src : item->getSources()) {
         const HintedUser &usr = src.getUser();
-        if (!usr.user)
-            continue;
-
-        QString nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
+        const QString nick = sourceNick(usr);
         if (!nick.isEmpty())
             sources[nick] = _q(usr.user->getCID().toBase32());
     }
 
     for (const auto &src : item->getBadSources()) {
         const HintedUser &usr = src.getUser();
-        if (!usr.user)
-            continue;
-
-        QString nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
+        const QString nick = sourceNick(usr);
         if (!nick.isEmpty())
             badSources[nick] = _q(usr.user->getCID().toBase32());
     }
@@ -94,10 +97,11 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
         if (usr.user->isOnline())
             ++online;
 
-        nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
-
-        if (!nick.isEmpty())
-            user_list.push_back(nick);
+        for (const string &n : ClientManager::getInstance()->getNicks(usr.user->getCID(), usr.hint)) {
+            nick = _q(n);
+            if (!nick.isEmpty() && !user_list.contains(nick))
+                user_list.push_back(nick);
+        }
     }
 
     if (!user_list.isEmpty())
@@ -122,7 +126,7 @@ void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *it
             continue;
 
         QString errors = params["ERRORS"].toString();
-        nick = WulforUtil::getInstance()->getNicks(usr.user->getCID(), _q(usr.hint));
+        nick = sourceNick(usr);
 
         if (!src.isSet(QueueItem::Source::FLAG_REMOVED)) {
             if (!errors.isEmpty())

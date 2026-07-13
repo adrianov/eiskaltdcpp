@@ -21,6 +21,7 @@
 
 #include "Download.h"
 #include "HashManager.h"
+#include "NaturalCompare.h"
 #include "Segment.h"
 #include "Transfer.h"
 
@@ -61,6 +62,7 @@ QueueItem* UserQueue::getNext(const UserPtr& aUser, QueueItem::Priority minPrio,
         QueueItem* next = nullptr;
 
         // Prefer incomplete files that already have progress over not-started ones.
+        // Within a pass, natural-sort filename picks among alternatives (file1 before file11).
         for(int pass = 0; pass < 2 && !next && !retry; ++pass) {
             for(auto qi: i->second) {
                 const bool hasProgress = qi->getDownloadedBytes() > 0;
@@ -81,27 +83,23 @@ QueueItem* UserQueue::getNext(const UserPtr& aUser, QueueItem::Priority minPrio,
                         break;
                     }
                 }
-                if(qi->isWaiting()) {
-                    next = qi;
-                    break;
-                }
-
-                if(qi->getDownloads()[0]->getType() == Transfer::TYPE_TREE) {
-                    continue;
-                }
-                if(!qi->isSet(QueueItem::FLAG_USER_LIST)) {
-                    auto blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
-                    if(blockSize == 0)
-                        blockSize = qi->getSize();
-                    if(qi->getNextSegment(blockSize, wantedSize,lastSpeed, source->getPartialSource()).getSize() == 0) {
-                        dcdebug("No segment for %s in %s, block " I64_FMT "\n",
-                                aUser->getCID().toBase32().c_str(), qi->getTarget().c_str(),
-                                static_cast<long long int>(blockSize));
+                if(!qi->isWaiting()) {
+                    if(qi->getDownloads()[0]->getType() == Transfer::TYPE_TREE)
                         continue;
+                    if(!qi->isSet(QueueItem::FLAG_USER_LIST)) {
+                        auto blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
+                        if(blockSize == 0)
+                            blockSize = qi->getSize();
+                        if(qi->getNextSegment(blockSize, wantedSize, lastSpeed, source->getPartialSource()).getSize() == 0) {
+                            dcdebug("No segment for %s in %s, block " I64_FMT "\n",
+                                    aUser->getCID().toBase32().c_str(), qi->getTarget().c_str(),
+                                    static_cast<long long int>(blockSize));
+                            continue;
+                        }
                     }
                 }
-                next = qi;
-                break;
+                if(!next || compareNatural(qi->getTargetFileName(), next->getTargetFileName()) < 0)
+                    next = qi;
             }
         }
 

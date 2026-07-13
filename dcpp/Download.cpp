@@ -32,12 +32,10 @@ namespace dcpp {
 
 namespace {
 
-/** Same threshold as QueueManagerSource FLAG_NO_TREE keep-source. */
-const int64_t MAX_SIZE_WO_TREE = 20 * 1024 * 1024;
+/** Separate tthl only for large files (block checks). Smaller downloads use
+ *  the TTH root alone. */
+const int64_t MAX_SIZE_WO_TREE = 64 * 1024 * 1024;
 
-/** Separate tthl only when the tree is useful: large files (block checks) or
- *  multiple sources (segmented download). Smaller single-source files use the
- *  TTH root alone — same integrity we already accept under MAX_SIZE_WO_TREE. */
 bool wantTthl(const QueueItem& qi, const QueueItem::Source& source,
               bool supportsTrees, const UserConnection& conn)
 {
@@ -45,10 +43,7 @@ bool wantTthl(const QueueItem& qi, const QueueItem::Source& source,
         return false;
     if(source.isSet(QueueItem::Source::FLAG_NO_TREE))
         return false;
-    if(qi.getSize() <= HashManager::MIN_BLOCK_SIZE)
-        return false;
-    return qi.getSize() >= MAX_SIZE_WO_TREE
-            || qi.getSources().size() > 1;
+    return qi.getSize() >= MAX_SIZE_WO_TREE;
 }
 
 } // namespace
