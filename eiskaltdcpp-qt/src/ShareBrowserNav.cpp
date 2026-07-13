@@ -30,7 +30,18 @@ void ShareBrowser::goDown(QTreeView *view){
     if (selected.size() > 1 || selected.empty())
         return;
 
-    slotRightPaneClicked(selected.at(0));
+    const QModelIndex index = selected.at(0);
+    FileBrowserItem *item = nullptr;
+
+    if (view->model() == proxy)
+        item = static_cast<FileBrowserItem*>(proxy->mapToSource(index).internalPointer());
+    else
+        item = static_cast<FileBrowserItem*>(index.internalPointer());
+
+    if (!item || item->file)
+        return;
+
+    slotRightPaneClicked(index);
 
     treeView_RPANE->setFocus();
 }

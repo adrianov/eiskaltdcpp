@@ -80,7 +80,7 @@ class ShareBrowser : public  QWidget,
         };
 
         Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr), bool treePane = false,
-                    bool hasDeletable = false, bool hasFile = false);
+                    bool hasDeletable = false);
 
         QString getTarget() { return target; }
 

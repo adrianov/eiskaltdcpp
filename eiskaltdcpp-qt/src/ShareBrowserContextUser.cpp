@@ -10,16 +10,12 @@
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
 #include "SearchLocalPath.h"
-#include "WulforUtil.h"
 
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/ClientManager.h"
 #include "dcpp/ShareManager.h"
 
 #include <QInputDialog>
-#include <QDesktopServices>
-#include <QDir>
-#include <QUrl>
 
 using namespace dcpp;
 
@@ -30,7 +26,6 @@ StringList localPaths(DirectoryListing &listing, FileBrowserItem *item)
     if (!item)
         return StringList();
 
-    ShareManager *SM = ShareManager::getInstance();
     try {
         if (item->file)
             return listing.getLocalPaths(item->file);
@@ -46,7 +41,8 @@ StringList localPaths(DirectoryListing &listing, FileBrowserItem *item)
         if (parts.isEmpty())
             return StringList();
         parts.removeFirst();
-        return SM->getRealPaths(Util::toAdcFile(_tq(parts.join("\\") + '\\')));
+        return ShareManager::getInstance()->getRealPaths(
+            Util::toAdcFile(_tq(parts.join("\\") + '\\')));
     } catch (...) {
         return StringList();
     }
@@ -89,32 +85,21 @@ void ShareBrowser::contextUserActions(Menu::Action act, const QModelIndexList &l
             break;
         }
         case Menu::OpenFile:
-        {
-            for (const auto &index : list) {
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                if (!item || !item->file)
-                    continue;
-                for (const auto &path : localPaths(listing, item))
-                    SearchLocalPath::openFile(_q(path));
-            }
-            break;
-        }
         case Menu::OpenUrl:
         {
+            const bool reveal = (act == Menu::OpenUrl);
             for (const auto &index : list) {
                 FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
                 if (!item)
                     continue;
-
                 for (const auto &path : localPaths(listing, item)) {
                     const QString local = _q(path);
-                    if (item->file)
-                        WulforUtil::revealPath(local);
-                    else if (QDir(local).exists())
-                        QDesktopServices::openUrl(QUrl::fromLocalFile(local));
+                    if (reveal)
+                        SearchLocalPath::openDirectory(local);
+                    else
+                        SearchLocalPath::openFile(local);
                 }
             }
-
             break;
         }
         case Menu::DeleteFile:
