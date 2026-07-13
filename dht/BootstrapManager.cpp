@@ -18,23 +18,26 @@
 
 #include "stdafx.h"
 #include "BootstrapManager.h"
-#include "Constants.h"
 #include "DHT.h"
-#include "SearchManager.h"
-#include "dcpp/AdcCommand.h"
 #include "dcpp/ClientManager.h"
 #include "dcpp/HttpConnection.h"
 #include "dcpp/LogManager.h"
-#include <zlib.h>
 
 namespace dht
 {
-    vector<string> dhtservers;
- 
-    BootstrapManager::BootstrapManager(void)
+
+    namespace {
+        // Community-hosted seed list (legacy strongdc/fly-server endpoints are gone).
+        const char* const BOOTSTRAP_URLS[] = {
+            "https://dht.hublist.eu/dcDHT.php"
+        };
+        const size_t BOOTSTRAP_URL_COUNT = sizeof(BOOTSTRAP_URLS) / sizeof(BOOTSTRAP_URLS[0]);
+        const uint64_t HTTP_RETRY_MS = 60 * 1000;
+    }
+
+    BootstrapManager::BootstrapManager(void) :
+        nextServer(0), downloading(false), callActive(false), syncFinished(false), lastAttempt(0)
     {
-        dhtservers.push_back("http://strongdc.sourceforge.net/bootstrap/");
-        dhtservers.push_back("http://dht.fly-server.ru/dcDHT.php");
         httpConnection.addListener(this);
     }
 
@@ -43,115 +46,51 @@ namespace dht
         httpConnection.removeListener(this);
     }
 
+    void BootstrapManager::finishDownload()
+    {
+        syncFinished = true;
+        if(!callActive)
+            downloading = false;
+    }
+
     void BootstrapManager::bootstrap()
     {
-        if(bootstrapNodes.empty())
+        string url;
         {
-            LogManager::getInstance()->message(_("DHT bootstrapping started"));
-            string dhturl = dhtservers[Util::rand(dhtservers.size())];
-            // TODO: make URL settable
-            string url = dhturl  + "?cid=" + ClientManager::getInstance()->getMe()->getCID().toBase32() + "&encryption=1";
+            Lock l(cs);
+            if(!bootstrapNodes.empty() || downloading)
+                return;
+            if(lastAttempt && GET_TICK() - lastAttempt < HTTP_RETRY_MS)
+                return;
 
-            // store only active nodes to database
-            if(ClientManager::getInstance()->isActive(Util::emptyString))
-            {
-                url += "&u4=" + DHT::getInstance()->getPort();
-            }
+            lastAttempt = GET_TICK();
+            downloading = true;
+            callActive = true;
+            syncFinished = false;
+            nodesXML.clear();
 
-            httpConnection.downloadFile(url);
+            const string& dhturl = BOOTSTRAP_URLS[nextServer++ % BOOTSTRAP_URL_COUNT];
+            url = string(dhturl) + "?cid=" + ClientManager::getInstance()->getMe()->getCID().toBase32()
+                + "&encryption=1&u4=" + DHT::getInstance()->getPort();
         }
-    }
 
-    void BootstrapManager::on(HttpConnectionListener::Data, HttpConnection*, const uint8_t* buf, size_t len) throw()
-    {
-        nodesXML += string((const char*)buf, len);
-    }
+        // Outside the lock: Failed/Complete may run before downloadFile returns.
+        // Keep downloading set until we leave downloadFile so another thread cannot
+        // start a second attempt on the same HttpConnection mid-call.
+        LogManager::getInstance()->message(_("DHT bootstrapping started"));
+        httpConnection.downloadFile(url);
 
-    #define BUFSIZE 16384
-    void BootstrapManager::on(HttpConnectionListener::Complete, HttpConnection*, string const&) throw()
-    {
-        if(!nodesXML.empty())
-        {
-            try
-            {
-                uLongf destLen = BUFSIZE;
-                std::unique_ptr<uint8_t[]> destBuf;
-
-                // decompress incoming packet
-                int result;
-
-                do
-                {
-                    destLen *= 2;
-                    destBuf.reset(new uint8_t[destLen]);
-
-                    result = uncompress(&destBuf[0], &destLen, (Bytef*)nodesXML.data(), nodesXML.length());
-                }
-                while (result == Z_BUF_ERROR);
-
-                if(result != Z_OK)
-                {
-                    // decompression error!!!
-                    throw Exception("Decompress error.");
-                }
-
-                SimpleXML remoteXml;
-                remoteXml.fromXML(string((char*)&destBuf[0], destLen));
-                remoteXml.stepIn();
-
-                while(remoteXml.findChild("Node"))
-                {
-                    CID cid     = CID(remoteXml.getChildAttrib("CID"));
-                    string i4   = remoteXml.getChildAttrib("I4");
-                    string u4   = remoteXml.getChildAttrib("U4");
-
-                    addBootstrapNode(i4, u4, cid, UDPKey());
-                }
-
-                remoteXml.stepOut();
-
-                LogManager::getInstance()->message(_("DHT bootstrapping is finished successfully."));
-            }
-            catch(Exception& e)
-            {
-                LogManager::getInstance()->message(_("DHT bootstrap error: ") + e.getError());
-            }
-        }
-    }
-
-    void BootstrapManager::on(HttpConnectionListener::Failed, HttpConnection*, const string& aLine) throw()
-    {
-        LogManager::getInstance()->message(_("DHT bootstrap error: ") + aLine);
+        Lock l(cs);
+        callActive = false;
+        if(syncFinished)
+            downloading = false;
     }
 
     void BootstrapManager::addBootstrapNode(const string& ip, const string& udpPort, const CID& targetCID, const UDPKey& udpKey)
     {
+        Lock l(cs);
         BootstrapNode node = { ip, udpPort, targetCID, udpKey };
         bootstrapNodes.push_back(node);
-    }
-
-    void BootstrapManager::process()
-    {
-        Lock l(cs);
-        if(!bootstrapNodes.empty())
-        {
-            // send bootstrap request
-            AdcCommand cmd(AdcCommand::CMD_GET, AdcCommand::TYPE_UDP);
-            cmd.addParam("nodes");
-            cmd.addParam("dht.xml");
-
-            const BootstrapNode& node = bootstrapNodes.front();
-
-            CID key;
-            // if our external IP changed from the last time, we can't encrypt packet with this key
-            // this won't probably work now
-            if(DHT::getInstance()->getLastExternalIP() == node.udpKey.ip)
-                key = node.udpKey.key;
-
-            DHT::getInstance()->send(cmd, node.ip, node.udpPort, node.cid, key);
-
-            bootstrapNodes.pop_front();
-        }
     }
 
 }

@@ -58,7 +58,9 @@ namespace dht
         {
             if(aTick - lastBootstrap > 15000 || (DHT::getInstance()->getNodesCount() == 0 && aTick - lastBootstrap >= 2000))
             {
-                // bootstrap if we doesn't know any remote node
+                // Re-fetch HTTP seeds when the UDP queue is empty; then ping queued contacts.
+                if(DHT::getInstance()->getNodesCount() == 0)
+                    BootstrapManager::getInstance()->bootstrap();
                 BootstrapManager::getInstance()->process();
                 lastBootstrap = aTick;
             }
