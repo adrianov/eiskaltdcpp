@@ -11,6 +11,9 @@ set(DCPP_EXTRA_SOURCES
     DirectoryListingDir.cpp
     IncomingPortCheck.cpp
     SSLSocketHandshake.cpp
+    CryptoManagerSsl.cpp
+    CryptoManagerCert.cpp
+    CryptoManagerCertGen.cpp
     ClientConnect.cpp
     ClientReconnect.cpp
     ClientManagerConnect.cpp

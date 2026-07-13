@@ -76,6 +76,7 @@ private:
     bool isExtra(uint8_t b) {
         return (b == 0 || b==5 || b==124 || b==96 || b==126 || b==36);
     }
+    void initSslContexts();
     void loadKeyprint(const string& file) noexcept;
 };
 
