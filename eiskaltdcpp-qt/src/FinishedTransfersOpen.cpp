@@ -21,9 +21,10 @@
 #include <windows.h>
 #include <shellapi.h>
 #elif defined(Q_OS_UNIX)
-#include <QHash>
+#include <QFile>
 #include <QMimeDatabase>
-#include <QProcess>
+#include <QSet>
+#include <QStandardPaths>
 #endif
 
 namespace {
@@ -51,6 +52,58 @@ QString resolveLocalFile(QString file)
         return dir.absoluteFilePath(matches.first());
     return info.absoluteFilePath();
 }
+
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MAC)
+void absorbMimeApps(const QString &path, QSet<QString> &mimes)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    bool in = false;
+    while (!f.atEnd()) {
+        const QByteArray line = f.readLine().trimmed();
+        if (line.startsWith('[')) {
+            in = line == "[MIME Cache]" || line == "[Default Applications]"
+                 || line == "[Added Associations]";
+            continue;
+        }
+        if (!in || line.isEmpty() || line.startsWith('#'))
+            continue;
+        const int eq = line.indexOf('=');
+        if (eq <= 0)
+            continue;
+        const QString mime = QString::fromUtf8(line.left(eq).trimmed());
+        if (line.mid(eq + 1).trimmed().isEmpty())
+            mimes.remove(mime);
+        else
+            mimes.insert(mime);
+    }
+}
+
+bool unixMimeHasApp(const QFileInfo &info)
+{
+    static QSet<QString> mimesWithApp;
+    static bool ready = false;
+    static bool present = false;
+    if (!ready) {
+        ready = true;
+        const QStringList roots = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+        for (const QString &root : roots)
+            absorbMimeApps(root + QStringLiteral("/applications/mimeinfo.cache"), mimesWithApp);
+        for (const QString &root : roots)
+            absorbMimeApps(root + QStringLiteral("/applications/mimeapps.list"), mimesWithApp);
+        absorbMimeApps(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+                           + QStringLiteral("/mimeapps.list"),
+                       mimesWithApp);
+        present = !mimesWithApp.isEmpty();
+    }
+    if (!present)
+        return true; // keep legacy open when desktop MIME DB is unavailable
+    static QMimeDatabase db;
+    return mimesWithApp.contains(db.mimeTypeForFile(info).name());
+}
+#endif
 
 bool hasAssociatedApp(const QString &path)
 {
@@ -82,19 +135,7 @@ bool hasAssociatedApp(const QString &path)
         exe);
     return reinterpret_cast<INT_PTR>(result) > 32;
 #elif defined(Q_OS_UNIX)
-    static QHash<QString, bool> mimeHasApp;
-    const QString mime = QMimeDatabase().mimeTypeForFile(info).name();
-    const auto cached = mimeHasApp.constFind(mime);
-    if (cached != mimeHasApp.cend())
-        return *cached;
-
-    QProcess proc;
-    proc.start(QStringLiteral("xdg-mime"), {QStringLiteral("query"), QStringLiteral("default"), mime});
-    bool hasApp = true; // keep legacy open when detection is unavailable
-    if (proc.waitForFinished(1500) && proc.exitStatus() == QProcess::NormalExit)
-        hasApp = !QString::fromLocal8Bit(proc.readAllStandardOutput()).trimmed().isEmpty();
-    mimeHasApp.insert(mime, hasApp);
-    return hasApp;
+    return unixMimeHasApp(info);
 #else
     return true;
 #endif
