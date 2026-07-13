@@ -142,6 +142,9 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
         return;
     rememberListMeta(cid, listPath, rows.size());
     setLastError(QString());
+    // Fresh list rows: attach matching queue sources while the peer connection may still be idle.
+    if (user->isOnline())
+        matchQueueSync(UserList{user});
 }
 
 #endif

@@ -66,13 +66,16 @@ void ShareIndexListListener::stop()
 void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
                                 const std::string &dir, int64_t) noexcept
 {
+    const HintedUser hinted = hintedFromQueue(item);
     if (item && item->isAnySet(QueueItem::FLAG_USER_LIST)) {
-        const HintedUser hinted = hintedFromQueue(item);
         const QString listName = _q(item->getListName());
         enqueueListIngest(hinted.user, listName, _q(hinted.hint));
 
         if (item->isSet(QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_USER_LIST) && hinted.user)
             emit openShare(hinted.user, listName, _q(dir));
+    } else if (hinted.user && ShareIndex::getInstance()) {
+        // Attach other queued TTHs this peer has so checkDownloads can reuse the socket.
+        ShareIndex::getInstance()->matchQueue(UserList{hinted.user});
     }
 
     bool empty = true;
@@ -113,4 +116,7 @@ void ShareIndexListListener::on(QueueManagerListener::SourceRemoved, QueueItem *
     ShareIndex::getInstance()->removeTth(
         _q(user->getCID().toBase32()),
         _q(item->getTTH().toBase32()));
+    // Peer may still have other queued files; rematch before the idle socket times out.
+    if (QueueManager::getInstance()->hasDownload(user) == QueueItem::PAUSED)
+        ShareIndex::getInstance()->matchQueue(UserList{user});
 }

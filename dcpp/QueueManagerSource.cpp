@@ -79,9 +79,15 @@ void QueueManager::matchSources(const HintedUser& user,
             QueueItem* qi = item.second;
             const auto match = indexed.find(qi->getTTH());
             if(qi->isFinished() || qi->isSet(QueueItem::FLAG_USER_LIST)
-                    || match == indexed.end() || match->second != qi->getSize()
-                    || qi->isSource(user))
+                    || match == indexed.end() || match->second != qi->getSize())
                 continue;
+            if(qi->isSource(user)) {
+                // Same as search hits: already a source still needs a connect nudge
+                // (revives given-up CQIs / idle sockets).
+                wantConnection |= (qi->getPriority() != QueueItem::PAUSED)
+                        && !userQueue.getRunning(user.user);
+                continue;
+            }
             try {
                 wantConnection |= addSource(qi, user, QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
             } catch(const Exception&) { }

@@ -153,6 +153,12 @@ void ShareIndex::stopWrites() {}
 
 QList<QVariantMap> ShareIndex::search(const SearchFilter &) { return {}; }
 
+QHash<QString, QList<ShareIndex::IndexUser>>
+ShareIndex::usersByTth(const QStringList &, qint64, int)
+{
+    return {};
+}
+
 ShareIndex::IndexStats ShareIndex::indexStats() { return {}; }
 
 bool ShareIndex::needsListIngest(const QString &, const QString &) { return false; }

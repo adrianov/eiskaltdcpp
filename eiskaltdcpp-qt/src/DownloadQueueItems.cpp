@@ -9,7 +9,6 @@
 
 #include "DownloadQueue.h"
 #include "DownloadQueuePrivate.h"
-#include "DownloadQueueModel.h"
 #include "WulforUtil.h"
 
 #include "dcpp/ClientManager.h"
@@ -60,54 +59,6 @@ void DownloadQueue::removeSource(const QString &cid, const QString &target){
             catch (const Exception&){}
         }
     }
-}
-
-void DownloadQueue::loadList(){
-    VarMap params;
-
-    const QueueItem::StringMap &ll = QueueManager::getInstance()->lockQueue();
-
-    for (const auto &k : ll) {
-        getParams(params, k.second);
-
-        addFile(params);
-    }
-
-    QueueManager::getInstance()->unlockQueue();
-
-    Q_D(DownloadQueue);
-
-    d->queue_model->sort();
-}
-
-void DownloadQueue::addFile(const DownloadQueue::VarMap &map){
-    Q_D(DownloadQueue);
-
-    d->queue_model->addItem(map);
-    syncSourceMaps(map["TARGET"].toString());
-}
-
-void DownloadQueue::remFile(const VarMap &map){
-    Q_D(DownloadQueue);
-
-    if (d->queue_model->remItem(map)){
-        auto it = d->sources.find(map["TARGET"].toString());
-
-        if (it != d->sources.end())
-            d->sources.erase(it);
-
-        it = d->badSources.find(map["TARGET"].toString());
-
-        if (it != d->badSources.end())
-            d->badSources.erase(it);
-    }
-}
-
-void DownloadQueue::updateFile(const DownloadQueue::VarMap &map){
-    Q_D(DownloadQueue);
-
-    d->queue_model->updItem(map);
-    syncSourceMaps(map["TARGET"].toString());
 }
 
 QString DownloadQueue::getCID(const VarMap &map){
@@ -176,4 +127,3 @@ void DownloadQueue::slotSettingsChanged(const QString &key, const QString &value
     if (key == WS_TRANSLATION_FILE)
         retranslateUi(this);
 }
-

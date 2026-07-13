@@ -11,6 +11,7 @@
 #include "stdinc.h"
 #include "QueueManager.h"
 
+#include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "SearchResult.h"
 #include "SettingsManager.h"
@@ -86,8 +87,11 @@ void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& aUser
     }
 
     if(hasDown) {
-        // the user just came on, so there's only 1 possible hub, no need for a hint
-        ConnectionManager::getInstance()->getDownloadConnection(HintedUser(aUser, Util::emptyString));
+        string hint;
+        const StringList hubs = ClientManager::getInstance()->getHubs(aUser->getCID(), Util::emptyString);
+        if(!hubs.empty())
+            hint = hubs.front();
+        ConnectionManager::getInstance()->getDownloadConnection(HintedUser(aUser, hint));
     }
 }
 

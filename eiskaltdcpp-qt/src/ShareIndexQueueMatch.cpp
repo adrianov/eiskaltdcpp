@@ -13,7 +13,6 @@
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/Encoder.h"
-#include "dcpp/ListCache.h"
 #include "dcpp/QueueManager.h"
 
 using namespace dcpp;
@@ -34,7 +33,7 @@ std::string bindMarks(size_t count)
 
 } // namespace
 
-/** Query only current queue roots, then let QueueManager verify and add each source. */
+/** Query queued TTHs against indexed locations, then let QueueManager verify and add each source. */
 void ShareIndex::matchQueueSync(const UserList &users)
 {
     open();
@@ -48,7 +47,8 @@ void ShareIndex::matchQueueSync(const UserList &users)
 
     unordered_map<string, UserPtr> online;
     for (const UserPtr &user : users) {
-        if (user && ListCache::matchesShare(user))
+        // Online is enough: TTH+size is checked in matchSources; FNA drops stale rows.
+        if (user && user->isOnline())
             online.emplace(user->getCID().toBase32(), user);
     }
     if (online.empty())
@@ -74,7 +74,7 @@ void ShareIndex::matchQueueSync(const UserList &users)
                 "SELECT u.cid,f.tth,f.size FROM share_locations l "
                 "JOIN share_users u ON u.user_id=l.user_id "
                 "JOIN share_files f ON f.file_id=l.file_id "
-                "WHERE l.source=1 AND l.is_dir=0"
+                "WHERE l.is_dir=0"
                 " AND u.cid IN (" + bindMarks(cn) + ")"
                 " AND f.tth IN (" + bindMarks(tn) + ")";
 
@@ -101,8 +101,14 @@ void ShareIndex::matchQueueSync(const UserList &users)
 
     for (const auto &entry : matches) {
         const auto user = online.find(entry.first);
-        if (user != online.end() && user->second->isOnline())
-            qm->matchSources(HintedUser(user->second, Util::emptyString), entry.second);
+        if (user == online.end() || !user->second->isOnline())
+            continue;
+        // Prefer a real hub URL so NMDC share-size / connect use the right OnlineUser.
+        string hint;
+        const StringList hubs = ClientManager::getInstance()->getHubs(user->second->getCID(), Util::emptyString);
+        if (!hubs.empty())
+            hint = hubs.front();
+        qm->matchSources(HintedUser(user->second, hint), entry.second);
     }
 }
 

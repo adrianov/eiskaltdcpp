@@ -63,7 +63,7 @@ public:
 
     void ingestList(const dcpp::UserPtr &user, const QString &listPath,
                     const QString &hubUrl, const QString &nick);
-    /** Match queued TTHs against saved lists owned by newly online users. */
+    /** Match queued TTHs against indexed locations for these online users. */
     void matchQueue(const dcpp::UserList &users);
     /** Drop stale (cid, tth) rows after File Not Available. */
     void removeTth(const QString &cid, const QString &tth);
@@ -80,6 +80,15 @@ public:
     void stopWrites();
 
     QList<QVariantMap> search(const SearchFilter &filter);
+
+    /** Unique index holders per TTH (nick + cid + size). size filter 0 = any. */
+    struct IndexUser {
+        QString nick;
+        QString cid;
+        qint64 size = 0;
+    };
+    QHash<QString, QList<IndexUser>> usersByTth(const QStringList &tths, qint64 size = 0,
+                                                 int limitPerTth = 64);
 
     /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
     struct IndexStats {
@@ -98,6 +107,7 @@ public:
 
 #ifdef USE_QT_SQLITE
     friend bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
+    friend bool shareIndexSmokeUsers(ShareIndex &idx, duckdb::Connection &con, QString *error);
     friend bool shareIndexSmokeMigrate(const QString &path, QString *error);
     friend bool shareIndexSmokeWrites(ShareIndex &idx, duckdb::Connection &con, QString *error);
     friend void shareIndexRunWriteWorker();

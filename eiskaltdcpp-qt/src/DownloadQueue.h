@@ -143,6 +143,11 @@ private:
     void save();
 
     void getParams(VarMap&, const dcpp::QueueItem*);
+    /** Fill USERS/STATUS from ShareIndex; optionally attach online holders. */
+    void applyIndexUsers(VarMap &map, bool attach = true);
+    void applyIndexUsers(QList<VarMap> &rows, bool attach = true);
+    /** Revive download CQIs for attached online sources (given-up / idle). */
+    void nudgeSourceConnects(const QString &target);
     void syncSourceMaps(const QString &target);
     void loadList();
 

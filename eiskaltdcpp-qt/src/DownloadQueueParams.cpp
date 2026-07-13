@@ -19,6 +19,14 @@ using namespace dcpp;
 
 namespace {
 
+struct SourceInfo {
+    QStringList nicks;
+    int online = 0;
+    QMap<QString, QString> sources;
+    QMap<QString, QString> badSources;
+    QString errors;
+};
+
 QString sourceNick(const HintedUser &usr)
 {
     if (!usr.user)
@@ -27,29 +35,65 @@ QString sourceNick(const HintedUser &usr)
     return nicks.empty() ? QString() : _q(nicks[0]);
 }
 
-void fillUserSourceMaps(const QueueItem *item, QMap<QString, QString> &sources, QMap<QString, QString> &badSources)
+SourceInfo collectSources(const QueueItem *item)
 {
+    SourceInfo info;
+    if (!item)
+        return info;
+
     for (const auto &src : item->getSources()) {
         const HintedUser &usr = src.getUser();
-        const QString nick = sourceNick(usr);
-        if (!nick.isEmpty())
-            sources[nick] = _q(usr.user->getCID().toBase32());
+        if (!usr.user)
+            continue;
+        if (usr.user->isOnline())
+            ++info.online;
+        const QString cid = _q(usr.user->getCID().toBase32());
+        for (const string &n : ClientManager::getInstance()->getNicks(usr.user->getCID(), usr.hint)) {
+            const QString nick = _q(n);
+            if (nick.isEmpty())
+                continue;
+            if (!info.nicks.contains(nick))
+                info.nicks.push_back(nick);
+            info.sources[nick] = cid;
+        }
     }
 
     for (const auto &src : item->getBadSources()) {
         const HintedUser &usr = src.getUser();
+        if (!usr.user || src.isSet(QueueItem::Source::FLAG_REMOVED))
+            continue;
         const QString nick = sourceNick(usr);
-        if (!nick.isEmpty())
-            badSources[nick] = _q(usr.user->getCID().toBase32());
+        if (nick.isEmpty())
+            continue;
+        info.badSources[nick] = _q(usr.user->getCID().toBase32());
+
+        QString reason;
+        if (src.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
+            reason = DownloadQueue::tr("File not available");
+        else if (src.isSet(QueueItem::Source::FLAG_PASSIVE))
+            reason = DownloadQueue::tr("Passive user");
+        else if (src.isSet(QueueItem::Source::FLAG_CRC_FAILED))
+            reason = DownloadQueue::tr("Checksum mismatch");
+        else if (src.isSet(QueueItem::Source::FLAG_BAD_TREE))
+            reason = DownloadQueue::tr("Full tree does not match TTH root");
+        else if (src.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
+            reason = DownloadQueue::tr("Source too slow");
+        else if (src.isSet(QueueItem::Source::FLAG_NO_TTHF))
+            reason = DownloadQueue::tr("Remote client does not fully support TTH - cannot download");
+        if (reason.isEmpty())
+            continue;
+        if (!info.errors.isEmpty())
+            info.errors += ", ";
+        info.errors += nick + " (" + reason + ")";
     }
+    return info;
 }
 
 void storeSourceMaps(DownloadQueuePrivate *d, const QString &target, const QueueItem *item)
 {
-    QMap<QString, QString> sources, badSources;
-    fillUserSourceMaps(item, sources, badSources);
-    d->sources[target] = sources;
-    d->badSources[target] = badSources;
+    const SourceInfo info = collectSources(item);
+    d->sources[target] = info.sources;
+    d->badSources[target] = info.badSources;
 }
 
 } // namespace
@@ -76,84 +120,24 @@ void DownloadQueue::syncSourceMaps(const QString &target)
 
 void DownloadQueue::getParams(DownloadQueue::VarMap &params, const QueueItem *item)
 {
-    QString nick;
-    int online = 0;
-
     if (!item)
         return;
+
+    const SourceInfo info = collectSources(item);
 
     params["FNAME"]  = _q(item->getTargetFileName());
     params["PATH"]   = _q(Util::getFilePath(item->getTarget()));
     params["TARGET"] = _q(item->getTarget());
-    params["USERS"]  = QString("");
-
-    QStringList user_list;
-
-    for (const auto &src : item->getSources()) {
-        const HintedUser &usr = src.getUser();
-        if (!usr.user)
-            continue;
-
-        if (usr.user->isOnline())
-            ++online;
-
-        for (const string &n : ClientManager::getInstance()->getNicks(usr.user->getCID(), usr.hint)) {
-            nick = _q(n);
-            if (!nick.isEmpty() && !user_list.contains(nick))
-                user_list.push_back(nick);
-        }
-    }
-
-    if (!user_list.isEmpty())
-        params["USERS"] = user_list.join(", ");
-    else
-        params["USERS"] = tr("No users...");
-
-    if (item->isWaiting())
-        params["STATUS"] = tr("%1 of %2 user(s) online").arg(online).arg(item->getSources().size());
-    else
-        params["STATUS"] = tr("Running...");
-
-    params["ESIZE"] = (qlonglong)item->getSize();
-    params["DOWN"]  = (qlonglong)item->getDownloadedBytes();
-    params["PRIO"]  = static_cast<int>(item->getPriority());
-
-    params["ERRORS"] = QString("");
-
-    for (const auto &src : item->getBadSources()) {
-        const HintedUser &usr = src.getUser();
-        if (!usr.user)
-            continue;
-
-        QString errors = params["ERRORS"].toString();
-        nick = sourceNick(usr);
-
-        if (!src.isSet(QueueItem::Source::FLAG_REMOVED)) {
-            if (!errors.isEmpty())
-                errors += ", ";
-
-            errors += nick + " (";
-
-            if (src.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
-                errors += tr("File not available");
-            else if (src.isSet(QueueItem::Source::FLAG_PASSIVE))
-                errors += tr("Passive user");
-            else if (src.isSet(QueueItem::Source::FLAG_CRC_FAILED))
-                errors += tr("Checksum mismatch");
-            else if (src.isSet(QueueItem::Source::FLAG_BAD_TREE))
-                errors += tr("Full tree does not match TTH root");
-            else if (src.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
-                errors += tr("Source too slow");
-            else if (src.isSet(QueueItem::Source::FLAG_NO_TTHF))
-                errors += tr("Remote client does not fully support TTH - cannot download");
-
-            params["ERRORS"] = errors + ")";
-        }
-    }
-
-    if (params["ERRORS"].toString().isEmpty())
-        params["ERRORS"] = tr("No errors");
-
-    params["ADDED"] = _q(Util::formatTime("%Y-%m-%d %H:%M", item->getAdded()));
-    params["TTH"] = _q(item->getTTH().toBase32());
+    params["USERS"]  = info.nicks.isEmpty() ? tr("No users...") : info.nicks.join(", ");
+    params["STATUS"] = item->isWaiting()
+            ? tr("%1 of %2 user(s) online").arg(info.online).arg(item->getSources().size())
+            : tr("Running...");
+    params["ESIZE"]  = (qlonglong)item->getSize();
+    params["DOWN"]   = (qlonglong)item->getDownloadedBytes();
+    params["PRIO"]   = static_cast<int>(item->getPriority());
+    params["ERRORS"] = info.errors.isEmpty() ? tr("No errors") : info.errors;
+    params["ADDED"]  = _q(Util::formatTime("%Y-%m-%d %H:%M", item->getAdded()));
+    params["TTH"]    = _q(item->getTTH().toBase32());
+    params["SRC_ONLINE"] = info.online;
+    params["SRC_TOTAL"]  = static_cast<int>(item->getSources().size());
 }
