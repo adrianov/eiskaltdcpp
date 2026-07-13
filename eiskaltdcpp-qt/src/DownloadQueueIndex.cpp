@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "DownloadQueue.h"
+#include "DownloadQueuePrivate.h"
 #include "ShareIndex.h"
 #include "WulforUtil.h"
 
@@ -16,11 +17,14 @@
 #include "dcpp/User.h"
 #include "dcpp/Util.h"
 
+#include <QDateTime>
 #include <QSet>
 
 using namespace dcpp;
 
 namespace {
+
+constexpr qint64 kIndexAttachCooldownMs = 60 * 1000;
 
 struct HolderView {
     QStringList nicks;
@@ -107,9 +111,21 @@ void matchHolders(ShareIndex *idx, const UserList &users)
         idx->matchQueue(users);
 }
 
+bool needsAttach(bool forceAttach, const QVariantMap &map, const HolderView &view)
+{
+    if (view.match.empty())
+        return false;
+    if (forceAttach)
+        return true;
+    if (map.value("SRC_TOTAL").toInt() == 0)
+        return true;
+    // Index sees more online holders than QueueItem online sources.
+    return view.online > map.value("SRC_ONLINE").toInt();
+}
+
 } // namespace
 
-void DownloadQueue::applyIndexUsers(VarMap &map, bool attach)
+void DownloadQueue::applyIndexUsers(VarMap &map, bool forceAttach)
 {
     ShareIndex *idx = ShareIndex::getInstance();
     if (!idx || !idx->isOpen())
@@ -122,11 +138,23 @@ void DownloadQueue::applyIndexUsers(VarMap &map, bool attach)
     const qint64 size = map.value("ESIZE").toLongLong();
     const HolderView view = buildView(idx->usersByTth(QStringList{tth}, size > 0 ? size : 0).value(tth));
     applyView(map, view);
-    if (attach)
-        matchHolders(idx, view.match);
+    if (!needsAttach(forceAttach, map, view))
+        return;
+
+    if (!forceAttach && map.value("SRC_TOTAL").toInt() > 0) {
+        Q_D(DownloadQueue);
+        const QString target = map.value("TARGET").toString();
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        qint64 &last = d->lastIndexAttach[target];
+        if (now < last + kIndexAttachCooldownMs)
+            return;
+        last = now;
+    }
+
+    matchHolders(idx, view.match);
 }
 
-void DownloadQueue::applyIndexUsers(QList<VarMap> &rows, bool attach)
+void DownloadQueue::applyIndexUsers(QList<VarMap> &rows, bool forceAttach)
 {
     ShareIndex *idx = ShareIndex::getInstance();
     if (!idx || !idx->isOpen() || rows.isEmpty())
@@ -153,7 +181,7 @@ void DownloadQueue::applyIndexUsers(QList<VarMap> &rows, bool attach)
         const qint64 size = map.value("ESIZE").toLongLong();
         const HolderView view = buildView(filterSize(byTth.value(tth), size));
         applyView(map, view);
-        if (!attach)
+        if (!needsAttach(forceAttach, map, view))
             continue;
         for (const UserPtr &user : view.match) {
             const QString cid = _q(user->getCID().toBase32());
@@ -163,6 +191,5 @@ void DownloadQueue::applyIndexUsers(QList<VarMap> &rows, bool attach)
             match.push_back(user);
         }
     }
-    if (attach)
-        matchHolders(idx, match);
+    matchHolders(idx, match);
 }

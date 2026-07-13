@@ -11,11 +11,7 @@
 #include "DownloadQueuePrivate.h"
 #include "DownloadQueueModel.h"
 
-#include "dcpp/ClientManager.h"
-#include "dcpp/ConnectionManager.h"
 #include "dcpp/QueueManager.h"
-#include "dcpp/User.h"
-#include "dcpp/Util.h"
 
 using namespace dcpp;
 
@@ -30,7 +26,7 @@ void DownloadQueue::loadList(){
     }
     QueueManager::getInstance()->unlockQueue();
 
-    applyIndexUsers(rows);
+    applyIndexUsers(rows, true);
 
     Q_D(DownloadQueue);
     for (const VarMap &params : rows) {
@@ -44,7 +40,7 @@ void DownloadQueue::addFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
 
     VarMap row = map;
-    applyIndexUsers(row);
+    applyIndexUsers(row, true);
     d->queue_model->addItem(row);
     syncSourceMaps(row["TARGET"].toString());
 }
@@ -62,6 +58,8 @@ void DownloadQueue::remFile(const VarMap &map){
 
         if (it != d->badSources.end())
             d->badSources.erase(it);
+
+        d->lastIndexAttach.remove(map["TARGET"].toString());
     }
 }
 
@@ -69,43 +67,10 @@ void DownloadQueue::updateFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
 
     VarMap row = map;
-    if (row.value("STATUS").toString() != tr("Running...")) {
-        // Always rematch online index holders (adds missing sources; nudges existing ones).
-        applyIndexUsers(row, true);
-        d->queue_model->updItem(row);
-        syncSourceMaps(row["TARGET"].toString());
-        nudgeSourceConnects(row["TARGET"].toString());
-        return;
-    }
+    // Display + attach only when index shows online holders we have not counted yet.
+    // Do not CTM-nudge on every StatusUpdated (that flooded peers and restarted tthl).
+    if (row.value("STATUS").toString() != tr("Running..."))
+        applyIndexUsers(row, false);
     d->queue_model->updItem(row);
     syncSourceMaps(row["TARGET"].toString());
-}
-
-void DownloadQueue::nudgeSourceConnects(const QString &target)
-{
-    if (target.isEmpty())
-        return;
-
-    Q_D(DownloadQueue);
-    if (!d->sources.contains(target))
-        return;
-
-    QueueManager *qm = QueueManager::getInstance();
-    ConnectionManager *cm = ConnectionManager::getInstance();
-    ClientManager *cl = ClientManager::getInstance();
-    for (auto it = d->sources[target].constBegin(); it != d->sources[target].constEnd(); ++it) {
-        const QString &cid = it.value();
-        if (cid.size() != 39)
-            continue;
-        UserPtr user = cl->findUser(CID(cid.toStdString()));
-        if (!user || !user->isOnline())
-            continue;
-        if (qm->hasDownload(user) == QueueItem::PAUSED)
-            continue;
-        string hint;
-        const StringList hubs = cl->getHubs(user->getCID(), Util::emptyString);
-        if (!hubs.empty())
-            hint = hubs.front();
-        cm->getDownloadConnection(HintedUser(user, hint));
-    }
 }
