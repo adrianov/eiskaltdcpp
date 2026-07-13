@@ -94,12 +94,15 @@ int SearchManager::UdpQueue::run() {
             }
             uint8_t slots = (uint8_t)Util::toInt(x.substr(i, j-i));
             i = j + 1;
-            if( (j = x.rfind(" (")) == string::npos) {
+            // rfind over the whole line breaks when the filename contains " ("
+            // (e.g. "Track (+++).avi"); only accept a match after the slots field.
+            if( (j = x.rfind(" (")) == string::npos || j < i) {
                 continue;
             }
             string hubName = x.substr(i, j-i);
             i = j + 2;
-            if( (j = x.rfind(')')) == string::npos) {
+            // Same bound as above: a ')' inside the filename must not win.
+            if( (j = x.rfind(')')) == string::npos || j < i) {
                 continue;
             }
 

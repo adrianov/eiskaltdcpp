@@ -154,6 +154,7 @@ void AdcHub::handle(AdcCommand::STA, AdcCommand& c) noexcept {
         return;
     }
     noteSearchDenied(*this, c.getParam(1));
+    noteSearchRateLimit(searchQueue, c.getParam(1));
     ChatMessage message = { c.getParam(1), u, nullptr, nullptr, false, 0 };
     fire(ClientListener::Message(), this, message);
 }

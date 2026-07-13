@@ -1,132 +1,122 @@
 /*
  * Copyright (C) 2003-2006 RevConnect, http://www.revconnect.com
+ * Copyright (C) 2009-2020 EiskaltDC++ developers
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "stdinc.h"
-
 #include "SearchQueue.h"
-
-#include "TimerManager.h"
-#include "QueueManager.h"
-#include "SearchManager.h"
 
 namespace dcpp {
 
-bool SearchQueue::add(const SearchCore& s)
-{
-    dcassert(s.owners.size() == 1);
+void SearchQueue::clear() {
+    Lock l(cs);
+    searchQueue.clear();
+}
 
+void SearchQueue::insertByPriority(const SearchCore& s) {
+    if(s.isAuto()) {
+        searchQueue.push_back(s);
+        return;
+    }
+    for(auto i = searchQueue.begin(); i != searchQueue.end(); ++i) {
+        if(i->isAuto()) {
+            searchQueue.insert(i, s);
+            return;
+        }
+    }
+    searchQueue.push_back(s);
+}
+
+bool SearchQueue::add(const SearchCore& s) {
+    dcassert(s.owners.size() == 1);
     Lock l(cs);
 
-    for(auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
-    {
-        // check dupe
-        if(*i == s) {
-            void* aOwner = *s.owners.begin();
-            i->owners.insert(aOwner);
-
-            // if previous search was autosearch and current one isn't, it should be readded before autosearches
-            if(s.token != "auto" && i->token == "auto")
-            {
-                searchQueue.erase(i);
-                break;
-            }
-
-            return false;
+    for(auto i = searchQueue.begin(); i != searchQueue.end(); ++i) {
+        if(!(*i == s))
+            continue;
+        void* aOwner = *s.owners.begin();
+        i->owners.insert(aOwner);
+        // Promote auto → manual: re-place before other autos.
+        if(!s.isAuto() && i->isAuto()) {
+            SearchCore promoted = *i;
+            promoted.token = s.token;
+            searchQueue.erase(i);
+            insertByPriority(promoted);
         }
+        return false;
     }
 
-    if(s.token == "auto") {
-        // Insert last (automatic search)
-        searchQueue.push_back(s);
-    } else {
-        bool added = false;
-        if(searchQueue.empty()) {
-            searchQueue.push_front(s);
-            added = true;
-        } else {
-            // Insert before the automatic searches (manual search)
-            for(auto i = searchQueue.begin(); i != searchQueue.end(); ++i) {
-                if(i->token == "auto") {
-                    searchQueue.insert(i, s);
-                    added = true;
-                    break;
-                }
-            }
-        }
-        if (!added) {
-            searchQueue.push_back(s);
-        }
-    }
+    insertByPriority(s);
     return true;
 }
 
-bool SearchQueue::pop(SearchCore& s, uint64_t now)
-{
-    dcassert(interval);
-
-    //uint64_t now = GET_TICK();
-    if(now <= lastSearchTime + interval && lastSearchTime > 0)
+bool SearchQueue::pop(SearchCore& s, uint64_t now) {
+    Lock l(cs);
+    if(searchQueue.empty())
+        return false;
+    if(nextAllowed != 0 && now < nextAllowed)
         return false;
 
-    {
-        Lock l(cs);
-        if(!searchQueue.empty()){
-            s = searchQueue.front();
-            searchQueue.pop_front();
-            lastSearchTime = now;
-            return true;
-        }
-    }
-
-    return false;
+    s = searchQueue.front();
+    searchQueue.pop_front();
+    nextAllowed = interval ? (now + interval) : now;
+    return true;
 }
 
-uint64_t SearchQueue::getSearchTime(void* aOwner, uint64_t now) {
+uint64_t SearchQueue::getSearchTime(void* aOwner, uint64_t now) const {
+    if(!aOwner)
+        return 0;
 
-    if(aOwner == 0) return 0xFFFFFFFF;
+    Lock l(cs);
+    uint64_t t = (nextAllowed != 0 && nextAllowed > now) ? nextAllowed : now;
+    const uint64_t step = interval ? interval : 0;
 
-    uint64_t x = max(lastSearchTime, now - interval);
-
-    for(auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i){
-        x += interval;
-
-        if(i->owners.find(aOwner) != i->owners.end())
-            return x;
-        else if(i->owners.empty())
-            break;
+    for(const auto& item : searchQueue) {
+        if(item.owners.find(aOwner) != item.owners.end())
+            return t;
+        t += step;
     }
-
     return 0;
 }
 
-bool SearchQueue::cancelSearch(void* aOwner){
+bool SearchQueue::cancelSearch(void* aOwner) {
     dcassert(aOwner);
-
     Lock l(cs);
-    for(auto i = searchQueue.begin(); i != searchQueue.end(); ++i){
+    bool removed = false;
+    for(auto i = searchQueue.begin(); i != searchQueue.end(); ) {
         const auto j = i->owners.find(aOwner);
-        if(j != i->owners.end()){
-            i->owners.erase(j);
-            if(i->owners.empty())
-                searchQueue.erase(i);
-            return true;
+        if(j == i->owners.end()) {
+            ++i;
+            continue;
         }
+        i->owners.erase(j);
+        removed = true;
+        if(i->owners.empty())
+            i = searchQueue.erase(i);
+        else
+            ++i;
     }
-    return false;
+    return removed;
 }
 
+void SearchQueue::delayNext(uint32_t seconds, uint64_t now) {
+    if(!seconds)
+        return;
+
+    const uint64_t waitMs = (uint64_t)seconds * 1000;
+    // Same +1s fudge as Client::setSearchInterval.
+    const uint64_t minInterval = (uint64_t)(seconds + min(seconds, (uint32_t)1)) * 1000;
+    if(interval < minInterval)
+        interval = minInterval;
+
+    const uint64_t until = now + waitMs;
+    if(nextAllowed < until)
+        nextAllowed = until;
 }
+
+} // namespace dcpp

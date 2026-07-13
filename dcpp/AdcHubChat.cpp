@@ -43,6 +43,8 @@ void AdcHub::handle(AdcCommand::MSG, AdcCommand& c) noexcept {
     if(c.getParam("TS", 1, temp))
         message.timestamp = Util::toInt64(temp);
 
+    noteSearchRateLimit(searchQueue, c.getParam(0));
+
     const Identity& id = message.from->getIdentity();
     if(id.isHub() || id.isBot() || id.isOp() || message.from->getUser()->isSet(User::BOT))
         noteSearchDenied(*this, c.getParam(0));

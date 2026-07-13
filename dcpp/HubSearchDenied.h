@@ -14,9 +14,13 @@
 namespace dcpp {
 
 class Client;
+class SearchQueue;
 
 /** Hub text that denies search (e.g. class registration required). */
 bool isSearchDeniedHubText(const string& message);
 void noteSearchDenied(Client& client, const string& message);
+
+/** Delay next search when hub says e.g. "You can do 1 search in 64 seconds". */
+void noteSearchRateLimit(SearchQueue& queue, const string& message);
 
 } // namespace dcpp

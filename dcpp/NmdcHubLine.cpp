@@ -55,6 +55,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             stopInfectedConnect(text);
             noteSecureCtmRejected(text);
             noteSearchDenied(*this, text);
+            noteSearchRateLimit(searchQueue, text);
             fire(ClientListener::StatusMessage(), this, text);
             return;
         }
@@ -89,6 +90,8 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         string body = unescape(message);
         stopInfectedConnect(body, nick);
         noteSecureCtmRejected(body);
+        // Rate-limit text is specific; honor it from any nick (hub scripts vary).
+        noteSearchRateLimit(searchQueue, body);
 
         ChatMessage chatMessage = { body, findUser(nick), nullptr, nullptr, false, 0 };
         if(!chatMessage.from) {

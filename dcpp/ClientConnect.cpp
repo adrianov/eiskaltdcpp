@@ -63,7 +63,10 @@ void Client::reloadSettings(bool updateNick) {
             externalIP = SETTING(INTERNETIP);
         }
 
-        setSearchInterval(fav->getSearchInterval());
+        // Keep hub-raised floor from delayNext; myInfo/reload must not lower it.
+        const uint64_t ms = (uint64_t)(fav->getSearchInterval() + min(fav->getSearchInterval(), (uint32_t)1)) * 1000;
+        if(searchQueue.interval < ms)
+            searchQueue.interval = ms;
     } else {
         if(updateNick) {
             string nick = FavoriteManager::getInstance()->getHubNick(getHubUrl());
@@ -72,7 +75,10 @@ void Client::reloadSettings(bool updateNick) {
             setCurrentNick(checkNick(nick));
         }
         setCurrentDescription(SETTING(DESCRIPTION));
-        setSearchInterval(SETTING(MINIMUM_SEARCH_INTERVAL));
+        const uint32_t sec = SETTING(MINIMUM_SEARCH_INTERVAL);
+        const uint64_t ms = (uint64_t)(sec + min(sec, (uint32_t)1)) * 1000;
+        if(searchQueue.interval < ms)
+            searchQueue.interval = ms;
     }
     setClientId(ClientId);
 }

@@ -48,7 +48,8 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
     const string target = checkTarget(aTarget, aSize);
 
     // Check if it's a zero-byte file, if so, create and return...
-    if (aSize == 0)
+    // Hashed magnets with size 0 still queue (size may arrive from the peer).
+    if (aSize == 0 && !root)
     {
         if (!BOOLSETTING(SKIP_ZERO_BYTE))
         {
@@ -114,8 +115,9 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
         target = checkTarget(aTarget, /*checkExistence*/ true);
     }
 
-    // Check if it's a zero-byte file, if so, create and return...
-    if(aSize == 0) {
+    // True empty files (no TTH): create locally. Hashed results may report size 0
+    // (e.g. ShareIndex gaps) and must still enter the queue.
+    if(aSize == 0 && !root) {
         if(!BOOLSETTING(SKIP_ZERO_BYTE)) {
             File::ensureDirectory(target);
             File f(target, File::WRITE, File::CREATE);
