@@ -19,36 +19,47 @@ uint64_t Client::search(int aSizeMode, int64_t aSize, int aFileType, const strin
     if(getSearchBlocked())
         return 0;
 
-    if(searchQueue.interval) {
-        SearchCore s;
-        s.fileType = aFileType;
-        s.size     = aSize;
-        s.query    = aString;
-        s.sizeType = aSizeMode;
-        s.token    = aToken;
-        s.exts     = aExtList;
-        s.owners.insert(owner);
+    SearchCore s;
+    s.fileType = aFileType;
+    s.size     = aSize;
+    s.query    = aString;
+    s.sizeType = aSizeMode;
+    s.token    = aToken;
+    s.exts     = aExtList;
+    s.owners.insert(owner);
 
-        searchQueue.add(s);
+    searchQueue.add(s);
 
-        uint64_t now = GET_TICK();
-        return searchQueue.getSearchTime(owner, now) - now;
+    const uint64_t now = GET_TICK();
+    if(isConnected()) {
+        SearchCore out;
+        for(;;) {
+            if(!searchQueue.pop(out, now))
+                break;
+            // 6-arg overload → hub send (not this queueing method).
+            search(out.sizeType, out.size, out.fileType, out.query, out.token, out.exts);
+            if(searchQueue.interval)
+                break;
+        }
     }
-    search(aSizeMode, aSize, aFileType , aString, aToken, aExtList);
-    return 0;
+
+    const uint64_t when = searchQueue.getSearchTime(owner, now);
+    return (when > now) ? (when - now) : 0;
 }
 
 void Client::on(Second, uint64_t aTick) noexcept {
     if(state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)) )
         connect();
-    if(!searchQueue.interval || getSearchBlocked()) return;
+    if(getSearchBlocked() || !isConnected())
+        return;
 
-    if(isConnected()) {
-        SearchCore s;
-
-        if(searchQueue.pop(s, aTick)) {
-            search(s.sizeType, s.size, s.fileType , s.query, s.token, s.exts);
-        }
+    SearchCore s;
+    for(;;) {
+        if(!searchQueue.pop(s, aTick))
+            break;
+        search(s.sizeType, s.size, s.fileType, s.query, s.token, s.exts);
+        if(searchQueue.interval)
+            break;
     }
 }
 

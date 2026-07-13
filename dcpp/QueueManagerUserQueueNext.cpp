@@ -62,7 +62,7 @@ QueueItem* UserQueue::getNext(const UserPtr& aUser, QueueItem::Priority minPrio,
         QueueItem* next = nullptr;
 
         // Prefer incomplete files that already have progress over not-started ones.
-        // Within a pass, natural-sort filename picks among alternatives (file1 before file11).
+        // Within a pass, natural-sort full target path (dir + name) among alternatives.
         for(int pass = 0; pass < 2 && !next && !retry; ++pass) {
             for(auto qi: i->second) {
                 const bool hasProgress = qi->getDownloadedBytes() > 0;
@@ -98,7 +98,7 @@ QueueItem* UserQueue::getNext(const UserPtr& aUser, QueueItem::Priority minPrio,
                         }
                     }
                 }
-                if(!next || compareNatural(qi->getTargetFileName(), next->getTargetFileName()) < 0)
+                if(!next || compareNatural(qi->getTarget(), next->getTarget()) < 0)
                     next = qi;
             }
         }
