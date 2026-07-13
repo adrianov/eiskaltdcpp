@@ -14,6 +14,7 @@
 #include <QTemporaryDir>
 
 bool shareIndexSmokeSearch(ShareIndex &idx, duckdb::Connection &con, QString *error);
+bool shareIndexSmokeUsers(ShareIndex &idx, duckdb::Connection &con, QString *error);
 bool shareIndexSmokeMigrate(const QString &path, QString *error);
 bool shareIndexSmokeWrites(ShareIndex &idx, duckdb::Connection &con, QString *error);
 
@@ -53,6 +54,8 @@ bool ShareIndex::smokeCheck(QString *error)
     if (!shareIndexSmokeWrites(idx, *con, error))
         return false;
     if (!shareIndexSmokeSearch(idx, *con, error))
+        return false;
+    if (!shareIndexSmokeUsers(idx, *con, error))
         return false;
     return shareIndexSmokeMigrate(dir.path() + "/legacy's.duckdb", error);
 }
