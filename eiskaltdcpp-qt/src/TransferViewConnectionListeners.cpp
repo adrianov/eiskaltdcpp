@@ -33,6 +33,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQu
 
             if (!aFlags)
                 params["FNAME"] = _q(Util::getFileName(aTarget));
+            else if (aFlags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST))
+                params["FNAME"] = tr("File list");
 
             params["BGROUP"] = !aFlags;
         }
