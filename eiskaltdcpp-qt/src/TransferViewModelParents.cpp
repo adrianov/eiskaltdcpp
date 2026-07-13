@@ -16,6 +16,8 @@ using namespace TransferViewMetrics;
 
 void TransferViewModel::updateParents(){
     for (const auto &i : rootItem->childItems) {
+        if (i->childCount() < 1)
+            continue;
         updateParent(i);
         const QModelIndex idx = createIndexForItem(i);
         if (idx.isValid()) {
@@ -34,22 +36,18 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         return;
 
     QList<QString> hubs;
-    int downloading = 0;
+    int active = 0;
     qint64 bestQueuePos = 0;
     double speed = 0.0;
-    qint64 totalSize = 0;
-    qlonglong actual = p->dpos;
-    qint64 timeLeft = 0;
-    double progress = 0.0;
-
-    totalSize = vlng(p->data(COLUMN_TRANSFER_SIZE));
+    qint64 totalSize = vlng(p->data(COLUMN_TRANSFER_SIZE));
+    qlonglong progressPos = p->download ? p->dpos : 0;
 
     for (const auto &i : p->childItems){
         if (!i->fail) {
             const double childSpeed = vdbl(i->data(COLUMN_TRANSFER_SPEED));
             speed += childSpeed;
             if (childSpeed > 0)
-                downloading++;
+                active++;
             else if (i->queuePos > 0 && (bestQueuePos == 0 || i->queuePos < bestQueuePos))
                 bestQueuePos = i->queuePos;
         }
@@ -57,25 +55,40 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         if (!hubs.contains(vstr(i->data(COLUMN_TRANSFER_HOST))))
             hubs.append(vstr(i->data(COLUMN_TRANSFER_HOST)));
 
-        actual += i->dpos;
+        const qint64 childSize = vlng(i->data(COLUMN_TRANSFER_SIZE));
+        if (childSize > totalSize)
+            totalSize = childSize;
+
+        if (p->download)
+            progressPos += i->dpos;
+        else if (i->dpos > progressPos)
+            progressPos = i->dpos;
     }
 
-    if (actual <= vlng(p->data(COLUMN_TRANSFER_SIZE)))
-        p->dpos = actual;
+    if (!p->download && totalSize > 0 && progressPos > totalSize)
+        progressPos = totalSize;
+
+    if (!p->download || progressPos <= totalSize)
+        p->dpos = progressPos;
 
     if (totalSize > 0)
-        progress = (double)(p->dpos * 100.0) / totalSize;
-    if (speed > 0)
-        timeLeft = (totalSize - p->dpos) / speed;
+        p->updateColumn(COLUMN_TRANSFER_SIZE, totalSize);
+
+    const double progress = totalSize > 0
+        ? qBound(0.0, (double)(p->dpos * 100.0) / totalSize, 100.0) : 0.0;
+    qint64 timeLeft = speed > 0 ? (totalSize - p->dpos) / speed : 0;
 
     speed = TransferDisplay::roundSpeed(speed);
     p->smoothTleft = TransferDisplay::smoothTimeLeft(p->smoothTleft, timeLeft);
     timeLeft = p->smoothTleft;
 
-    if (downloading && !p->finished)
-        p->updateColumn(COLUMN_TRANSFER_STATS, tr("Downloaded "));
-    else if (!p->finished)
+    // Keep progress wording while sources briefly idle between segments (speed→0).
+    if (!p->finished && (active || p->dpos > 0 || p->percent > 0))
+        p->updateColumn(COLUMN_TRANSFER_STATS, p->download ? tr("Downloaded ") : tr("Uploaded "));
+    else if (!p->finished && p->download)
         p->updateColumn(COLUMN_TRANSFER_STATS, slotWaitStat(bestQueuePos, true));
+    else if (!p->finished)
+        p->updateColumn(COLUMN_TRANSFER_STATS, tr("Uploaded "));
 
     QString stat = vstr(p->data(COLUMN_TRANSFER_STATS)) + WulforUtil::formatDisplayBytes(p->dpos)
                    + QString(" (%1%)").arg(progress, 0, 'f', 1);
@@ -87,11 +100,19 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     if (vstr(p->data(COLUMN_TRANSFER_FNAME)).startsWith(QString("TTH: "))){
         QString name = vstr(p->data(COLUMN_TRANSFER_FNAME));
         name.remove(0, QString("TTH: ").length());
-
         p->updateColumn(COLUMN_TRANSFER_FNAME, name);
     }
 
-    p->updateColumn(COLUMN_TRANSFER_USERS, QString("%1/%2").arg(downloading).arg(p->childCount()));
+    QString nick;
+    for (const auto &i : p->childItems) {
+        nick = vstr(i->data(COLUMN_TRANSFER_USERS));
+        if (!nick.isEmpty())
+            break;
+    }
+    p->updateColumn(COLUMN_TRANSFER_USERS,
+                    p->childCount() > 1 && !nick.isEmpty()
+                        ? nick + QString(", ... (%1/%2)").arg(active).arg(p->childCount())
+                        : nick);
     p->updateColumn(COLUMN_TRANSFER_FLAGS, "");
     p->updateColumn(COLUMN_TRANSFER_TLEFT, timeLeft);
     p->updateColumn(COLUMN_TRANSFER_HOST, hubs_str);
@@ -109,7 +130,8 @@ void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){
 
     TransferViewItem *item;
 
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
+    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item,
+                      vbol(params["DOWN"]) ? QString() : vstr(params["HOST"])))
         return;
 
     if (!item->finished){

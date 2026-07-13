@@ -9,14 +9,18 @@
 
 #include "TransferViewModel.h"
 
-bool TransferViewModel::findTransfer(const QString &cid, bool download, TransferViewItem **item){
+bool TransferViewModel::findTransfer(const QString &cid, bool download, TransferViewItem **item,
+                                     const QString &hub){
     if (!item)
         return false;
 
     auto i = transfer_hash.find(cid);
     while (i != transfer_hash.end() && i.key() == cid && !cid.isEmpty()){
-        if (i.value()->download == download){
-           *item = i.value();
+        TransferViewItem *row = i.value();
+        if (row->download == download
+                && (download || hub.isEmpty()
+                    || vstr(row->data(COLUMN_TRANSFER_HOST)) == hub)){
+           *item = row;
            return true;
         }
         ++i;
@@ -24,30 +28,38 @@ bool TransferViewModel::findTransfer(const QString &cid, bool download, Transfer
     return false;
 }
 
-bool TransferViewModel::findParent(const QString &target, TransferViewItem **item, bool download){
-    if (!item)
+bool TransferViewModel::findParent(const QString &target, TransferViewItem **item, bool download,
+                                   const QString &ip){
+    if (!item || target.isEmpty())
+        return false;
+    if (!download && ip.isEmpty())
         return false;
 
     for (const auto &i : rootItem->childItems){
-        if ((i->download == download) && i->target == target && i->cid.isEmpty()){
-            *item = i;
-            return true;
-        }
+        if (i->download != download || i->target != target || !i->cid.isEmpty())
+            continue;
+        if (!download && vstr(i->data(COLUMN_TRANSFER_IP)) != ip)
+            continue;
+        *item = i;
+        return true;
     }
     return false;
 }
 
 TransferViewItem *TransferViewModel::getParent(const QString &target, const VarMap &params){
+    const bool download = vbol(params["DOWN"]);
+    const QString ip = vstr(params["IP"]);
     TransferViewItem *p = nullptr;
-    if (findParent(target, &p))
+    if (findParent(target, &p, download, ip))
         return p;
 
     QList<QVariant> data;
     data << params["USER"] << 0 << "" << "" << params["ESIZE"]
-         << params["TLEFT"] << params["FNAME"] << params["HOST"] << "" << "";
+         << params["TLEFT"] << params["FNAME"] << params["HOST"]
+         << (download ? QVariant("") : params["IP"]) << "";
 
     p = new TransferViewItem(data, rootItem);
-    p->download = true;
+    p->download = download;
     p->target = target;
     p->dpos = params.value("FPOS").toLongLong();
     rootItem->appendChild(p);

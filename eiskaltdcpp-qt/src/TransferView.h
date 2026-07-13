@@ -128,7 +128,7 @@ protected:
     void removeFromQueue(const QString&);
     void removeTransfer(const QString&);
     void removeDownloadSource(const QString&);
-    void removeUploadItem(const QString&);
+    void removeUploadItem(const QString&, const QString &hub = QString());
     QString resolveDownloadTarget(TransferViewItem*) const;
     bool canRemoveItem(TransferViewItem*) const;
     void forceAttempt(const QString&);

@@ -17,6 +17,30 @@
 
 #include <QDir>
 
+namespace {
+
+void fillDownloadTarget(QVariantMap &params, dcpp::ConnectionQueueItem *cqi)
+{
+    if (!cqi->getDownload())
+        return;
+
+    string aTarget;
+    int64_t aSize = 0;
+    int aFlags = 0;
+    if (!QueueManager::getInstance()->getQueueInfo(cqi->getUser(), aTarget, aSize, aFlags))
+        return;
+
+    params["TARGET"] = _q(aTarget);
+    params["ESIZE"] = static_cast<qlonglong>(aSize);
+
+    if (aFlags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST))
+        params["FNAME"] = TransferView::tr("File list");
+    else if (!aTarget.empty())
+        params["FNAME"] = _q(Util::getFileName(aTarget));
+}
+
+} // namespace
+
 void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQueueItem* cqi) noexcept{
     VarMap params;
 
@@ -24,21 +48,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQu
 
     params["FNAME"] = "";
     params["STAT"] = tr("Connecting...");
-
-    if(cqi->getDownload()) {
-        string aTarget; int64_t aSize; int aFlags = 0;
-        if(QueueManager::getInstance()->getQueueInfo(cqi->getUser(), aTarget, aSize, aFlags)) {
-            params["TARGET"] = _q(aTarget);
-            params["ESIZE"] = (qlonglong)aSize;
-
-            if (!aFlags)
-                params["FNAME"] = _q(Util::getFileName(aTarget));
-            else if (aFlags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST))
-                params["FNAME"] = tr("File list");
-
-            params["BGROUP"] = !aFlags;
-        }
-    }
+    params["SOFT_STAT"] = true;
+    fillDownloadTarget(params, cqi);
 
     emit coreCMAdded(params);
 }
@@ -50,6 +61,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Connected, dcpp::Connecti
     getParams(params, cqi);
 
     params["STAT"] = tr("Connected");
+    params["SOFT_STAT"] = true;
+    fillDownloadTarget(params, cqi);
 
     emit coreCMConnected(params);
 }
@@ -75,6 +88,7 @@ void TransferView::on(dcpp::ConnectionManagerListener::Failed, dcpp::ConnectionQ
     params["FAIL"] = true;
     params["SPEED"] = (qlonglong)0;
     params["TLEFT"] = -1;
+    fillDownloadTarget(params, cqi);
 
     emit coreCMFailed(params);
 }
@@ -83,12 +97,15 @@ void TransferView::on(dcpp::ConnectionManagerListener::StatusChanged, dcpp::Conn
     VarMap params;
     getParams(params, cqi);
 
-    if (cqi->getState() == ConnectionQueueItem::CONNECTING)
+    if (cqi->getState() == ConnectionQueueItem::CONNECTING) {
         params["STAT"] = tr("Connecting");
-    else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS)
+        params["SOFT_STAT"] = true;
+    } else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS)
         params["STAT"] = tr("No download slots");
     else
         params["STAT"] = tr("Waiting to retry");
+
+    fillDownloadTarget(params, cqi);
 
     emit coreCMStatusChanged(params);
 }

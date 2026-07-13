@@ -33,6 +33,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Requesting, dcpp::Download*
     const DownloadUiState s = downloadState(dl);
     applyDownloadMetrics(params, dl, s, tr("Requesting"));
     params["FAIL"]  = false;
+    params["SOFT_STAT"] = true;
 
     emit coreDMRequesting(params);
 }
@@ -60,6 +61,8 @@ void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* d
     const QString stat = s.continuing ? downloadProgressStat(s.downloaded, s.fileSize) : tr("Download starting...");
     applyDownloadMetrics(params, dl, s, stat);
     applyDownloadSpeed(params, dl, s);
+    if (!s.continuing)
+        params["SOFT_STAT"] = true;
 
     emit coreDMStarting(params);
 }
@@ -116,6 +119,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Complete, dcpp::Download* d
     const DownloadUiState s = downloadState(dl);
     applyDownloadMetrics(params, dl, s, tr("Download complete"));
     params["SPEED"] = 0;
+    params["SOFT_STAT"] = true;
 
     qint64 pos = QueueManager::getInstance()->getPos(dl->getPath()) + dl->getPos();
 

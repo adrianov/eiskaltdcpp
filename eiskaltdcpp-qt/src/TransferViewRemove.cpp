@@ -67,7 +67,7 @@ void TransferView::removeDownloadSource(const QString &cid){
     model->removeTransfer(params);
 }
 
-void TransferView::removeUploadItem(const QString &cid){
+void TransferView::removeUploadItem(const QString &cid, const QString &hub){
     if (cid.isEmpty())
         return;
 
@@ -75,6 +75,7 @@ void TransferView::removeUploadItem(const QString &cid){
 
     VarMap params;
     params["CID"] = cid;
+    params["HOST"] = hub;
     params["DOWN"] = false;
     model->removeTransfer(params);
 }
@@ -82,7 +83,7 @@ void TransferView::removeUploadItem(const QString &cid){
 void TransferView::removeMenuSelection(const QList<TransferViewItem*> &items){
     QStringList targets;
     QStringList downloadSources;
-    QStringList uploadCids;
+    QList<QPair<QString, QString>> uploadRows;
 
     for (const auto &i : items) {
         if (i->download) {
@@ -93,8 +94,10 @@ void TransferView::removeMenuSelection(const QList<TransferViewItem*> &items){
             } else if (!i->cid.isEmpty() && !downloadSources.contains(i->cid)) {
                 downloadSources.append(i->cid);
             }
-        } else if (!i->cid.isEmpty() && !uploadCids.contains(i->cid)) {
-            uploadCids.append(i->cid);
+        } else if (!i->cid.isEmpty()) {
+            const QPair<QString, QString> row(i->cid, vstr(i->data(COLUMN_TRANSFER_HOST)));
+            if (!uploadRows.contains(row))
+                uploadRows.append(row);
         }
     }
 
@@ -102,6 +105,6 @@ void TransferView::removeMenuSelection(const QList<TransferViewItem*> &items){
         removeTransfer(target);
     for (const auto &cid : downloadSources)
         removeDownloadSource(cid);
-    for (const auto &cid : uploadCids)
-        removeUploadItem(cid);
+    for (const auto &row : uploadRows)
+        removeUploadItem(row.first, row.second);
 }

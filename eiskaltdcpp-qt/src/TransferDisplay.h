@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <QString>
 #include <cstdint>
 
 namespace TransferDisplay {
@@ -29,6 +30,12 @@ inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
     if (!displayed || actual * 2 >= displayed * 3)
         return actual;
     return displayed;
+}
+
+/** True for "Downloaded …" / "Uploaded …" progress status text. */
+inline bool isProgressStat(const QString &stat, const QString &downloadedPrefix, const QString &uploadedPrefix)
+{
+    return stat.startsWith(downloadedPrefix) || stat.startsWith(uploadedPrefix);
 }
 
 } // namespace TransferDisplay

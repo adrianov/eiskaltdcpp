@@ -24,7 +24,9 @@ static const quint64 UPLOAD_UI_INTERVAL_MS = 250;
 static QHash<QString, quint64> uploadTickTimes;
 
 QString uploadTickKey(const dcpp::Upload *ul) {
-    return _q(ul->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(ul->getPath());
+    return _q(ul->getUser()->getCID().toBase32()) + QLatin1Char('|')
+        + _q(ul->getUserConnection().getHubUrl()) + QLatin1Char('|')
+        + _q(ul->getPath());
 }
 
 bool shouldRefreshUploadUi(const QString &key) {
@@ -65,6 +67,8 @@ void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) n
     const QString stat = s.continuing ? uploadProgressStat(s.sent, s.fileSize) : tr("Upload starting...");
     applyUploadMetrics(params, s, stat);
     applyUploadSpeed(params, ul, s);
+    if (!s.continuing)
+        params["SOFT_STAT"] = true;
 
     if (IPFilter::getInstance()){
         if (!IPFilter::getInstance()->OK(vstr(params["IP"]).toStdString(), eDIRECTION_OUT)){
@@ -74,9 +78,11 @@ void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) n
     }
 
     emit coreUMStarting(params);
+    emit coreUpdateParents();
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList& uls) noexcept{
+    bool any = false;
     for (const auto &it : uls){
         Upload* ul = it;
         const QString tickKey = uploadTickKey(ul);
@@ -105,7 +111,11 @@ void TransferView::on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList&
         params["STAT"] = uploadProgressStat(s.sent, s.fileSize);
 
         emit coreUMTick(params);
+        any = true;
     }
+
+    if (any)
+        emit coreUpdateParents();
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) noexcept{
@@ -118,6 +128,7 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
         applyUploadMetrics(params, s, uploadProgressStat(s.sent, s.fileSize));
         applyUploadSpeed(params, ul, s);
         emit coreUMTick(params);
+        emit coreUpdateParents();
         return;
     }
 
@@ -130,4 +141,5 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     params["FAIL"] = false;
 
     emit coreUMComplete(params);
+    emit coreUpdateParents();
 }

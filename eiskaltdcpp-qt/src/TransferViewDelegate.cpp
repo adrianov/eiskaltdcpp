@@ -45,7 +45,7 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
         return;
     }
 
-    if (item->download && item->childCount() == 1 && !item->cid.isEmpty())
+    if (item->childCount() == 1 && item->cid.isEmpty())
         item = item->child(0);
 
     const QString status = stripBracketedStatusPrefix(item->data(COLUMN_TRANSFER_STATS).toString());

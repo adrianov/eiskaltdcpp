@@ -11,6 +11,7 @@
 
 #include <QAbstractItemModel>
 #include <QMultiHash>
+#include <QSet>
 #include <QSize>
 
 static const int COLUMN_TRANSFER_USERS       = 0;
@@ -89,10 +90,10 @@ public:
     /** sort list */
     virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder);
 
-    /** */
-    bool findTransfer(const QString &, bool, TransferViewItem**);
-    /** */
-    bool findParent(const QString&, TransferViewItem**, bool = true);
+    /** Uploads with a hub match that connection; downloads ignore hub. */
+    bool findTransfer(const QString &, bool, TransferViewItem**, const QString &hub = QString());
+    /** Download parents key on target; upload parents on target + IP. */
+    bool findParent(const QString&, TransferViewItem**, bool = true, const QString &ip = QString());
     /** */
     TransferViewItem *getParent(const QString &target, const VarMap &params);
 
@@ -137,6 +138,9 @@ public Q_SLOTS:
     void setShowTranferedFilesOnlyState (bool state);
     bool getShowTranferedFilesOnlyState ();
 
+private Q_SLOTS:
+    void flushPendingTargetRemoves();
+
 private:
     inline QString      vstr(const QVariant &var) { return var.toString(); }
     inline int          vint(const QVariant &var) { return var.toInt(); }
@@ -148,8 +152,11 @@ private:
     void updateParent(TransferViewItem*);
     /** */
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
+    void removeQueueTargetNow(const QString &target);
     /** */
     QMultiHash<QString, TransferViewItem*> transfer_hash;
+    QSet<QString> pendingTargetRemoves;
+    bool flushTargetsQueued = false;
     /** */
     QMap<QString, int> column_map;
     /** */

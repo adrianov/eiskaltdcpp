@@ -76,7 +76,8 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
         }
         case Qt::DisplayRole:
         {
-            if (item->download && index.column() != COLUMN_TRANSFER_SIZE && item->childCount() == 1)
+            // Single-child groups show the child row (download segments or same-IP uploads).
+            if (item->childCount() == 1 && index.column() != COLUMN_TRANSFER_SIZE)
                 return data(createIndex(0, index.column(), reinterpret_cast<void*>(item->childItems.first())), role);
 
             if (index.column() == COLUMN_TRANSFER_SPEED)
@@ -160,9 +161,8 @@ bool TransferViewModel::hasChildren(const QModelIndex &parent) const
     TransferViewItem *parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
     if (!parentItem)
         return false;
-    if (parentItem->download && parentItem->childCount() == 1)
-        return false;
-    return parentItem->childCount() > 0;
+    // Single-child groups stay flat; multi-hub same-IP uploads expand like download sources.
+    return parentItem->childCount() > 1;
 }
 
 QModelIndex TransferViewModel::createIndexForItem(TransferViewItem *item)

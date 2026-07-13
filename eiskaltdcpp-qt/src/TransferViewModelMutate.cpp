@@ -9,118 +9,36 @@
 
 #include "TransferViewModel.h"
 #include "TransferDisplay.h"
-
-namespace {
-
-bool isHiddenTransferName(const QString &fname)
-{
-    return fname.isEmpty() || fname == TransferViewModel::tr("File list");
-}
-
-bool isAttached(TransferViewItem *item)
-{
-    return item && item->parent() && item->parent()->childItems.contains(item);
-}
-
-void attachTransfer(TransferViewItem *item, TransferViewItem *parent)
-{
-    if (!item || !parent || isAttached(item))
-        return;
-    parent->appendChild(item);
-}
-
-} // namespace
-
-void TransferViewModel::initTransfer(const VarMap &params){
-    if (params.empty())
-        return;
-
-    TransferViewItem *item = nullptr;
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item)) {
-        addConnection(params);
-        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
-            return;
-    }
-
-    const bool needParent = (vstr(params["FNAME"]) != tr("File list"));
-    if (needParent){
-        TransferViewItem *to = getParent(vstr(params["TARGET"]), params);
-        TransferViewItem *p = item->parent();
-
-        if (p != to) {
-            if (isAttached(item))
-                moveTransfer(item, p, to);
-            else
-                attachTransfer(item, to);
-
-            if (p && p != rootItem && !p->childCount() && rootItem->childItems.contains(p)){
-                beginRemoveRows(QModelIndex(), p->row(), p->row());
-                rootItem->childItems.removeAt(p->row());
-                delete p;
-                endRemoveRows();
-            }
-            sort(sortColumn, sortOrder);
-        } else if (!isAttached(item)) {
-            attachTransfer(item, to);
-            emit layoutChanged();
-        }
-    } else if (!isAttached(item)) {
-        attachTransfer(item, rootItem);
-        emit layoutChanged();
-    }
-
-    updateTransfer(params);
-}
-
-void TransferViewModel::addConnection(const VarMap &params){
-    if (params.empty())
-        return;
-
-    TransferViewItem *existing = nullptr;
-    if (findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &existing))
-        return;
-
-    const bool bDownload = vbol(params["DOWN"]);
-    const bool bGroup = bDownload && vbol(params["BGROUP"]);
-    TransferViewItem *to = bGroup ? getParent(vstr(params["TARGET"]), params) : nullptr;
-    TransferViewItem *parent = (to && bGroup) ? to : rootItem;
-
-    QList<QVariant> data;
-    data << params["USER"] << "" << params["STAT"] << "" << "" << ""
-         << params["FNAME"] << params["HOST"] << "" << "";
-
-    TransferViewItem *item = new TransferViewItem(data, parent);
-    item->download = bDownload;
-    item->cid = vstr(params["CID"]);
-    if (item->download)
-        item->target = vstr(params["TARGET"]);
-
-    transfer_hash.insert(item->cid, item);
-
-    // Defer tree insert for empty names when filtering; attach once FNAME is known.
-    if (showTranferedFilesOnly && isHiddenTransferName(vstr(params["FNAME"])))
-        return;
-
-    attachTransfer(item, parent);
-    emit layoutChanged();
-}
+#include "TransferViewModelTree.h"
 
 void TransferViewModel::updateTransfer(const VarMap &params){
     if (params.empty())
         return;
 
+    const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
     TransferViewItem *item = nullptr;
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item)) {
+    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
         // Do not revive after CM::Removed (uploads always; downloads on Failed —
         // e.g. peer close after a finished file list would recreate an empty row).
         if (!vbol(params["DOWN"]) || vbol(params["FAIL"]))
             return;
         addConnection(params);
-        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item))
+        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub))
             return;
     }
 
     VarMap p = params;
+    // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).
+    const bool sameTarget = !p.contains("TARGET") || vstr(p["TARGET"]) == item->target;
+    if (vbol(p.value("SOFT_STAT")) && !vbol(p["FAIL"]) && sameTarget) {
+        if (p.contains("STAT")
+            && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(),
+                                               tr("Downloaded "), tr("Uploaded ")))
+            p.remove("STAT");
+        if (p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos)
+            p.remove("DPOS");
+    }
+
     if (p.contains("SPEED"))
         p["SPEED"] = TransferDisplay::roundSpeed(vdbl(p["SPEED"]));
     if (p.contains("TLEFT")) {
@@ -133,29 +51,56 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             item->updateColumn(i.value(), p[i.key()]);
     }
 
-    item->dpos = vlng(p["DPOS"]);
+    if (p.contains("DPOS"))
+        item->dpos = vlng(p["DPOS"]);
     if (vbol(p["DOWN"]) || p.contains("PERC"))
-        item->percent = vdbl(p["PERC"]);
+        item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
 
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
     item->fail = vbol(p["FAIL"]);
+    if (!item->fail)
+        item->finished = false;
     if (p.contains("TTH"))
         item->tth = vstr(p["TTH"]);
     if (p.contains("QUEUE_POS"))
         item->queuePos = vlng(p["QUEUE_POS"]);
 
     const QString fname = vstr(p["FNAME"]);
-    if (showTranferedFilesOnly && isHiddenTransferName(fname))
-        return;
+    const QString newTarget = vstr(p["TARGET"]);
 
-    if (!isAttached(item)) {
-        TransferViewItem *parent = item->parent() ? item->parent() : rootItem;
-        if (vbol(p["DOWN"]) && !vstr(p["TARGET"]).isEmpty() && fname != tr("File list"))
-            parent = getParent(vstr(p["TARGET"]), p);
-        attachTransfer(item, parent);
-        emit layoutChanged();
+    TransferViewItem *from = item->parent();
+    TransferViewItem *to = rootItem;
+    if (TransferViewTree::wantsParent(p, fname)) {
+        TransferViewItem *existing = nullptr;
+        const QString oldTarget = from ? from->target : QString();
+        if (from && from != rootItem && !findParent(newTarget, &existing, true)
+                && TransferViewTree::retargetGroup(item, from, newTarget, p)) {
+            pendingTargetRemoves.remove(oldTarget);
+            to = from;
+        } else {
+            to = getParent(newTarget, p);
+        }
     }
+
+    if (!TransferViewTree::isAttached(item) || from != to) {
+        if (TransferViewTree::isAttached(item) && from && from != to)
+            moveTransfer(item, from, to);
+        else if (!(showTranferedFilesOnly && TransferViewTree::isHiddenName(fname)))
+            TransferViewTree::attach(item, to);
+
+        if (from && from != rootItem && from != to && !from->childCount()
+                && rootItem->childItems.contains(from)) {
+            beginRemoveRows(QModelIndex(), from->row(), from->row());
+            rootItem->childItems.removeAt(from->row());
+            delete from;
+            endRemoveRows();
+        }
+        sort(sortColumn, sortOrder);
+    }
+
+    if (showTranferedFilesOnly && TransferViewTree::isHiddenName(fname))
+        return;
 
     if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
         item->parent()->dpos = vlng(p["FPOS"]);
@@ -164,5 +109,14 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (idx.isValid()) {
         emit dataChanged(index(idx.row(), 0, idx.parent()),
                          index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+    }
+    TransferViewItem *group = item->parent();
+    if (group && group != rootItem && rootItem->childItems.contains(group)) {
+        updateParent(group);
+        const QModelIndex pidx = createIndexForItem(group);
+        if (pidx.isValid()) {
+            emit dataChanged(index(pidx.row(), 0, pidx.parent()),
+                             index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
+        }
     }
 }
