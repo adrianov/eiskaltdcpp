@@ -10,6 +10,7 @@
 #include "TransfersUpload.hh"
 
 #include <glib/gi18n.h>
+#include <algorithm>
 #include <unordered_map>
 
 #include <dcpp/File.h>
@@ -26,11 +27,10 @@ namespace {
 static const uint64_t UPLOAD_UI_INTERVAL_MS = 250;
 static unordered_map<string, uint64_t> uploadTickTimes;
 
-int64_t uploadFileSize(const Upload *ul) {
+int64_t uploadDiskSize(const Upload *ul) {
     if (ul->getType() != Transfer::TYPE_FILE)
-        return ul->getSize();
-    int64_t size = File::getSize(ul->getPath());
-    return size > 0 ? size : ul->getSize();
+        return -1;
+    return File::getSize(ul->getPath());
 }
 
 } // namespace
@@ -39,10 +39,23 @@ namespace TransfersUpload {
 
 UploadUiState uploadState(const Upload *ul) {
     UploadUiState s;
-    s.fileSize = uploadFileSize(ul);
-    s.sent = ul->getStartPos() + ul->getPos();
-    s.continuing = ul->getStartPos() > 0;
-    s.fileDone = s.fileSize > 0 && ul->getStartPos() + ul->getSize() >= s.fileSize;
+    const int64_t startPos = ul->getStartPos();
+    const int64_t pos = ul->getPos();
+    const int64_t segmentSize = ul->getSize();
+    const int64_t diskSize = uploadDiskSize(ul);
+
+    // Use full-file offsets only when File::getSize succeeds.
+    if (diskSize > 0) {
+        s.fileSize = diskSize;
+        s.sent = startPos + pos;
+        if (s.sent > s.fileSize)
+            s.sent = s.fileSize;
+    } else {
+        s.fileSize = segmentSize > 0 ? segmentSize : pos;
+        s.sent = pos;
+    }
+    s.continuing = startPos > 0;
+    s.fileDone = diskSize > 0 && startPos + segmentSize >= diskSize;
     return s;
 }
 
@@ -66,7 +79,8 @@ void clearUploadUiThrottle(const string& key) {
 void setUploadParams(StringMap& params, Upload* ul, const UploadUiState& s) {
     params["Size"] = Util::toString(s.fileSize);
     params["Download Position"] = Util::toString(s.sent);
-    const double progress = s.fileSize > 0 ? s.sent * 100.0 / s.fileSize : 0.0;
+    const double progress = s.fileSize > 0
+        ? std::min(100.0, std::max(0.0, s.sent * 100.0 / s.fileSize)) : 0.0;
     params["Progress Hidden"] = Util::toString(static_cast<int>(progress + 0.5));
     params["Progress"] = Util::toString(static_cast<int>(progress + 0.5)) + "%";
     params["Transferred"] = Util::formatBytes(s.sent);
@@ -82,7 +96,8 @@ void setUploadParams(StringMap& params, Upload* ul, const UploadUiState& s) {
 }
 
 string uploadProgressStatus(int64_t sent, int64_t fileSize) {
-    const int progress = fileSize > 0 ? static_cast<int>(sent * 100.0 / fileSize) : 0;
+    const int progress = fileSize > 0
+        ? static_cast<int>(std::min(100.0, std::max(0.0, sent * 100.0 / fileSize)) + 0.5) : 0;
     return str(F_("Uploaded %1% (%2%%) ") % Util::formatBytes(sent) % progress);
 }
 
