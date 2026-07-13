@@ -9,13 +9,16 @@ export HOMEBREW=${HOMEBREW:-$(brew --prefix)}
 export OSX_ARCHITECTURES=${OSX_ARCHITECTURES:-arm64}
 export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-26.0}
 
-# Apple Clang rejects -fuse-ld=mold (often set for Linux). Use stock clang.
+# Apple Clang rejects -fuse-ld=mold (often set for Linux). Pin system clang so
+# PATH entries like Homebrew ccache/libexec cannot change CMAKE_*_COMPILER and
+# trigger a mid-configure cache wipe (which drops CMAKE_PREFIX_PATH / Qt5).
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
-export CC=clang
-export CXX=clang++
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
 
-# Drop a poisoned in-tree cache from a previous configure in the source root.
+# Drop poisoned caches (source-root or stale build/) that fight the toolchain.
 rm -rf "$root/CMakeCache.txt" "$root/CMakeFiles"
+rm -rf "$build/CMakeCache.txt" "$build/CMakeFiles"
 
 mkdir -p "$build"
 cd "$build"
@@ -25,8 +28,8 @@ cmake "$root" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_PREFIX="$dist" \
     -DCMAKE_INSTALL_MESSAGE=NEVER \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++
+    -DCMAKE_C_COMPILER=/usr/bin/clang \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
 make -j"$(sysctl -n hw.ncpu)"
 make install

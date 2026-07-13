@@ -20,20 +20,24 @@ else()
     endif()
 endif()
 
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/gettext")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/openssl@1.1")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/openssl")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/qt@5")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/qt5")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/qt")
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${HOMEBREW}/opt/duckdb")
+# Absolute Apple Clang — bare "clang" resolves to ccache/libexec when that is on PATH,
+# which flips CMAKE_*_COMPILER mid-configure, wipes the cache, and drops Qt prefixes.
+set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE FILEPATH "" FORCE)
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE FILEPATH "" FORCE)
 
-set(CMAKE_C_COMPILER   "clang")
-set(CMAKE_CXX_COMPILER "clang++")
+set(_HB_PREFIX
+    "${HOMEBREW}"
+    "${HOMEBREW}/opt/gettext"
+    "${HOMEBREW}/opt/openssl@1.1"
+    "${HOMEBREW}/opt/openssl"
+    "${HOMEBREW}/opt/qt@5"
+    "${HOMEBREW}/opt/qt5"
+    "${HOMEBREW}/opt/qt"
+    "${HOMEBREW}/opt/duckdb")
+set(CMAKE_PREFIX_PATH "${_HB_PREFIX}" CACHE STRING "Homebrew package prefixes" FORCE)
+unset(_HB_PREFIX)
 
 set(CMAKE_OSX_ARCHITECTURES "${OSX_ARCHITECTURES}"
     CACHE STRING "CMAKE_OSX_ARCHITECTURES" FORCE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "${OSX_DEPLOYMENT_TARGET}"
     CACHE STRING "CMAKE_OSX_DEPLOYMENT_TARGET" FORCE)
-#set(CMAKE_BUILD_TYPE Release CACHE STRING "Debug|Release|RelWithDebInfo|MinSizeRel")
