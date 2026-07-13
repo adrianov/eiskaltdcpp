@@ -223,6 +223,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserActions.cpp
     src/ShareBrowserInit.cpp
     src/ShareBrowserContextUser.cpp
+    src/ShareBrowserDelete.cpp
     src/DownloadQueueContext.cpp
     src/DownloadQueueContextMore.cpp
     src/DownloadQueueMenu.cpp

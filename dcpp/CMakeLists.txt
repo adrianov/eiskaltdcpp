@@ -40,6 +40,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerSource.cpp
     QueueManagerUserQueue.cpp
     QueueManagerUserQueueNext.cpp
+    NaturalCompare.cpp
     QueueManagerWorkers.cpp
     QueueManagerRecheck.cpp
     QueueManagerPartial.cpp
@@ -85,6 +86,7 @@ set(DCPP_EXTRA_SOURCES
     UploadManagerAutoSlot.cpp
     DownloadManagerTransfer.cpp
     ConnectionManagerQueue.cpp
+    ConnectionManagerTimer.cpp
     ConnectionManagerGetDownload.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
@@ -116,6 +118,7 @@ set(DCPP_EXTRA_SOURCES
     ScriptManagerLuaQuery.cpp
     ScriptManagerEval.cpp
     ShareManagerFile.cpp
+    ShareManagerRemoveDir.cpp
     FinishedManagerComplete.cpp
     FinishedManagerMap.cpp
 )
