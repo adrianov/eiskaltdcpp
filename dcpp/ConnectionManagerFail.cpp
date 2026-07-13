@@ -71,6 +71,16 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
     cqi->setErrors(-1);
 }
 
+void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi) {
+    if(!cqi || cqi->getErrors() != -1)
+        return;
+    cqi->setErrors(0);
+    cqi->setSlotWaits(0);
+    cqi->setLastAttempt(0);
+    cqi->setConnectAttempts(0);
+    clearConnectCooldown(cqi->getUser().user);
+}
+
 void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
     // Nothing left to fetch (e.g. file list just finished): drop instead of
     // slot-wait / Failed UI that would stick as "Connection closed".

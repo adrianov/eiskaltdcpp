@@ -162,6 +162,8 @@ private:
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
     void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
     void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait);
+    /** Clear permanent give-up so an explicit reconnect request can retry. */
+    void reviveDownloadQueue(ConnectionQueueItem* cqi);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
 

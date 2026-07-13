@@ -179,6 +179,13 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
             }
             if(cqi->getState() == ConnectionQueueItem::WAITING)
                 cqi->setUser(aUser);
+            // Explicit reconnect must undo permanent give-up (WAITING or slot-wait).
+            if(cqi->getState() != ConnectionQueueItem::ACTIVE &&
+                    cqi->getState() != ConnectionQueueItem::CONNECTING) {
+                reviveDownloadQueue(cqi);
+                if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS)
+                    cqi->setState(ConnectionQueueItem::WAITING);
+            }
             idleUser = cqi->getUser().user;
         } else {
             getCQI(aUser, true);

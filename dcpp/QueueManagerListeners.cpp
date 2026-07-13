@@ -35,7 +35,10 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
 
         for(auto qi : matches) {
             // Size compare to avoid popular spoof
-            if(qi->getSize() == sr->getSize() && !qi->isSource(sr->getUser())) {
+            if(qi->getSize() != sr->getSize())
+                continue;
+
+            if(!qi->isSource(sr->getUser())) {
                 try {
                     if(!BOOLSETTING(AUTO_SEARCH_AUTO_MATCH))
                         wantConnection = addSource(qi, HintedUser(sr->getUser(), sr->getHubURL()), 0);
@@ -43,8 +46,12 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
                 } catch(const Exception&) {
                     // ...
                 }
-                break;
+            } else {
+                // Already on the queue item: still nudge connect (revives given-up CQIs).
+                wantConnection = (qi->getPriority() != QueueItem::PAUSED)
+                        && !userQueue.getRunning(sr->getUser());
             }
+            break;
         }
     }
 
@@ -56,7 +63,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
             // ...
         }
     }
-    if(added && sr->getUser()->isOnline() && wantConnection) {
+    if(sr->getUser()->isOnline() && wantConnection) {
         ConnectionManager::getInstance()->getDownloadConnection(HintedUser(sr->getUser(), sr->getHubURL()));
     }
 
