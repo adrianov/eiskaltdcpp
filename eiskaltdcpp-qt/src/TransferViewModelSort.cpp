@@ -76,12 +76,32 @@ void TransferViewModel::sort(int column, Qt::SortOrder order) {
     if (!rootItem || rootItem->childItems.empty() || column < 0 || column > columnCount()-1)
         return;
 
+    // Keep selection/view persistent indexes mapped across reorder (avoids null
+    // internalPointer leftovers that crash QTreeView scroll size hints).
+    const QModelIndexList from = persistentIndexList();
+    QList<TransferViewItem*> fromItems;
+    fromItems.reserve(from.size());
+    for (const QModelIndex &idx : from)
+        fromItems.append(static_cast<TransferViewItem*>(idx.internalPointer()));
+
     emit layoutAboutToBeChanged();
 
     if (order == Qt::AscendingOrder)
         Compare<Qt::AscendingOrder>().sort(column, rootItem->childItems);
     else if (order == Qt::DescendingOrder)
         Compare<Qt::DescendingOrder>().sort(column, rootItem->childItems);
+
+    QModelIndexList to;
+    to.reserve(from.size());
+    for (int i = 0; i < fromItems.size(); ++i) {
+        TransferViewItem *item = fromItems.at(i);
+        TransferViewItem *p = item ? item->parent() : nullptr;
+        if (!item || !p || !p->childItems.contains(item))
+            to.append(QModelIndex());
+        else
+            to.append(createIndex(item->row(), from.at(i).column(), item));
+    }
+    changePersistentIndexList(from, to);
 
     emit layoutChanged();
 }

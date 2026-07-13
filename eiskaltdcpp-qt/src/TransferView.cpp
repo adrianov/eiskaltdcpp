@@ -91,6 +91,8 @@ void TransferView::init(){
 
     treeView_TRANSFERS->setModel(model);
     treeView_TRANSFERS->setItemDelegate(new TransferViewDelegate(this));
+    // Fixed icon/bar height — avoid per-row sizeHint probes on stale indexes while scrolling.
+    treeView_TRANSFERS->setUniformRowHeights(true);
     treeView_TRANSFERS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_TRANSFERS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 

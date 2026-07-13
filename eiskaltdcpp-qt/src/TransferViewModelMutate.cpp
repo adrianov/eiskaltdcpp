@@ -9,6 +9,7 @@
 
 #include "TransferViewModel.h"
 #include "TransferDisplay.h"
+#include "TransferViewMetrics.h"
 #include "TransferViewModelTree.h"
 
 void TransferViewModel::updateTransfer(const VarMap &params){
@@ -30,18 +31,15 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     VarMap p = params;
     // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).
     const bool sameTarget = !p.contains("TARGET") || vstr(p["TARGET"]) == item->target;
+    // High-water only for the same peer row + known same file (explicit TARGET match).
+    const bool uploadHold = !vbol(p["DOWN"]) && !vbol(p["FAIL"])
+            && p.contains("TARGET") && !item->target.isEmpty()
+            && vstr(p["TARGET"]) == item->target;
     if (vbol(p.value("SOFT_STAT")) && !vbol(p["FAIL"]) && sameTarget) {
         if (p.contains("STAT")
             && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(),
                                                tr("Downloaded "), tr("Uploaded ")))
             p.remove("STAT");
-        // Uploads store absolute file offsets in DPOS — hold high-water between segments.
-        // Drop PERC with DPOS so the bar % stays with the held status text.
-        // Downloads use segment-relative DPOS; blocking a reset double-counts with parent fpos.
-        if (!vbol(p["DOWN"]) && p.contains("DPOS") && vlng(p["DPOS"]) < item->dpos) {
-            p.remove("DPOS");
-            p.remove("PERC");
-        }
     }
 
     if (p.contains("SPEED"))
@@ -56,11 +54,23 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             item->updateColumn(i.value(), p[i.key()]);
     }
 
-    if (p.contains("DPOS"))
-        item->dpos = vlng(p["DPOS"]);
-    // Percent tracks PERC/STAT together — do not high-water separately from status text.
-    if (p.contains("PERC"))
+    if (p.contains("DPOS")) {
+        const qlonglong next = vlng(p["DPOS"]);
+        item->dpos = uploadHold ? TransferDisplay::highWaterBytes(item->dpos, next) : next;
+        if (uploadHold) {
+            const qlonglong size = vlng(item->data(COLUMN_TRANSFER_SIZE));
+            item->percent = size > 0
+                ? qBound(0.0, item->dpos * 100.0 / size, 100.0) : 0.0;
+            const QString stat = item->data(COLUMN_TRANSFER_STATS).toString();
+            if (TransferDisplay::isProgressStat(stat, tr("Downloaded "), tr("Uploaded ")))
+                item->updateColumn(COLUMN_TRANSFER_STATS,
+                                   TransferViewMetrics::uploadProgressStat(item->dpos, size));
+        } else if (p.contains("PERC")) {
+            item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
+        }
+    } else if (p.contains("PERC")) {
         item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
+    }
 
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);

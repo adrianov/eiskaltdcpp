@@ -156,6 +156,7 @@ void TransferViewModel::updateTransferPos(const VarMap &params, qint64 pos){
         return;
     }
 
+    // Upload progress is updated via Tick/Starting (updateTransfer), not this signal.
     item->dpos = pos;
 
     const QModelIndex idx = createIndexForItem(item);

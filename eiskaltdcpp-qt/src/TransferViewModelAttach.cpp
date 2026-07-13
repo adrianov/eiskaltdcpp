@@ -50,8 +50,7 @@ void TransferViewModel::addConnection(const VarMap &params){
     TransferViewItem *item = new TransferViewItem(data, parent);
     item->download = bDownload;
     item->cid = vstr(params["CID"]);
-    if (item->download)
-        item->target = vstr(params["TARGET"]);
+    item->target = vstr(params["TARGET"]);
 
     transfer_hash.insert(item->cid, item);
 
