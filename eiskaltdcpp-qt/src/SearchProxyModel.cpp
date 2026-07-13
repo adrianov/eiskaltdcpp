@@ -76,7 +76,7 @@ bool SearchProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &source
     const QModelIndex nameIndex = model->index(sourceRow, COLUMN_SF_FILENAME, sourceParent);
     const SearchItem *item = static_cast<SearchItem*>(nameIndex.internalPointer());
     if (!item)
-        return true;
+        return false;
 
     if (!noText) {
         // Same case-insensitive fold as hub intake (Util::findSubString / utf8ToLC).

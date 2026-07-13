@@ -17,6 +17,8 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     SearchItem *item = static_cast<SearchItem*>(index.internalPointer());
+    if (!item)
+        return QVariant();
 
     switch(role) {
         case Qt::DecorationRole:

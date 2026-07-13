@@ -160,6 +160,7 @@ set(QT_EXTRA_SOURCES
     src/SearchModelAdd.cpp
     src/SearchModelData.cpp
     src/SearchModelMutate.cpp
+    src/SearchModelNav.cpp
     src/SearchProxyModel.cpp
     src/SearchItem.cpp
     src/ReciprocalList.cpp

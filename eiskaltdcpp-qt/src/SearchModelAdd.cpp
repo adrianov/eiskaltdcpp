@@ -16,7 +16,7 @@
 
 bool SearchModel::addResultPtr(const QVariantMap &map){
     try {
-        return addResult(map["FILE"].toString(),
+        const bool ok = addResult(map["FILE"].toString(),
                   map["SIZE"].toULongLong(),
                   map["TTH"].toString(),
                   map["PATH"].toString(),
@@ -28,6 +28,8 @@ bool SearchModel::addResultPtr(const QVariantMap &map){
                   map["HOST"].toString(),
                   map["CID"].toString(),
                   map["ISDIR"].toBool());
+        flushDeferredSort();
+        return ok;
     }
     catch (SearchListException &) {
         return false;
@@ -103,17 +105,18 @@ bool SearchModel::addResult
         return true;
     }
 
-    if (sortColumn == COLUMN_SF_COUNT){
-        beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
-        parent->appendChild(item);
-        endInsertRows();
-        sort(sortColumn, sortOrder);
-        return true;
-    }
-
-    beginInsertRows(createIndexForItem(parent), parent->childCount(), parent->childCount());
+    const QModelIndex parentIdx = createIndexForItem(parent);
+    beginInsertRows(parentIdx, parent->childCount(), parent->childCount());
     parent->appendChild(item);
     endInsertRows();
+
+    // Count column display depends on child count; notify without a full resort.
+    if (parentIdx.isValid())
+        emit dataChanged(parentIdx, parentIdx);
+
+    // Defer Count-column root resort to end of batch (avoids layoutChanged per child).
+    if (sortColumn == COLUMN_SF_COUNT)
+        countSortPending = true;
 
     return true;
 }

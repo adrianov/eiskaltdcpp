@@ -17,6 +17,7 @@ void SearchModel::clearModel(){
     // Notify views/selection before freeing items; deleting first leaves
     // QItemSelection with dangling indexes and crashes in QTreeView paint.
     beginResetModel();
+    countSortPending = false;
     qDeleteAll(rootItem->childItems);
     rootItem->childItems.clear();
     tths.clear();

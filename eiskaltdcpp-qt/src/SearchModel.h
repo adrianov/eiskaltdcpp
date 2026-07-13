@@ -10,7 +10,6 @@
 #pragma once
 
 #include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
 #include <QString>
 #include <QPixmap>
 #include <QList>
@@ -21,15 +20,6 @@
 #include "dcpp/stdinc.h"
 #include "dcpp/SearchResult.h"
 #include "dcpp/SearchManager.h"
-
-class SearchProxyModel: public QSortFilterProxyModel {
-Q_OBJECT
-public:
-    SearchProxyModel(QObject *parent = nullptr): QSortFilterProxyModel(parent){}
-    virtual ~SearchProxyModel(){}
-
-    virtual void sort(int column, Qt::SortOrder order);
-};
 
 static const unsigned COLUMN_SF_COUNT          = 0;
 static const unsigned COLUMN_SF_FILENAME       = 1;
@@ -169,10 +159,11 @@ public:
     /** */
     void removeItem(const SearchItem*);
 
-    /** */
-    void repaint();
     /** Re-resolve local path and queue state for one TTH, or all after async moves. */
     void refreshLocal(const QString &tth);
+
+    /** Run one Count-column root sort after a batch of grouped inserts. */
+    void flushDeferredSort();
 
 public Q_SLOTS:
     /** */
@@ -187,6 +178,8 @@ private:
     int sortColumn;
     /** */
     Qt::SortOrder sortOrder;
+    /** True when grouped inserts need one Count-column root sort. */
+    bool countSortPending = false;
     /** */
     SearchItem *rootItem;
     /** */
@@ -195,6 +188,4 @@ private:
     QHash<QString, SearchItem*> dirs;
 
     static QString dirGroupKey(const QString &path, const QString &file);
-
-    void reset();
 };
