@@ -10,6 +10,7 @@
 #pragma once
 
 #include <QMap>
+#include <QHash>
 #include <QShortcut>
 
 #include "DownloadQueueModel.h"
@@ -28,4 +29,6 @@ public:
 
     SourceMap sources;
     SourceMap badSources;
+    /** Last auto index-match per target (ms); avoids CTM storms when holders stay unmatched. */
+    QHash<QString, qint64> lastIndexAttach;
 };
