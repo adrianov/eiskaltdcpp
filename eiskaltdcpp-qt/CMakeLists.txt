@@ -97,7 +97,13 @@ set(QT_EXTRA_SOURCES
     src/PublicHubModelSort.cpp
     src/PublicHubsActions.cpp
     src/PublicHubsFilter.cpp
+    src/QueuedUserItem.cpp
+    src/QueuedUsersModel.cpp
+    src/QueuedUsersSort.cpp
     src/FavoriteUsersActions.cpp
+    src/FavoriteHubItem.cpp
+    src/FavoriteHubModelMut.cpp
+    src/FavoriteHubModelSort.cpp
     src/FinishedTransfersInit.cpp
     src/FinishedTransfersItem.cpp
     src/FinishedTransfersListener.cpp
