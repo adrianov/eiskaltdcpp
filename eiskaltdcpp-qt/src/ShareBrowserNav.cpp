@@ -14,11 +14,52 @@
 #include "SearchLocalPath.h"
 
 #include "dcpp/ClientManager.h"
+#include "dcpp/Exception.h"
+#include "dcpp/QueueManager.h"
 #include "dcpp/SettingsManager.h"
 
 #include <QAbstractItemView>
+#include <vector>
 
 using namespace dcpp;
+
+namespace {
+
+struct DlJob {
+    string target;
+    int64_t size;
+    TTHValue tth;
+};
+
+void collectJobs(DirectoryListing::Directory *dir, DirectoryListing::Directory *root,
+                 const string &aTarget, std::vector<DlJob> &out)
+{
+    const string target = (dir == root) ? aTarget : aTarget + dir->getName() + PATH_SEPARATOR;
+    for (auto &sub : dir->directories)
+        collectJobs(sub, root, target, out);
+    for (auto *file : dir->files)
+        out.push_back({target + file->getName(), file->getSize(), file->getTTH()});
+}
+
+void queueJobs(const HintedUser &user, std::vector<DlJob> jobs)
+{
+    if (jobs.empty())
+        return;
+
+    AsyncRunner *runner = new AsyncRunner(nullptr);
+    runner->setRunFunction([user, jobs = std::move(jobs)]() {
+        for (const DlJob &job : jobs) {
+            try {
+                QueueManager::getInstance()->add(job.target, job.size, job.tth, user, 0);
+            } catch (const Exception &) {
+            }
+        }
+    });
+    QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()), Qt::QueuedConnection);
+    runner->start();
+}
+
+} // namespace
 
 void ShareBrowser::goDown(QTreeView *view){
     if (view != treeView_RPANE)
@@ -68,26 +109,23 @@ void ShareBrowser::goUp(QTreeView *view){
 }
 
 void ShareBrowser::download(dcpp::DirectoryListing::Directory *dir, const QString &target){
-    if (dir && !target.isEmpty()){
-        try {
-            listing.download(dir, target.toStdString(), false);
-        }
-        catch (const Exception &e){
-            MainWindow::getInstance()->setStatusMessage(_q(e.getError()));
-        }
-    }
+    if (!dir || target.isEmpty())
+        return;
+
+    // Snapshot targets on the UI thread so the worker never touches listing (or a closed tab).
+    std::vector<DlJob> jobs;
+    collectJobs(dir, listing.getRoot(), target.toStdString(), jobs);
+    queueJobs(listing.getUser(), std::move(jobs));
 }
 
 void ShareBrowser::download(dcpp::DirectoryListing::File *file, const QString &target){
-    if (file && !target.isEmpty()){
-        QString name = _q(file->getName());
+    if (!file || target.isEmpty())
+        return;
 
-        try {
-            listing.download(file, (target+name).toStdString(), false, false);
-        }
-        catch (const Exception &e){
-            MainWindow::getInstance()->setStatusMessage(_q(e.getError()));
-        }
+    try {
+        listing.download(file, (target + _q(file->getName())).toStdString(), false, false);
+    } catch (const Exception &e) {
+        MainWindow::getInstance()->setStatusMessage(_q(e.getError()));
     }
 }
 
@@ -129,4 +167,3 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     treeView_LPANE->scrollTo(parent_index, QAbstractItemView::PositionAtCenter);
 }
-
