@@ -67,19 +67,15 @@ bool isPikachuGhost(const Identity& id) {
 
 bool isViablePeer(const OnlineUser& ou) {
     const Identity& id = ou.getIdentity();
-    const UserPtr& u = ou.getUser();
 
-    if(u->isSet(User::BOT) || isPikachuGhost(id))
+    if(isPikachuGhost(id))
         return false;
 
     if(hasClientTag(clientTag(id)))
         return true;
 
-    // Tagless MyINFO (e.g. hmn.pp.ru) still carries connection type and share size.
-    if(!id.getConnection().empty() || id.getBytesShared() > 0)
-        return true;
-
-    return false;
+    // Tagless MyINFO (e.g. hmn.pp.ru): connection or share beats a stale User::BOT flag.
+    return !id.getConnection().empty() || id.getBytesShared() > 0;
 }
 
 bool prefersRevConnect(const OnlineUser& ou) {

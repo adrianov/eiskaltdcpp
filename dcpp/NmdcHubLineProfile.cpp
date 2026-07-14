@@ -151,18 +151,7 @@ void NmdcHub::onLineMyInfo(const string& param) {
     if(j == string::npos)
         return;
 
-    string connection = param.substr(i, j-i-1);
-    if(connection.empty()) {
-        u.getUser()->setFlag(User::BOT);
-        u.getIdentity().setHub(false);
-    } else {
-        u.getUser()->unsetFlag(User::BOT);
-        u.getIdentity().setBot(false);
-    }
-
-    u.getIdentity().setHub(false);
-    u.getIdentity().setConnection(connection);
-    u.getIdentity().setStatus(Util::toString(param[j-1]));
+    applyMyInfoConnection(u, param.substr(i, j-i-1), param[j-1]);
 
     if(u.getIdentity().getStatus() & Identity::TLS)
         u.getUser()->setFlag(User::TLS);

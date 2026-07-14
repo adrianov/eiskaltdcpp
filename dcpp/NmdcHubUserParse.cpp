@@ -45,7 +45,37 @@ void setClientFromSegment(Identity& id, string segment) {
     }
 }
 
+bool isNmdcModeChar(char c) {
+    return c == 'A' || c == 'P' || c == 'C' || c == '5';
+}
+
 } // namespace
+
+void NmdcHub::applyMyInfoConnection(OnlineUser& u, const string& connection, char modeChar) {
+    u.getIdentity().setHub(false);
+    u.getIdentity().setConnection(connection);
+
+    // Tagless hubs put A/P/C/5 in the status slot with an empty connection field.
+    // That is a real peer mode, not a hub bot and not Identity status flags.
+    if(connection.empty() && isNmdcModeChar(modeChar)) {
+        u.getUser()->unsetFlag(User::BOT);
+        u.getIdentity().setBot(false);
+        if(modeChar == 'A')
+            u.getUser()->unsetFlag(User::PASSIVE);
+        else
+            u.getUser()->setFlag(User::PASSIVE);
+        u.getIdentity().setStatus(Util::toString((int)Identity::NORMAL));
+        return;
+    }
+
+    if(connection.empty())
+        u.getUser()->setFlag(User::BOT);
+    else {
+        u.getUser()->unsetFlag(User::BOT);
+        u.getIdentity().setBot(false);
+    }
+    u.getIdentity().setStatus(Util::toString((int)(unsigned char)modeChar));
+}
 
 void NmdcHub::stopInfectedConnect(const string& message, const string& aNick) {
     if((Util::findSubString(message, "зараж") == string::npos &&

@@ -133,6 +133,7 @@ private:
 
     void updateFromTag(Identity& id, const string& tag);
     void findTagInMyINFO(Identity& id, const string& param, size_t start);
+    void applyMyInfoConnection(OnlineUser& u, const string& connection, char modeChar);
 
     void onLineSearch(const string& param);
     void onLineMyInfo(const string& param);
