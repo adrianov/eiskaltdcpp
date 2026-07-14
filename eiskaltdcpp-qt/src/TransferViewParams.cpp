@@ -13,9 +13,27 @@
 
 #include "dcpp/Util.h"
 #include "dcpp/Download.h"
-#include "dcpp/Upload.h"
+#include "dcpp/User.h"
 
 using namespace TransferViewMetrics;
+
+namespace {
+
+/** Prefer connection hub URL; lock-free DHT fallback when core left it empty. */
+QString transferHost(const dcpp::UserPtr &user, const std::string &hubUrl)
+{
+    if (!hubUrl.empty())
+        return _q(hubUrl);
+#ifdef WITH_DHT
+    if (user && user->isSet(dcpp::User::DHT))
+        return QStringLiteral("DHT");
+#else
+    Q_UNUSED(user);
+#endif
+    return QString();
+}
+
+} // namespace
 
 void TransferView::getParams(TransferView::VarMap &params, const dcpp::ConnectionQueueItem *item){
     const dcpp::UserPtr &user = item->getUser();
@@ -25,7 +43,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Connectio
     params["USER"]  = WU->getNicks(user->getCID());
     params["HUB"]   = WU->getHubNames(user);
     params["FAIL"]  = false;
-    params["HOST"]  = _q(item->getUser().hint);
+    params["HOST"]  = transferHost(user, item->getUser().hint);
     params["DOWN"]  = item->getDownload();
 }
 
@@ -68,7 +86,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
     params["IP"]    = _q(trf->getUserConnection().getRemoteIp());
     params["TLEFT"] = qlonglong(trf->getSecondsLeft() > 0 ? trf->getSecondsLeft() : -1);
     params["TARGET"]= _q(trf->getPath());
-    params["HOST"]  = _q(trf->getUserConnection().getHubUrl());
+    params["HOST"]  = transferHost(user, trf->getUserConnection().getHubUrl());
     params["DOWN"]  = true;
     params["TTH"] = _q(trf->getTTH().toBase32());
     if (trf->getUserConnection().isSecure())

@@ -10,6 +10,7 @@
 #include "stdinc.h"
 #include "ConnectionManager.h"
 
+#include "ClientManager.h"
 #include "DownloadManager.h"
 #include "PeerConnectLog.h"
 #include "SettingsManager.h"
@@ -18,7 +19,45 @@
 
 namespace dcpp {
 
+namespace {
+
+#ifdef WITH_DHT
+/** One-shot: incoming DHT peers often have an empty hub URL. */
+void stampDhtHub(UserConnection* uc)
+{
+    if (!uc || !uc->getHubUrl().empty() || !uc->getUser())
+        return;
+    auto* cm = ClientManager::getInstance();
+    if (!cm->findDHTNode(uc->getUser()->getCID()))
+        return;
+    for (const auto& url : cm->getHubUrls(uc->getUser()->getCID())) {
+        if (url != "DHT")
+            return;
+    }
+    uc->setHubUrl("DHT");
+}
+#endif
+
+/** Idle upload waiting for $Get/$ADCGET — safe to replace on peer reconnect spam. */
+UserConnection* findIdleUpload(UserConnectionList& conns, UserConnection* uc) {
+    for(auto* existing : conns) {
+        if(existing == uc || existing->getUser() != uc->getUser())
+            continue;
+        if(!existing->isSet(UserConnection::FLAG_UPLOAD) ||
+                !existing->isSet(UserConnection::FLAG_ASSOCIATED))
+            continue;
+        if(existing->getState() == UserConnection::STATE_GET)
+            return existing;
+    }
+    return nullptr;
+}
+
+} // namespace
+
 void ConnectionManager::addDownloadConnection(UserConnection* uc) {
+#ifdef WITH_DHT
+    stampDhtHub(uc); // before cs — ClientManager lock must not nest under ours
+#endif
     bool addConn = false;
     {
         Lock l(cs);
@@ -56,26 +95,11 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
     }
 }
 
-namespace {
-
-/** Idle upload waiting for $Get/$ADCGET — safe to replace on peer reconnect spam. */
-UserConnection* findIdleUpload(UserConnectionList& conns, UserConnection* uc) {
-    for(auto* existing : conns) {
-        if(existing == uc || existing->getUser() != uc->getUser())
-            continue;
-        if(!existing->isSet(UserConnection::FLAG_UPLOAD) ||
-                !existing->isSet(UserConnection::FLAG_ASSOCIATED))
-            continue;
-        if(existing->getState() == UserConnection::STATE_GET)
-            return existing;
-    }
-    return nullptr;
-}
-
-} // namespace
-
 void ConnectionManager::addUploadConnection(UserConnection* uc) {
     dcassert(uc->isSet(UserConnection::FLAG_UPLOAD));
+#ifdef WITH_DHT
+    stampDhtHub(uc); // before cs — ClientManager lock must not nest under ours
+#endif
 
     bool addConn = false;
     UserConnection* stale = nullptr;
