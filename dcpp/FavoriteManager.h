@@ -48,6 +48,8 @@ public:
     StringList getHubLists();
     void setHubList(int aHubList);
     int getSelectedHubList() { return lastServer; }
+    /** Drop in-flight public-hublist download so its socket can exit on quit. */
+    void abortHttp();
     void refresh(bool forceDownload = false);
     HubTypes getHubListType() { return listType; }
     HubEntryList getPublicHubs() {
