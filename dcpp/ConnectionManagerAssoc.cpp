@@ -12,6 +12,7 @@
 
 #include "ClientManager.h"
 #include "DownloadManager.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "SettingsManager.h"
 #include "UploadManager.h"
@@ -74,6 +75,8 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 
                 fire(ConnectionManagerListener::Connected(), cqi);
 
+                const string hub = !uc->getHubUrl().empty() ? uc->getHubUrl() : cqi->getUser().hint;
+                PeerConnectHub::rememberSuccess(cqi->getUser().user, hub);
                 PeerConnectLog::connected(cqi->getUser(), true);
                 dcdebug("ConnectionManager::addDownloadConnection, leaving to downloadmanager\n");
                 addConn = true;

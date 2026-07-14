@@ -15,6 +15,7 @@
 #include "DownloadManager.h"
 #include "MappingManager.h"
 #include "PeerConnectFilter.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
 
@@ -85,6 +86,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                         cqi->setLastAttempt(aTick);
                         noteConnectCooldown(cqi->getUser().user,
                                 PeerConnectFilter::connectBackoffMs(cqi->getErrors()));
+                        PeerConnectHub::rememberFailure(cqi->getUser().user, cqi->getUser().hint);
                         if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
                             markQueueGiveUp(cqi, cqi->getErrors(), false);
                         } else {
@@ -119,9 +121,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                             cqi->setState(ConnectionQueueItem::CONNECTING);
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
 
-                            if(cqi->getUser().hint.empty()) {
+                            {
                                 const string hub = ClientManager::getInstance()->resolveHubHint(
-                                        cqi->getUser().user);
+                                        cqi->getUser().user, cqi->getUser().hint);
                                 if(!hub.empty())
                                     cqi->setHubHint(hub);
                             }

@@ -23,10 +23,7 @@
 namespace dcpp {
 
 OnlineUser* ClientManager::findConnectUser(const HintedUser& user, bool priv) {
-    OnlineUser* ou = findOnlineUser(user, priv);
-    if(!ou || !PeerConnectFilter::isViablePeer(*ou))
-        ou = findBestOnlineUser(user.user->getCID(), user.hint, priv);
-    return ou;
+    return findBestOnlineUser(user.user->getCID(), user.hint, priv);
 }
 
 void ClientManager::markFakeActive(OnlineUser& ou) {

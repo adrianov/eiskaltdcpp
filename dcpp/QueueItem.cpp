@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "File.h"
 #include "PeerConnectFilter.h"
+#include "PeerConnectHub.h"
 #include "QueueManager.h"
 #include "Util.h"
 
@@ -40,18 +41,27 @@ string getTempName(const string& aFileName, const TTHValue& aRoot) {
 
 void QueueItem::getOnlineUsers(HintedUserList& l, const unordered_set<CID>& queuedDownloads) const {
     auto* qm = QueueManager::getInstance();
+    auto* cm = ClientManager::getInstance();
+    HintedUserList candidates;
     for(auto& i: sources) {
         if(!i.getUser().user->isOnline())
             continue;
-        OnlineUser* ou = ClientManager::getInstance()->findOnlineUser(i.getUser(), false);
+        OnlineUser* ou = cm->findOnlineUser(i.getUser(), false);
         if(ou && !PeerConnectFilter::isViablePeer(*ou))
             continue;
         if(!qm->shouldConnectSource(this, i.getUser(), queuedDownloads))
             continue;
-        l.push_back(i.getUser());
-        if(isSet(FLAG_USER_LIST))
-            return;
+        HintedUser hu = i.getUser();
+        hu.hint = cm->resolveHubHint(hu.user, hu.hint);
+        candidates.push_back(hu);
     }
+    if(candidates.empty())
+        return;
+    PeerConnectHub::sortSources(candidates);
+    if(isSet(FLAG_USER_LIST))
+        l.push_back(candidates.front());
+    else
+        l.insert(l.end(), candidates.begin(), candidates.end());
 }
 
 void QueueItem::addSource(const HintedUser& aUser) {

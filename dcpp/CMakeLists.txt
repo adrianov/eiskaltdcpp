@@ -28,6 +28,7 @@ set(DCPP_EXTRA_SOURCES
     ClientReconnect.cpp
     ClientManagerConnect.cpp
     ClientManagerConnectHub.cpp
+    ClientManagerHubInfo.cpp
     ClientManagerHubGuard.cpp
     ClientLocalIp.cpp
     ClientManagerUserLookup.cpp
@@ -85,6 +86,7 @@ set(DCPP_EXTRA_SOURCES
     PeerConnectFilter.cpp
     HubReconnectFilter.cpp
     PeerConnectTls.cpp
+    PeerConnectHub.cpp
     DownloadManagerSlots.cpp
     DownloadManagerSlotFail.cpp
     DownloadManagerTimer.cpp

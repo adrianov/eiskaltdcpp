@@ -13,6 +13,7 @@
 #include "ClientManager.h"
 #include "Encoder.h"
 #include "LogManager.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectTls.h"
@@ -121,6 +122,11 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);
+    if(!slotWait) {
+        const string hub = (aSource && !aSource->getHubUrl().empty()) ? aSource->getHubUrl()
+                : dlCqi->getUser().hint;
+        PeerConnectHub::rememberFailure(dlCqi->getUser().user, hub);
+    }
     fire(ConnectionManagerListener::Failed(), dlCqi, aError);
 }
 
