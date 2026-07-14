@@ -29,6 +29,7 @@ set(DCPP_EXTRA_SOURCES
     ClientManagerConnect.cpp
     ClientManagerConnectHub.cpp
     ClientManagerHubInfo.cpp
+    DCPlusPlusStartup.cpp
     ClientManagerHubGuard.cpp
     ClientLocalIp.cpp
     ClientManagerUserLookup.cpp
@@ -253,7 +254,7 @@ if (XATTR_FOUND)
 endif (XATTR_FOUND)
 
 if (USE_MINIUPNP)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/DCPlusPlus.cpp
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/DCPlusPlusStartup.cpp
                         ${PROJECT_SOURCE_DIR}/MappingManager.cpp
                  PROPERTY COMPILE_DEFINITIONS USE_MINIUPNP )
 endif()
