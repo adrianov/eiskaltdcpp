@@ -45,7 +45,10 @@ DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map, bool quie
     d->total_files++;
     d->total_size += childData.at(COLUMN_DOWNLOADQUEUE_ESIZE).toULongLong();
 
-    if (!quiet) {
+    if (quiet) {
+        for (DownloadQueueItem *folder = droot; folder; folder = folder->parent())
+            d->batchExpand.insert(folder);
+    } else {
         emit updateStats(d->total_files, d->total_size);
         // Expand leaf folder and ancestors so a new row is visible if parents were collapsed.
         for (QModelIndex idx = parentIdx; idx.isValid(); idx = idx.parent())
@@ -58,6 +61,12 @@ DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map, bool quie
 void DownloadQueueModel::finishBatch(){
     Q_D(static DownloadQueueModel);
     emit updateStats(d->total_files, d->total_size);
+    for (DownloadQueueItem *folder : d->batchExpand) {
+        const QModelIndex idx = createIndexForItem(folder);
+        if (idx.isValid())
+            emit needExpand(idx);
+    }
+    d->batchExpand.clear();
 }
 
 void DownloadQueueModel::updItem(const QVariantMap &map){

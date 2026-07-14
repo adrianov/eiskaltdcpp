@@ -11,10 +11,13 @@
 
 #include "DownloadQueueModel.h"
 
+#include <QSet>
+
 class DownloadQueueModelPrivate {
 public:
     quint64 total_files = 0;
     quint64 total_size = 0;
+    QSet<DownloadQueueItem*> batchExpand;
     int sortColumn = COLUMN_DOWNLOADQUEUE_NAME;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
     DownloadQueueItem *rootItem = nullptr;
