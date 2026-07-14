@@ -13,7 +13,7 @@
 
 #include "dcpp/ClientManager.h"
 
-#include <QAbstractItemView>
+#include <QSignalBlocker>
 
 using namespace dcpp;
 
@@ -22,19 +22,33 @@ void ShareBrowser::selectLeftFolder(FileBrowserItem *item){
         return;
 
     const QModelIndex src = tree_model->createIndexForItem(item);
-    const QModelIndex viewIdx = treeMapFromSource(src);
+    if (!src.isValid())
+        return;
+
+    QModelIndex viewIdx = treeMapFromSource(src);
+    if (!viewIdx.isValid())
+        return;
+
     for (QModelIndex p = viewIdx.parent(); p.isValid(); p = p.parent())
         treeView_LPANE->expand(p);
 
-    treeView_LPANE->selectionModel()->setCurrentIndex(viewIdx,
-            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(viewIdx, QAbstractItemView::PositionAtCenter);
+    viewIdx = treeMapFromSource(tree_model->createIndexForItem(item));
+    if (!viewIdx.isValid())
+        return;
+
+    // Block selectionModel signals: setCurrentIndex → currentChanged → QTreeView::scrollTo
+    // was crashing with the left-pane filter proxy (null deref inside scrollTo).
+    QItemSelectionModel *sm = treeView_LPANE->selectionModel();
+    {
+        const QSignalBlocker block(sm);
+        sm->setCurrentIndex(viewIdx,
+                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    }
+    treeView_LPANE->viewport()->update();
+    slotLeftPaneSelChanged(sm->selection(), QItemSelection());
 }
 
 void ShareBrowser::continueInit(){
-    tree_model->repaint();
-    list_model->repaint();
-
     load();
 
     if (user == ClientManager::getInstance()->getMe()){
@@ -54,9 +68,10 @@ void ShareBrowser::continueInit(){
         if (rootIdx.isValid())
             openItem = static_cast<FileBrowserItem*>(rootIdx.internalPointer());
     }
-    selectLeftFolder(openItem);
 
     pathHistory.clear();
 
     ArenaWidgetManager::getInstance()->activate(this);
+
+    selectLeftFolder(openItem);
 }

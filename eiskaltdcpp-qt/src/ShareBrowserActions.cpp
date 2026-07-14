@@ -112,10 +112,15 @@ void ShareBrowser::slotLayoutUpdated(){
     if (selected.size() > 1 || selected.empty())
         return;
 
-    QModelIndex index = selected.at(0);
-    index = treeMapToSource(index);
+    const QModelIndex src = treeMapToSource(selected.at(0));
+    if (!src.isValid())
+        return;
 
-    treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(index),
+    const QModelIndex viewIdx = treeMapFromSource(src);
+    if (!viewIdx.isValid())
+        return;
+
+    selection_model->setCurrentIndex(viewIdx,
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 

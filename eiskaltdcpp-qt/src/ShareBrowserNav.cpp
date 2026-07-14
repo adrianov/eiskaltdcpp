@@ -107,7 +107,6 @@ void ShareBrowser::goUp(QTreeView *view){
 
     treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(tree_index),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(treeMapFromSource(tree_index), QAbstractItemView::PositionAtCenter);
 
     treeView_RPANE->setFocus();
 }
@@ -165,5 +164,4 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
 
     treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(parent_index),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(treeMapFromSource(parent_index), QAbstractItemView::PositionAtCenter);
 }

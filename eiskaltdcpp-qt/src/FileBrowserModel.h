@@ -138,6 +138,8 @@ private:
     /** */
     void fetchBranch(const QModelIndex &parent, dcpp::DirectoryListing::Directory *dir);
     /** */
+    void saveRestrictions();
+    /** */
     dcpp::DirectoryListing *listing;
     /** */
     int sortColumn;

@@ -25,8 +25,11 @@ FileBrowserFilterProxy::FileBrowserFilterProxy(bool treeMode, QObject *parent):
 }
 
 void FileBrowserFilterProxy::sort(int column, Qt::SortOrder order) {
-    if (sourceModel())
-        sourceModel()->sort(column, order);
+    // Left-pane tree is sorted in FileBrowserModel::fetchMore. Forwarding sort to the
+    // source emits layoutChanged and has crashed QTreeView::scrollTo via the proxy.
+    if (treeMode_ || !sourceModel())
+        return;
+    sourceModel()->sort(column, order);
 }
 
 void FileBrowserFilterProxy::applyFilters(const QStringList &terms, qulonglong size, int sizeMode,

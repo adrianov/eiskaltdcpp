@@ -92,6 +92,8 @@ set(QT_EXTRA_SOURCES
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp
+    src/FileBrowserModelFetch.cpp
+    src/FileBrowserModelPath.cpp
     src/FileBrowserFilterProxy.cpp
     src/FileBrowserFilterProxyTree.cpp
     src/FileBrowserModelSort.cpp

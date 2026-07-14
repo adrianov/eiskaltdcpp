@@ -17,16 +17,10 @@
 #include <QtGui>
 #endif
 
-#include <QFileInfo>
 #include <QList>
 #include <QStringList>
-#include <QFile>
-
-#include "dcpp/UploadManager.h"
 
 using namespace dcpp;
-
-#include <set>
 
 FileBrowserModel::FileBrowserModel(QObject *parent)
     : QAbstractItemModel(parent), listing(nullptr), restrictionsLoaded(false), ownList(false)
@@ -46,23 +40,7 @@ FileBrowserModel::~FileBrowserModel()
     if (rootItem)
         delete rootItem;
 
-    if (restrictionsLoaded){
-        QFile f(_q(Util::getPath(Util::PATH_USER_CONFIG) + "PerFolderLimit.conf"));
-
-        if (f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)){
-            QTextStream stream(&f);
-
-            for (auto it = restrict_map.begin(); it != restrict_map.end(); ++it) {
-                stream << it.value() << " " << it.key() << '\n';
-            }
-
-            stream.flush();
-
-            f.close();
-
-            dcpp::UploadManager::getInstance()->reloadRestrictions();
-        }
-    }
+    saveRestrictions();
 }
 
 int FileBrowserModel::columnCount(const QModelIndex &parent) const
@@ -121,67 +99,6 @@ int FileBrowserModel::rowCount(const QModelIndex &parent) const
     return parentItem->childCount();
 }
 
-bool FileBrowserModel::canFetchMore(const QModelIndex &parent) const{
-    if (!listing)
-        return false;
-
-    FileBrowserItem *item = parent.isValid()? static_cast<FileBrowserItem*>(parent.internalPointer()) : rootItem;
-
-    return (item->dir && (item->dir->directories.size() != static_cast<size_t>(item->childCount())));
-}
-
-void FileBrowserModel::fetchBranch(const QModelIndex &parent, dcpp::DirectoryListing::Directory *dir){
-    if (!dir)
-        return;
-
-    FileBrowserItem *root = parent.isValid()? static_cast<FileBrowserItem*>(parent.internalPointer()) : rootItem;
-    FileBrowserItem *item;
-    quint64 size = 0;
-    QList<QVariant> data;
-
-    size = dir->getTotalSize(true);
-
-    data << _q(dir->getName())
-         << WulforUtil::formatBytes(size)
-         << size
-         << "";
-
-    item = new FileBrowserItem(data, root);
-    item->dir = dir;
-
-    beginInsertRows(parent, root->childCount(), root->childCount());
-    {
-        root->appendChild(item);
-    }
-    endInsertRows();
-}
-
-bool FileBrowserModel::hasChildren(const QModelIndex &parent) const{
-    if (!parent.isValid())
-        return true;
-
-    FileBrowserItem *item = static_cast<FileBrowserItem*>(parent.internalPointer());
-
-    return (item->dir && !item->dir->directories.empty());
-}
-
-void FileBrowserModel::fetchMore(const QModelIndex &parent){
-    if (!listing)
-        return;
-
-    if (!parent.isValid())
-        fetchBranch(parent, listing->getRoot());
-    else{
-        FileBrowserItem *item = static_cast<FileBrowserItem*>(parent.internalPointer());
-        QModelIndex i = createIndexForItem(item);
-
-        for (const auto &dir : item->dir->directories) //loading child directories
-            fetchBranch(i, dir);
-
-        sortFileBrowserItems(sortColumn, sortOrder, item);
-    }
-}
-
 void FileBrowserModel::sort(int column, Qt::SortOrder order) {
     sortColumn = column;
     sortOrder = order;
@@ -189,10 +106,10 @@ void FileBrowserModel::sort(int column, Qt::SortOrder order) {
     if (!rootItem || rootItem->childItems.empty() || column < 0 || column > columnCount()-1)
         return;
 
+    // Plain layout signals only — remapping persistent indexes here breaks
+    // QSortFilterProxyModel (ShareBrowser left pane) and crashes in scrollTo.
     emit layoutAboutToBeChanged();
-
     sortFileBrowserItems(column, order, rootItem);
-
     emit layoutChanged();
 }
 
@@ -214,88 +131,6 @@ Qt::SortOrder FileBrowserModel::getSortOrder() const {
 
 void FileBrowserModel::setSortOrder(Qt::SortOrder o) {
     sortOrder = o;
-}
-
-QString FileBrowserModel::createRemotePath(FileBrowserItem *item) const{
-    QString s;
-    FileBrowserItem * pitem;
-
-    if (!item) {
-        return s;
-    }
-
-    pitem = item;
-    s = pitem->data(COLUMN_FILEBROWSER_NAME).toString();
-
-    while ((pitem = pitem->parent())) {
-        // check for root entry
-        if (pitem->parent()) {
-            s = pitem->data(COLUMN_FILEBROWSER_NAME).toString() + "\\" + s;
-        }
-    }
-
-    return s;
-}
-
-FileBrowserItem *FileBrowserModel::createRootForPath(const QString &path, FileBrowserItem *pathRoot){
-    if (path.isEmpty() || path.isNull())
-        return nullptr;
-
-    QString _path = path;
-    _path.replace("\\", "/");
-
-    QStringList list = _path.split("/", WULFOR_SKIP_EMPTY);
-    FileBrowserItem *root = pathRoot?pathRoot:rootItem;
-
-    if (list.empty() || !root)
-        return nullptr;
-
-    for (const auto &s : list){
-        if (s.isEmpty())
-            continue;
-
-        if (!root)
-            return nullptr;
-
-        if (s == ".." && root->parent()){
-            root = root->parent();
-
-            continue;
-        }
-        else if (s == ".")
-            continue;
-
-        bool found = false;
-
-        if (root->dir && !root->dir->directories.empty() && !root->childCount()) //Load child items
-            fetchMore(createIndexForItem(root));
-
-        for (const auto &item : root->childItems){
-            if (!item->dir)
-                continue;
-
-            QString name = (item == rootItem ? "" : item->data(COLUMN_FILEBROWSER_NAME).toString());
-
-            if (!name.compare(s, Qt::CaseSensitive)){
-                root = item;
-                found = true;
-
-                break;
-            }
-        }
-
-        if (!found)
-            return root;
-    }
-
-    return root;
-}
-
-QModelIndex FileBrowserModel::createIndexForItem(FileBrowserItem *item){
-    if (!rootItem || !item)
-        return QModelIndex();
-
-    return createIndex(item->row(), 0, item);
 }
 
 void FileBrowserModel::highlightDuplicates(){
@@ -320,62 +155,6 @@ void FileBrowserModel::highlightDuplicates(){
     }
 }
 
-void FileBrowserModel::loadRestrictions(){
-    QFile f(_q(Util::getPath(Util::PATH_USER_CONFIG) + "PerFolderLimit.conf"));
-
-    if (f.open(QIODevice::ReadOnly | QIODevice::Text)){
-        QTextStream stream(&f);
-        QString line = "";
-
-        while (!(line = stream.readLine(0)).isNull()){
-            QStringList list = line.split(' ');
-
-            if (list.size() < 2)
-                continue;
-
-            bool ok = false;
-            unsigned size = 0;
-
-            size = list.at(0).toUInt(&ok);
-
-            if (!ok)
-                continue;
-
-            QString virt_path = line.remove(0, list.at(0).length() + 1);
-
-            if (!virt_path.startsWith('/'))
-                virt_path.prepend('/');
-
-            if (!virt_path.isEmpty() && size > 0 && !restrict_map.contains(virt_path))
-                restrict_map.insert(virt_path, size);
-        }
-
-        restrictionsLoaded = true;
-
-        f.close();
-    }
-}
-
-void FileBrowserModel::updateRestriction(QModelIndex &i, unsigned size){
-    FileBrowserItem *item = static_cast<FileBrowserItem*>(i.internalPointer());
-    QString path = "";//virtual path
-    QStringList dirs = createRemotePath(item).split("\\");
-
-    if (dirs.size() >= 2){
-        dirs.removeFirst();
-
-        path = "/" + dirs.join("/");
-    }
-    else
-        path = "/";
-
-    if (!size && restrict_map.contains(path))
-        restrict_map.remove(path);
-    else {
-        restrict_map[path] = size;
-    }
-}
-
 void FileBrowserModel::clear(){
     beginRemoveRows(QModelIndex(), 0, (rowCount() >= 1? rowCount() : 1)-1);
     {
@@ -386,5 +165,6 @@ void FileBrowserModel::clear(){
 }
 
 void FileBrowserModel::repaint(){
+    emit layoutAboutToBeChanged();
     emit layoutChanged();
 }
