@@ -11,11 +11,7 @@
 #include "DownloadQueueModelPrivate.h"
 #include "WulforUtil.h"
 
-#include <QApplication>
-
-DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map){
-    static quint64 counter = 0;
-
+DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map, bool quiet){
     DownloadQueueItem *droot = createPath(map["PATH"].toString());
 
     if (!droot)
@@ -49,17 +45,19 @@ DownloadQueueItem *DownloadQueueModel::addItem(const QVariantMap &map){
     d->total_files++;
     d->total_size += childData.at(COLUMN_DOWNLOADQUEUE_ESIZE).toULongLong();
 
-    emit updateStats(d->total_files, d->total_size);
-    // Expand leaf folder and ancestors so a new row is visible if parents were collapsed.
-    for (QModelIndex idx = parentIdx; idx.isValid(); idx = idx.parent())
-        emit needExpand(idx);
-
-    counter++;
-
-    if ((counter % 100) == 0)
-        QApplication::processEvents();
+    if (!quiet) {
+        emit updateStats(d->total_files, d->total_size);
+        // Expand leaf folder and ancestors so a new row is visible if parents were collapsed.
+        for (QModelIndex idx = parentIdx; idx.isValid(); idx = idx.parent())
+            emit needExpand(idx);
+    }
 
     return child;
+}
+
+void DownloadQueueModel::finishBatch(){
+    Q_D(static DownloadQueueModel);
+    emit updateStats(d->total_files, d->total_size);
 }
 
 void DownloadQueueModel::updItem(const QVariantMap &map){

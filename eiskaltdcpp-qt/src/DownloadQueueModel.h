@@ -98,8 +98,9 @@ public:
     virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder);
     virtual void sort() { sort(getSortColumn(), getSortOrder()); }
 
-    /** */
-    DownloadQueueItem *addItem(const QVariantMap &);
+    /** quiet: skip per-row expand/stats (caller emits once after a batch). */
+    DownloadQueueItem *addItem(const QVariantMap &, bool quiet = false);
+    void finishBatch();
     /** */
     void updItem(const QVariantMap &);
     /** */

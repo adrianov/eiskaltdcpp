@@ -124,6 +124,7 @@ private Q_SLOTS:
     void addFile(const VarMap&);
     void remFile(const VarMap&);
     void updateFile(const VarMap&);
+    void flushPendingAdds();
 
     void requestDelete();
 

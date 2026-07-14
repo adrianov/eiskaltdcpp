@@ -39,14 +39,45 @@ void DownloadQueue::loadList(){
 void DownloadQueue::addFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
 
-    VarMap row = map;
-    applyIndexUsers(row, true);
-    d->queue_model->addItem(row);
-    syncSourceMaps(row["TARGET"].toString());
+    d->pendingAdds.append(map);
+    if (d->flushAddsQueued)
+        return;
+    d->flushAddsQueued = true;
+    QMetaObject::invokeMethod(this, "flushPendingAdds", Qt::QueuedConnection);
+}
+
+void DownloadQueue::flushPendingAdds(){
+    Q_D(DownloadQueue);
+
+    QList<VarMap> rows = d->pendingAdds;
+    d->pendingAdds.clear();
+    d->flushAddsQueued = false;
+
+    if (rows.isEmpty())
+        return;
+
+    applyIndexUsers(rows, true);
+
+    treeView_TARGET->setUpdatesEnabled(false);
+    for (VarMap &row : rows) {
+        d->queue_model->addItem(row, true);
+        syncSourceMaps(row["TARGET"].toString());
+    }
+    d->queue_model->finishBatch();
+    treeView_TARGET->setUpdatesEnabled(true);
+
+    if (!d->pendingAdds.isEmpty()) {
+        d->flushAddsQueued = true;
+        QMetaObject::invokeMethod(this, "flushPendingAdds", Qt::QueuedConnection);
+    }
 }
 
 void DownloadQueue::remFile(const VarMap &map){
     Q_D(DownloadQueue);
+
+    // Status/remove can arrive while Added is still coalesced — flush first to avoid dupes/misses.
+    if (!d->pendingAdds.isEmpty())
+        flushPendingAdds();
 
     if (d->queue_model->remItem(map)){
         auto it = d->sources.find(map["TARGET"].toString());
@@ -65,6 +96,9 @@ void DownloadQueue::remFile(const VarMap &map){
 
 void DownloadQueue::updateFile(const DownloadQueue::VarMap &map){
     Q_D(DownloadQueue);
+
+    if (!d->pendingAdds.isEmpty())
+        flushPendingAdds();
 
     VarMap row = map;
     // Display + attach only when index shows online holders we have not counted yet.

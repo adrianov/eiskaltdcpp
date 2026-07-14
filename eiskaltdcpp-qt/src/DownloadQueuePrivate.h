@@ -31,4 +31,7 @@ public:
     SourceMap badSources;
     /** Last auto index-match per target (ms); avoids CTM storms when holders stay unmatched. */
     QHash<QString, qint64> lastIndexAttach;
+
+    QList<QVariantMap> pendingAdds;
+    bool flushAddsQueued = false;
 };
