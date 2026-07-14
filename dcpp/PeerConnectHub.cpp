@@ -103,7 +103,7 @@ int preference(const UserPtr& user, const string& hub) {
 HubOutcome get(const UserPtr& user, const string& hub) {
     if(!user || hub.empty())
         return UNKNOWN;
-    ensureLoaded();
+    // load() at startup; avoid disk I/O on the connect hot path.
     FastLock l(hubCs);
     auto ci = hubOutcomes.find(user->getCID());
     if(ci == hubOutcomes.end())
