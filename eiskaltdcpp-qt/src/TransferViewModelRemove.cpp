@@ -8,48 +8,53 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferDisplay.h"
-#include "WulforUtil.h"
+#include "TransferViewRemoveUtil.h"
 
-#include "dcpp/CID.h"
-#include "dcpp/ClientManager.h"
-#include "dcpp/QueueItem.h"
-#include "dcpp/QueueManager.h"
+using namespace TransferViewRemove;
 
-using namespace dcpp;
-
-namespace {
-
-void eraseHashEntry(QMultiHash<QString, TransferViewItem*> &hash, TransferViewItem *item) {
-    if (!item || item->cid.isEmpty())
+void TransferViewModel::dropTransferRow(TransferViewItem *item) {
+    if (!item)
         return;
 
-    auto i = hash.find(item->cid);
-    while (i != hash.end() && i.key() == item->cid) {
+    TransferViewItem *p = item->parent();
+    if (p && p->childItems.contains(item)) {
+        beginRemoveRows(createIndexForItem(p), item->row(), item->row());
+        p->childItems.removeAt(item->row());
+        endRemoveRows();
+    }
+
+    auto i = transfer_hash.find(item->cid);
+    while (i != transfer_hash.end() && i.key() == item->cid) {
         if (i.value() == item) {
-            hash.erase(i);
-            return;
+            transfer_hash.erase(i);
+            break;
         }
         ++i;
     }
+    delete item;
+
+    if (p && p != rootItem && rootItem->childItems.contains(p)) {
+        if (!p->childCount()) {
+            beginRemoveRows(QModelIndex(), p->row(), p->row());
+            rootItem->childItems.removeAt(p->row());
+            delete p;
+            endRemoveRows();
+        } else {
+            updateParent(p);
+            const QModelIndex pidx = createIndexForItem(p);
+            if (pidx.isValid()) {
+                emit dataChanged(index(pidx.row(), 0, pidx.parent()),
+                                 index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
+            }
+        }
+    }
+
+    pruneEmptyParents();
 }
 
-bool moreDownloadsFrom(const QString &cid) {
-    if (cid.isEmpty())
-        return false;
-    const UserPtr user = ClientManager::getInstance()->findUser(CID(_tq(cid)));
-    if (!user)
-        return false;
-    return QueueManager::getInstance()->hasDownload(user) != QueueItem::PAUSED;
+bool TransferViewModel::shouldRemoveStaleRow(const TransferViewItem *item) const {
+    return !keepAcrossReconnect(item, tr("Downloaded "), tr("Uploaded "));
 }
-
-// Progress rows may linger across reconnect; Connecting/Connected must not.
-bool keepAcrossReconnect(const TransferViewItem *item, const QString &dl, const QString &ul) {
-    return item && (item->dpos > 0 || item->percent > 0
-            || TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(), dl, ul));
-}
-
-} // namespace
 
 void TransferViewModel::removeTransfer(const VarMap &params){
     if (params.empty() || vstr(params["CID"]).isEmpty())
@@ -58,11 +63,13 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const QString cid = vstr(params["CID"]);
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
+    const QString dlPrefix = tr("Downloaded ");
+    const QString ulPrefix = tr("Uploaded ");
 
-    if (download && moreDownloadsFrom(cid)) {
+    if (download) {
         TransferViewItem *item = nullptr;
         if (findTransfer(cid, true, &item)
-                && keepAcrossReconnect(item, tr("Downloaded "), tr("Uploaded "))) {
+                && keepAcrossReconnect(item, dlPrefix, ulPrefix)) {
             item->fail = false;
             item->finished = false;
             item->updateColumn(COLUMN_TRANSFER_SPEED, 0);
@@ -76,118 +83,25 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     }
 
     auto i = transfer_hash.find(cid);
-    while (i != transfer_hash.end() && i.key() == cid){
+    while (i != transfer_hash.end() && i.key() == cid) {
         TransferViewItem *item = i.value();
-        if (item->download == download
-                && (item->download || hub.isEmpty()
-                    || vstr(item->data(COLUMN_TRANSFER_HOST)) == hub)){
-            TransferViewItem *p = item->parent();
-
-            if (p && p->childItems.contains(item)) {
-                beginRemoveRows(createIndexForItem(p), item->row(), item->row());
-                p->childItems.removeAt(item->row());
-                endRemoveRows();
-            }
-
-            transfer_hash.erase(i);
-            delete item;
-
-            if (p && p != rootItem && rootItem->childItems.contains(p)) {
-                if (!p->childCount()) {
-                    beginRemoveRows(QModelIndex(), p->row(), p->row());
-                    rootItem->childItems.removeAt(p->row());
-                    delete p;
-                    endRemoveRows();
-                } else {
-                    updateParent(p);
-                    const QModelIndex pidx = createIndexForItem(p);
-                    if (pidx.isValid()) {
-                        emit dataChanged(index(pidx.row(), 0, pidx.parent()),
-                                         index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
-                    }
-                }
-            }
-
-            return;
-        }
-
-        ++i;
-    }
-}
-
-void TransferViewModel::removeQueueTarget(const VarMap &params){
-    if (params.empty() || !params.contains("TARGET"))
-        return;
-
-    const QString target = vstr(params["TARGET"]);
-    if (target.isEmpty())
-        return;
-
-    // Defer so next-file Requesting can reparent before the group is destroyed.
-    pendingTargetRemoves.insert(target);
-    if (flushTargetsQueued)
-        return;
-    flushTargetsQueued = true;
-    QMetaObject::invokeMethod(this, "flushPendingTargetRemoves", Qt::QueuedConnection);
-}
-
-void TransferViewModel::flushPendingTargetRemoves(){
-    flushTargetsQueued = false;
-    const QSet<QString> targets = pendingTargetRemoves;
-    pendingTargetRemoves.clear();
-    for (const QString &target : targets)
-        removeQueueTargetNow(target);
-}
-
-void TransferViewModel::removeQueueTargetNow(const QString &target){
-    if (target.isEmpty())
-        return;
-
-    const QString dlPrefix = tr("Downloaded ");
-    const QString ulPrefix = tr("Uploaded ");
-
-    TransferViewItem *p = nullptr;
-    if (findParent(target, &p)) {
-        while (p->childCount() > 0) {
-            TransferViewItem *child = p->childItems.last();
-            if (child->download && moreDownloadsFrom(child->cid)
-                    && keepAcrossReconnect(child, dlPrefix, ulPrefix)) {
-                moveTransfer(child, p, rootItem);
-                child->finished = false;
-                continue;
-            }
-
-            eraseHashEntry(transfer_hash, child);
-            const int row = p->childCount() - 1;
-            beginRemoveRows(createIndexForItem(p), row, row);
-            p->childItems.removeLast();
-            delete child;
-            endRemoveRows();
-        }
-
-        if (rootItem->childItems.contains(p)) {
-            const int parentRow = p->row();
-            beginRemoveRows(QModelIndex(), parentRow, parentRow);
-            rootItem->childItems.removeAt(parentRow);
-            delete p;
-            endRemoveRows();
-        }
-    }
-
-    for (int row = rootItem->childCount() - 1; row >= 0; --row) {
-        TransferViewItem *item = rootItem->child(row);
-        if (!item->download || item->target != target)
-            continue;
-        if (!item->cid.isEmpty() && moreDownloadsFrom(item->cid)
-                && keepAcrossReconnect(item, dlPrefix, ulPrefix)) {
-            item->finished = false;
+        if (!matchesRemove(item, download, hub)) {
+            ++i;
             continue;
         }
+        dropTransferRow(item);
+        return;
+    }
 
-        eraseHashEntry(transfer_hash, item);
-        beginRemoveRows(QModelIndex(), row, row);
-        rootItem->childItems.removeAt(row);
-        delete item;
-        endRemoveRows();
+    if (!download && !hub.isEmpty()) {
+        i = transfer_hash.find(cid);
+        while (i != transfer_hash.end() && i.key() == cid) {
+            TransferViewItem *item = i.value();
+            if (!item->download) {
+                dropTransferRow(item);
+                return;
+            }
+            ++i;
+        }
     }
 }

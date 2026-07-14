@@ -143,3 +143,20 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     emit coreUMComplete(params);
     emit coreUpdateParents();
 }
+
+void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept{
+    clearUploadUiThrottle(uploadTickKey(ul));
+
+    VarMap params;
+    getParams(params, ul);
+    const UploadUiState s = uploadState(ul);
+    applyUploadMetrics(params, s, _q(reason));
+    applyUploadSpeed(params, ul, s);
+    params["SPEED"] = 0.0;
+    params["TLEFT"] = qlonglong(-1);
+    params["DOWN"] = false;
+    params["FAIL"] = true;
+
+    emit coreUMFailed(params);
+    emit coreUpdateParents();
+}

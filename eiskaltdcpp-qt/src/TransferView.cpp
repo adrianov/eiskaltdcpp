@@ -120,6 +120,7 @@ void TransferView::init(){
     connect(this, SIGNAL(coreUMStarting(VarMap)),       model, SLOT(initTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreUMTick(VarMap)),           model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreUMComplete(VarMap)),       model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
+    connect(this, SIGNAL(coreUMFailed(VarMap)),         model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);
 
     load();
 }

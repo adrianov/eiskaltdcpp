@@ -9,6 +9,7 @@
 
 #include "TransferViewModel.h"
 #include "TransferViewModelTree.h"
+#include "TransferViewRemoveUtil.h"
 
 void TransferViewModel::initTransfer(const VarMap &params){
     if (params.empty())
@@ -27,6 +28,9 @@ void TransferViewModel::initTransfer(const VarMap &params){
 
 void TransferViewModel::addConnection(const VarMap &params){
     if (params.empty())
+        return;
+
+    if (TransferViewRemove::offlineOrphan(vstr(params["CID"]), vstr(params["HOST"])))
         return;
 
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);

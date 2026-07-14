@@ -11,26 +11,21 @@
 #include "TransferViewMetrics.h"
 #include "WulforUtil.h"
 
+#include "dcpp/ClientManager.h"
 #include "dcpp/Util.h"
 #include "dcpp/Download.h"
-#include "dcpp/User.h"
 
 using namespace TransferViewMetrics;
 
 namespace {
 
-/** Prefer connection hub URL; lock-free DHT fallback when core left it empty. */
-QString transferHost(const dcpp::UserPtr &user, const std::string &hubUrl)
+/** getNicks can return "" when an online identity has a blank NI. */
+QString transferUserNick(const dcpp::UserPtr &user, const std::string &hub)
 {
-    if (!hubUrl.empty())
-        return _q(hubUrl);
-#ifdef WITH_DHT
-    if (user && user->isSet(dcpp::User::DHT))
-        return QStringLiteral("DHT");
-#else
-    Q_UNUSED(user);
-#endif
-    return QString();
+    if (!user)
+        return QString();
+    const QString nick = WulforUtil::getInstance()->getNicks(user->getCID(), _q(hub));
+    return nick.isEmpty() ? '{' + _q(user->getCID().toBase32()) + '}' : nick;
 }
 
 } // namespace
@@ -38,20 +33,24 @@ QString transferHost(const dcpp::UserPtr &user, const std::string &hubUrl)
 void TransferView::getParams(TransferView::VarMap &params, const dcpp::ConnectionQueueItem *item){
     const dcpp::UserPtr &user = item->getUser();
     WulforUtil *WU = WulforUtil::getInstance();
+    const std::string host = ClientManager::getInstance()->resolveHubHint(user, item->getUser().hint);
 
     params["CID"]   = _q(user->getCID().toBase32());
-    params["USER"]  = WU->getNicks(user->getCID());
+    params["USER"]  = transferUserNick(user, host);
     params["HUB"]   = WU->getHubNames(user);
     params["FAIL"]  = false;
-    params["HOST"]  = transferHost(user, item->getUser().hint);
+    params["HOST"]  = host.empty() ? QString() : _q(host);
     params["DOWN"]  = item->getDownload();
 }
 
 void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer *trf){
     const UserPtr& user = trf->getUser();
     WulforUtil *WU = WulforUtil::getInstance();
+    const std::string host = ClientManager::getInstance()->resolveHubHint(
+            user, trf->getUserConnection().getHubUrl());
 
     params["CID"]   = _q(user->getCID().toBase32());
+    params["USER"]  = transferUserNick(user, host);
 
     if (trf->getType() == Transfer::TYPE_PARTIAL_LIST || trf->getType() == Transfer::TYPE_FULL_LIST)
         params["FNAME"] = tr("File list");
@@ -59,11 +58,6 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
         params["FNAME"] = QString("TTH: ") + _q(Util::getFileName(trf->getPath()));
     else
         params["FNAME"] = _q(Util::getFileName(trf->getPath()));
-
-    QString nick = WU->getNicks(user->getCID());
-
-    if (!nick.isEmpty())//Do not update user nick if user is offline
-        params["USER"]  = nick;
 
     params["HUB"]   = WU->getHubNames(user);
     params["PATH"]  = _q(Util::getFilePath(trf->getPath()));
@@ -86,7 +80,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
     params["IP"]    = _q(trf->getUserConnection().getRemoteIp());
     params["TLEFT"] = qlonglong(trf->getSecondsLeft() > 0 ? trf->getSecondsLeft() : -1);
     params["TARGET"]= _q(trf->getPath());
-    params["HOST"]  = transferHost(user, trf->getUserConnection().getHubUrl());
+    params["HOST"]  = host.empty() ? QString() : _q(host);
     params["DOWN"]  = true;
     params["TTH"] = _q(trf->getTTH().toBase32());
     if (trf->getUserConnection().isSecure())

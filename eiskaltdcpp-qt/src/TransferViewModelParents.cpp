@@ -29,6 +29,8 @@ void TransferViewModel::updateParents(){
     // SPEED order changes every tick; other columns stay stable with dataChanged only.
     if (sortColumn == COLUMN_TRANSFER_SPEED)
         sort(sortColumn, sortOrder);
+
+    pruneEmptyParents();
 }
 
 void TransferViewModel::updateParent(TransferViewItem *p){

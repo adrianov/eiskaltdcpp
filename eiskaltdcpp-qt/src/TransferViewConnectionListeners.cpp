@@ -9,6 +9,7 @@
 
 #include "TransferView.h"
 #include "TransferViewMetrics.h"
+#include "TransferViewRemoveUtil.h"
 #include "WulforUtil.h"
 
 #include "dcpp/Util.h"
@@ -39,6 +40,12 @@ void fillDownloadTarget(QVariantMap &params, dcpp::ConnectionQueueItem *cqi)
         params["FNAME"] = _q(Util::getFileName(aTarget));
 }
 
+bool offlineOrphan(const QVariantMap &params) {
+    return TransferViewRemove::offlineOrphan(
+            params.value(QStringLiteral("CID")).toString(),
+            params.value(QStringLiteral("HOST")).toString());
+}
+
 } // namespace
 
 void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQueueItem* cqi) noexcept{
@@ -50,6 +57,9 @@ void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQu
     params["STAT"] = tr("Connecting...");
     params["SOFT_STAT"] = true;
     fillDownloadTarget(params, cqi);
+
+    if (offlineOrphan(params))
+        return;
 
     emit coreCMAdded(params);
 }
@@ -63,6 +73,11 @@ void TransferView::on(dcpp::ConnectionManagerListener::Connected, dcpp::Connecti
     params["STAT"] = tr("Connected");
     params["SOFT_STAT"] = true;
     fillDownloadTarget(params, cqi);
+
+    if (offlineOrphan(params)) {
+        emit coreCMRemoved(params);
+        return;
+    }
 
     emit coreCMConnected(params);
 }
@@ -90,6 +105,11 @@ void TransferView::on(dcpp::ConnectionManagerListener::Failed, dcpp::ConnectionQ
     params["TLEFT"] = -1;
     fillDownloadTarget(params, cqi);
 
+    if (offlineOrphan(params)) {
+        emit coreCMRemoved(params);
+        return;
+    }
+
     emit coreCMFailed(params);
 }
 
@@ -106,6 +126,11 @@ void TransferView::on(dcpp::ConnectionManagerListener::StatusChanged, dcpp::Conn
         params["STAT"] = tr("Waiting to retry");
 
     fillDownloadTarget(params, cqi);
+
+    if (offlineOrphan(params)) {
+        emit coreCMRemoved(params);
+        return;
+    }
 
     emit coreCMStatusChanged(params);
 }

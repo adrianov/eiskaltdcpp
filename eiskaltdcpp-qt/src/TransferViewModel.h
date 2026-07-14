@@ -153,6 +153,9 @@ private:
 
     /** */
     void updateParent(TransferViewItem*);
+    void pruneEmptyParents();
+    bool shouldRemoveStaleRow(const TransferViewItem *item) const;
+    void dropTransferRow(TransferViewItem *item);
     /** */
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);

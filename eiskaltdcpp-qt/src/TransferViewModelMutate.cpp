@@ -11,21 +11,36 @@
 #include "TransferDisplay.h"
 #include "TransferViewMetrics.h"
 #include "TransferViewModelTree.h"
+#include "TransferViewRemoveUtil.h"
 
 void TransferViewModel::updateTransfer(const VarMap &params){
     if (params.empty())
         return;
 
+    if (TransferViewRemove::offlineOrphan(vstr(params["CID"]), vstr(params["HOST"]))) {
+        removeTransfer(params);
+        return;
+    }
+
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
     TransferViewItem *item = nullptr;
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
-        // Do not revive after CM::Removed (uploads always; downloads on Failed —
-        // e.g. peer close after a finished file list would recreate an empty row).
+    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
+            && !vbol(params["DOWN"]) && !hub.isEmpty())
+        findTransfer(vstr(params["CID"]), false, &item, QString());
+    if (!item) {
         if (!vbol(params["DOWN"]) || vbol(params["FAIL"]))
             return;
         addConnection(params);
-        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub))
+        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
+                && !vbol(params["DOWN"]) && !hub.isEmpty())
+            findTransfer(vstr(params["CID"]), false, &item, QString());
+        if (!item)
             return;
+    }
+
+    if (vbol(params["FAIL"]) && shouldRemoveStaleRow(item)) {
+        removeTransfer(params);
+        return;
     }
 
     VarMap p = params;
