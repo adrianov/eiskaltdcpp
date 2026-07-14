@@ -12,6 +12,7 @@
 #include "ClientManager.h"
 
 #include "PeerConnectFilter.h"
+#include "QueueManager.h"
 
 #include <unordered_set>
 
@@ -25,6 +26,26 @@ StringList ClientManager::getHubUrls(const CID& cid) const {
         lst.push_back(i->second->getClient().getHubUrl());
     }
     return lst;
+}
+
+string ClientManager::resolveHubHint(const UserPtr& user, const string& hint) {
+    if(!hint.empty())
+        return hint;
+    if(!user)
+        return Util::emptyString;
+
+    if(OnlineUser* ou = findBestOnlineUser(user->getCID(), Util::emptyString, false)) {
+        const string& url = ou->getClient().getHubUrl();
+        if(!url.empty())
+            return url;
+    }
+
+#ifdef WITH_DHT
+    if(findDHTNode(user->getCID()) || user->isSet(User::DHT))
+        return "DHT";
+#endif
+
+    return QueueManager::getInstance()->sourceHubHint(user);
 }
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool priv) {

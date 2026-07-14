@@ -75,6 +75,11 @@ public:
     /** Add verified TTH+size matches through the normal queue and connection path. */
     void matchSources(const HintedUser& user, const vector<SourceMatch>& matches) noexcept;
 
+    /** False when another source with the same nick or IP is already busy on this file. */
+    bool shouldConnectSource(const QueueItem* qi, const HintedUser& aUser) noexcept;
+    /** False when the user's next queued file has a busy nick/IP alias source. */
+    bool allowDownloadConnect(const HintedUser& aUser) noexcept;
+
     bool getTTH(const string& name, TTHValue& tth) noexcept;
 
     int64_t getSize(const string& target) noexcept;
@@ -109,6 +114,9 @@ public:
     QueueItem::Priority hasDownload(const UserPtr& aUser) noexcept;
 
     bool getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept;
+
+    /** First non-empty hub hint from this user's queue sources. */
+    string sourceHubHint(const UserPtr& aUser) noexcept;
 
     int countOnlineSources(const string& aTarget);
 
@@ -164,6 +172,8 @@ private:
 
     static string checkTarget(const string& aTarget, bool checkExsistence);
     bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad);
+    bool isBusyOnFile(const QueueItem* qi, const HintedUser& src);
+    bool hasBusyAlias(const QueueItem* qi, const HintedUser& candidate);
 
     void processList(const string& name, const HintedUser& user, int flags);
     bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);

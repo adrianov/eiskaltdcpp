@@ -13,7 +13,6 @@
 
 #include "ClientManager.h"
 #include "DownloadManager.h"
-#include "FavoriteManager.h"
 #include "MappingManager.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
@@ -105,6 +104,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     if(DownloadManager::getInstance()->isWaitingUploadSlot(cqi->getUser().user))
                         continue;
 
+                    if(!QueueManager::getInstance()->allowDownloadConnect(cqi->getUser()))
+                        continue;
+
                     QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
                     bool startDown = DownloadManager::getInstance()->startDownload(prio);
 
@@ -114,12 +116,11 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                             cqi->setState(ConnectionQueueItem::CONNECTING);
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
 
-                            if(cqi->getConnectAttempts() >= 3) {
-                                OnlineUser* ou = ClientManager::getInstance()->findBestOnlineUser(
-                                        cqi->getUser().user->getCID(), cqi->getUser().hint,
-                                        FavoriteManager::getInstance()->isPrivate(cqi->getUser().hint));
-                                if(ou && ou->getClient().getHubUrl() != cqi->getUser().hint)
-                                    cqi->setHubHint(ou->getClient().getHubUrl());
+                            if(cqi->getUser().hint.empty()) {
+                                const string hub = ClientManager::getInstance()->resolveHubHint(
+                                        cqi->getUser().user);
+                                if(!hub.empty())
+                                    cqi->setHubHint(hub);
                             }
 
                             const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(

@@ -49,6 +49,8 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     fire(QueueManagerListener::SourcesUpdated(), qi);
     setDirty();
 
+    if(hasBusyAlias(qi, aUser))
+        wantConnection = false;
     return wantConnection;
 }
 
@@ -84,8 +86,8 @@ void QueueManager::matchSources(const HintedUser& user,
             if(qi->isSource(user)) {
                 // Same as search hits: already a source still needs a connect nudge
                 // (revives given-up CQIs / idle sockets).
-                wantConnection |= (qi->getPriority() != QueueItem::PAUSED)
-                        && !userQueue.getRunning(user.user);
+                wantConnection |= !userQueue.getRunning(user.user)
+                        && shouldConnectSource(qi, user);
                 continue;
             }
             try {

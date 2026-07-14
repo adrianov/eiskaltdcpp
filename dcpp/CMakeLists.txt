@@ -49,6 +49,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerPutFinish.cpp
     QueueManagerSave.cpp
     QueueManagerSource.cpp
+    QueueManagerSourceBusy.cpp
     QueueManagerUserQueue.cpp
     QueueManagerUserQueueNext.cpp
     NaturalCompare.cpp
@@ -100,6 +101,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerQueue.cpp
     ConnectionManagerTimer.cpp
     ConnectionManagerGetDownload.cpp
+    ConnectionManagerPeerMatch.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
     ConnectionManagerNmdcHandshake.cpp

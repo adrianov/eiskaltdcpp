@@ -79,6 +79,24 @@ bool QueueManager::getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& 
     return true;
 }
 
+string QueueManager::sourceHubHint(const UserPtr& aUser) noexcept {
+    if(!aUser)
+        return Util::emptyString;
+
+    Lock l(cs);
+    for(int i = 0; i < QueueItem::LAST; ++i) {
+        auto j = userQueue.getList(i).find(aUser);
+        if(j == userQueue.getList(i).end())
+            continue;
+        for(auto& qi : j->second) {
+            auto si = qi->getSource(aUser);
+            if(si != qi->getSources().end() && !si->getUser().hint.empty())
+                return si->getUser().hint;
+        }
+    }
+    return Util::emptyString;
+}
+
 QueueManager::QueueManager() :
     lastSave(0),
     queueFile(Util::getPath(Util::PATH_USER_CONFIG) + "Queue.xml"),

@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "File.h"
 #include "PeerConnectFilter.h"
+#include "QueueManager.h"
 #include "Util.h"
 
 namespace dcpp {
@@ -38,11 +39,14 @@ string getTempName(const string& aFileName, const TTHValue& aRoot) {
 }
 
 void QueueItem::getOnlineUsers(HintedUserList& l) const {
+    auto* qm = QueueManager::getInstance();
     for(auto& i: sources) {
         if(!i.getUser().user->isOnline())
             continue;
         OnlineUser* ou = ClientManager::getInstance()->findOnlineUser(i.getUser(), false);
         if(ou && !PeerConnectFilter::isViablePeer(*ou))
+            continue;
+        if(!qm->shouldConnectSource(this, i.getUser()))
             continue;
         l.push_back(i.getUser());
         if(isSet(FLAG_USER_LIST))

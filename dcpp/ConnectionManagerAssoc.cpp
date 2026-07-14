@@ -21,22 +21,15 @@ namespace dcpp {
 
 namespace {
 
-#ifdef WITH_DHT
-/** One-shot: incoming DHT peers often have an empty hub URL. */
-void stampDhtHub(UserConnection* uc)
+/** One-shot: incoming ADC peers and some DHT sockets arrive without a hub URL. */
+void stampHubUrl(UserConnection* uc)
 {
     if (!uc || !uc->getHubUrl().empty() || !uc->getUser())
         return;
-    auto* cm = ClientManager::getInstance();
-    if (!cm->findDHTNode(uc->getUser()->getCID()))
-        return;
-    for (const auto& url : cm->getHubUrls(uc->getUser()->getCID())) {
-        if (url != "DHT")
-            return;
-    }
-    uc->setHubUrl("DHT");
+    const string hub = ClientManager::getInstance()->resolveHubHint(uc->getUser());
+    if (!hub.empty())
+        uc->setHubUrl(hub);
 }
-#endif
 
 /** Idle upload waiting for $Get/$ADCGET — safe to replace on peer reconnect spam. */
 UserConnection* findIdleUpload(UserConnectionList& conns, UserConnection* uc) {
@@ -55,15 +48,15 @@ UserConnection* findIdleUpload(UserConnectionList& conns, UserConnection* uc) {
 } // namespace
 
 void ConnectionManager::addDownloadConnection(UserConnection* uc) {
-#ifdef WITH_DHT
-    stampDhtHub(uc); // before cs — ClientManager lock must not nest under ours
-#endif
+    stampHubUrl(uc); // before cs — ClientManager lock must not nest under ours
     bool addConn = false;
     {
         Lock l(cs);
 
         auto* cqi = findDownloadCqi(uc->getHintedUser());
         if(cqi) {
+            if(cqi->getUser().hint.empty() && !uc->getHubUrl().empty())
+                cqi->setHubHint(uc->getHubUrl());
             // Never bind a download to a CQI from another hub (wrong file list / identity).
             if(uc->getUser() && uc->getUser()->isSet(User::NMDC) &&
                     !cqi->getUser().hint.empty() && !uc->getHubUrl().empty() &&
@@ -97,9 +90,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 
 void ConnectionManager::addUploadConnection(UserConnection* uc) {
     dcassert(uc->isSet(UserConnection::FLAG_UPLOAD));
-#ifdef WITH_DHT
-    stampDhtHub(uc); // before cs — ClientManager lock must not nest under ours
-#endif
+    stampHubUrl(uc); // before cs — ClientManager lock must not nest under ours
 
     bool addConn = false;
     UserConnection* stale = nullptr;

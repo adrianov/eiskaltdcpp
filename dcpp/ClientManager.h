@@ -49,6 +49,9 @@ public:
     StringList getHubNames(const CID& cid, const string& hintUrl);
     StringList getHubUrls(const CID& cid) const;
 
+    /** Fill empty hub hint / connection hub URL from online user or DHT. */
+    string resolveHubHint(const UserPtr& user, const string& hint = Util::emptyString);
+
     StringList getNicks(const CID& cid, const string& hintUrl, bool priv);
     StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
     StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);

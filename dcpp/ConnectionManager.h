@@ -62,6 +62,8 @@ public:
 
     /** False while a per-user outgoing-connect cooldown is active (survives CQI churn). */
     bool allowOutgoingConnect(const UserPtr& user) const;
+    /** True when a download CQI exists for the user (connecting, waiting, or active). */
+    bool isQueuedForDownload(const UserPtr& user) const;
     /** Arm cooldown after CTM/RCM or a failed attempt; ms is a minimum floor. */
     void noteOutgoingConnect(const UserPtr& user, int minBackoffMs);
     /** Clear strikes after a real download starts (peer granted a slot). */

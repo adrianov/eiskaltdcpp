@@ -49,8 +49,8 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
                 }
             } else {
                 // Already on the queue item: still nudge connect (revives given-up CQIs).
-                wantConnection = (qi->getPriority() != QueueItem::PAUSED)
-                        && !userQueue.getRunning(sr->getUser());
+                wantConnection = !userQueue.getRunning(sr->getUser())
+                        && shouldConnectSource(qi, HintedUser(sr->getUser(), sr->getHubURL()));
             }
             break;
         }
@@ -87,10 +87,7 @@ void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& aUser
     }
 
     if(hasDown) {
-        string hint;
-        const StringList hubs = ClientManager::getInstance()->getHubs(aUser->getCID(), Util::emptyString);
-        if(!hubs.empty())
-            hint = hubs.front();
+        const string hint = ClientManager::getInstance()->resolveHubHint(aUser);
         ConnectionManager::getInstance()->getDownloadConnection(HintedUser(aUser, hint));
     }
 }

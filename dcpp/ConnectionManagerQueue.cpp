@@ -44,6 +44,19 @@ void ConnectionManager::putCQI(ConnectionQueueItem* cqi) {
     delete cqi;
 }
 
+bool ConnectionManager::isQueuedForDownload(const UserPtr& user) const {
+    if(!user)
+        return false;
+    Lock l(cs);
+    for(auto& cqi: downloads) {
+        if(cqi->getUser().user != user)
+            continue;
+        if(cqi->getState() == ConnectionQueueItem::ACTIVE || cqi->getErrors() != -1)
+            return true;
+    }
+    return false;
+}
+
 void ConnectionManager::onUpnpReady() {
     Lock l(cs);
     for(auto& cqi : downloads) {
