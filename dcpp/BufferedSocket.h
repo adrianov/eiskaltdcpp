@@ -69,9 +69,10 @@ public:
         }
     }
 
-    static void waitShutdown() {
-        while(sockets > 0)
+    static bool waitShutdown() {
+        for(int i = 0; sockets > 0 && i < 600; ++i)
             Thread::sleep(50);
+        return sockets == 0;
     }
 
     void accept(const Socket& srv, bool secure, bool allowUntrusted);

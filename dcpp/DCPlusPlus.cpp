@@ -155,10 +155,11 @@ void shutdown() {
     FavoriteManager::getInstance()->abortHttp();
     IncomingPortCheck::deleteInstance();
 
-    BufferedSocket::waitShutdown();
+    const bool socketsStopped = BufferedSocket::waitShutdown();
 #ifdef LUA_SCRIPT
     // After sockets stop: UserConnection::send still calls into Lua until then.
-    ScriptManager::deleteInstance();
+    if(socketsStopped)
+        ScriptManager::deleteInstance();
 #endif
     QueueManager::getInstance()->removeUserLists();
     QueueManager::getInstance()->saveQueue(true);
@@ -167,6 +168,8 @@ void shutdown() {
         IPFilter::getInstance()->shutdown();
     }
     SettingsManager::getInstance()->save();
+    if(!socketsStopped)
+        return;
 
     MappingManager::deleteInstance();
     ConnectivityManager::deleteInstance();
