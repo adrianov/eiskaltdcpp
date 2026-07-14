@@ -25,9 +25,9 @@ enum HubOutcome {
 HubOutcome get(const UserPtr& user, const string& hub);
 void rememberSuccess(const UserPtr& user, const string& hub);
 void rememberFailure(const UserPtr& user, const string& hub);
-/** Lower value = try sooner (successful hubs before unknown, then failed). */
-int preference(const UserPtr& user, const string& hub);
 void sortSources(HintedUserList& sources);
+void load();
+void save();
 
 } // namespace PeerConnectHub
 

@@ -19,6 +19,7 @@
 
 #include "ConnectionManager.h"
 
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectTls.h"
 
@@ -124,19 +125,22 @@ bool ConnectionManager::consumeAdc(const string& token, const UserPtr& user) {
 }
 
 void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
-    Lock l(cs);
+    {
+        Lock l(cs);
 
-    for(auto& j : userConnections) {
-        if((j->getLastActivity() + 180*1000) < aTick) {
-            j->disconnect(true);
+        for(auto& j : userConnections) {
+            if((j->getLastActivity() + 180*1000) < aTick) {
+                j->disconnect(true);
+            }
+        }
+        for(auto i = adcExpected.begin(); i != adcExpected.end();) {
+            if(i->second.second + 180*1000 < aTick)
+                i = adcExpected.erase(i);
+            else
+                ++i;
         }
     }
-    for(auto i = adcExpected.begin(); i != adcExpected.end();) {
-        if(i->second.second + 180*1000 < aTick)
-            i = adcExpected.erase(i);
-        else
-            ++i;
-    }
+    PeerConnectHub::save();
 }
 
 const string& ConnectionManager::getPort() const {

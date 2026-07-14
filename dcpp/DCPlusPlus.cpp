@@ -33,6 +33,7 @@
 #include "LogManager.h"
 #include "MappingManager.h"
 #include "IncomingPortCheck.h"
+#include "PeerConnectHub.h"
 #include "QueueManager.h"
 #include "ResourceManager.h"
 #include "SearchManager.h"
@@ -136,6 +137,7 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
         (*f)(p, _("Users"));
     ClientManager::getInstance()->loadUsers();
     ListCache::load();
+    PeerConnectHub::load();
 }
 
 void shutdown() {
@@ -164,6 +166,7 @@ void shutdown() {
     QueueManager::getInstance()->removeUserLists();
     QueueManager::getInstance()->saveQueue(true);
     ClientManager::getInstance()->saveUsers();
+    PeerConnectHub::save();
     if (IPFilter::getInstance()) {
         IPFilter::getInstance()->shutdown();
     }
