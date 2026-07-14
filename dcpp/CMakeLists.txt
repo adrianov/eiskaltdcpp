@@ -6,6 +6,16 @@ file (GLOB dcpp_hdrs ${PROJECT_SOURCE_DIR}/*.h)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
 set(DCPP_EXTRA_SOURCES
+    BufferedSocketWrite.cpp
+    BufferedSocketRead.cpp
+    BufferedSocketConnect.cpp
+    FavoriteManagerHttp.cpp
+    FavoriteManagerHttpFetch.cpp
+    FavoriteManagerStore.cpp
+    FavoriteManagerLoad.cpp
+    FavoriteManagerCommands.cpp
+    FavoriteManagerEntries.cpp
+    FavoriteManagerUsers.cpp
     DirectoryListingLoad.cpp
     DirectoryListingLoader.cpp
     DirectoryListingDir.cpp

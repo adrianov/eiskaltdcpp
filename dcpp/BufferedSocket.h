@@ -69,7 +69,8 @@ public:
     }
 
     static void waitShutdown() {
-        while(sockets > 0)
+        // Cap wait so a stuck socket thread cannot freeze app quit forever.
+        for(int i = 0; sockets > 0 && i < 150; ++i)
             Thread::sleep(100);
     }
 
@@ -103,7 +104,7 @@ public:
     /** Send an updated signal to all listeners */
     void updated() { Lock l(cs); addTask(UPDATED, 0); }
 
-    void disconnect(bool graceless = false) noexcept { Lock l(cs); if(graceless) disconnecting = true; addTask(DISCONNECT, 0); }
+    void disconnect(bool graceless = false) noexcept;
 
     string getLocalIp() const { return sock->getLocalIp(); }
     string getLocalPort() const { return sock->getLocalPort(); }
