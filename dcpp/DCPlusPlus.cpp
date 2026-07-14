@@ -151,6 +151,10 @@ void shutdown() {
     ConnectionManager::getInstance()->shutdown();
     MappingManager::getInstance()->close();
 
+    // Drop HTTP sockets before waiting — owners are deleted later.
+    FavoriteManager::getInstance()->abortHttp();
+    IncomingPortCheck::deleteInstance();
+
     BufferedSocket::waitShutdown();
 #ifdef LUA_SCRIPT
     // After sockets stop: UserConnection::send still calls into Lua until then.
@@ -165,7 +169,6 @@ void shutdown() {
     SettingsManager::getInstance()->save();
 
     MappingManager::deleteInstance();
-    IncomingPortCheck::deleteInstance();
     ConnectivityManager::deleteInstance();
     ADLSearchManager::deleteInstance();
     FinishedManager::deleteInstance();

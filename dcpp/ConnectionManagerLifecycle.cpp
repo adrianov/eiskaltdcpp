@@ -49,11 +49,11 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
 void ConnectionManager::shutdown() {
     // Idempotent: Qt/GTK/daemon may close peers before destroying hub widgets.
     if(shuttingDown) {
-        while(true) {
+        for(int i = 0; i < 300; ++i) {
             {
                 Lock l(cs);
                 if(userConnections.empty())
-                    break;
+                    return;
             }
             Thread::sleep(50);
         }
@@ -86,7 +86,7 @@ void ConnectionManager::shutdown() {
         for(auto j: userConnections)
             j->disconnect(true);
     }
-    while(true) {
+    for(int i = 0; i < 300; ++i) {
         {
             Lock l(cs);
             if(userConnections.empty())
@@ -96,11 +96,12 @@ void ConnectionManager::shutdown() {
     }
 
     // Leave hubs after peers so upload grace is not cut short by offline kicks.
+    // Client::shutdown (putSocket) — disconnect alone leaves the socket thread waiting for SHUTDOWN.
     {
         const Client::List hubs = ClientManager::getInstance()->getClients();
         for(auto c : hubs) {
             c->setAutoReconnect(false);
-            c->disconnect(false);
+            c->shutdown();
         }
     }
 
