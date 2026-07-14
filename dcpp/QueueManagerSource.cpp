@@ -18,7 +18,8 @@
 namespace dcpp {
 
 /** Add a source to an existing queue item */
-bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad) {
+bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad,
+        const QueuedDownloadUsers* queuedPrefetched) {
     bool wantConnection = (qi->getPriority() != QueueItem::PAUSED) && !userQueue.getRunning(aUser);
 
     if(qi->isSource(aUser)) {
@@ -49,7 +50,10 @@ bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::Mask
     fire(QueueManagerListener::SourcesUpdated(), qi);
     setDirty();
 
-    if(hasBusyAlias(qi, aUser))
+    // Prefer a snapshot taken before QueueManager::cs; never touch CM while QM is held.
+    const QueuedDownloadUsers empty;
+    const QueuedDownloadUsers& localQueued = queuedPrefetched ? *queuedPrefetched : empty;
+    if(hasBusyAlias(qi, aUser, localQueued))
         wantConnection = false;
     return wantConnection;
 }
@@ -75,6 +79,7 @@ void QueueManager::matchSources(const HintedUser& user,
         indexed.emplace(match.tth, match.size);
 
     bool wantConnection = false;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
     {
         Lock l(cs);
         for(const auto& item: fileQueue.getQueue()) {
@@ -87,11 +92,11 @@ void QueueManager::matchSources(const HintedUser& user,
                 // Same as search hits: already a source still needs a connect nudge
                 // (revives given-up CQIs / idle sockets).
                 wantConnection |= !userQueue.getRunning(user.user)
-                        && shouldConnectSource(qi, user);
+                        && shouldConnectSource(qi, user, queued);
                 continue;
             }
             try {
-                wantConnection |= addSource(qi, user, QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
+                wantConnection |= addSource(qi, user, QueueItem::Source::FLAG_FILE_NOT_AVAILABLE, &queued);
             } catch(const Exception&) { }
         }
     }

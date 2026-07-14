@@ -125,6 +125,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
         return;
     }
 
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
     {
         Lock l(cs);
 
@@ -137,7 +138,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
                 for(auto& i : ql) {
                     if(!i->isSource(aUser)) {
                         try {
-                            wantConnection = addSource(i, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0);
+                            wantConnection = addSource(i, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0, &queued);
                             sourceAdded = true;
                         } catch(...) { }
                     }
@@ -169,7 +170,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
             q->setFlag(aFlags);
         }
 
-        wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0);
+        wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0, &queued);
     }
 
 connect:
@@ -179,11 +180,12 @@ connect:
 
 void QueueManager::readd(const string& target, const HintedUser& aUser) {
     bool wantConnection = false;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
     {
         Lock l(cs);
         QueueItem* q = fileQueue.find(target);
         if(q && q->isBadSource(aUser)) {
-            wantConnection = addSource(q, aUser, QueueItem::Source::FLAG_MASK);
+            wantConnection = addSource(q, aUser, QueueItem::Source::FLAG_MASK, &queued);
         }
     }
     if(wantConnection && aUser.user->isOnline())

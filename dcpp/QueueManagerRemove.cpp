@@ -65,6 +65,7 @@ int64_t QueueManager::getQueued(const UserPtr& aUser) const {
 
 void QueueManager::setPriority(const string& aTarget, QueueItem::Priority p) noexcept {
     HintedUserList getConn;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
 
     {
         Lock l(cs);
@@ -73,7 +74,7 @@ void QueueManager::setPriority(const string& aTarget, QueueItem::Priority p) noe
         if( (q != NULL) && (q->getPriority() != p) && !q->isFinished() ) {
             if(q->getPriority() == QueueItem::PAUSED || p == QueueItem::HIGHEST) {
                 // Problem, we have to request connections to all these users...
-                q->getOnlineUsers(getConn);
+                q->getOnlineUsers(getConn, queued);
             }
             userQueue.setPriority(q, p);
             setDirty();

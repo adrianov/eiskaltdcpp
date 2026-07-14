@@ -36,6 +36,8 @@ namespace dcpp {
 
 STANDARD_EXCEPTION(QueueException);
 
+using QueuedDownloadUsers = unordered_set<CID>;
+
 class UserConnection;
 class ConnectionQueueItem;
 class QueueLoader;
@@ -75,9 +77,10 @@ public:
     /** Add verified TTH+size matches through the normal queue and connection path. */
     void matchSources(const HintedUser& user, const vector<SourceMatch>& matches) noexcept;
 
-    /** False when another source with the same nick or IP is already busy on this file. */
-    bool shouldConnectSource(const QueueItem* qi, const HintedUser& aUser) noexcept;
-    /** False when the user's next queued file has a busy nick/IP alias source. */
+    /** False if nick/IP alias is busy (pass CM snapshot taken before QueueManager::cs). */
+    bool shouldConnectSource(const QueueItem* qi, const HintedUser& aUser,
+            const QueuedDownloadUsers& queued) noexcept;
+    /** False if next file for user has a busy nick/IP alias. */
     bool allowDownloadConnect(const HintedUser& aUser) noexcept;
 
     bool getTTH(const string& name, TTHValue& tth) noexcept;
@@ -107,40 +110,18 @@ public:
     void putDownload(Download* aDownload, bool finished) noexcept;
     void setFile(Download* download);
     void handleDiskFull(const string& target) noexcept;
-
     int64_t getQueued(const UserPtr& aUser) const;
-
-    /** @return The highest priority download the user has, PAUSED may also mean no downloads */
+    /** Highest priority for user; PAUSED may also mean no downloads. */
     QueueItem::Priority hasDownload(const UserPtr& aUser) noexcept;
-
     bool getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept;
-
-    /** First non-empty hub hint from this user's queue sources. */
     string sourceHubHint(const UserPtr& aUser) noexcept;
-
     int countOnlineSources(const string& aTarget);
-
     void loadQueue() noexcept;
     void saveQueue(bool force = false) noexcept;
-
     void noDeleteFileList(const string& path);
-
     bool handlePartialSearch(const TTHValue& tth, PartsInfo& _outPartsInfo);
     bool handlePartialResult(const UserPtr& aUser, const string& hubHint, const TTHValue& tth, const QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
-
-    bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& tempTarget, int64_t& size) {
-        Lock l(cs);
-        auto ql = fileQueue.find(tth);
-
-        if(ql.empty()) return false;
-
-        QueueItem* qi = ql.front();
-
-        tempTarget = qi->getTempTarget();
-        size = qi->getSize();
-
-        return qi->isChunkDownloaded(startPos, bytes);
-    }
+    bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& tempTarget, int64_t& size);
 
     GETSET(uint64_t, lastSave, LastSave);
     GETSET(string, queueFile, QueueFile);
@@ -171,9 +152,10 @@ private:
     StringList protectedFileLists;
 
     static string checkTarget(const string& aTarget, bool checkExsistence);
-    bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad);
-    bool isBusyOnFile(const QueueItem* qi, const HintedUser& src);
-    bool hasBusyAlias(const QueueItem* qi, const HintedUser& candidate);
+    bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad,
+            const QueuedDownloadUsers* queuedPrefetched = nullptr);
+    bool isBusyOnFile(const QueueItem* qi, const HintedUser& src, const QueuedDownloadUsers& queued);
+    bool hasBusyAlias(const QueueItem* qi, const HintedUser& candidate, const QueuedDownloadUsers& queued);
 
     void processList(const string& name, const HintedUser& user, int flags);
     bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);
@@ -188,7 +170,8 @@ private:
     void setDirty();
 
     void putDownloadBody(Download* d, bool finished, HintedUserList& getConn,
-            string& fl_fname, HintedUser& fl_user, int& fl_flag);
+            string& fl_fname, HintedUser& fl_user, int& fl_flag,
+            const QueuedDownloadUsers& queued);
 
     bool checkSfv(QueueItem* qi, Download* d);
     uint32_t calcCrc32(const string& file);

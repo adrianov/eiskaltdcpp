@@ -22,6 +22,11 @@ namespace dcpp {
 
 using ConnectionManagerPeerMatch::samePeer;
 
+void ConnectionManager::nmdcExpect(const string& aNick, const string& aMyNick, const string& aHubUrl) {
+    expectedConnections.clearOtherHubs(aNick, aHubUrl);
+    expectedConnections.add(aNick, aMyNick, aHubUrl);
+}
+
 void ConnectionManager::mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other) {
     if(!keep || !other || keep == other)
         return;
@@ -90,6 +95,31 @@ ConnectionQueueItem* ConnectionManager::findDownloadCqi(const HintedUser& user) 
             match = cqi;
     }
     return match;
+}
+
+bool ConnectionManager::peerConnectInFlight(const HintedUser& user) const {
+    for(auto& cqi : downloads) {
+        if(cqi->getState() != ConnectionQueueItem::CONNECTING)
+            continue;
+        if(samePeer(user, cqi->getUser()))
+            return true;
+    }
+    return false;
+}
+
+ConnectionQueueItem* ConnectionManager::findDownloadCqiForHub(const string& hubUrl, const CID& wireCid) const {
+    ConnectionQueueItem* cidMatch = nullptr;
+    for(auto& cqi : downloads) {
+        if(cqi->getState() != ConnectionQueueItem::CONNECTING &&
+                cqi->getState() != ConnectionQueueItem::WAITING)
+            continue;
+        if(!(cqi->getUser().user->getCID() == wireCid))
+            continue;
+        if(!hubUrl.empty() && cqi->getUser().hint == hubUrl)
+            return cqi;
+        cidMatch = cqi;
+    }
+    return cidMatch;
 }
 
 bool ConnectionManager::slotWaitActive(const ConnectionQueueItem* cqi) const {

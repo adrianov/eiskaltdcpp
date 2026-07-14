@@ -42,7 +42,8 @@ bool peersSameNick(const HintedUser& a, const HintedUser& b) {
 
 } // namespace
 
-bool QueueManager::isBusyOnFile(const QueueItem* qi, const HintedUser& src) {
+bool QueueManager::isBusyOnFile(const QueueItem* qi, const HintedUser& src,
+        const QueuedDownloadUsers& queued) {
     if(!qi || !src.user)
         return false;
     if(userQueue.getRunning(src.user) == qi)
@@ -53,19 +54,20 @@ bool QueueManager::isBusyOnFile(const QueueItem* qi, const HintedUser& src) {
     }
     if(!qi->isSource(src.user))
         return false;
-    if(ConnectionManager::getInstance()->isQueuedForDownload(src.user) &&
+    if(queued.count(src.user->getCID()) &&
             userQueue.getNext(src.user, QueueItem::LOWEST) == qi)
         return true;
     return false;
 }
 
-bool QueueManager::hasBusyAlias(const QueueItem* qi, const HintedUser& candidate) {
+bool QueueManager::hasBusyAlias(const QueueItem* qi, const HintedUser& candidate,
+        const QueuedDownloadUsers& queued) {
     if(!qi || !candidate.user)
         return false;
     const string candIp = peerIp(candidate, qi);
     for(auto& s: qi->getSources()) {
         const HintedUser& other = s.getUser();
-        if(other.user == candidate.user || !isBusyOnFile(qi, other))
+        if(other.user == candidate.user || !isBusyOnFile(qi, other, queued))
             continue;
         if(peersSameNick(other, candidate))
             return true;
@@ -76,21 +78,23 @@ bool QueueManager::hasBusyAlias(const QueueItem* qi, const HintedUser& candidate
     return false;
 }
 
-bool QueueManager::shouldConnectSource(const QueueItem* qi, const HintedUser& aUser) noexcept {
+bool QueueManager::shouldConnectSource(const QueueItem* qi, const HintedUser& aUser,
+        const QueuedDownloadUsers& queued) noexcept {
     Lock l(cs);
     if(!qi || qi->isFinished() || qi->getPriority() == QueueItem::PAUSED)
         return false;
-    return !hasBusyAlias(qi, aUser);
+    return !hasBusyAlias(qi, aUser, queued);
 }
 
 bool QueueManager::allowDownloadConnect(const HintedUser& aUser) noexcept {
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
     Lock l(cs);
     if(!aUser.user)
         return false;
     if(userQueue.getRunning(aUser))
         return true;
     QueueItem* qi = userQueue.getNext(aUser.user, QueueItem::LOWEST);
-    return qi && !hasBusyAlias(qi, aUser);
+    return qi && !hasBusyAlias(qi, aUser, queued);
 }
 
 } // namespace dcpp

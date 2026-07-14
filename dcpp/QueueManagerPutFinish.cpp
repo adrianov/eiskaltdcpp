@@ -24,7 +24,7 @@
 namespace dcpp {
 
 void QueueManager::putDownloadBody(Download* d, bool finished, HintedUserList& getConn,
-        string& fl_fname, HintedUser& fl_user, int& fl_flag) {
+        string& fl_fname, HintedUser& fl_user, int& fl_flag, const QueuedDownloadUsers& queued) {
     if(d->getType() == Transfer::TYPE_PARTIAL_LIST) {
         QueueItem* q = nullptr;
         try {
@@ -89,7 +89,7 @@ void QueueManager::putDownloadBody(Download* d, bool finished, HintedUserList& g
             }
         }
         if(q->getPriority() != QueueItem::PAUSED)
-            q->getOnlineUsers(getConn);
+            q->getOnlineUsers(getConn, queued);
         userQueue.removeDownload(q, d->getUser());
         fire(QueueManagerListener::StatusUpdated(), q);
         return;

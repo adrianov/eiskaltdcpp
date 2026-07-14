@@ -57,6 +57,16 @@ bool ConnectionManager::isQueuedForDownload(const UserPtr& user) const {
     return false;
 }
 
+QueuedDownloadUsers ConnectionManager::queuedDownloadUsers() const {
+    Lock l(cs);
+    QueuedDownloadUsers out;
+    for(auto& cqi: downloads) {
+        if(cqi->getState() == ConnectionQueueItem::ACTIVE || cqi->getErrors() != -1)
+            out.insert(cqi->getUser().user->getCID());
+    }
+    return out;
+}
+
 void ConnectionManager::onUpnpReady() {
     Lock l(cs);
     for(auto& cqi : downloads) {

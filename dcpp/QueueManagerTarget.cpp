@@ -11,6 +11,7 @@
 #include "stdinc.h"
 #include "QueueManager.h"
 
+#include "ConnectionManager.h"
 #include "File.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
@@ -107,6 +108,7 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept {
         return;
 
     bool delSource = false;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
 
     Lock l(cs);
     QueueItem* qs = fileQueue.find(aSource);
@@ -133,7 +135,7 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept {
 
             for(auto& i: qs->getSources()) {
                 try {
-                    addSource(qt, i.getUser(), QueueItem::Source::FLAG_MASK);
+                    addSource(qt, i.getUser(), QueueItem::Source::FLAG_MASK, &queued);
                 } catch(const Exception&) {
                 }
             }

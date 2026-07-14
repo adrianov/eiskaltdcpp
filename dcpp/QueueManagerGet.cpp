@@ -65,4 +65,16 @@ Download* QueueManager::getDownload(UserConnection& aSource, bool supportsTrees)
     return d;
 }
 
+bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes,
+        string& tempTarget, int64_t& size) {
+    Lock l(cs);
+    auto ql = fileQueue.find(tth);
+    if(ql.empty())
+        return false;
+    QueueItem* qi = ql.front();
+    tempTarget = qi->getTempTarget();
+    size = qi->getSize();
+    return qi->isChunkDownloaded(startPos, bytes);
+}
+
 } // namespace dcpp

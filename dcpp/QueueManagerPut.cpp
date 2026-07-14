@@ -29,11 +29,12 @@ void QueueManager::putDownload(Download* aDownload, bool finished) noexcept {
     unique_ptr<Download> d(aDownload);
     aDownload = nullptr;
 
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
     {
         Lock l(cs);
         delete d->getFile();
         d->setFile(0);
-        putDownloadBody(d.get(), finished, getConn, fl_fname, fl_user, fl_flag);
+        putDownloadBody(d.get(), finished, getConn, fl_fname, fl_user, fl_flag, queued);
     }
 
     for(auto& i: getConn)

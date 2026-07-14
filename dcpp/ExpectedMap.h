@@ -40,6 +40,9 @@ public:
      */
     StringPair removeIf(const function<bool(const string& utf8Nick, const string& hubUrl)>& pred);
 
+    /** Drop pending expects for utf8Nick on every hub except keepHubUrl. */
+    void clearOtherHubs(const string& utf8Nick, const string& keepHubUrl);
+
 private:
     typedef vector<StringPair> ExpectList;
     typedef unordered_map<string, ExpectList> ExpectMap;

@@ -61,6 +61,7 @@ private:
 
 int QueueManager::matchListing(const DirectoryListing& dl) noexcept {
     int matches = 0;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
 
     {
         Lock l(cs);
@@ -76,7 +77,7 @@ int QueueManager::matchListing(const DirectoryListing& dl) noexcept {
             auto j = tthMap.find(qi->getTTH());
             if(j != tthMap.end() && j->second->getSize() == qi->getSize()) {
                 try {
-                    addSource(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
+                    addSource(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE, &queued);
                 } catch(...) {
                 }
                 matches++;

@@ -85,7 +85,8 @@ public:
 
     virtual ~QueueItem() { }
 
-    void getOnlineUsers(HintedUserList& l) const;
+    /** Caller must hold QueueManager::cs and pass a CM download-queue snapshot taken before that lock. */
+    void getOnlineUsers(HintedUserList& l, const unordered_set<CID>& queuedDownloads) const;
 
     SourceList& getSources() { return sources; }
     const SourceList& getSources() const { return sources; }

@@ -107,6 +107,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     if(!QueueManager::getInstance()->allowDownloadConnect(cqi->getUser()))
                         continue;
 
+                    if(peerConnectInFlight(cqi->getUser()))
+                        continue;
+
                     QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
                     bool startDown = DownloadManager::getInstance()->startDownload(prio);
 

@@ -39,6 +39,8 @@ using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 
+using QueuedDownloadUsers = unordered_set<CID>;
+
 class SocketException;
 
 class ConnectionManager : public Speaker<ConnectionManagerListener>,
@@ -46,9 +48,7 @@ class ConnectionManager : public Speaker<ConnectionManagerListener>,
         public Singleton<ConnectionManager>
 {
 public:
-    void nmdcExpect(const string& aNick, const string& aMyNick, const string& aHubUrl) {
-        expectedConnections.add(aNick, aMyNick, aHubUrl);
-    }
+    void nmdcExpect(const string& aNick, const string& aMyNick, const string& aHubUrl);
 
     void nmdcConnect(const string& aServer, const string& aPort, const string& aMyNick, const string& hubUrl, const string& encoding, bool secure);
     void nmdcConnect(const string& aServer, const string& aPort, const string& localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, const string& encoding, bool secure);
@@ -64,6 +64,8 @@ public:
     bool allowOutgoingConnect(const UserPtr& user) const;
     /** True when a download CQI exists for the user (connecting, waiting, or active). */
     bool isQueuedForDownload(const UserPtr& user) const;
+    /** Snapshot of users with a live download CQI (caller must not hold QueueManager::cs). */
+    QueuedDownloadUsers queuedDownloadUsers() const;
     /** Arm cooldown after CTM/RCM or a failed attempt; ms is a minimum floor. */
     void noteOutgoingConnect(const UserPtr& user, int minBackoffMs);
     /** Clear strikes after a real download starts (peer granted a slot). */
@@ -149,6 +151,9 @@ private:
     ConnectionQueueItem* getCQI(const HintedUser& user, bool download);
     void putCQI(ConnectionQueueItem* cqi);
     ConnectionQueueItem* findDownloadCqi(const HintedUser& user);
+    /** True when another hub identity for the same peer is already connecting. */
+    bool peerConnectInFlight(const HintedUser& user) const;
+    ConnectionQueueItem* findDownloadCqiForHub(const string& hubUrl, const CID& wireCid) const;
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
     bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
     bool connectCooldownActive(const UserPtr& user) const;

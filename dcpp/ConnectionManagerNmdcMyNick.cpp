@@ -50,6 +50,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 
     if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
         // Exact wire match (ASCII / legacy hub-encoded keys), then encoding-aware UTF-8.
+        // nmdcExpect() keeps only the latest hub for this nick, so the first hit is correct.
         StringPair i = expectedConnections.removeExact(aNick);
         if(i.second.empty()) {
             i = expectedConnections.removeIf([&](const string& utf8Key, const string& hubUrl) {
@@ -86,17 +87,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
     {
         // One lock for match + bind: CQIs may be deleted by the timer thread.
         Lock l(cs);
-        ConnectionQueueItem::Ptr matchedCqi = nullptr;
-        for(auto& cqi: downloads) {
-            if(cqi->getState() != ConnectionQueueItem::CONNECTING &&
-                    cqi->getState() != ConnectionQueueItem::WAITING)
-                continue;
-            // CID encodes nick+hub, so equality alone is hub-correct (hint may be empty).
-            if(cqi->getUser().user->getCID() == wireCid) {
-                matchedCqi = cqi;
-                break;
-            }
-        }
+        ConnectionQueueItem::Ptr matchedCqi = findDownloadCqiForHub(hubUrl, wireCid);
         if(!matchedCqi) {
             for(auto& cqi: downloads) {
                 if(cqi->getState() != ConnectionQueueItem::CONNECTING &&

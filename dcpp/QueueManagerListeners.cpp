@@ -29,6 +29,7 @@ void QueueManager::noDeleteFileList(const string& path) {
 void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noexcept {
     bool added = false;
     bool wantConnection = false;
+    const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
 
     {
         Lock l(cs);
@@ -42,7 +43,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
             if(!qi->isSource(sr->getUser())) {
                 try {
                     if(!BOOLSETTING(AUTO_SEARCH_AUTO_MATCH))
-                        wantConnection = addSource(qi, HintedUser(sr->getUser(), sr->getHubURL()), 0);
+                        wantConnection = addSource(qi, HintedUser(sr->getUser(), sr->getHubURL()), 0, &queued);
                     added = true;
                 } catch(const Exception&) {
                     // ...
@@ -50,7 +51,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResultPtr& sr) noex
             } else {
                 // Already on the queue item: still nudge connect (revives given-up CQIs).
                 wantConnection = !userQueue.getRunning(sr->getUser())
-                        && shouldConnectSource(qi, HintedUser(sr->getUser(), sr->getHubURL()));
+                        && shouldConnectSource(qi, HintedUser(sr->getUser(), sr->getHubURL()), queued);
             }
             break;
         }
