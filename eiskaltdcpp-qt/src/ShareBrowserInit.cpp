@@ -32,10 +32,6 @@ void ShareBrowser::selectLeftFolder(FileBrowserItem *item){
     for (QModelIndex p = viewIdx.parent(); p.isValid(); p = p.parent())
         treeView_LPANE->expand(p);
 
-    viewIdx = treeMapFromSource(tree_model->createIndexForItem(item));
-    if (!viewIdx.isValid())
-        return;
-
     // Block selectionModel signals: setCurrentIndex → currentChanged → QTreeView::scrollTo
     // was crashing with the left-pane filter proxy (null deref inside scrollTo).
     QItemSelectionModel *sm = treeView_LPANE->selectionModel();
