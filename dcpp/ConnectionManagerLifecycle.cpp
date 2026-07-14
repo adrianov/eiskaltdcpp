@@ -12,7 +12,6 @@
 
 #include "Client.h"
 #include "ClientManager.h"
-#include "Thread.h"
 #include "UserConnection.h"
 
 namespace dcpp {
@@ -48,17 +47,8 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
 
 void ConnectionManager::shutdown() {
     // Idempotent: Qt/GTK/daemon may close peers before destroying hub widgets.
-    if(shuttingDown) {
-        for(int i = 0; i < 300; ++i) {
-            {
-                Lock l(cs);
-                if(userConnections.empty())
-                    return;
-            }
-            Thread::sleep(50);
-        }
+    if(shuttingDown)
         return;
-    }
 
     TimerManager::getInstance()->removeListener(this);
     shuttingDown = true;
@@ -67,35 +57,10 @@ void ConnectionManager::shutdown() {
     {
         Lock l(cs);
         for(auto j: userConnections)
-            j->disconnect(false);
-    }
-
-    // Let uploads finish the current send / TLS close without blocking quit forever.
-    const uint64_t graceUntil = GET_TICK() + 3000;
-    while(GET_TICK() < graceUntil) {
-        {
-            Lock l(cs);
-            if(userConnections.empty())
-                break;
-        }
-        Thread::sleep(50);
-    }
-
-    {
-        Lock l(cs);
-        for(auto j: userConnections)
             j->disconnect(true);
     }
-    for(int i = 0; i < 300; ++i) {
-        {
-            Lock l(cs);
-            if(userConnections.empty())
-                break;
-        }
-        Thread::sleep(50);
-    }
 
-    // Leave hubs after peers so upload grace is not cut short by offline kicks.
+    // Hub sockets are no longer needed once global shutdown begins.
     // Client::shutdown (putSocket) — disconnect alone leaves the socket thread waiting for SHUTDOWN.
     {
         const Client::List hubs = ClientManager::getInstance()->getClients();
@@ -104,9 +69,6 @@ void ConnectionManager::shutdown() {
             c->shutdown();
         }
     }
-
-    // Brief pause so TCP/TLS close can leave the host before process teardown.
-    Thread::sleep(250);
 }
 
 void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* conn, const StringList& feat) noexcept {

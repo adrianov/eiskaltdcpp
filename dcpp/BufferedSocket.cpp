@@ -64,7 +64,14 @@ void BufferedSocket::setMode (Modes aMode, size_t aRollback) {
 }
 
 bool BufferedSocket::checkEvents() {
-    while(state == RUNNING ? taskSem.wait(0) : taskSem.wait()) {
+    // Only wait here, where every consumed signal also pops its task.
+    while(true) {
+        const bool haveTask = (state != RUNNING || disconnecting)
+            ? taskSem.wait()
+            : taskSem.wait(0);
+        if(!haveTask)
+            break;
+
         pair<Tasks, unique_ptr<TaskData> > p;
         {
             Lock l(cs);
@@ -86,6 +93,8 @@ bool BufferedSocket::checkEvents() {
                 threadConnect(ci->addr, ci->port, ci->localPort, ci->natRole, ci->proxy);
             } else if(p.first == ACCEPTED) {
                 threadAccept();
+            } else if(p.first == DISCONNECT) {
+                fail(_("Disconnected"));
             } else {
                 dcdebug("%d unexpected in STARTING state\n", p.first);
             }
@@ -126,13 +135,8 @@ int BufferedSocket::run() {
             if(!checkEvents()) {
                 break;
             }
-            if(state == RUNNING) {
-                if(disconnecting) {
-                    // Avoid spinning: wait for DISCONNECT/SHUTDOWN instead of polling the socket.
-                    taskSem.wait(POLL_TIMEOUT);
-                } else {
-                    checkSocket();
-                }
+            if(state == RUNNING && !disconnecting) {
+                checkSocket();
             }
         } catch(const Exception& e) {
             fail(e.getError());
@@ -148,7 +152,7 @@ void BufferedSocket::fail(const string& aError) {
         sock->disconnect();
     }
 
-    if(state == RUNNING) {
+    if(state == RUNNING || state == STARTING) {
         state = FAILED;
         fire(BufferedSocketListener::Failed(), aError);
     }
@@ -157,9 +161,9 @@ void BufferedSocket::fail(const string& aError) {
 void BufferedSocket::shutdown() {
     Lock l(cs);
     disconnecting = true;
-    // Unblock sock->wait so the worker can drain SHUTDOWN promptly.
+    // Wake the worker without closing or mutating its socket from this thread.
     if(sock.get()) {
-        sock->disconnect();
+        sock->Socket::shutdown();
     }
     addTask(SHUTDOWN, 0);
 }
@@ -174,7 +178,7 @@ void BufferedSocket::disconnect(bool graceless) noexcept {
     if(graceless) {
         disconnecting = true;
         if(sock.get())
-            sock->disconnect();
+            sock->Socket::shutdown();
     }
     addTask(DISCONNECT, 0);
 }

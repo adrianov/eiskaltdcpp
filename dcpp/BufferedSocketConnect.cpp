@@ -85,6 +85,8 @@ void BufferedSocket::threadConnect(const string& aAddr, const string &aPort, con
     state = RUNNING;
 
     while (GET_TICK() < endTime) {
+        if(disconnecting)
+            return;
         dcdebug("threadConnect attempt to addr \"%s\"\n", aAddr.c_str());
         try {
             if(proxy) {
@@ -93,6 +95,8 @@ void BufferedSocket::threadConnect(const string& aAddr, const string &aPort, con
                 sock->connect(aAddr, aPort);
             }
 
+            if(disconnecting)
+                return;
             bool connSucceeded;
             while(!(connSucceeded = sock->waitConnected(POLL_TIMEOUT)) && endTime >= GET_TICK()) {
                 if(disconnecting) return;

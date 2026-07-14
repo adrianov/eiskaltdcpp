@@ -18,16 +18,15 @@
 #include "format.h"
 
 #include <regex>
-
 namespace dcpp {
 
 IncomingPortCheck::IncomingPortCheck() :
     httpDone(false),
     httpFailed(false),
-    busy(false)
+    busy(false),
+    stopping(false)
 {
 }
-
 void IncomingPortCheck::start() {
     if(!ClientManager::getInstance()->isActive())
         return;
@@ -44,7 +43,6 @@ void IncomingPortCheck::start() {
     }
     fire(IncomingPortCheckListener::PortResult(), string(), string(),
          static_cast<int>(Result::Unknown));
-
     Thread::start();
 }
 
@@ -82,26 +80,33 @@ void IncomingPortCheck::clearKind(const string& kind) {
 }
 
 int IncomingPortCheck::run() noexcept {
-    Thread::sleep(2000);
-
+    if(stopSem.wait(2000))
+        return 0;
     const string tcp = ConnectionManager::getInstance()->getPort();
     const string tls = ConnectionManager::getInstance()->getSecurePort();
 
     auto probe = [this](const string& port) -> Result {
         Result r = fetchPort(port, "https://ifconfig.co/port/" + port);
-        if(r != Result::Unknown)
+        if(r != Result::Unknown || stopping)
             return r;
         return fetchPort(port, "https://ipconfig.io/port/" + port);
     };
 
-    if(!tcp.empty())
-        report(tcp, "TCP", probe(tcp));
+    auto check = [&](const string& port, const string& label) {
+        if(port.empty() || stopping)
+            return;
+        const Result result = probe(port);
+        if(!stopping)
+            report(port, label, result);
+    };
 
-    if(!tls.empty() && tls != tcp)
-        report(tls, "TLS", probe(tls));
+    check(tcp, "TCP");
+    if(tls != tcp)
+        check(tls, "TLS");
 
     busy = false;
-    fire(IncomingPortCheckListener::Finished());
+    if(!stopping)
+        fire(IncomingPortCheckListener::Finished());
     return 0;
 }
 
@@ -116,14 +121,14 @@ IncomingPortCheck::Result IncomingPortCheck::fetchPort(const string& port, const
     HttpConnection http;
     http.addListener(this);
     http.downloadFile(url);
-
-    for(int i = 0; i < 300; ++i) {
+    for(int i = 0; i < 300 && !stopping; ++i) {
         {
             Lock l(cs);
             if(httpDone || httpFailed)
                 break;
         }
-        Thread::sleep(100);
+        if(stopSem.wait(100))
+            break;
     }
 
     http.removeListener(this);
@@ -132,11 +137,7 @@ IncomingPortCheck::Result IncomingPortCheck::fetchPort(const string& port, const
     if(httpFailed || response.empty())
         return Result::Unknown;
 
-    Result r = parseBody(response);
-    if(r != Result::Unknown)
-        return r;
-
-    return Result::Unknown;
+    return parseBody(response);
 }
 
 IncomingPortCheck::Result IncomingPortCheck::parseBody(const string& body) {

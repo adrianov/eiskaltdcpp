@@ -12,6 +12,7 @@
 #include "CriticalSection.h"
 #include "HttpConnectionListener.h"
 #include "IncomingPortCheckListener.h"
+#include "Semaphore.h"
 #include "Singleton.h"
 #include "Speaker.h"
 #include "Thread.h"
@@ -49,7 +50,11 @@ private:
     friend class Singleton<IncomingPortCheck>;
 
     IncomingPortCheck();
-    virtual ~IncomingPortCheck() noexcept { join(); }
+    virtual ~IncomingPortCheck() noexcept {
+        stopping = true;
+        stopSem.signal();
+        join();
+    }
 
     int run() noexcept override;
 
@@ -66,6 +71,8 @@ private:
     bool httpDone;
     bool httpFailed;
     std::atomic<bool> busy;
+    std::atomic<bool> stopping;
+    Semaphore stopSem;
 
     std::unordered_map<string, Result> lastResult;
     std::unordered_map<string, string> lastPort;

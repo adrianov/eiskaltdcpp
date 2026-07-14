@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <deque>
 #include <memory>
 
@@ -69,9 +70,8 @@ public:
     }
 
     static void waitShutdown() {
-        // Cap wait so a stuck socket thread cannot freeze app quit forever.
-        for(int i = 0; sockets > 0 && i < 150; ++i)
-            Thread::sleep(100);
+        while(sockets > 0)
+            Thread::sleep(50);
     }
 
     void accept(const Socket& srv, bool secure, bool allowUntrusted);
@@ -174,7 +174,7 @@ public:
 
     unique_ptr<Socket> sock;
     State state;
-    bool disconnecting;
+    std::atomic<bool> disconnecting;
 
     virtual int run();
 
