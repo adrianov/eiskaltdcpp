@@ -20,12 +20,16 @@ namespace {
 
 FastCriticalSection hubCs;
 unordered_map<CID, unordered_map<string, HubOutcome>> hubOutcomes;
+enum { MAX_USERS = 2048 };
 
 void remember(const UserPtr& user, const string& hub, HubOutcome outcome) {
     if(!user || hub.empty())
         return;
     FastLock l(hubCs);
-    hubOutcomes[user->getCID()][hub] = outcome;
+    const CID& cid = user->getCID();
+    if(hubOutcomes.size() >= MAX_USERS && hubOutcomes.find(cid) == hubOutcomes.end())
+        hubOutcomes.erase(hubOutcomes.begin());
+    hubOutcomes[cid][hub] = outcome;
 }
 
 } // namespace
