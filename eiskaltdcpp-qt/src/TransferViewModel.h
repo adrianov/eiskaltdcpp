@@ -22,8 +22,9 @@ static const int COLUMN_TRANSFER_SIZE        = 4;
 static const int COLUMN_TRANSFER_TLEFT       = 5;
 static const int COLUMN_TRANSFER_FNAME       = 6;
 static const int COLUMN_TRANSFER_HOST        = 7;
-static const int COLUMN_TRANSFER_IP          = 8;
-static const int COLUMN_TRANSFER_ENCRYPTION  = 9;
+static const int COLUMN_TRANSFER_TAG         = 8;
+static const int COLUMN_TRANSFER_IP          = 9;
+static const int COLUMN_TRANSFER_ENCRYPTION  = 10;
 
 class TransferViewItem
 {

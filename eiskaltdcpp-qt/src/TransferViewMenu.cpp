@@ -54,6 +54,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     copy_column->addAction(TransferView::tr("Time left"));
     copy_column->addAction(TransferView::tr("Filename"));
     copy_column->addAction(TransferView::tr("Hub"));
+    copy_column->addAction(TransferView::tr("Tag"));
     copy_column->addAction(TransferView::tr("IP"));
     copy_column->addAction(TransferView::tr("Encryption"));
     copy_column->addAction(TransferView::tr("Magnet"));

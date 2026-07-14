@@ -49,7 +49,7 @@ void TransferViewModel::addConnection(const VarMap &params){
 
     QList<QVariant> data;
     data << params["USER"] << "" << params["STAT"] << "" << "" << ""
-         << params["FNAME"] << params["HOST"] << "" << "";
+         << params["FNAME"] << params["HOST"] << params["TAG"] << "" << "";
 
     TransferViewItem *item = new TransferViewItem(data, parent);
     item->download = bDownload;

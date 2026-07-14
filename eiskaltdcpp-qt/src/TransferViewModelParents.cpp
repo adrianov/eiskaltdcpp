@@ -38,6 +38,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         return;
 
     QList<QString> hubs;
+    QList<QString> tags;
     int active = 0;
     qint64 bestQueuePos = 0;
     double speed = 0.0;
@@ -57,6 +58,10 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
         if (!hubs.contains(vstr(i->data(COLUMN_TRANSFER_HOST))))
             hubs.append(vstr(i->data(COLUMN_TRANSFER_HOST)));
+
+        const QString tag = vstr(i->data(COLUMN_TRANSFER_TAG));
+        if (!tag.isEmpty() && !tags.contains(tag))
+            tags.append(tag);
 
         const qint64 childSize = vlng(i->data(COLUMN_TRANSFER_SIZE));
         if (childSize > totalSize)
@@ -104,6 +109,10 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     for (const QString &s : hubs)
         hubs_str += s + " ";
 
+    QString tags_str;
+    for (const QString &s : tags)
+        tags_str += s + " ";
+
     if (vstr(p->data(COLUMN_TRANSFER_FNAME)).startsWith(QString("TTH: "))){
         QString name = vstr(p->data(COLUMN_TRANSFER_FNAME));
         name.remove(0, QString("TTH: ").length());
@@ -123,6 +132,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     p->updateColumn(COLUMN_TRANSFER_FLAGS, "");
     p->updateColumn(COLUMN_TRANSFER_TLEFT, timeLeft);
     p->updateColumn(COLUMN_TRANSFER_HOST, hubs_str);
+    p->updateColumn(COLUMN_TRANSFER_TAG, tags_str);
     p->updateColumn(COLUMN_TRANSFER_SPEED, speed);
 
     if (!p->finished)

@@ -63,6 +63,8 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
         group->updateColumn(COLUMN_TRANSFER_FNAME, p.value("FNAME"));
     if (p.contains("USER"))
         group->updateColumn(COLUMN_TRANSFER_USERS, p.value("USER"));
+    if (p.contains("TAG"))
+        group->updateColumn(COLUMN_TRANSFER_TAG, p.value("TAG"));
     return true;
 }
 

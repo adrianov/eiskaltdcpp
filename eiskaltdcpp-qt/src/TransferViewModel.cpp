@@ -14,7 +14,7 @@ TransferViewModel::TransferViewModel(QObject *parent)
 {
     QList<QVariant> rootData;
     rootData << tr("Users") << tr("Speed") << tr("Status") << tr("Flags") << tr("Size")
-             << tr("Time left") << tr("File name") << tr("Host") << tr("IP")
+             << tr("Time left") << tr("File name") << tr("Host") << tr("Tag") << tr("IP")
              << tr("Encryption");
 
     rootItem = new TransferViewItem(rootData, nullptr);
@@ -27,6 +27,7 @@ TransferViewModel::TransferViewModel(QObject *parent)
     column_map.insert("TLEFT", COLUMN_TRANSFER_TLEFT);
     column_map.insert("FNAME", COLUMN_TRANSFER_FNAME);
     column_map.insert("HOST", COLUMN_TRANSFER_HOST);
+    column_map.insert("TAG", COLUMN_TRANSFER_TAG);
     column_map.insert("IP", COLUMN_TRANSFER_IP);
     column_map.insert("ENCRYPTION", COLUMN_TRANSFER_ENCRYPTION);
 

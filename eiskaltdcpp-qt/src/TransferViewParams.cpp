@@ -28,6 +28,16 @@ QString transferUserNick(const dcpp::UserPtr &user, const std::string &hub)
     return nick.isEmpty() ? '{' + _q(user->getCID().toBase32()) + '}' : nick;
 }
 
+QString transferUserTag(const dcpp::UserPtr &user, const std::string &hub)
+{
+    if (!user)
+        return QString();
+    // Prefer hub hint; fall back to any online identity for the CID.
+    if (OnlineUser *ou = ClientManager::getInstance()->findOnlineUser(user->getCID(), hub, false))
+        return _q(ou->getIdentity().getTag());
+    return QString();
+}
+
 } // namespace
 
 void TransferView::getParams(TransferView::VarMap &params, const dcpp::ConnectionQueueItem *item){
@@ -40,6 +50,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Connectio
     params["HUB"]   = WU->getHubNames(user);
     params["FAIL"]  = false;
     params["HOST"]  = host.empty() ? QString() : _q(host);
+    params["TAG"]   = transferUserTag(user, host);
     params["DOWN"]  = item->getDownload();
 }
 
@@ -81,6 +92,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
     params["TLEFT"] = qlonglong(trf->getSecondsLeft() > 0 ? trf->getSecondsLeft() : -1);
     params["TARGET"]= _q(trf->getPath());
     params["HOST"]  = host.empty() ? QString() : _q(host);
+    params["TAG"]   = transferUserTag(user, host);
     params["DOWN"]  = true;
     params["TTH"] = _q(trf->getTTH().toBase32());
     if (trf->getUserConnection().isSecure())

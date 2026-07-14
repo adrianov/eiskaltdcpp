@@ -55,7 +55,7 @@ TransferViewItem *TransferViewModel::getParent(const QString &target, const VarM
 
     QList<QVariant> data;
     data << params["USER"] << 0 << "" << "" << params["ESIZE"]
-         << params["TLEFT"] << params["FNAME"] << params["HOST"]
+         << params["TLEFT"] << params["FNAME"] << params["HOST"] << params["TAG"]
          << (download ? QVariant("") : params["IP"]) << "";
 
     p = new TransferViewItem(data, rootItem);

@@ -70,6 +70,11 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
         case Qt::ToolTipRole:
             if (index.column() == COLUMN_TRANSFER_FNAME)
                 return item->target;
+            if (index.column() == COLUMN_TRANSFER_TAG) {
+                const QString tag = item->data(COLUMN_TRANSFER_TAG).toString();
+                if (!tag.isEmpty())
+                    return tag;
+            }
             break;
         default:
             break;

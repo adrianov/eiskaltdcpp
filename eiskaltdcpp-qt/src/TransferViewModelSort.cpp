@@ -40,11 +40,11 @@ private:
     template <typename T>
     bool static Cmp(const T& l, const T& r);
 
-    static AttrComp attrs[10];
+    static AttrComp attrs[11];
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[10] = {
+typename Compare<order>::AttrComp Compare<order>::attrs[11] = {
     AttrCmp<COLUMN_TRANSFER_USERS>,
     NumCmp<COLUMN_TRANSFER_SPEED>,
     AttrCmp<COLUMN_TRANSFER_STATS>,
@@ -53,6 +53,7 @@ typename Compare<order>::AttrComp Compare<order>::attrs[10] = {
     NumCmp<COLUMN_TRANSFER_TLEFT>,
     NaturalAttrCmp<COLUMN_TRANSFER_FNAME>,
     AttrCmp<COLUMN_TRANSFER_HOST>,
+    AttrCmp<COLUMN_TRANSFER_TAG>,
     AttrCmp<COLUMN_TRANSFER_IP>,
     AttrCmp<COLUMN_TRANSFER_ENCRYPTION>
 };
