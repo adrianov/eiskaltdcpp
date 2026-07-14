@@ -115,15 +115,9 @@ void ReciprocalList::maybeFetch(const HintedUser &peer)
     if (!qm || qm->hasListQueued(peer))
         return;
 
-    HintedUser cachePeer = peer;
-    string listBase;
     string listFile;
-    const bool cached = ReciprocalListPeer::findCachedList(peer, cachePeer, listBase, listFile);
-
-    if (cached) {
+    if (ReciprocalListPeer::findCachedList(peer, listFile)) {
         ReciprocalListPeer::markChecked(peer);
-        if (listFile.empty())
-            return;
         queueSilentList(qm, peer);
         return;
     }

@@ -21,8 +21,8 @@ namespace ReciprocalListPeer {
 
 bool cooldownActive(const dcpp::HintedUser &peer);
 void markChecked(const dcpp::HintedUser &peer);
-bool findCachedList(const dcpp::HintedUser &peer, dcpp::HintedUser &cachePeer,
-        std::string &listBase, std::string &listFile);
+/** True when peer or a same-list alias has a reusable cache; sets listFile to peer's path. */
+bool findCachedList(const dcpp::HintedUser &peer, std::string &listFile);
 
 } // namespace ReciprocalListPeer
 

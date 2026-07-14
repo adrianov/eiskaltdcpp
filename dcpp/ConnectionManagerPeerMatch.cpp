@@ -63,7 +63,10 @@ void forEachListPeer(const HintedUser& seed, const std::function<void(const Hint
     });
 }
 
-void addPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
+/** Seed keys only: aliases with the same nick/IP+share hash to the same keys. */
+void collectListPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
+    if(!user.user)
+        return;
     auto* cm = ClientManager::getInstance();
     const int64_t share = Util::toInt64(cm->getField(user.user->getCID(), user.hint, "SS"));
     if(share <= 0) {
@@ -79,20 +82,6 @@ void addPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
         keys.insert(Text::toLower(nicks[0]) + ":" + shareS);
     if(ip.empty() && nicks.empty())
         keys.insert(user.user->getCID().toBase32());
-}
-
-void collectListPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
-    forEachListPeer(user, [&](const HintedUser& peer) {
-        addPeerKeys(peer, keys);
-    });
-}
-
-string listPeerKey(const HintedUser& user) {
-    std::unordered_set<string> keys;
-    addPeerKeys(user, keys);
-    if(!keys.empty())
-        return *keys.begin();
-    return user.user->getCID().toBase32();
 }
 
 } // namespace ConnectionManagerPeerMatch

@@ -69,9 +69,9 @@ void markChecked(const HintedUser &peer)
         gPeerChecked[key] = now;
 }
 
-bool findCachedList(const HintedUser &peer, HintedUser &cachePeer, string &listBase, string &listFile)
+bool findCachedList(const HintedUser &peer, string &listFile)
 {
-    listBase = QueueManager::getInstance()->getListPath(peer);
+    const string listBase = QueueManager::getInstance()->getListPath(peer);
     listFile = ListCache::findListFile(listBase);
     if (ListCache::matchesUserShare(peer, listBase))
         return true;
@@ -81,12 +81,8 @@ bool findCachedList(const HintedUser &peer, HintedUser &cachePeer, string &listB
         if (found || alias.user == peer.user)
             return;
         const string base = QueueManager::getInstance()->getListPath(alias);
-        if (!ListCache::matchesUserShare(alias, base))
-            return;
-        cachePeer = alias;
-        listBase = base;
-        listFile = ListCache::findListFile(base);
-        found = true;
+        if (ListCache::matchesUserShare(alias, base))
+            found = true;
     });
     return found;
 }

@@ -23,8 +23,7 @@ bool samePeer(const HintedUser& a, const HintedUser& b);
 /** Invoke fn for seed and every online cross-hub alias of seed. */
 void forEachListPeer(const HintedUser& seed, const std::function<void(const HintedUser&)>& fn);
 
-/** Stable key for cross-hub list-peer backoff (IP or nick + share size). */
-string listPeerKey(const HintedUser& user);
+/** Backoff keys for this identity (nick/IP + share). Aliases collide on the same keys. */
 void collectListPeerKeys(const HintedUser& user, std::unordered_set<string>& keys);
 
 } // namespace ConnectionManagerPeerMatch
