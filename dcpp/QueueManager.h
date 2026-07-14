@@ -159,6 +159,8 @@ private:
 
     void processList(const string& name, const HintedUser& user, int flags);
     bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);
+    bool tryUseCachedListAt(const HintedUser& user, int flags, const string& initialDir,
+            const HintedUser& cacheUser, const string& listBase);
     void purgeOtherListQueues(const HintedUser& aUser);
 
     void load(const SimpleXML& aXml);

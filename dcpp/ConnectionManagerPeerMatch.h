@@ -11,11 +11,21 @@
 
 #include "HintedUser.h"
 
+#include <functional>
+#include <unordered_set>
+
 namespace dcpp {
 namespace ConnectionManagerPeerMatch {
 
-/** Treat cross-hub NMDC identities as aliases unless stronger metadata disagrees. */
+/** Same nick or IP, same share size, different hub — same user and file list. */
 bool samePeer(const HintedUser& a, const HintedUser& b);
+
+/** Invoke fn for seed and every online cross-hub alias of seed. */
+void forEachListPeer(const HintedUser& seed, const std::function<void(const HintedUser&)>& fn);
+
+/** Stable key for cross-hub list-peer backoff (IP or nick + share size). */
+string listPeerKey(const HintedUser& user);
+void collectListPeerKeys(const HintedUser& user, std::unordered_set<string>& keys);
 
 } // namespace ConnectionManagerPeerMatch
 } // namespace dcpp

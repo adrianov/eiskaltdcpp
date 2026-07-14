@@ -168,6 +168,7 @@ set(QT_EXTRA_SOURCES
     src/SearchProxyModel.cpp
     src/SearchItem.cpp
     src/ReciprocalList.cpp
+    src/ReciprocalListPeer.cpp
     src/ShareIndexListListener.cpp
     src/SettingsConnectionInit.cpp
     src/SettingsConnectionPorts.cpp

@@ -11,6 +11,7 @@
 #include "ListCache.h"
 
 #include "ClientManager.h"
+#include "ConnectionManagerPeerMatch.h"
 #include "DirectoryListing.h"
 #include "File.h"
 #include "ListCacheStore.h"
@@ -84,6 +85,21 @@ bool ListCache::fetchedWithinDay(const CID& cid) {
     if(fetched < 0)
         return false;
     return (time(nullptr) - fetched) < DAY_SECS;
+}
+
+bool ListCache::fetchedWithinDay(const HintedUser& user) {
+    if(!user.user)
+        return false;
+    if(fetchedWithinDay(user.user->getCID()))
+        return true;
+    bool within = false;
+    ConnectionManagerPeerMatch::forEachListPeer(user, [&](const HintedUser& peer) {
+        if(within || peer.user->getCID() == user.user->getCID())
+            return;
+        if(fetchedWithinDay(peer.user->getCID()))
+            within = true;
+    });
+    return within;
 }
 
 } // namespace dcpp

@@ -23,6 +23,7 @@
  * Triggers: peer downloaded our full list, or became a source on an active download.
  * Reuses ListCache when share size matches; otherwise downloads at most once per day,
  * with a concurrent queue cap and a short per-peer cooldown.
+ * Cross-hub aliases (same nick or IP and share size) share backoff and cached lists.
  * SourceAdded work is deferred off QueueManager::cs to avoid lock inversion with
  * DownloadManager (search → addSource → fetch → checkIdle).
  */

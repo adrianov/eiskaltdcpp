@@ -100,7 +100,7 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         dlCqi->setSlotWaits(dlCqi->getSlotWaits() + 1);
         dlCqi->setLastAttempt(GET_TICK());
         const int backoffMs = PeerConnectFilter::slotWaitBackoffMs(dlCqi->getSlotWaits());
-        noteConnectCooldown(dlCqi->getUser().user, backoffMs);
+        noteConnectCooldown(dlCqi->getUser(), backoffMs);
         PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMs / (60 * 1000));
         if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
             markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
@@ -108,14 +108,14 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
         dlCqi->setErrors(dlCqi->getErrors() + 1);
         dlCqi->setLastAttempt(GET_TICK());
-        noteConnectCooldown(dlCqi->getUser().user, PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
+        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
             markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     } else {
         dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
         dlCqi->setLastAttempt(GET_TICK());
         if(!protocolError) {
-            noteConnectCooldown(dlCqi->getUser().user, PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
+            noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
             if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
                 markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
         }

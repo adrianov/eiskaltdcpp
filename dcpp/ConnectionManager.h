@@ -120,12 +120,13 @@ private:
     ExpectedMap expectedConnections;
     std::unordered_multimap<string, std::pair<UserPtr, uint64_t>> adcExpected;
 
-    /** Next allowed outgoing connect tick + strike count (CID-keyed, CQI-independent). */
+    /** Next allowed outgoing connect tick + strike count (list-peer-keyed, CQI-independent). */
     struct ConnectCooldown {
         uint64_t until = 0;
         int strikes = 0;
     };
-    unordered_map<CID, ConnectCooldown> connectCooldown;
+    mutable CriticalSection cooldownCs;
+    unordered_map<string, ConnectCooldown> connectCooldown;
 
     uint32_t floodCounter;
     unordered_set<string> hubsBlockingCC;
@@ -156,7 +157,9 @@ private:
     ConnectionQueueItem* findDownloadCqiForHub(const string& hubUrl, const CID& wireCid) const;
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
     bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
+    bool connectCooldownActive(const HintedUser& user) const;
     bool connectCooldownActive(const UserPtr& user) const;
+    void noteConnectCooldown(const HintedUser& user, int minBackoffMs);
     void noteConnectCooldown(const UserPtr& user, int minBackoffMs);
     void clearConnectCooldown(const UserPtr& user);
     static void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other);

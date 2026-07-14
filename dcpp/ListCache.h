@@ -39,6 +39,8 @@ public:
                              time_t when = time(nullptr));
     /** True when a successful fetch was recorded less than 24 hours ago (auto-refresh cooldown). */
     static bool fetchedWithinDay(const CID& cid);
+    /** True when seed or any cross-hub list peer was fetched within 24 hours. */
+    static bool fetchedWithinDay(const HintedUser& user);
 };
 
 } // namespace dcpp

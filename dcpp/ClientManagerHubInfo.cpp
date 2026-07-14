@@ -81,6 +81,12 @@ StringList ClientManager::getNicks(const CID& cid, const string& hintUrl, bool p
     return StringList(ret.begin(), ret.end());
 }
 
+void ClientManager::visitOnlineUsers(const std::function<void(OnlineUser*)>& fn) const {
+    Lock l(cs);
+    for(auto& i : onlineUsers)
+        fn(i.second);
+}
+
 void ClientManager::cidsForNick(const string& nick, std::unordered_set<CID>& out) const {
     Lock l(cs);
     for(auto& i : onlineUsers) {

@@ -45,6 +45,7 @@ set(DCPP_EXTRA_SOURCES
     SearchManagerResponse.cpp
     QueueManagerIndex.cpp
     QueueManagerList.cpp
+    QueueManagerListCache.cpp
     QueueManagerListMatch.cpp
     QueueManagerLoad.cpp
     QueueManagerPut.cpp
@@ -104,6 +105,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerQueue.cpp
     ConnectionManagerTimer.cpp
     ConnectionManagerGetDownload.cpp
+    ConnectionManagerCooldown.cpp
     ConnectionManagerPeerMatch.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp

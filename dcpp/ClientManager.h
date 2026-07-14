@@ -29,6 +29,8 @@
 #include "Socket.h"
 #include "TimerManager.h"
 
+#include <functional>
+
 namespace dcpp {
 
 class UserCommand;
@@ -58,6 +60,7 @@ public:
 
     StringList getNicks(const HintedUser& user) { return getNicks(user.user->getCID(), user.hint); }
     void cidsForNick(const string& nick, std::unordered_set<CID>& out) const;
+    void visitOnlineUsers(const std::function<void(OnlineUser*)>& fn) const;
     string getNickOrCid(const CID& cid, const string& hintUrl) {
         StringList nicks = getNicks(cid, hintUrl);
         return nicks.empty() ? cid.toBase32() : nicks[0];

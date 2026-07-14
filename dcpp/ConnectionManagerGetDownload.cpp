@@ -40,48 +40,6 @@ void ConnectionManager::mergeQueueState(ConnectionQueueItem* keep, const Connect
         keep->setConnectAttempts(other->getConnectAttempts());
 }
 
-bool ConnectionManager::connectCooldownActive(const UserPtr& user) const {
-    if(!user)
-        return false;
-    auto i = connectCooldown.find(user->getCID());
-    return i != connectCooldown.end() && GET_TICK() < i->second.until;
-}
-
-void ConnectionManager::noteConnectCooldown(const UserPtr& user, int minBackoffMs) {
-    if(!user)
-        return;
-    auto& e = connectCooldown[user->getCID()];
-    e.strikes = min(e.strikes + 1, PeerConnectFilter::MAX_CONNECT_ERRORS);
-    const int wait = max(minBackoffMs, PeerConnectFilter::connectBackoffMs(e.strikes));
-    const uint64_t until = GET_TICK() + static_cast<uint64_t>(wait);
-    if(until > e.until)
-        e.until = until;
-}
-
-void ConnectionManager::clearConnectCooldown(const UserPtr& user) {
-    if(user)
-        connectCooldown.erase(user->getCID());
-}
-
-bool ConnectionManager::allowOutgoingConnect(const UserPtr& user) const {
-    Lock l(cs);
-    return !connectCooldownActive(user);
-}
-
-void ConnectionManager::noteOutgoingConnect(const UserPtr& user, int minBackoffMs) {
-    Lock l(cs);
-    noteConnectCooldown(user, minBackoffMs);
-}
-
-void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
-    if(!user)
-        return;
-    Lock l(cs);
-    auto i = connectCooldown.find(user->getCID());
-    if(i != connectCooldown.end())
-        i->second.strikes = 0;
-}
-
 ConnectionQueueItem* ConnectionManager::findDownloadCqi(const HintedUser& user) {
     ConnectionQueueItem* match = nullptr;
     for(auto& cqi : downloads) {
@@ -134,7 +92,7 @@ bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const
         return false;
     if(cqi->getErrors() == -1)
         return true;
-    if(connectCooldownActive(cqi->getUser().user))
+    if(connectCooldownActive(cqi->getUser()))
         return true;
     if(cqi->getLastAttempt() == 0)
         return false;

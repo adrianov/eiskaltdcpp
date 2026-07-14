@@ -12,46 +12,12 @@
 #include "QueueManager.h"
 
 #include "ClientManager.h"
-#include "DirectoryListing.h"
-#include "ListCache.h"
-#include "LogManager.h"
+#include "ConnectionManagerPeerMatch.h"
 #include "PeerConnectLog.h"
-
-#include <unordered_set>
 
 namespace dcpp {
 
-void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
-    StringList nicks = ClientManager::getInstance()->getNicks(aUser);
-    if(nicks.empty())
-        return;
-
-    std::unordered_set<CID> sameNick;
-    ClientManager::getInstance()->cidsForNick(nicks[0], sameNick);
-    StringList stale;
-
-    {
-        Lock l(cs);
-        for(auto& i: fileQueue.getQueue()) {
-            QueueItem* qi = i.second;
-            if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
-                continue;
-
-            const HintedUser& src = qi->getSources()[0].getUser();
-            if(src.user == aUser.user)
-                continue;
-
-            if(sameNick.count(src.user->getCID()))
-                stale.push_back(qi->getTarget());
-        }
-    }
-
-    for(auto& target: stale)
-        remove(target);
-}
-
 void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
-    // Skip silent reciprocal lists and directory-list fetches; manual browse / match stay allowed.
     const bool autoList = aFlags == 0
             || ((aFlags & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
                 && !(aFlags & (QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST)));
@@ -72,11 +38,21 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
         throw QueueException(_("User is not online on this hub"));
     }
 
-    // Merge browse / match / directory flags onto an in-flight silent list.
     if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST)) {
         Lock l(cs);
         QueueItem* qi = fileQueue.find(getListPath(aUser));
         if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished()) {
+            qi->setFlag(aFlags);
+            if(!aInitialDir.empty())
+                qi->setTempTarget(aInitialDir);
+            return;
+        }
+        for(const auto& i: fileQueue.getQueue()) {
+            qi = i.second;
+            if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
+                continue;
+            if(!ConnectionManagerPeerMatch::samePeer(aUser, qi->getSources()[0].getUser()))
+                continue;
             qi->setFlag(aFlags);
             if(!aInitialDir.empty())
                 qi->setTempTarget(aInitialDir);
@@ -91,14 +67,6 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
     add(aInitialDir, -1, TTHValue(), aUser, QueueItem::FLAG_USER_LIST | aFlags);
 }
 
-bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
-    if(!user.user)
-        return false;
-    Lock l(cs);
-    QueueItem* qi = fileQueue.find(getListPath(user));
-    return qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished();
-}
-
 size_t QueueManager::countQueuedLists() noexcept {
     Lock l(cs);
     size_t n = 0;
@@ -110,8 +78,6 @@ size_t QueueManager::countQueuedLists() noexcept {
 }
 
 void QueueManager::removeUserLists() noexcept {
-    // Match by flag or FileLists/ path: Queue.xml does not persist FLAG_USER_LIST,
-    // so reloaded list downloads look like normal files under that directory.
     const string listPath = Util::getListPath();
     StringList targets;
     {
@@ -125,27 +91,6 @@ void QueueManager::removeUserLists() noexcept {
     }
     for(const auto& t: targets)
         remove(t);
-}
-
-bool QueueManager::tryUseCachedList(const HintedUser& aUser, int aFlags, const string& aInitialDir) {
-    const string listBase = getListPath(aUser);
-    if(!ListCache::matchesUserShare(aUser, listBase))
-        return false;
-
-    const string listFile = ListCache::findListFile(listBase);
-    const int processFlags = aFlags & (QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_MATCH_QUEUE);
-    if(processFlags)
-        processList(listFile, aUser, processFlags);
-
-    if(aFlags & QueueItem::FLAG_CLIENT_VIEW) {
-        PeerConnectLog::cachedList(aUser, listFile);
-        fire(QueueManagerListener::ListFromCache(), aUser, listFile, aInitialDir);
-        return true;
-    }
-
-    // Every non-browse cache hit must notify consumers such as ShareIndex.
-    fire(QueueManagerListener::ListCached(), aUser, listFile);
-    return true;
 }
 
 string QueueManager::getListPath(const HintedUser& user) {
@@ -175,7 +120,6 @@ void QueueManager::addDirectory(const string& aDir, const HintedUser& aUser, con
         try {
             addList(aUser, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
         } catch(const Exception&) {
-            // Ignore, we don't really care...
         }
     }
 }

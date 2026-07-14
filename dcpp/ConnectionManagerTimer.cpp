@@ -84,7 +84,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     if(cqi->getLastAttempt() + 50 * 1000 < aTick) {
                         cqi->setErrors(cqi->getErrors() + 1);
                         cqi->setLastAttempt(aTick);
-                        noteConnectCooldown(cqi->getUser().user,
+                        noteConnectCooldown(cqi->getUser(),
                                 PeerConnectFilter::connectBackoffMs(cqi->getErrors()));
                         PeerConnectHub::rememberFailure(cqi->getUser().user, cqi->getUser().hint);
                         if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {

@@ -11,7 +11,6 @@
 #include "ConnectionManagerPeerMatch.h"
 
 #include "ClientManager.h"
-#include "ListCache.h"
 #include "User.h"
 
 namespace dcpp {
@@ -19,17 +18,17 @@ namespace ConnectionManagerPeerMatch {
 
 namespace {
 
-bool knownDifferent(ClientManager* cm, const HintedUser& a, const HintedUser& b, const char* field) {
-    const string first = cm->getField(a.user->getCID(), a.hint, field);
-    const string second = cm->getField(b.user->getCID(), b.hint, field);
-    return !first.empty() && !second.empty() && first != second;
-}
-
 bool sameNick(ClientManager* cm, const HintedUser& a, const HintedUser& b) {
     const StringList first = cm->getNicks(a);
     const StringList second = cm->getNicks(b);
     return !first.empty() && !second.empty() &&
             Util::stricmp(first[0].c_str(), second[0].c_str()) == 0;
+}
+
+bool sameIp(ClientManager* cm, const HintedUser& a, const HintedUser& b) {
+    const string first = Util::normalizeIpv4(cm->getField(a.user->getCID(), a.hint, "I4"));
+    const string second = Util::normalizeIpv4(cm->getField(b.user->getCID(), b.hint, "I4"));
+    return !first.empty() && first == second;
 }
 
 } // namespace
@@ -45,21 +44,55 @@ bool samePeer(const HintedUser& a, const HintedUser& b) {
     auto* cm = ClientManager::getInstance();
     const int64_t aShare = Util::toInt64(cm->getField(a.user->getCID(), a.hint, "SS"));
     const int64_t bShare = Util::toInt64(cm->getField(b.user->getCID(), b.hint, "SS"));
-    if(aShare > 0 && aShare == bShare && sameNick(cm, a, b))
-        return true;
-    if(aShare <= 0 || bShare <= 0 || aShare != bShare)
-        return false;
-    if(knownDifferent(cm, a, b, "TA") || knownDifferent(cm, a, b, "DE"))
+    if(aShare <= 0 || aShare != bShare)
         return false;
 
-    const string aIp = Util::normalizeIpv4(cm->getField(a.user->getCID(), a.hint, "I4"));
-    const string bIp = Util::normalizeIpv4(cm->getField(b.user->getCID(), b.hint, "I4"));
-    if(!aIp.empty() && !bIp.empty() && aIp != bIp)
-        return false;
+    return sameNick(cm, a, b) || sameIp(cm, a, b);
+}
 
-    const int64_t aList = ListCache::fileSize(a.user->getCID());
-    const int64_t bList = ListCache::fileSize(b.user->getCID());
-    return aList < 0 || bList < 0 || aList == bList;
+void forEachListPeer(const HintedUser& seed, const std::function<void(const HintedUser&)>& fn) {
+    if(!seed.user)
+        return;
+    fn(seed);
+    ClientManager::getInstance()->visitOnlineUsers([&](OnlineUser* ou) {
+        HintedUser peer(ou->getUser(), ou->getClient().getHubUrl());
+        if(peer.user == seed.user && peer.hint == seed.hint)
+            return;
+        if(samePeer(seed, peer))
+            fn(peer);
+    });
+}
+
+void addPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
+    auto* cm = ClientManager::getInstance();
+    const int64_t share = Util::toInt64(cm->getField(user.user->getCID(), user.hint, "SS"));
+    if(share <= 0) {
+        keys.insert(user.user->getCID().toBase32());
+        return;
+    }
+    const string shareS = Util::toString(share);
+    const string ip = Util::normalizeIpv4(cm->getField(user.user->getCID(), user.hint, "I4"));
+    if(!ip.empty())
+        keys.insert(ip + ":" + shareS);
+    const StringList nicks = cm->getNicks(user);
+    if(!nicks.empty())
+        keys.insert(Text::toLower(nicks[0]) + ":" + shareS);
+    if(ip.empty() && nicks.empty())
+        keys.insert(user.user->getCID().toBase32());
+}
+
+void collectListPeerKeys(const HintedUser& user, std::unordered_set<string>& keys) {
+    forEachListPeer(user, [&](const HintedUser& peer) {
+        addPeerKeys(peer, keys);
+    });
+}
+
+string listPeerKey(const HintedUser& user) {
+    std::unordered_set<string> keys;
+    addPeerKeys(user, keys);
+    if(!keys.empty())
+        return *keys.begin();
+    return user.user->getCID().toBase32();
 }
 
 } // namespace ConnectionManagerPeerMatch
