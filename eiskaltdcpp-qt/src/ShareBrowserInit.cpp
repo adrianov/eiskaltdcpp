@@ -21,16 +21,14 @@ void ShareBrowser::selectLeftFolder(FileBrowserItem *item){
     if (!item)
         return;
 
-    const QModelIndex openIdx = tree_model->createIndexForItem(item);
-    for (QModelIndex p = openIdx.parent(); p.isValid(); p = p.parent())
+    const QModelIndex src = tree_model->createIndexForItem(item);
+    const QModelIndex viewIdx = treeMapFromSource(src);
+    for (QModelIndex p = viewIdx.parent(); p.isValid(); p = p.parent())
         treeView_LPANE->expand(p);
 
-    // ClearAndSelect replaces any prior rows. SelectCurrent only adds, and
-    // slotLeftPaneSelChanged ignores multi-select — so Browse folder used to
-    // highlight the jump path while the right pane stayed on the previous root.
-    treeView_LPANE->selectionModel()->setCurrentIndex(openIdx,
+    treeView_LPANE->selectionModel()->setCurrentIndex(viewIdx,
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(openIdx, QAbstractItemView::PositionAtCenter);
+    treeView_LPANE->scrollTo(viewIdx, QAbstractItemView::PositionAtCenter);
 }
 
 void ShareBrowser::continueInit(){

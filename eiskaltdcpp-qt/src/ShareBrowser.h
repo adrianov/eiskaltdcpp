@@ -16,11 +16,11 @@
 #include <QItemSelectionModel>
 #include <QThread>
 #include <QCloseEvent>
-#include <QSortFilterProxyModel>
 
 #include "ArenaWidget.h"
 #include "WulforUtil.h"
 #include "ui_UIShareBrowser.h"
+#include "FileBrowserFilterProxy.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/ClientManager.h"
@@ -107,7 +107,7 @@ public:
     QWidget *getWidget();
     QMenu   *getMenu();
     const QPixmap &getPixmap(){ return WICON(WulforUtil::eiOWN_FILELIST); }
-    void requestFilter() { slotFilter(); }
+    void requestFilter() {}
     ArenaWidget::Role role() const { return ArenaWidget::ShareBrowser; }
 
 protected:
@@ -119,7 +119,9 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void init();
-    void slotFilter();
+    void slotApplyFilters();
+    void slotClearFilters();
+    void flushViewFilters();
     void slotRightPaneClicked(const QModelIndex&);
     void slotRightPaneSelChanged(const QItemSelection&, const QItemSelection&);
     void slotLeftPaneSelChanged(const QItemSelection&, const QItemSelection&);
@@ -127,12 +129,9 @@ private Q_SLOTS:
     void slotHeaderMenu();
     void slotLayoutUpdated();
     void slotSettingsChanged(const QString&, const QString&);
-    void slotStartSearch();
-    void slotSearchJumpTo(FileBrowserItem*);
     void slotButtonBack();
     void slotButtonForward();
     void slotButtonUp();
-    void slotMatchList();
     void slotClose();
     void slotAddToFavorites();
     void slotDie(const QString &msg);
@@ -155,6 +154,12 @@ private:
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
 
+    void readSizeFilter(quint64 &size, int &mode) const;
+    void applyViewFiltersNow();
+
+    QModelIndex treeMapToSource(const QModelIndex &index) const;
+    QModelIndex treeMapFromSource(const QModelIndex &index) const;
+
     void goUp(QTreeView *);
     void goDown(QTreeView *);
 
@@ -167,7 +172,9 @@ private:
 
     QMenu *arena_menu;
 
-    QSortFilterProxyModel *proxy;
+    FileBrowserFilterProxy *proxy;
+    FileBrowserFilterProxy *tree_proxy;
+    bool viewFilterPending = false;
 
     QVector <SelPair>::iterator pathHistory_iter;
     QVector <SelPair> pathHistory;
@@ -178,9 +185,7 @@ private:
     QString jump_to;
     dcpp::DirectoryListing listing;
     dcpp::UserPtr user;
-    quint64 share_size;
     quint64 current_size;
-    quint64 itemsCount;
 
     FileBrowserModel *tree_model;
     FileBrowserModel *list_model;

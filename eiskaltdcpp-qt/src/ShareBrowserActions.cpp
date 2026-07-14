@@ -10,12 +10,9 @@
 #include "ShareBrowser.h"
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
-#include "FileBrowserModelSort.h"
 #include "MainWindow.h"
-#include "ShareBrowserSearch.h"
 #include "ArenaWidgetManager.h"
 
-#include "dcpp/QueueManager.h"
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/ClientManager.h"
 
@@ -32,6 +29,7 @@ void ShareBrowser::slotButtonUp(){
         return;
 
     QModelIndex index = selected.at(0);
+    index = treeMapToSource(index);
 
     if (index.isValid()){
 
@@ -49,7 +47,8 @@ void ShareBrowser::slotButtonUp(){
             sparent.dir = item->parent()->dir;
 
             sparent.path_tesxt = tree_model->createRemotePath(item->parent());
-            lineEdit_PATH->setText(tree_model->createRemotePath(item->parent()));
+            lineEdit_PATH->setText(sparent.path_tesxt);
+            applyViewFiltersNow();
 
             slotRightPaneClicked(index.parent());
 
@@ -74,6 +73,7 @@ void ShareBrowser::slotButtonBack(){
         SelPair sp= *pathHistory_iter;
         changeRoot(sp.dir);
         lineEdit_PATH->setText(sp.path_tesxt);
+        applyViewFiltersNow();
 
         slotRightPaneClicked(sp.index);
 
@@ -96,6 +96,7 @@ void ShareBrowser::slotButtonForward(){
         SelPair sp= *pathHistory_iter;
         changeRoot(sp.dir);
         lineEdit_PATH->setText(sp.path_tesxt);
+        applyViewFiltersNow();
 
         slotRightPaneClicked(sp.index);
 
@@ -112,54 +113,14 @@ void ShareBrowser::slotLayoutUpdated(){
         return;
 
     QModelIndex index = selected.at(0);
+    index = treeMapToSource(index);
 
-    treeView_LPANE->selectionModel()->setCurrentIndex(index,
+    treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(index),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
 void ShareBrowser::slotHeaderMenu(){
     WulforUtil::headerMenu(treeView_RPANE);
-}
-
-void ShareBrowser::slotFilter(){
-    if (frame_FILTER->isVisible()){
-        treeView_RPANE->setModel(list_model);
-
-        disconnect(lineEdit_FILTER, SIGNAL(textChanged(QString)), proxy, SLOT(setFilterFixedString(QString)));
-
-        delete proxy;
-        proxy = nullptr;
-    }
-    else {
-        proxy = new FileBrowserFilterProxy();
-        proxy->setDynamicSortFilter(true);
-        proxy->setFilterFixedString(lineEdit_FILTER->text());
-        proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
-        proxy->setFilterKeyColumn(COLUMN_FILEBROWSER_NAME);
-        proxy->setSourceModel(list_model);
-
-        treeView_RPANE->setModel(proxy);
-
-        connect(lineEdit_FILTER, SIGNAL(textChanged(QString)), proxy, SLOT(setFilterFixedString(QString)));
-
-        lineEdit_FILTER->setFocus();
-
-        if (!lineEdit_FILTER->text().isEmpty())
-            lineEdit_FILTER->selectAll();
-    }
-
-    frame_FILTER->setVisible(!frame_FILTER->isVisible());
-}
-
-void ShareBrowser::slotStartSearch(){
-    ShareBrowserSearch *sb_search = new ShareBrowserSearch(tree_model, this);
-
-    sb_search->setSearchRoot(tree_root);
-    connect(sb_search, SIGNAL(indexClicked(FileBrowserItem*)), this, SLOT(slotSearchJumpTo(FileBrowserItem*)));
-}
-
-void ShareBrowser::slotSearchJumpTo(FileBrowserItem *tree_item){
-    selectLeftFolder(tree_item);
 }
 
 void ShareBrowser::slotSettingsChanged(const QString &key, const QString&){
@@ -180,9 +141,4 @@ void ShareBrowser::slotDie(const QString &msg){
     QMessageBox::warning(MainWindow::getInstance(), tr("Share browser"), msg, QMessageBox::Ok);
 
     slotClose();
-}
-
-void ShareBrowser::slotMatchList(){
-    int matched = QueueManager::getInstance()->matchListing(listing);
-    label_LEFT->setText(QString(tr("Matched %1 files")).arg(matched));
 }

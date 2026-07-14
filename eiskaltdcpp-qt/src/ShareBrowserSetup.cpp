@@ -11,6 +11,8 @@
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "FileBrowserModel.h"
+#include "FileBrowserFilterProxy.h"
+#include "SearchFileTypes.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
 
@@ -31,13 +33,21 @@ void ShareBrowser::init(){
     toolButton_FORWARD->setIcon(WICON(WulforUtil::eiNEXT));
     toolButton_BACK->setIcon(WICON(WulforUtil::eiPREVIOUS));
 
-    frame_FILTER->setVisible(false);
-
     initModels();
+
+    SearchFileTypes::fillCombo(comboBox_FILETYPES);
+    lineEdit_FILTER->setPlaceholderText(tr("Filter path (space-separated, -exclude)"));
+    lineEdit_FILTER->setToolTip(tr("Filter by path/name. Space-separated terms; prefix - to exclude."));
+
+    proxy = new FileBrowserFilterProxy(false, this);
+    proxy->setSourceModel(list_model);
+
+    tree_proxy = new FileBrowserFilterProxy(true, this);
+    tree_proxy->setSourceModel(tree_model);
 
     lineEdit_FILTER->installEventFilter(this);
 
-    treeView_LPANE->setModel(tree_model);
+    treeView_LPANE->setModel(tree_proxy);
 
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_ESIZE);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TTH);
@@ -48,17 +58,13 @@ void ShareBrowser::init(){
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_HIT);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TS);
 
-    treeView_LPANE->setExpanded(tree_model->index(0, 0), true);
+    treeView_LPANE->setExpanded(treeMapFromSource(tree_model->index(0, 0)), true);
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    treeView_RPANE->setModel(list_model);
+    treeView_RPANE->setModel(proxy);
     treeView_RPANE->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->installEventFilter(this);
-
-    toolButton_CLOSEFILTER->setIcon(WICON(WulforUtil::eiEDITDELETE));
-    toolButton_SEARCH->setIcon(WICON(WulforUtil::eiFIND));
-    toolButton_MATCHLIST->setIcon(WICON(WulforUtil::eiDOWNLIST));
 
     arena_menu = new QMenu(tr("Filebrowser"));
 
@@ -75,7 +81,13 @@ void ShareBrowser::init(){
 
     connect(add_fav, SIGNAL(triggered()), this, SLOT(slotAddToFavorites()));
     connect(close_wnd, SIGNAL(triggered()), this, SLOT(slotClose()));
-    connect(toolButton_CLOSEFILTER, SIGNAL(clicked()), this, SLOT(slotFilter()));
+
+    connect(lineEdit_FILTER, SIGNAL(textChanged(QString)), this, SLOT(slotApplyFilters()));
+    connect(lineEdit_SIZE, SIGNAL(textChanged(QString)), this, SLOT(slotApplyFilters()));
+    connect(comboBox_SIZE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyFilters()));
+    connect(comboBox_SIZETYPE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyFilters()));
+    connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyFilters()));
+    connect(pushButton_CLEAR, SIGNAL(clicked()), this, SLOT(slotClearFilters()));
 
     connect(treeView_RPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(slotRightPaneSelChanged(QItemSelection,QItemSelection)));
@@ -84,11 +96,11 @@ void ShareBrowser::init(){
     connect(treeView_RPANE, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotRightPaneClicked(QModelIndex)));
     connect(tree_model, SIGNAL(layoutChanged()), this, SLOT(slotLayoutUpdated()));
     connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
-    connect(toolButton_SEARCH, SIGNAL(clicked()), this, SLOT(slotStartSearch()));
     connect(toolButton_BACK, SIGNAL(clicked()), this, SLOT(slotButtonBack()));
     connect(toolButton_FORWARD, SIGNAL(clicked()), this, SLOT(slotButtonForward()));
     connect(toolButton_UP, SIGNAL(clicked()), this, SLOT(slotButtonUp()));
-    connect(toolButton_MATCHLIST, SIGNAL(clicked()), this, SLOT(slotMatchList()));
+
+    applyViewFiltersNow();
 
     continueInit();
 }
@@ -119,11 +131,6 @@ void ShareBrowser::load(){
 
     treeView_LPANE->setSortingEnabled(true);
     treeView_RPANE->setSortingEnabled(true);
-
-    itemsCount = listing.getRoot()->getTotalFileCount(true);
-    share_size = listing.getRoot()->getTotalSize(true);
-
-    label_LEFT->setText(QString(tr("Total share size: %1;  Files: %2")).arg(WulforUtil::formatBytes(share_size)).arg(itemsCount));
 }
 
 void ShareBrowser::save(){

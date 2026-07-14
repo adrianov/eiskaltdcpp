@@ -28,9 +28,13 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
     QModelIndexList list;
     QModelIndexList selected  = selection_model->selectedRows(0);
 
-    if (view == treeView_RPANE && treeView_RPANE->model() == proxy){
+    if (view == treeView_RPANE && proxy){
         for (const QModelIndex &i : selected)
             list.push_back(proxy->mapToSource(i));
+    }
+    else if (view == treeView_LPANE && tree_proxy){
+        for (const QModelIndex &i : selected)
+            list.push_back(tree_proxy->mapToSource(i));
     }
     else
         list = selected;

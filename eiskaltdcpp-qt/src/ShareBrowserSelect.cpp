@@ -83,6 +83,12 @@ void ShareBrowser::changeRoot(dcpp::DirectoryListing::Directory *root){
     list_model->highlightDuplicates();
 
     list_model->sort();
+
+    // changeRoot appends without insert signals; remap proxy under current filters.
+    if (proxy)
+        proxy->invalidate();
+    if (tree_proxy)
+        tree_proxy->invalidate();
 }
 
 void ShareBrowser::slotRightPaneSelChanged(const QItemSelection &, const QItemSelection &){
@@ -91,14 +97,19 @@ void ShareBrowser::slotRightPaneSelChanged(const QItemSelection &, const QItemSe
     quint32    total_selected   = 0;
 
     for (const auto &i : list) {
-        selected_size += reinterpret_cast<FileBrowserItem*>(i.internalPointer())->data(COLUMN_FILEBROWSER_ESIZE).toULongLong();
+        const QModelIndex src = proxy ? proxy->mapToSource(i) : i;
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(src.internalPointer());
+        if (!item)
+            continue;
+        selected_size += item->data(COLUMN_FILEBROWSER_ESIZE).toULongLong();
         total_selected++;
     }
 
     QString status;
+    const int shown = proxy ? proxy->rowCount() : list_root->childCount();
 
     if (total_selected > 0)
-        status = tr("Selected %1 from %2 items; ").arg(total_selected).arg(list_root->childCount());
+        status = tr("Selected %1 from %2 items; ").arg(total_selected).arg(shown);
 
     status += tr("Total size: %1").arg(WulforUtil::formatBytes(current_size));
 
@@ -123,6 +134,7 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
         return;
 
     QModelIndex index = selected.at(0);
+    index = treeMapToSource(index);
 
     if (index.isValid()){
 
@@ -136,6 +148,7 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
 
         lineEdit_PATH->setText(tree_model->createRemotePath(item));
         p.path_tesxt = tree_model->createRemotePath(item);
+        applyViewFiltersNow();
 
         pathHistory.append(p);
         pathHistory_iter = pathHistory.end();
@@ -148,31 +161,24 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
         if (deselected_idx.size() != 1)
             return;
 
-        QModelIndex old_index = deselected_idx.at(0);
+        QModelIndex old_index = treeMapToSource(deselected_idx.at(0));
         bool switchedToParent = (old_index.parent() == index);
 
+        QModelIndex src;
         if (switchedToParent){
             FileBrowserItem *old_item = static_cast<FileBrowserItem*>(old_index.internalPointer());
-            QString old_path = old_item->data(COLUMN_FILEBROWSER_NAME).toString();
-
-            FileBrowserItem *list_item = list_model->createRootForPath(old_path);
-
-            if (list_item){
-                QModelIndex i = list_model->index(list_item->row(), 0, QModelIndex());
-
-                if (i.isValid()){
-                    treeView_RPANE->selectionModel()->select(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-                    treeView_RPANE->selectionModel()->setCurrentIndex(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-                }
-            }
+            FileBrowserItem *list_item = list_model->createRootForPath(
+                    old_item->data(COLUMN_FILEBROWSER_NAME).toString());
+            if (list_item)
+                src = list_model->index(list_item->row(), 0, QModelIndex());
+        } else {
+            src = list_model->index(0, 0, QModelIndex());
         }
-        else {
-            QModelIndex i = list_model->index(0, 0, QModelIndex());
 
-            if (i.isValid()){
-                treeView_RPANE->selectionModel()->select(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-                treeView_RPANE->selectionModel()->setCurrentIndex(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-            }
+        QModelIndex i = proxy ? proxy->mapFromSource(src) : src;
+        if (i.isValid()){
+            treeView_RPANE->selectionModel()->select(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
+            treeView_RPANE->selectionModel()->setCurrentIndex(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
         }
     }
 }

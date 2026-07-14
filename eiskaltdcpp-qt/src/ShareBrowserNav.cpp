@@ -19,6 +19,7 @@
 #include "dcpp/SettingsManager.h"
 
 #include <QAbstractItemView>
+#include <QMetaObject>
 #include <vector>
 
 using namespace dcpp;
@@ -48,11 +49,18 @@ void queueJobs(const HintedUser &user, std::vector<DlJob> jobs)
 
     AsyncRunner *runner = new AsyncRunner(nullptr);
     runner->setRunFunction([user, jobs = std::move(jobs)]() {
+        QString errMsg;
         for (const DlJob &job : jobs) {
             try {
                 QueueManager::getInstance()->add(job.target, job.size, job.tth, user, 0);
-            } catch (const Exception &) {
+            } catch (const Exception &e) {
+                if (errMsg.isEmpty())
+                    errMsg = _q(e.getError());
             }
+        }
+        if (!errMsg.isEmpty()) {
+            QMetaObject::invokeMethod(MainWindow::getInstance(), "setStatusMessage",
+                                      Qt::QueuedConnection, Q_ARG(QString, errMsg));
         }
     });
     QObject::connect(runner, SIGNAL(finished()), runner, SLOT(deleteLater()), Qt::QueuedConnection);
@@ -72,12 +80,8 @@ void ShareBrowser::goDown(QTreeView *view){
         return;
 
     const QModelIndex index = selected.at(0);
-    FileBrowserItem *item = nullptr;
-
-    if (view->model() == proxy)
-        item = static_cast<FileBrowserItem*>(proxy->mapToSource(index).internalPointer());
-    else
-        item = static_cast<FileBrowserItem*>(index.internalPointer());
+    const QModelIndex src = proxy ? proxy->mapToSource(index) : index;
+    FileBrowserItem *item = static_cast<FileBrowserItem*>(src.internalPointer());
 
     if (!item || item->file)
         return;
@@ -101,9 +105,9 @@ void ShareBrowser::goUp(QTreeView *view){
     FileBrowserItem *tree_item = tree_model->createRootForPath(paths.join("\\"));
     QModelIndex tree_index = tree_model->createIndexForItem(tree_item);
 
-    treeView_LPANE->selectionModel()->setCurrentIndex(tree_index,
+    treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(tree_index),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(tree_index, QAbstractItemView::PositionAtCenter);
+    treeView_LPANE->scrollTo(treeMapFromSource(tree_index), QAbstractItemView::PositionAtCenter);
 
     treeView_RPANE->setFocus();
 }
@@ -133,12 +137,8 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
     if (!index.isValid())
         return;
 
-    FileBrowserItem *item = nullptr;
-
-    if (treeView_RPANE->model() == proxy)
-        item = static_cast<FileBrowserItem*>(proxy->mapToSource(index).internalPointer());
-    else
-        item = static_cast<FileBrowserItem*>(index.internalPointer());
+    const QModelIndex src = proxy ? proxy->mapToSource(index) : index;
+    FileBrowserItem *item = static_cast<FileBrowserItem*>(src.internalPointer());
 
     if (!item)
         return;
@@ -163,7 +163,7 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
     if (tree_model->canFetchMore(parent_index))
         tree_model->fetchMore(parent_index);
 
-    treeView_LPANE->selectionModel()->setCurrentIndex(parent_index,
+    treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(parent_index),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-    treeView_LPANE->scrollTo(parent_index, QAbstractItemView::PositionAtCenter);
+    treeView_LPANE->scrollTo(treeMapFromSource(parent_index), QAbstractItemView::PositionAtCenter);
 }

@@ -92,6 +92,8 @@ set(QT_EXTRA_SOURCES
     src/ChatSearchBar.cpp
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp
+    src/FileBrowserFilterProxy.cpp
+    src/FileBrowserFilterProxyTree.cpp
     src/FileBrowserModelSort.cpp
     src/PublicHubItem.cpp
     src/PublicHubModelData.cpp
@@ -233,6 +235,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserNav.cpp
     src/ShareBrowserSelect.cpp
     src/ShareBrowserActions.cpp
+    src/ShareBrowserFilter.cpp
     src/ShareBrowserInit.cpp
     src/ShareBrowserSetup.cpp
     src/ShareBrowserContextUser.cpp

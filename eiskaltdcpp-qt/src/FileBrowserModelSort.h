@@ -11,15 +11,4 @@
 
 #include "FileBrowserModel.h"
 
-#include <QSortFilterProxyModel>
-
 void sortFileBrowserItems(int column, Qt::SortOrder order, FileBrowserItem *root);
-
-/** Filter proxy that keeps FileBrowserModel::sort (natural Name order). */
-class FileBrowserFilterProxy : public QSortFilterProxyModel {
-public:
-    void sort(int column, Qt::SortOrder order) override {
-        if (sourceModel())
-            sourceModel()->sort(column, order);
-    }
-};

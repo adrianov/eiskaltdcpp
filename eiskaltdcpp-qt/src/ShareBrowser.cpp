@@ -11,7 +11,6 @@
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
-#include "ShareBrowserSearch.h"
 #include "ArenaWidgetManager.h"
 
 #include "dcpp/SettingsManager.h"
@@ -74,9 +73,7 @@ ShareBrowser::ShareBrowser(UserPtr _user, const QString &_file, const QString &_
         jump_to(_jump_to),
         listing(HintedUser(_user, "")),
         user(_user),
-        share_size(0),
         current_size(0),
-        itemsCount(0),
         tree_model(nullptr),
         list_model(nullptr),
         tree_root(nullptr),
@@ -116,8 +113,6 @@ ShareBrowser::~ShareBrowser(){
     delete list_model;
     delete arena_menu;
 
-    delete proxy;
-
     pathHistory.clear();
 
     Menu::deleteInstance();
@@ -148,10 +143,7 @@ bool ShareBrowser::eventFilter(QObject *obj, QEvent *e){
         QKeyEvent *k_e = reinterpret_cast<QKeyEvent*>(e);
 
         if (k_e->key() == Qt::Key_Escape){
-            lineEdit_FILTER->clear();
-
-            requestFilter();
-
+            slotClearFilters();
             return true;
         }
     }

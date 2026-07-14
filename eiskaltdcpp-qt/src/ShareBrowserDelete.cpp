@@ -138,7 +138,7 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
         pathHistory_iter = pathHistory.end();
         tree_model->clear();
         tree_model->fetchMore(QModelIndex());
-        const QModelIndex rootIdx = tree_model->index(0, 0);
+        const QModelIndex rootIdx = treeMapFromSource(tree_model->index(0, 0));
         if (rootIdx.isValid())
             treeView_LPANE->setExpanded(rootIdx, true);
     }
@@ -155,7 +155,7 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
         FileBrowserItem *ti = remote.isEmpty() ? listRoot
             : tree_model->createRootForPath(remote, listRoot);
         if (ti) {
-            const QModelIndex ix = tree_model->createIndexForItem(ti);
+            const QModelIndex ix = treeMapFromSource(tree_model->createIndexForItem(ti));
             treeView_LPANE->selectionModel()->select(ix,
                     QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
             return; // selection slot refreshes the right pane
