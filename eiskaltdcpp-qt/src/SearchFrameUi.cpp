@@ -59,9 +59,9 @@ void SearchFrame::fastSearch(const QString &text, bool isTTH){
         return;
 
     if (!isTTH)
-        comboBox_FILETYPES->setCurrentIndex(0); // set type "Any"
+        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_ANY);
     else
-        comboBox_FILETYPES->setCurrentIndex(8); // set type "TTH"
+        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_TTH);
 
     lineEdit_SEARCHSTR->setText(text);
 

@@ -85,7 +85,9 @@ void SearchFrame::slotStartSearch(){
         d->token = _q(Util::toString(Util::rand()));
     }
 
-    int ftype = comboBox_FILETYPES->currentIndex();
+    const int idx = comboBox_FILETYPES->currentIndex();
+    int ftype = (idx >= 0) ? comboBox_FILETYPES->itemData(idx).toInt() : SearchManager::TYPE_ANY;
+    const QString typeName = (idx >= 0) ? comboBox_FILETYPES->itemText(idx) : QString();
 
     d->isHash = (ftype == SearchManager::TYPE_TTH);
     d->filterShared = static_cast<AlreadySharedAction>(comboBox_SHARED->currentIndex());
@@ -105,23 +107,20 @@ void SearchFrame::slotStartSearch(){
 
     string ftypeStr;
     if (ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_LAST)
-        ftypeStr = SearchManager::getInstance()->getTypeStr(ftype);
+        ftypeStr = SearchManager::getTypeStr(ftype);
+    else if (ftype >= SearchManager::TYPE_LAST && !typeName.isEmpty())
+        ftypeStr = _tq(typeName);
     else
-    {
-        ftypeStr = _tq(lineEdit_SEARCHSTR->text());
         ftype = SearchManager::TYPE_ANY;
-    }
 
     StringList exts;
     try{
-        if (ftype == SearchManager::TYPE_ANY){
-            // Custom searchtype
+        if (ftype == SearchManager::TYPE_ANY && !ftypeStr.empty())
             exts = SettingsManager::getInstance()->getExtensions(ftypeStr);
-        }
-        else if ((ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_DIRECTORY) || ftype == SearchManager::TYPE_CD_IMAGE){
-            // Predefined searchtype
-            exts = SettingsManager::getInstance()->getExtensions(string(1, '0' + ftype));
-        }
+        else if ((ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_DIRECTORY) ||
+                 ftype == SearchManager::TYPE_CD_IMAGE ||
+                 ftype == SearchManager::TYPE_AUDIO_VIDEO)
+            exts = SearchManager::getTypeExtensions(ftype);
     }
     catch (const SearchTypeException&){
         ftype = SearchManager::TYPE_ANY;

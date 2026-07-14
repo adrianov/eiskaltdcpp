@@ -1031,6 +1031,9 @@ static bool checkType(const string& aString, int aType) {
     if(aType == SearchManager::TYPE_ANY)
         return true;
 
+    if(aType == SearchManager::TYPE_AUDIO_VIDEO)
+        return checkType(aString, SearchManager::TYPE_AUDIO) || checkType(aString, SearchManager::TYPE_VIDEO);
+
     if(aString.length() < 5)
         return false;
 

@@ -1768,7 +1768,7 @@ void Settings::initSearchTypes_gui()
         {
             key = type[0] - '0';
             if (type[0] == '7')
-                key = 9;
+                key = SearchManager::TYPE_CD_IMAGE;
             type = SearchManager::getTypeStr(key);
             predefined = true;
         }
@@ -2181,7 +2181,7 @@ void Settings::onDefaultSTButton_gui(GtkWidget*, gpointer data)
         {
             key = type[0] - '0';
             if (type[0] == '7')
-                key = 9;
+                key = SearchManager::TYPE_CD_IMAGE;
             type = SearchManager::getTypeStr(key);
             predefined = true;
         }

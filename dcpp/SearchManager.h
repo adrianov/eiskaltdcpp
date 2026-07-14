@@ -55,12 +55,14 @@ public:
         TYPE_DIRECTORY,
         TYPE_TTH,
         TYPE_CD_IMAGE,
+        TYPE_AUDIO_VIDEO, // after CD Image: keep NMDC wire ids (Directory=8, TTH=9)
         TYPE_LAST
     };
 private:
     static const char* types[TYPE_LAST];
 public:
     static const char* getTypeStr(int type);
+    static StringList getTypeExtensions(int type);
 
     void search(const string& aName, int64_t aSize, TypeModes aTypeMode, SizeModes aSizeMode, const string& aToken, void* aOwner = NULL);
     void search(const string& aName, const string& aSize, TypeModes aTypeMode, SizeModes aSizeMode, const string& aToken, void* aOwner = NULL) {

@@ -141,6 +141,9 @@ void NmdcHub::search(int aSizeType, int64_t aSize, int aFileType, const string& 
     checkstate();
     char c1 = (aSizeType == SearchManager::SIZE_DONTCARE) ? 'F' : 'T';
     char c2 = (aSizeType == SearchManager::SIZE_ATLEAST) ? 'F' : 'T';
+    // NMDC has no Audio & Video type; send Any and let the client filter by extensions.
+    if(aFileType == SearchManager::TYPE_AUDIO_VIDEO)
+        aFileType = SearchManager::TYPE_ANY;
     string tmp = ((aFileType == SearchManager::TYPE_TTH) ? "TTH:" + aString : fromUtf8(escape(aString)));
     string::size_type i;
     while((i = tmp.find(' ')) != string::npos) {

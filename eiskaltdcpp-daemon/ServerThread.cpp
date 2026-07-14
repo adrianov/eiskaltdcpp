@@ -729,12 +729,12 @@ bool ServerThread::sendSearchOnHubs(const string& search, const int& searchtype,
     // Get ADC searchtype extensions if any is selected
     StringList exts;
     try {
-        if (ftype == SearchManager::TYPE_ANY) {
-            // Custom searchtype
+        if (ftype == SearchManager::TYPE_ANY && !ftypeStr.empty()) {
             exts = SettingsManager::getInstance()->getExtensions(ftypeStr);
-        } else if ((ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_DIRECTORY) || ftype == SearchManager::TYPE_CD_IMAGE) {
-            // Predefined searchtype
-            exts = SettingsManager::getInstance()->getExtensions(string(1, '0' + ftype));
+        } else if ((ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_DIRECTORY) ||
+                   ftype == SearchManager::TYPE_CD_IMAGE ||
+                   ftype == SearchManager::TYPE_AUDIO_VIDEO) {
+            exts = SearchManager::getTypeExtensions(ftype);
         }
     } catch (const SearchTypeException&) {
         ftype = SearchManager::TYPE_ANY;

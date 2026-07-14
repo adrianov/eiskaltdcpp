@@ -204,7 +204,11 @@ private:
         static Ptr create(const string& aName, const Ptr& aParent = Ptr()) { return Ptr(new Directory(aName, aParent)); }
 
         bool hasType(uint32_t type) const noexcept {
-            return ( (type == SearchManager::TYPE_ANY) || (fileTypes & (1 << type)) );
+            if(type == SearchManager::TYPE_ANY)
+                return true;
+            if(type == SearchManager::TYPE_AUDIO_VIDEO)
+                return (fileTypes & ((1 << SearchManager::TYPE_AUDIO) | (1 << SearchManager::TYPE_VIDEO))) != 0;
+            return (fileTypes & (1 << type)) != 0;
         }
         void addType(uint32_t type) noexcept;
 

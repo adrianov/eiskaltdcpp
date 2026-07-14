@@ -38,10 +38,25 @@ const char* SearchManager::types[TYPE_LAST] = {
     N_("Video"),
     N_("Directory"),
     N_("TTH"),
-    N_("CD Image")
+    N_("CD Image"),
+    N_("Audio & Video")
 };
 const char* SearchManager::getTypeStr(int type) {
     return _(types[type]);
+}
+
+StringList SearchManager::getTypeExtensions(int type) {
+    if(type == TYPE_AUDIO_VIDEO) {
+        StringList ret = SettingsManager::getInstance()->getExtensions("1");
+        const StringList& video = SettingsManager::getInstance()->getExtensions("6");
+        ret.insert(ret.end(), video.begin(), video.end());
+        return ret;
+    }
+    if(type == TYPE_CD_IMAGE)
+        return SettingsManager::getInstance()->getExtensions("7");
+    if(type > TYPE_ANY && type < TYPE_DIRECTORY)
+        return SettingsManager::getInstance()->getExtensions(string(1, '0' + type));
+    throw SearchTypeException(_("No such search type"));
 }
 
 SearchManager::SearchManager() :

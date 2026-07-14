@@ -44,7 +44,8 @@ static WulforUtil::Icons iconForType(int type) {
         WulforUtil::eiFILETYPE_VIDEO,
         WulforUtil::eiFOLDER_BLUE,
         WulforUtil::eiFIND,
-        WulforUtil::eiFILETYPE_ARCHIVE
+        WulforUtil::eiFILETYPE_ARCHIVE,
+        WulforUtil::eiFILETYPE_VIDEO
     };
     if (type >= 0 && type < SearchManager::TYPE_LAST)
         return icons[type];
@@ -78,11 +79,9 @@ void fillCombo(QComboBox *combo, bool forSearch) {
 QStringList extensionsFor(int typeIndex, const QString &typeName) {
     try {
         if ((typeIndex > SearchManager::TYPE_ANY && typeIndex < SearchManager::TYPE_DIRECTORY) ||
-            typeIndex == SearchManager::TYPE_CD_IMAGE) {
-            // Defaults use keys '1'..'6' for Audio..Video and '7' for CD Image.
-            const char key = (typeIndex == SearchManager::TYPE_CD_IMAGE)
-                    ? '7' : static_cast<char>('0' + typeIndex);
-            return toExtList(SettingsManager::getInstance()->getExtensions(string(1, key)));
+            typeIndex == SearchManager::TYPE_CD_IMAGE ||
+            typeIndex == SearchManager::TYPE_AUDIO_VIDEO) {
+            return toExtList(SearchManager::getTypeExtensions(typeIndex));
         }
         if (typeIndex >= SearchManager::TYPE_LAST && !typeName.isEmpty())
             return toExtList(SettingsManager::getInstance()->getExtensions(_tq(typeName)));
