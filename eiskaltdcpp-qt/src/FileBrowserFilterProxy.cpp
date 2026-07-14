@@ -114,12 +114,10 @@ bool FileBrowserFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &
             return false;
     }
 
-    if (filesOnly_ || !extFilter_.isEmpty()) {
-        if (!extFilter_.isEmpty()) {
-            const QString ext = QFileInfo(model->data(nameIndex).toString()).suffix().toUpper();
-            if (ext.isEmpty() || !extFilter_.contains(ext, Qt::CaseInsensitive))
-                return false;
-        }
+    if (!extFilter_.isEmpty()) {
+        const QString ext = QFileInfo(model->data(nameIndex).toString()).suffix().toUpper();
+        if (ext.isEmpty() || !extFilter_.contains(ext, Qt::CaseInsensitive))
+            return false;
     }
 
     if (sizeLimit_ && sizeMode_ != SearchManager::SIZE_DONTCARE) {

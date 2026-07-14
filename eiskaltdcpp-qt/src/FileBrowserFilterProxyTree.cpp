@@ -38,7 +38,7 @@ bool FileBrowserFilterProxy::filePasses(const QString &filePath, qulonglong size
     if (dirsOnly_)
         return false;
 
-    if (filesOnly_ || !extFilter_.isEmpty()) {
+    if (!extFilter_.isEmpty()) {
         const QString ext = QFileInfo(filePath.section(QLatin1Char('\\'), -1)).suffix().toUpper();
         if (ext.isEmpty() || !extFilter_.contains(ext, Qt::CaseInsensitive))
             return false;
