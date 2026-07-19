@@ -25,30 +25,6 @@ void logMsg(const string& msg) {
     LogManager::getInstance()->message(string("[Connect] ") + msg);
 }
 
-string phaseName(UserConnection::States s) {
-    switch(s) {
-    case UserConnection::STATE_UNCONNECTED: return "disconnected";
-    case UserConnection::STATE_CONNECT: return "TCP/TLS connect";
-    case UserConnection::STATE_SUPNICK: return "nick exchange";
-    case UserConnection::STATE_INF: return "ADC INF";
-    case UserConnection::STATE_LOCK: return "Lock/PK";
-    case UserConnection::STATE_DIRECTION: return "Direction";
-    case UserConnection::STATE_KEY: return "Key";
-    case UserConnection::STATE_GET: return "upload GET wait";
-    case UserConnection::STATE_SEND: return "upload Send wait";
-    case UserConnection::STATE_SND: return "download request wait";
-    case UserConnection::STATE_IDLE: return "idle";
-    case UserConnection::STATE_RUNNING: return "transfer";
-    default: return "unknown";
-    }
-}
-
-bool isPostHandshake(UserConnection::States s) {
-    return s == UserConnection::STATE_SND || s == UserConnection::STATE_IDLE ||
-           s == UserConnection::STATE_RUNNING || s == UserConnection::STATE_GET ||
-           s == UserConnection::STATE_SEND;
-}
-
 string linkInfo(const UserConnection* uc) {
     const string proto = uc->isSet(UserConnection::FLAG_NMDC) ? "NMDC" : "ADC";
     const string tls = uc->isSecure() ?
@@ -79,57 +55,44 @@ string directionDetail(const UserConnection* uc) {
     return ret;
 }
 
-string failHint(UserConnection::States phase, const string& err, bool protocolError, bool secure) {
-    if(protocolError)
-        return _("unexpected or invalid protocol message");
-
-    const string errLower = Text::toLower(err);
-    const bool closed = errLower.find("closed") != string::npos;
-    const bool disconnected = errLower.find("disconnect") != string::npos;
-    const bool ssl = err.find("SSL") != string::npos;
-
-    if(phase == UserConnection::STATE_DIRECTION) {
-        if(ssl)
-            return _("TLS error during $Direction; try plain/TLS port or trust settings");
-        return _("peer closed during $Direction (conflicting roles, multi-hub race, or remote client gave up)");
+/** One log line per key per minute; returns false when this hit was suppressed. */
+bool allowRateLimitedLog(unordered_map<string, pair<uint64_t, unsigned>>& log,
+        CriticalSection& cs, const string& key, unsigned& suppressed) {
+    constexpr uint64_t kInterval = 60 * 1000;
+    Lock l(cs);
+    const uint64_t tick = GET_TICK();
+    auto& e = log[key];
+    if(e.first && tick < e.first + kInterval) {
+        ++e.second;
+        return false;
     }
-
-    if(ssl)
-        return _("TLS error; try the other port (plain vs TLS) or check TLS settings");
-
-    if(closed || disconnected) {
-        if(isPostHandshake(phase))
-            return _("peer closed after handshake (no upload slot, file rejected, or client disconnects when queued)");
-        if(phase == UserConnection::STATE_CONNECT)
-            return secure ?
-                    _("peer closed during TLS connect (wrong port, blocked, or plain-only client?)") :
-                    _("peer closed TCP before handshake (TLS-only client, blocked port, or bad address?)");
-        if(phase >= UserConnection::STATE_SUPNICK && phase <= UserConnection::STATE_KEY)
-            return _("peer closed during handshake (TLS mismatch, version mismatch, or rejected connection)");
+    suppressed = e.second;
+    e = { tick, 0 };
+    if(log.size() > 256) {
+        for(auto it = log.begin(); it != log.end(); ) {
+            if(tick >= it->second.first + kInterval)
+                it = log.erase(it);
+            else
+                ++it;
+        }
     }
-    return Util::emptyString;
+    return true;
 }
 
 } // namespace
 
 namespace PeerConnectLog {
 
-void connectionFail(const UserConnection* uc, const string& err, bool protocolError) {
-    if(!uc || !uc->getUser())
+void skip(const string& target, const string& hub, const string& reason) {
+    static CriticalSection skipCs;
+    static unordered_map<string, pair<uint64_t, unsigned>> skipLog;
+    unsigned suppressed = 0;
+    if(!allowRateLimitedLog(skipLog, skipCs, target + '\n' + hub + '\n' + reason, suppressed))
         return;
-
-    const UserConnection::States phase = uc->getState();
-    const string nick = ClientManager::getInstance()->getNickOrCid(uc->getHintedUser());
-    const string what = isPostHandshake(phase) ?
-            string(_("connection lost")) : string(_("handshake failed"));
-    string msg = str(F_("%1% during %2% (%3%): %4%") % what % phaseName(phase) % linkInfo(uc) % err);
-    const string dirDetail = directionDetail(uc);
-    if(!dirDetail.empty())
-        msg += " [" + dirDetail + "]";
-    const string hint = failHint(phase, err, protocolError, uc->isSecure());
-    if(!hint.empty())
-        msg += str(F_(" — %1%") % hint);
-    logMsg(str(F_("%1% on %2%: %3%") % nick % uc->getHubUrl() % msg));
+    string msg = str(F_("%1% on %2%: %3%") % target % hub % reason);
+    if(suppressed)
+        msg += str(F_(" (+%1% similar)") % suppressed);
+    logMsg(msg);
 }
 
 void connectionReject(const UserConnection* uc, const string& reason) {
@@ -139,27 +102,12 @@ void connectionReject(const UserConnection* uc, const string& reason) {
     // Peers that spam $ConnectToMe while an upload slot is held can reject hundreds of
     // times per minute; keep one line per user per minute with a suppressed count.
     static CriticalSection rejectCs;
-    static unordered_map<CID, pair<uint64_t, unsigned>> rejectLog;
-    constexpr uint64_t kRejectLogInterval = 60 * 1000;
+    static unordered_map<string, pair<uint64_t, unsigned>> rejectLog;
     unsigned suppressed = 0;
     if(uc->getUser()) {
-        Lock l(rejectCs);
-        const uint64_t tick = GET_TICK();
-        auto& entry = rejectLog[uc->getUser()->getCID()];
-        if(entry.first && tick < entry.first + kRejectLogInterval) {
-            ++entry.second;
+        const string key = uc->getUser()->getCID().toBase32();
+        if(!allowRateLimitedLog(rejectLog, rejectCs, key, suppressed))
             return;
-        }
-        suppressed = entry.second;
-        entry = { tick, 0 };
-        if(rejectLog.size() > 256) {
-            for(auto it = rejectLog.begin(); it != rejectLog.end(); ) {
-                if(tick >= it->second.first + kRejectLogInterval)
-                    it = rejectLog.erase(it);
-                else
-                    ++it;
-            }
-        }
     }
 
     string msg = reason;

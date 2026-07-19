@@ -72,6 +72,7 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubLineLists.cpp
     NmdcHubConnect.cpp
     AdcHubConnect.cpp
+    AdcHubConnectIn.cpp
     AdcHubChat.cpp
     AdcHubStatus.cpp
     AdcHubSearch.cpp
@@ -116,6 +117,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerConnectOut.cpp
     ConnectionManagerLifecycle.cpp
     PeerConnectLogFail.cpp
+    PeerConnectLogDetail.cpp
     LogManagerTrim.cpp
     ProcessExit.cpp
     SocketSocks.cpp

@@ -145,11 +145,13 @@ void userOffline(const HintedUser& user) {
 }
 
 void passiveWait(const HintedUser& user) {
-    logMsg(withProfile(user, str(F_("%1%: waiting for active user (both passive)") % userName(user))));
+    skip(userName(user), user.hint.empty() ? string("?") : user.hint,
+            _("waiting for active user (both passive)"));
 }
 
 void passiveSkip(const HintedUser& user) {
-    logMsg(withProfile(user, str(F_("%1%: skipped passive-to-passive source") % userName(user))));
+    skip(userName(user), user.hint.empty() ? string("?") : user.hint,
+            _("skipped passive-to-passive source"));
 }
 
 void fakeActiveRetry(const HintedUser& user) {
@@ -187,10 +189,6 @@ void tcpFail(const string& user, const string& host, const string& port, const s
 
 void incomingReject(const string& nick, const string& reason) {
     logMsg(str(F_("Incoming from %1% rejected: %2%") % nick % reason));
-}
-
-void skip(const string& target, const string& hub, const string& reason) {
-    logMsg(str(F_("%1% on %2%: %3%") % target % hub % reason));
 }
 
 } // namespace PeerConnectLog
