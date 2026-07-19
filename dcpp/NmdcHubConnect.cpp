@@ -14,6 +14,7 @@
 
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
+#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectTls.h"
 #include "format.h"
@@ -113,13 +114,25 @@ void NmdcHub::onRevConnectToMe(const string& param) {
         return;
     }
 
+    auto* cm = ConnectionManager::getInstance();
     if(isActive()) {
+        if(!cm->allowOutgoingConnect(u->getUser())) {
+            PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
+                    _("connect cooldown (recent $ConnectToMe)"));
+            return;
+        }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, replying with $ConnectToMe");
         connectToMe(*u);
     } else if(BOOLSETTING(ALLOW_NATT) && u->getUser()->isSet(User::NAT_TRAVERSAL)) {
+        if(!cm->allowOutgoingConnect(u->getUser())) {
+            PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
+                    _("connect cooldown (recent $ConnectToMe)"));
+            return;
+        }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
         bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(PeerConnectTls::AUTO, *u);
-        ConnectionManager::getInstance()->nmdcExpect(u->getIdentity().getNick(), getMyNick(), getHubUrl());
+        cm->nmdcExpect(u->getIdentity().getNick(), getMyNick(), getHubUrl());
+        cm->noteOutgoingConnect(u->getUser(), PeerConnectFilter::connectBackoffMs(0));
         send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
@@ -129,7 +142,8 @@ void NmdcHub::onRevConnectToMe(const string& param) {
         revConnectToMe(*u);
         updated(*u);
     } else {
-        PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, both passive — no connection possible");
+        PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
+                _("$RevConnectToMe: both passive — no connection possible"));
     }
 }
 

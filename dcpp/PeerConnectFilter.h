@@ -30,6 +30,8 @@ bool prefersRevConnect(const OnlineUser& ou);
 constexpr int MAX_CONNECT_ERRORS = 6;
 constexpr int MAX_SLOT_WAITS = 12;
 constexpr int SLOT_WAIT_BASE_MS = 5 * 60 * 1000;
+/** After give-up, block CTM/RCM and auto-revive for this long. */
+constexpr int GIVE_UP_COOLDOWN_MS = 60 * 60 * 1000;
 
 bool shouldGiveUp(int errors);
 bool shouldGiveUpSlotWait(int slotWaits);

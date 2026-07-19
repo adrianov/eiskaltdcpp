@@ -70,10 +70,14 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
     else
         PeerConnectLog::queueGiveUp(cqi->getUser(), attempts);
     cqi->setErrors(-1);
+    noteConnectCooldown(cqi->getUser(), PeerConnectFilter::GIVE_UP_COOLDOWN_MS);
 }
 
 void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi) {
     if(!cqi || cqi->getErrors() != -1)
+        return;
+    // Keep give-up until sticky cooldown expires (or force clears it first).
+    if(connectCooldownActive(cqi->getUser()))
         return;
     cqi->setErrors(0);
     cqi->setSlotWaits(0);
@@ -111,14 +115,16 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
             markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
-    } else {
-        dlCqi->setErrors(protocolError ? -1 : (dlCqi->getErrors() + 1));
+    } else if(protocolError) {
+        dlCqi->setErrors(-1);
         dlCqi->setLastAttempt(GET_TICK());
-        if(!protocolError) {
-            noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
-            if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-                markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
-        }
+        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::GIVE_UP_COOLDOWN_MS);
+    } else {
+        dlCqi->setErrors(dlCqi->getErrors() + 1);
+        dlCqi->setLastAttempt(GET_TICK());
+        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
+        if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
+            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);

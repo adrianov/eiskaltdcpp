@@ -166,6 +166,7 @@ void ConnectionManager::force(const UserPtr& aUser) {
     clearConnectCooldown(aUser);
     auto i = find(downloads.begin(), downloads.end(), aUser);
     if(i != downloads.end()) {
+        reviveDownloadQueue(*i);
         (*i)->setLastAttempt(0);
     }
 }

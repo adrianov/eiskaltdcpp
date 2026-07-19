@@ -1,19 +1,6 @@
 /*
  * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
  * Copyright (C) 2019 Boris Pek <tehnick-8@yandex.ru>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -172,7 +159,6 @@ private:
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
     void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
     void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait);
-    /** Clear permanent give-up so an explicit reconnect request can retry. */
     void reviveDownloadQueue(ConnectionQueueItem* cqi);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
