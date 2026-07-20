@@ -9,51 +9,20 @@
 
 #include "stdinc.h"
 #include "PeerConnectLog.h"
+#include "PeerConnectLogUtil.h"
 
 #include "ClientManager.h"
-#include "LogManager.h"
-#include "UserConnection.h"
 #include "format.h"
 
 #include <unordered_map>
 
 namespace dcpp {
 
+using PeerConnectLogUtil::directionDetail;
+using PeerConnectLogUtil::linkInfo;
+using PeerConnectLogUtil::logMsg;
+
 namespace {
-
-void logMsg(const string& msg) {
-    LogManager::getInstance()->message(string("[Connect] ") + msg);
-}
-
-string linkInfo(const UserConnection* uc) {
-    const string proto = uc->isSet(UserConnection::FLAG_NMDC) ? "NMDC" : "ADC";
-    const string tls = uc->isSecure() ?
-            (uc->isTrusted() ? "TLS" : "TLS untrusted") : "plain";
-    string dir = "?";
-    if(uc->isSet(UserConnection::FLAG_DOWNLOAD))
-        dir = "download";
-    else if(uc->isSet(UserConnection::FLAG_UPLOAD))
-        dir = "upload";
-    const string inc = uc->isSet(UserConnection::FLAG_INCOMING) ? "incoming" : "outgoing";
-    string remote = uc->getRemoteIp();
-    if(!uc->getPort().empty())
-        remote += ":" + uc->getPort();
-    string ret = str(F_("%1% %2% %3% %4% from %5%") % proto % tls % dir % inc % remote);
-    if(uc->isSecure() && !uc->getCipherName().empty())
-        ret += ", cipher=" + uc->getCipherName();
-    return ret;
-}
-
-string directionDetail(const UserConnection* uc) {
-    if(!uc || uc->getState() != UserConnection::STATE_DIRECTION)
-        return Util::emptyString;
-    string ret = str(F_("sent $Direction %1% %2%") % uc->getDirectionString() % uc->getNumber());
-    if(!uc->getPeerDirection().empty())
-        ret += str(F_(", peer $Direction %1% %2%") % uc->getPeerDirection() % uc->getPeerDirectionNum());
-    else
-        ret += _(", no peer $Direction received");
-    return ret;
-}
 
 /** One log line per key per minute; returns false when this hit was suppressed. */
 bool allowRateLimitedLog(unordered_map<string, pair<uint64_t, unsigned>>& log,
