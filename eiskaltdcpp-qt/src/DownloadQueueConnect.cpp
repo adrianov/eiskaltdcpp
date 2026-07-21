@@ -100,11 +100,8 @@ void DownloadQueue::updateFile(const DownloadQueue::VarMap &map){
     if (!d->pendingAdds.isEmpty())
         flushPendingAdds();
 
-    VarMap row = map;
-    // Display + attach only when index shows online holders we have not counted yet.
-    // Do not CTM-nudge on every StatusUpdated (that flooded peers and restarted tthl).
-    if (row.value("STATUS").toString() != tr("Running..."))
-        applyIndexUsers(row, false);
-    d->queue_model->updItem(row);
-    syncSourceMaps(row["TARGET"].toString());
+    // Do not applyIndexUsers here: SourcesUpdated after dropping a silent peer would
+    // merge ShareIndex holders back into Users and matchQueue would re-add them.
+    d->queue_model->updItem(map);
+    syncSourceMaps(map["TARGET"].toString());
 }

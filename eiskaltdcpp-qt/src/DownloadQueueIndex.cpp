@@ -14,6 +14,7 @@
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/CID.h"
+#include "dcpp/PeerConnectHub.h"
 #include "dcpp/User.h"
 #include "dcpp/Util.h"
 
@@ -72,6 +73,9 @@ HolderView buildView(const QList<ShareIndex::IndexUser> &holders)
 
         UserPtr user;
         const QString nick = liveNick(u, &user);
+        // Silent/unreachable peers stay out of Users + auto-attach until search re-adds.
+        if (user && PeerConnectHub::isUnreachablePeer(user))
+            continue;
         if (!nick.isEmpty() && !view.nicks.contains(nick))
             view.nicks << nick;
 
@@ -85,24 +89,20 @@ HolderView buildView(const QList<ShareIndex::IndexUser> &holders)
 
 void applyView(QVariantMap &map, const HolderView &view)
 {
-    if (view.nicks.isEmpty())
+    const QString existing = map.value("USERS").toString();
+    const bool noQueueUsers = existing.isEmpty()
+            || existing == DownloadQueue::tr("No users...");
+    // Prefer QueueItem sources for Users; index only fills when the item has none.
+    if (!noQueueUsers || view.nicks.isEmpty())
         return;
 
-    QStringList nicks = view.nicks;
-    const QString existing = map.value("USERS").toString();
-    if (!existing.isEmpty() && existing != DownloadQueue::tr("No users...")) {
-        for (const QString &nick : existing.split(QStringLiteral(", "))) {
-            if (!nick.isEmpty() && !nicks.contains(nick))
-                nicks << nick;
-        }
-    }
-    map["USERS"] = nicks.join(QStringLiteral(", "));
+    map["USERS"] = view.nicks.join(QStringLiteral(", "));
 
     if (map.value("STATUS").toString() == DownloadQueue::tr("Running..."))
         return;
 
-    const int online = qMin(qMax(view.online, map.value("SRC_ONLINE").toInt()), nicks.size());
-    map["STATUS"] = DownloadQueue::tr("%1 of %2 user(s) online").arg(online).arg(nicks.size());
+    const int online = qMin(view.online, view.nicks.size());
+    map["STATUS"] = DownloadQueue::tr("%1 of %2 user(s) online").arg(online).arg(view.nicks.size());
 }
 
 void matchHolders(ShareIndex *idx, const UserList &users)
@@ -115,12 +115,12 @@ bool needsAttach(bool forceAttach, const QVariantMap &map, const HolderView &vie
 {
     if (view.match.empty())
         return false;
+    // Only attach on load/add (force), or when the item has no sources left.
+    // Do not attach merely because the index knows more online holders — that
+    // re-added silent peers after unreachable removal.
     if (forceAttach)
         return true;
-    if (map.value("SRC_TOTAL").toInt() == 0)
-        return true;
-    // Index sees more online holders than QueueItem online sources.
-    return view.online > map.value("SRC_ONLINE").toInt();
+    return map.value("SRC_TOTAL").toInt() == 0;
 }
 
 } // namespace

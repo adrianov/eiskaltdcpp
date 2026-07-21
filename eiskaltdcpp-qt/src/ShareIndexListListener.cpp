@@ -11,6 +11,7 @@
 #include "ShareIndex.h"
 #include "WulforUtil.h"
 
+#include "dcpp/PeerConnectHub.h"
 #include "dcpp/QueueItem.h"
 #include "dcpp/Download.h"
 
@@ -35,6 +36,8 @@ HintedUser hintedFromQueue(QueueItem *item)
 void enqueueListIngest(const UserPtr &user, const QString &listPath, const QString &hubUrl)
 {
     if (!user || listPath.isEmpty() || !QFileInfo::exists(listPath))
+        return;
+    if (PeerConnectHub::isUnreachablePeer(user))
         return;
     if (!ShareIndex::getInstance())
         return;
@@ -73,7 +76,8 @@ void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
 
         if (item->isSet(QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_USER_LIST) && hinted.user)
             emit openShare(hinted.user, listName, _q(dir));
-    } else if (hinted.user && ShareIndex::getInstance()) {
+    } else if (hinted.user && !PeerConnectHub::isUnreachablePeer(hinted.user)
+            && ShareIndex::getInstance()) {
         // Attach other queued TTHs this peer has so checkDownloads can reuse the socket.
         ShareIndex::getInstance()->matchQueue(UserList{hinted.user});
     }
@@ -106,11 +110,18 @@ void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUs
 void ShareIndexListListener::on(QueueManagerListener::SourceRemoved, QueueItem *item,
                                 const UserPtr &user, int reason) noexcept
 {
-    if (!item || !user || reason != QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
+    if (!user || !ShareIndex::getInstance())
+        return;
+
+    // item may be null: unreachable fires once after the full user-source walk.
+    if (reason == QueueItem::Source::FLAG_UNREACHABLE) {
+        ShareIndex::getInstance()->removeUser(_q(user->getCID().toBase32()));
+        return;
+    }
+
+    if (!item || reason != QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
         return;
     if (item->isSet(QueueItem::FLAG_USER_LIST))
-        return;
-    if (!ShareIndex::getInstance())
         return;
 
     ShareIndex::getInstance()->removeTth(
