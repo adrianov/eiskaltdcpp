@@ -72,6 +72,8 @@ SourceInfo collectSources(const QueueItem *item)
             reason = DownloadQueue::tr("File not available");
         else if (src.isSet(QueueItem::Source::FLAG_PASSIVE))
             reason = DownloadQueue::tr("Passive user");
+        else if (src.isSet(QueueItem::Source::FLAG_UNREACHABLE))
+            reason = DownloadQueue::tr("Unreachable");
         else if (src.isSet(QueueItem::Source::FLAG_CRC_FAILED))
             reason = DownloadQueue::tr("Checksum mismatch");
         else if (src.isSet(QueueItem::Source::FLAG_BAD_TREE))
