@@ -85,20 +85,41 @@ bool ConnectionManager::allowOutgoingConnect(const UserPtr& user) const {
 }
 
 void ConnectionManager::noteOutgoingConnect(const UserPtr& user, int minBackoffMs) {
-    noteConnectCooldown(user, minBackoffMs);
-}
-
-void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
-    if(!user)
+    // Anti-spam only: arm until without counting a failure strike.
+    if(!user || minBackoffMs <= 0)
         return;
     std::unordered_set<string> keys;
     collectListPeerKeys(resolveUser(user), keys);
     Lock l(cooldownCs);
+    const uint64_t until = GET_TICK() + static_cast<uint64_t>(minBackoffMs);
     for(const auto& key : keys) {
-        auto i = connectCooldown.find(key);
-        if(i != connectCooldown.end())
-            i->second.strikes = 0;
+        auto& e = connectCooldown[key];
+        if(until > e.until)
+            e.until = until;
     }
+}
+
+void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
+    // Peer granted a slot: drop CTM anti-spam so the next file can reconnect
+    // immediately. Failure / slot-wait paths re-arm backoff separately.
+    if(!user)
+        return;
+    const HintedUser hinted = resolveUser(user);
+    {
+        Lock l(cs);
+        if(auto* cqi = findDownloadCqi(hinted))
+            cqi->setGrantedSlot(true);
+    }
+    clearConnectCooldown(user);
+}
+
+void ConnectionManager::forgetDownloadSlot(const UserPtr& user) {
+    if(!user)
+        return;
+    const HintedUser hinted = resolveUser(user);
+    Lock l(cs);
+    if(auto* cqi = findDownloadCqi(hinted))
+        cqi->setGrantedSlot(false);
 }
 
 } // namespace dcpp

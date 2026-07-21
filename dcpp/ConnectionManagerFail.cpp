@@ -95,7 +95,11 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
     }
 
     const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
-    const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
+    const bool postClose = isPostHandshakeClose(aSource->getState()) && !protocolError;
+    // Peer drop after a granted slot (e.g. between files) is a soft retry, not slot-wait.
+    const bool betweenFiles = postClose && dlCqi->getGrantedSlot();
+    const bool slotWait = postClose && !betweenFiles;
+    dlCqi->setGrantedSlot(false);
 
     if(!tlsMismatch)
         PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
@@ -108,6 +112,9 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMs / (60 * 1000));
         if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
             markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
+    } else if(betweenFiles) {
+        dlCqi->setLastAttempt(0);
+        clearConnectCooldown(dlCqi->getUser().user);
     } else if(tlsMismatch) {
         PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
         dlCqi->setErrors(dlCqi->getErrors() + 1);
@@ -128,7 +135,7 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);
-    if(!slotWait) {
+    if(!slotWait && !betweenFiles) {
         const string hub = (aSource && !aSource->getHubUrl().empty()) ? aSource->getHubUrl()
                 : dlCqi->getUser().hint;
         PeerConnectHub::rememberFailure(dlCqi->getUser().user, hub);

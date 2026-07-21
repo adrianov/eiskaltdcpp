@@ -81,6 +81,7 @@ ConnectionQueueItem::ConnectionQueueItem(const HintedUser &aUser, bool aDownload
     state(WAITING),
     download(aDownload),
     secureMode(PeerConnectTls::learnedTlsRequired(aUser.user) ? PeerConnectTls::TLS : PeerConnectTls::AUTO),
+    grantedSlot(false),
     user(aUser)
 {
 }

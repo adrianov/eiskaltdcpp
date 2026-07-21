@@ -53,10 +53,12 @@ public:
     bool isQueuedForDownload(const UserPtr& user) const;
     /** Snapshot of users with a live download CQI (caller must not hold QueueManager::cs). */
     QueuedDownloadUsers queuedDownloadUsers() const;
-    /** Arm cooldown after CTM/RCM or a failed attempt; ms is a minimum floor. */
+    /** Arm CTM/RCM anti-spam cooldown (does not count as a failure strike). */
     void noteOutgoingConnect(const UserPtr& user, int minBackoffMs);
-    /** Clear strikes after a real download starts (peer granted a slot). */
+    /** Clear CTM cooldown after a real download starts (peer granted a slot). */
     void clearOutgoingStrikes(const UserPtr& user);
+    /** MaxedOut: next close should use slot-wait backoff, not between-files retry. */
+    void forgetDownloadSlot(const UserPtr& user);
 
     void disconnect(const UserPtr& user); // disconnect all transfers for the user
     void disconnect(const UserPtr& user, int isDownload);

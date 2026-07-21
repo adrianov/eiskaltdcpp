@@ -10,6 +10,7 @@
 #include "stdinc.h"
 #include "DownloadManager.h"
 
+#include "ConnectionManager.h"
 #include "Download.h"
 #include "FilteredFile.h"
 #include "LogManager.h"
@@ -102,6 +103,7 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
     d->setStart(GET_TICK());
     d->tick();
     aSource->setState(UserConnection::STATE_RUNNING);
+    ConnectionManager::getInstance()->clearOutgoingStrikes(aSource->getUser());
 
     fire(DownloadManagerListener::Starting(), d);
 

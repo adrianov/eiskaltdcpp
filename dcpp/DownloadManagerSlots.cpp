@@ -89,6 +89,8 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
         return;
     }
 
+    // Next close should use slot-wait backoff, not a between-files soft retry.
+    ConnectionManager::getInstance()->forgetDownloadSlot(aSource->getUser());
     aSource->setLastActivity(GET_TICK());
 
     const string nick = ClientManager::getInstance()->getNickOrCid(aSource->getHintedUser());
@@ -108,7 +110,6 @@ void DownloadManager::on(UserConnectionListener::Send, UserConnection* aSource) 
     if(aSource->getState() != UserConnection::STATE_SND || !aSource->getDownload())
         return;
 
-    ConnectionManager::getInstance()->clearOutgoingStrikes(aSource->getUser());
     Download* d = aSource->getDownload();
     startData(aSource, d->getStartPos(), d->getSize(),
               aSource->isSet(UserConnection::FLAG_SUPPORTS_ZLIB_GET) && BOOLSETTING(COMPRESS_TRANSFERS));

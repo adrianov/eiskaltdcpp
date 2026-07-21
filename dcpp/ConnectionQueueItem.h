@@ -76,6 +76,8 @@ public:
     GETSET(State, state, State);
     GETSET(bool, download, Download);
     GETSET(int, secureMode, SecureMode);
+    /** Peer granted a download slot on the current/last socket. */
+    GETSET(bool, grantedSlot, GrantedSlot);
 
     const HintedUser& getUser() const { return user; }
     void setHubHint(const string& hub) { user.hint = hub; }
