@@ -22,7 +22,7 @@ namespace dcpp {
 
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
     UserList passiveUsers;
-    UserList unreachableUsers;
+    HintedUserList unreachableUsers;
     ConnectionQueueItem::List removed;
 
     {
@@ -172,7 +172,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
         QueueManager::getInstance()->removeSource(ui, QueueItem::Source::FLAG_PASSIVE);
     }
     for(auto& ui : unreachableUsers) {
-        QueueManager::getInstance()->removeSource(ui, QueueItem::Source::FLAG_UNREACHABLE);
+        QueueManager::getInstance()->removePeerSources(ui, QueueItem::Source::FLAG_UNREACHABLE);
     }
 }
 

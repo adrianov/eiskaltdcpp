@@ -147,47 +147,40 @@ endCheck:
 }
 
 void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
-    // @todo remove from finished items
+    // Walk the full file queue — userQueue.getNext() skips items that are not
+    // download-eligible (e.g. already running from another source).
     bool isRunning = false;
-    string removeRunning;
+    StringList listsToRemove;
     {
         Lock l(cs);
-        QueueItem* qi = NULL;
-        while( (qi = userQueue.getNext(aUser, QueueItem::PAUSED)) != NULL) {
-            if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
-                remove(qi->getTarget());
-            } else {
-                userQueue.remove(qi, aUser);
-                qi->removeSource(aUser, reason);
-                fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
-                fire(QueueManagerListener::SourcesUpdated(), qi);
-                setDirty();
-            }
-        }
+        for(const auto& item: fileQueue.getQueue()) {
+            QueueItem* qi = item.second;
+            if(!qi->isSource(aUser))
+                continue;
 
-        qi = userQueue.getRunning(aUser);
-        if(qi) {
             if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
-                removeRunning = qi->getTarget();
-            } else {
+                listsToRemove.push_back(qi->getTarget());
+                continue;
+            }
+
+            if(userQueue.getRunning(aUser) == qi) {
                 userQueue.removeDownload(qi, aUser);
-                userQueue.remove(qi, aUser);
                 isRunning = true;
-                qi->removeSource(aUser, reason);
-                fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
                 fire(QueueManagerListener::StatusUpdated(), qi);
-                fire(QueueManagerListener::SourcesUpdated(), qi);
-                setDirty();
             }
+            if(!qi->isFinished())
+                userQueue.remove(qi, aUser);
+            qi->removeSource(aUser, reason);
+            fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
+            fire(QueueManagerListener::SourcesUpdated(), qi);
+            setDirty();
         }
     }
 
-    if(isRunning) {
+    if(isRunning)
         ConnectionManager::getInstance()->disconnect(aUser, true);
-    }
-    if(!removeRunning.empty()) {
-        remove(removeRunning);
-    }
+    for(const auto& target: listsToRemove)
+        remove(target);
 }
 
 } // namespace dcpp

@@ -12,10 +12,37 @@
 #include "QueueManager.h"
 
 #include "ConnectionManager.h"
+#include "ConnectionManagerPeerMatch.h"
 #include "Download.h"
 #include "File.h"
 
+#include <unordered_set>
+
 namespace dcpp {
+
+void QueueManager::removePeerSources(const HintedUser& peer, int reason) noexcept {
+    if(!peer.user)
+        return;
+
+    UserList users;
+    {
+        Lock l(cs);
+        unordered_set<CID> seen;
+        auto note = [&](const UserPtr& u) {
+            if(u && seen.insert(u->getCID()).second)
+                users.push_back(u);
+        };
+        note(peer.user);
+        for(const auto& item: fileQueue.getQueue()) {
+            for(const auto& s: item.second->getSources()) {
+                if(ConnectionManagerPeerMatch::samePeer(peer, s.getUser()))
+                    note(s.getUser().user);
+            }
+        }
+    }
+    for(const auto& u: users)
+        removeSource(u, reason);
+}
 
 void QueueManager::remove(const string& aTarget) noexcept {
     UserList x;

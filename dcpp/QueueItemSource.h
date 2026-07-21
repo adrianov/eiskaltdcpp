@@ -58,12 +58,12 @@ public:
         FLAG_TTH_INCONSISTENCY  = 0x300,
         FLAG_UNTRUSTED = 0x400,
         FLAG_UNENCRYPTED = 0x450,
-        /** No IP / slot-wait after trying every online hub. */
+        /** Remove-reason only: drop from sources (not stored as a bad source). */
         FLAG_UNREACHABLE = 0x800,
         FLAG_MASK = FLAG_FILE_NOT_AVAILABLE
         | FLAG_PASSIVE | FLAG_REMOVED | FLAG_CRC_FAILED | FLAG_CRC_WARN
         | FLAG_BAD_TREE | FLAG_NO_TREE | FLAG_SLOW_SOURCE | FLAG_TTH_INCONSISTENCY | FLAG_UNTRUSTED
-        | FLAG_UNENCRYPTED | FLAG_UNREACHABLE
+        | FLAG_UNENCRYPTED
     };
 
     QueueSource(const HintedUser& aUser) : user(aUser), partialSource(NULL) { }

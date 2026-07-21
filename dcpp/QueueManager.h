@@ -97,6 +97,8 @@ public:
     void removeUserLists() noexcept;
     void removeSource(const string& aTarget, const UserPtr& aUser, int reason, bool removeConn = true) noexcept;
     void removeSource(const UserPtr& aUser, int reason) noexcept;
+    /** Remove seed and NMDC same-peer hub aliases from every unfinished queue item. */
+    void removePeerSources(const HintedUser& peer, int reason) noexcept;
 
     void recheck(const string& aTarget);
 

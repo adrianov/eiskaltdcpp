@@ -97,13 +97,14 @@ void UserQueue::remove(QueueItem* qi, const UserPtr& aUser, bool removeRunning) 
         removeDownload(qi, aUser);
     }
 
-    dcassert(qi->isSource(aUser));
     auto& ulm = userQueue[qi->getPriority()];
     auto j = ulm.find(aUser);
-    dcassert(j != ulm.end());
+    if(j == ulm.end())
+        return;
     auto& l = j->second;
     auto i = find(l.begin(), l.end(), qi);
-    dcassert(i != l.end());
+    if(i == l.end())
+        return;
     l.erase(i);
 
     if(l.empty()) {

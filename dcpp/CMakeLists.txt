@@ -40,6 +40,7 @@ set(DCPP_EXTRA_SOURCES
     ExpectedMap.cpp
     QueueAutoSearch.cpp
     QueueItemSegment.cpp
+    QueueItemProgress.cpp
     SearchQuery.cpp
     SearchManagerUdp.cpp
     SearchManagerResponse.cpp
