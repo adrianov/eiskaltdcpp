@@ -59,15 +59,19 @@ bool ConnectionManager::onDownloadConnectTimeout(ConnectionQueueItem* cqi) {
     cqi->setHubHint(Util::emptyString);
     clearOutgoingConnect(cqi->getUser().user);
 
-    if(dropUnreachableDownload(cqi))
+    if(dropUnreachableDownload(cqi)) {
+        // Clear Transfers "Connecting" before putCQI(Removed); same as timeout path.
+        fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
         return true;
+    }
 
     if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
         markQueueGiveUp(cqi, cqi->getErrors(), false);
     } else {
         PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-        fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
     }
+    // Always Failed so the Transfers row is cleared (give-up used to leave "Connecting").
+    fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
     cqi->setState(ConnectionQueueItem::WAITING);
     return false;
 }

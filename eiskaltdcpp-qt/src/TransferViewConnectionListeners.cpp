@@ -49,6 +49,13 @@ bool offlineOrphan(const QVariantMap &params) {
 } // namespace
 
 void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQueueItem* cqi) noexcept{
+    // Downloads start WAITING; only show a row once CONNECTING/ACTIVE so the list
+    // does not fill with perpetual "Connecting..." while queued for retry.
+    if (cqi->getDownload()
+            && cqi->getState() != dcpp::ConnectionQueueItem::CONNECTING
+            && cqi->getState() != dcpp::ConnectionQueueItem::ACTIVE)
+        return;
+
     VarMap params;
 
     getParams(params, cqi);
@@ -114,6 +121,10 @@ void TransferView::on(dcpp::ConnectionManagerListener::Failed, dcpp::ConnectionQ
 }
 
 void TransferView::on(dcpp::ConnectionManagerListener::StatusChanged, dcpp::ConnectionQueueItem* cqi) noexcept{
+    // Downloads: only CONNECTING creates/updates a row (WAITING would linger as "Connecting...").
+    if (cqi->getDownload() && cqi->getState() != ConnectionQueueItem::CONNECTING)
+        return;
+
     VarMap params;
     getParams(params, cqi);
 
