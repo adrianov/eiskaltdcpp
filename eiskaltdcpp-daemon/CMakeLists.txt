@@ -7,6 +7,20 @@ include_directories(${PROJECT_SOURCE_DIR}
 
 aux_source_directory(${PROJECT_SOURCE_DIR} nasdc_SRCS)
 
+# Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob ever removed.
+set(NASDC_EXTRA_SOURCES
+    ServerThreadQueue.cpp
+    ServerThreadQueueParams.cpp
+)
+foreach(_src ${NASDC_EXTRA_SOURCES})
+    set(_path ${PROJECT_SOURCE_DIR}/${_src})
+    if(NOT EXISTS ${_path})
+        message(FATAL_ERROR "eiskaltdcpp-daemon source missing: ${_src}")
+    elseif(NOT "${_path}" IN_LIST nasdc_SRCS)
+        list(APPEND nasdc_SRCS ${_path})
+    endif()
+endforeach()
+
 if (JSONRPC_DAEMON AND XMLRPC_DAEMON)
     message("   Build both JSONRPC and XMLRPC interfaces is prohibited for now, set XMLRPC_DAEMON=OFF")
     set (XMLRPC_DAEMON OFF CACHE BOOL "Make daemon as xmlrpc server" FORCE)
