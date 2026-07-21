@@ -15,7 +15,6 @@
 #include "ConnectionManager.h"
 #include "CryptoManager.h"
 #include "format.h"
-#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "SettingsManager.h"
 
@@ -75,7 +74,7 @@ void AdcHub::handle(AdcCommand::RCM, AdcCommand& c) noexcept {
     auto* cm = ConnectionManager::getInstance();
     if(!cm->allowOutgoingConnect(u->getUser())) {
         PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
-                _("connect cooldown (recent CTM/RCM)"));
+                _("recent CTM/RCM still in flight"));
         return;
     }
 
@@ -87,7 +86,7 @@ void AdcHub::handle(AdcCommand::RCM, AdcCommand& c) noexcept {
     if(!BOOLSETTING(ALLOW_NATT) || !u->getIdentity().supports(NAT0_FEATURE))
         return;
 
-    cm->noteOutgoingConnect(u->getUser(), PeerConnectFilter::connectBackoffMs(0));
+    cm->noteOutgoingConnect(u->getUser());
     send(AdcCommand(AdcCommand::CMD_NAT, u->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).
          addParam(protocol).addParam(sock->getLocalPort()).addParam(token));
 }

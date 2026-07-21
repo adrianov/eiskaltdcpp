@@ -14,7 +14,6 @@
 #include "ConnectionManager.h"
 #include "format.h"
 #include "LogManager.h"
-#include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "PeerConnectTls.h"
 #include "SettingsManager.h"
@@ -32,7 +31,7 @@ void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool sec
     auto* cm = ConnectionManager::getInstance();
     const string& nick = user.getIdentity().getNick();
     if(!cm->allowOutgoingConnect(user.getUser())) {
-        PeerConnectLog::skip(nick, getHubUrl(), _("connect cooldown (recent CTM/RCM)"));
+        PeerConnectLog::skip(nick, getHubUrl(), _("recent CTM/RCM still in flight"));
         return;
     }
 
@@ -62,11 +61,11 @@ void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool sec
         }
         PeerConnectLog::adcSend(user, "CTM", port + (secure ? " TLS" : ""));
         cm->adcExpect(token, user.getUser());
-        cm->noteOutgoingConnect(user.getUser(), PeerConnectFilter::connectBackoffMs(0));
+        cm->noteOutgoingConnect(user.getUser());
         send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token));
     } else {
         PeerConnectLog::adcSend(user, "RCM", secure ? "TLS" : "ADC");
-        cm->noteOutgoingConnect(user.getUser(), PeerConnectFilter::connectBackoffMs(0));
+        cm->noteOutgoingConnect(user.getUser());
         send(AdcCommand(AdcCommand::CMD_RCM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(token));
     }
 }

@@ -92,12 +92,15 @@ bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const
         return false;
     if(cqi->getErrors() == -1)
         return true;
-    if(connectCooldownActive(cqi->getUser()))
-        return true;
+    // CONNECTING is paced by CONNECT_TIMEOUT_MS, not this backoff.
+    if(cqi->getState() == ConnectionQueueItem::CONNECTING)
+        return false;
     if(cqi->getLastAttempt() == 0)
         return false;
-    return GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(
-            PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits()));
+    const int ms = PeerConnectFilter::queueBackoffMs(cqi->getErrors(), cqi->getSlotWaits());
+    if(ms <= 0)
+        return false;
+    return GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(ms);
 }
 
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {

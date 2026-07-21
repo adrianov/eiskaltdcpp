@@ -114,6 +114,7 @@ HubOutcome get(const UserPtr& user, const string& hub) {
 
 void rememberSuccess(const UserPtr& user, const string& hub) {
     remember(user, hub, SUCCESS);
+    clearConnectTimeouts(user);
 }
 
 void rememberFailure(const UserPtr& user, const string& hub) {

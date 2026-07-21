@@ -68,6 +68,36 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(cqi->getErrors() == -1) {
+                    reviveDownloadQueue(cqi);
+                    if(cqi->getErrors() == -1)
+                        continue;
+                }
+
+                // CONNECTING timeout before WAITING backoff so hub rotate is not delayed.
+                if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
+                    // lastAttempt==0 is invalid while CONNECTING; recover instead of instant timeout.
+                    if(cqi->getLastAttempt() == 0) {
+                        cqi->setLastAttempt(aTick);
+                        continue;
+                    }
+                    if(cqi->getLastAttempt() + PeerConnectFilter::CONNECT_TIMEOUT_MS < aTick) {
+                        cqi->setErrors(cqi->getErrors() + 1);
+                        // Zero lastAttempt: full CONNECTING wait already elapsed — hub-rotate now.
+                        cqi->setLastAttempt(0);
+                        const string timedOutHub = cqi->getUser().hint;
+                        PeerConnectHub::noteConnectTimeout(cqi->getUser().user, timedOutHub);
+                        PeerConnectHub::rememberFailure(cqi->getUser().user, timedOutHub);
+                        // Drop hint so the next resolve does not soft-boost this hub.
+                        cqi->setHubHint(Util::emptyString);
+                        clearOutgoingConnect(cqi->getUser().user);
+                        if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                            markQueueGiveUp(cqi, cqi->getErrors(), false);
+                        } else {
+                            PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
+                            fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
+                        }
+                        cqi->setState(ConnectionQueueItem::WAITING);
+                    }
                     continue;
                 }
 
@@ -77,24 +107,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
                 if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
                     markQueueGiveUp(cqi, cqi->getErrors(), false);
-                    continue;
-                }
-
-                if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
-                    if(cqi->getLastAttempt() + 50 * 1000 < aTick) {
-                        cqi->setErrors(cqi->getErrors() + 1);
-                        cqi->setLastAttempt(aTick);
-                        noteConnectCooldown(cqi->getUser(),
-                                PeerConnectFilter::connectBackoffMs(cqi->getErrors()));
-                        PeerConnectHub::rememberFailure(cqi->getUser().user, cqi->getUser().hint);
-                        if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                            markQueueGiveUp(cqi, cqi->getErrors(), false);
-                        } else {
-                            PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-                            fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
-                        }
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    }
                     continue;
                 }
 
@@ -118,7 +130,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     if(cqi->getState() == ConnectionQueueItem::WAITING) {
                         if(startDown) {
                             cqi->setLastAttempt(aTick);
-                            cqi->setState(ConnectionQueueItem::CONNECTING);
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
 
                             {
@@ -130,13 +141,21 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
                             const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(
                                     cqi->getUser(), cqi->getConnectAttempts());
-                            PeerConnectLog::queueStart(cqi->getUser());
+                            string usedHub;
+                            // Mark CONNECTING only after connect() accepts — otherwise
+                            // allowOutgoingConnect sees our own CQI as "still in flight".
                             if(ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(),
-                                    reverseConnect, cqi->getSecureMode())) {
+                                    reverseConnect, cqi->getSecureMode(), &usedHub)) {
+                                cqi->setState(ConnectionQueueItem::CONNECTING);
+                                if(!usedHub.empty())
+                                    cqi->setHubHint(usedHub);
+                                PeerConnectLog::queueStart(cqi->getUser());
                                 fire(ConnectionManagerListener::StatusChanged(), cqi);
                                 attemptDone = true;
                             } else {
-                                cqi->setState(ConnectionQueueItem::WAITING);
+                                // Stay WAITING; keep lastAttempt for queueBackoffMs pacing.
+                                if(cqi->getConnectAttempts() > 0)
+                                    cqi->setConnectAttempts(cqi->getConnectAttempts() - 1);
                             }
                         } else {
                             cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);

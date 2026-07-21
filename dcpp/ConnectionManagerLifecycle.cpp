@@ -12,7 +12,6 @@
 
 #include "Client.h"
 #include "ClientManager.h"
-#include "PeerConnectFilter.h"
 #include "UserConnection.h"
 
 namespace dcpp {
@@ -41,11 +40,12 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
         auto i = find(downloads.begin(), downloads.end(), user);
         if(i != downloads.end()) {
             (*i)->setErrors(-1);
+            (*i)->setLastAttempt(GET_TICK());
             if((*i)->getState() == ConnectionQueueItem::CONNECTING)
                 (*i)->setState(ConnectionQueueItem::WAITING);
         }
     }
-    noteConnectCooldown(user, PeerConnectFilter::GIVE_UP_COOLDOWN_MS);
+    clearOutgoingConnect(user);
     disconnect(user);
 }
 

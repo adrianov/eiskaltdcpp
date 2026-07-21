@@ -164,11 +164,12 @@ void ConnectionManager::on(AdcCommand::STA, UserConnection*, const AdcCommand&) 
 
 void ConnectionManager::force(const UserPtr& aUser) {
     Lock l(cs);
-    clearConnectCooldown(aUser);
     auto i = find(downloads.begin(), downloads.end(), aUser);
     if(i != downloads.end()) {
-        reviveDownloadQueue(*i);
+        reviveDownloadQueue(*i, true);
         (*i)->setLastAttempt(0);
+    } else {
+        clearOutgoingConnect(aUser);
     }
 }
 

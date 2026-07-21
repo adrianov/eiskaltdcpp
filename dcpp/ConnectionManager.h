@@ -47,15 +47,17 @@ public:
     void force(const UserPtr& aUser);
     void onUpnpReady();
 
-    /** False while a per-user outgoing-connect cooldown is active (survives CQI churn). */
+    /** False while a short CTM latch is active or a download CQI is CONNECTING. */
     bool allowOutgoingConnect(const UserPtr& user) const;
     /** True when a download CQI exists for the user (connecting, waiting, or active). */
     bool isQueuedForDownload(const UserPtr& user) const;
     /** Snapshot of users with a live download CQI (caller must not hold QueueManager::cs). */
     QueuedDownloadUsers queuedDownloadUsers() const;
-    /** Arm CTM/RCM anti-spam cooldown (does not count as a failure strike). */
-    void noteOutgoingConnect(const UserPtr& user, int minBackoffMs);
-    /** Clear CTM cooldown after a real download starts (peer granted a slot). */
+    /** Arm short CTM/RCM latch (RevConnect / upload-notify anti-spam). */
+    void noteOutgoingConnect(const UserPtr& user);
+    /** Clear CTM latch. */
+    void clearOutgoingConnect(const UserPtr& user);
+    /** Peer granted a download slot: mark CQI and clear CTM latch. */
     void clearOutgoingStrikes(const UserPtr& user);
     /** MaxedOut: next close should use slot-wait backoff, not between-files retry. */
     void forgetDownloadSlot(const UserPtr& user);
@@ -109,13 +111,9 @@ private:
     ExpectedMap expectedConnections;
     std::unordered_multimap<string, std::pair<UserPtr, uint64_t>> adcExpected;
 
-    /** Next allowed outgoing connect tick + strike count (list-peer-keyed, CQI-independent). */
-    struct ConnectCooldown {
-        uint64_t until = 0;
-        int strikes = 0;
-    };
+    /** Short CTM/RCM latch until tick (list-peer-keyed; not download retry policy). */
     mutable CriticalSection cooldownCs;
-    unordered_map<string, ConnectCooldown> connectCooldown;
+    unordered_map<string, uint64_t> ctmLatch;
 
     uint32_t floodCounter;
     unordered_set<string> hubsBlockingCC;
@@ -146,11 +144,6 @@ private:
     ConnectionQueueItem* findDownloadCqiForHub(const string& hubUrl, const CID& wireCid) const;
     bool slotWaitActive(const ConnectionQueueItem* cqi) const;
     bool queueBackoffActive(const ConnectionQueueItem* cqi) const;
-    bool connectCooldownActive(const HintedUser& user) const;
-    bool connectCooldownActive(const UserPtr& user) const;
-    void noteConnectCooldown(const HintedUser& user, int minBackoffMs);
-    void noteConnectCooldown(const UserPtr& user, int minBackoffMs);
-    void clearConnectCooldown(const UserPtr& user);
     static void mergeQueueState(ConnectionQueueItem* keep, const ConnectionQueueItem* other);
 
     bool checkKeyprint(UserConnection *aSource);
@@ -161,7 +154,7 @@ private:
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
     void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
     void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait);
-    void reviveDownloadQueue(ConnectionQueueItem* cqi);
+    void reviveDownloadQueue(ConnectionQueueItem* cqi, bool forced = false);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
 

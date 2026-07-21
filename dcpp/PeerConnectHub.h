@@ -25,6 +25,10 @@ enum HubOutcome {
 HubOutcome get(const UserPtr& user, const string& hub);
 void rememberSuccess(const UserPtr& user, const string& hub);
 void rememberFailure(const UserPtr& user, const string& hub);
+/** Session list: hubs where $ConnectToMe timed out; skipped until all are listed. */
+void noteConnectTimeout(const UserPtr& user, const string& hub);
+bool isConnectTimeoutHub(const UserPtr& user, const string& hub);
+void clearConnectTimeouts(const UserPtr& user);
 void sortSources(HintedUserList& sources);
 void load();
 void save();

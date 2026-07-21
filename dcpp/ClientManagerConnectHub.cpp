@@ -41,51 +41,72 @@ string ClientManager::resolveHubHint(const UserPtr& user, const string& hint) {
 
 OnlineUser* ClientManager::findBestOnlineUser(const CID& cid, const string& hintUrl, bool priv) {
     Lock l(cs);
-    OnlineUser* best = nullptr;
-    int bestScore = -1;
-
     OnlinePairC op = onlineUsers.equal_range(cid);
-    for(auto i = op.first; i != op.second; ++i) {
-        OnlineUser* u = i->second;
-        if(!PeerConnectFilter::isViablePeer(*u))
-            continue;
+    OnlineUser* anyViable = nullptr;
+    bool sawTimeoutSkip = false;
 
-        int score = 0;
-        const string& hub = u->getClient().getHubUrl();
-        if(!hintUrl.empty() && hub == hintUrl)
-            score += 10;
+    auto pick = [&](bool skipTimeouts) -> OnlineUser* {
+        OnlineUser* best = nullptr;
+        int bestScore = 0;
+        bool haveBest = false;
+        for(auto i = op.first; i != op.second; ++i) {
+            OnlineUser* u = i->second;
+            if(!PeerConnectFilter::isViablePeer(*u))
+                continue;
+            if(!anyViable)
+                anyViable = u;
 
-        switch(PeerConnectHub::get(u->getUser(), hub)) {
-        case PeerConnectHub::SUCCESS: score += 20; break;
-        case PeerConnectHub::FAILURE: score -= 10; break;
-        default: break;
+            const string& hub = u->getClient().getHubUrl();
+            if(skipTimeouts && PeerConnectHub::isConnectTimeoutHub(u->getUser(), hub)) {
+                sawTimeoutSkip = true;
+                continue;
+            }
+
+            int score = 0;
+            if(!hintUrl.empty() && hub == hintUrl)
+                score += 10;
+
+            switch(PeerConnectHub::get(u->getUser(), hub)) {
+            case PeerConnectHub::SUCCESS: score += 20; break;
+            case PeerConnectHub::FAILURE: score -= 10; break;
+            default: break;
+            }
+
+            const string c = u->getIdentity().getApplication();
+            if(!c.empty() && c != "?")
+                score += 5;
+
+            if(!isActive(hub) && u->getUser()->isSet(User::PASSIVE)) {
+                score += 2;
+                if(PeerConnectFilter::prefersRevConnect(*u))
+                    score += 3;
+            } else if(isActive(hub)) {
+                score += 1;
+            }
+
+            if(!haveBest || score > bestScore) {
+                best = u;
+                bestScore = score;
+                haveBest = true;
+            }
         }
-
-        const string c = u->getIdentity().getApplication();
-        if(!c.empty() && c != "?")
-            score += 5;
-
-        if(!isActive(hub) && u->getUser()->isSet(User::PASSIVE)) {
-            score += 2;
-            if(PeerConnectFilter::prefersRevConnect(*u))
-                score += 3;
-        } else if(isActive(hub)) {
-            score += 1;
-        }
-
-        if(score > bestScore) {
-            best = u;
-            bestScore = score;
-        }
-    }
-
-    if(best)
         return best;
+    };
+
+    if(OnlineUser* best = pick(true))
+        return best;
+
+    // Every online hub timed out — clear the list and start again.
+    if(sawTimeoutSkip && anyViable) {
+        PeerConnectHub::clearConnectTimeouts(anyViable->getUser());
+        if(OnlineUser* best = pick(false))
+            return best;
+    }
 
     if(priv)
         return nullptr;
 
-    return op.first != op.second ? op.first->second : nullptr;
+    return anyViable;
 }
 
 } // namespace dcpp

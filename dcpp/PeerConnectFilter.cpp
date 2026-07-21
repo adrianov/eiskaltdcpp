@@ -92,22 +92,19 @@ bool shouldGiveUpSlotWait(int slotWaits) {
     return slotWaits >= MAX_SLOT_WAITS;
 }
 
-int connectBackoffMs(int errors) {
-    if(errors <= 0)
-        return 60 * 1000;
-    return 60 * 1000 * min(errors, MAX_CONNECT_ERRORS);
-}
-
 int slotWaitBackoffMs(int slotWaits) {
     if(slotWaits <= 0)
         return 0;
     return min(SLOT_WAIT_BASE_MS * slotWaits, 30 * 60 * 1000);
 }
 
-int queueBackoffMs(int errors, int slotWaits) {
-    int ms = connectBackoffMs(errors);
+int queueBackoffMs(int /*errors*/, int slotWaits) {
     const int slotMs = slotWaitBackoffMs(slotWaits);
-    return slotMs > ms ? slotMs : ms;
+    if(slotMs > 0)
+        return slotMs;
+    // Minimum gap after a failed/aborted attempt. CONNECTING timeout clears
+    // lastAttempt so the next hub can be tried immediately after a full wait.
+    return CONNECT_TIMEOUT_MS;
 }
 
 bool shouldLogTimeout(int errors) {

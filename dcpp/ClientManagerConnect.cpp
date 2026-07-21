@@ -34,7 +34,11 @@ void ClientManager::markFakeActive(OnlineUser& ou) {
     PeerConnectLog::fakeActiveRetry(ou);
 }
 
-bool ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode) {
+bool ClientManager::connect(const HintedUser& user, const string& token, bool reverseConnect, int secureMode,
+        string* usedHub) {
+    if(usedHub)
+        usedHub->clear();
+
     if(!MappingManager::getInstance()->readyForPeerConnect()) {
         dcdebug("ClientManager::connect deferred: waiting for UPnP port mapping\n");
         return false;
@@ -57,9 +61,11 @@ bool ClientManager::connect(const HintedUser& user, const string& token, bool re
 
     if(u) {
         if(!ConnectionManager::getInstance()->allowOutgoingConnect(u->getUser())) {
-            PeerConnectLog::skip(getNickOrCid(user), user.hint, _("connect cooldown (recent $ConnectToMe)"));
+            PeerConnectLog::skip(getNickOrCid(user), user.hint, _("recent $ConnectToMe still in flight"));
             return false;
         }
+        if(usedHub)
+            *usedHub = u->getClient().getHubUrl();
         u->getClient().connect(*u, token, reverseConnect, secureMode);
         return true;
     }

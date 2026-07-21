@@ -70,8 +70,12 @@ QueuedDownloadUsers ConnectionManager::queuedDownloadUsers() const {
 void ConnectionManager::onUpnpReady() {
     Lock l(cs);
     for(auto& cqi : downloads) {
-        // Do not wipe slot-wait / error backoff when UPnP remaps.
-        if(cqi->getState() != ConnectionQueueItem::ACTIVE && !queueBackoffActive(cqi))
+        // Only nudge WAITING items; never reset CONNECTING lastAttempt (that
+        // made CONNECT_TIMEOUT_MS compare against 0 and fire immediately).
+        if(cqi->getState() != ConnectionQueueItem::WAITING &&
+                cqi->getState() != ConnectionQueueItem::NO_DOWNLOAD_SLOTS)
+            continue;
+        if(!queueBackoffActive(cqi))
             cqi->setLastAttempt(0);
     }
 }

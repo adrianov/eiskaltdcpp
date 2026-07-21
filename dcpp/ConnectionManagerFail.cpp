@@ -70,20 +70,20 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
     else
         PeerConnectLog::queueGiveUp(cqi->getUser(), attempts);
     cqi->setErrors(-1);
-    noteConnectCooldown(cqi->getUser(), PeerConnectFilter::GIVE_UP_COOLDOWN_MS);
+    cqi->setLastAttempt(GET_TICK());
 }
 
-void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi) {
+void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi, bool forced) {
     if(!cqi || cqi->getErrors() != -1)
         return;
-    // Keep give-up until sticky cooldown expires (or force clears it first).
-    if(connectCooldownActive(cqi->getUser()))
+    if(!forced && cqi->getLastAttempt() != 0 &&
+            GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(PeerConnectFilter::GIVE_UP_COOLDOWN_MS))
         return;
     cqi->setErrors(0);
     cqi->setSlotWaits(0);
     cqi->setLastAttempt(0);
     cqi->setConnectAttempts(0);
-    clearConnectCooldown(cqi->getUser().user);
+    clearOutgoingConnect(cqi->getUser().user);
 }
 
 void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
@@ -96,9 +96,14 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
 
     const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool postClose = isPostHandshakeClose(aSource->getState()) && !protocolError;
-    // Peer drop after a granted slot (e.g. between files) is a soft retry, not slot-wait.
-    const bool betweenFiles = postClose && dlCqi->getGrantedSlot();
-    const bool slotWait = postClose && !betweenFiles;
+    const bool hadSlot = dlCqi->getGrantedSlot();
+    // Peer already uploaded at least one file on this socket, then dropped while
+    // idle or while we asked for the next file — reconnect for the rest without
+    // counting toward give-up. Latch (if still armed) paces quick fail loops.
+    const bool softReconnect = hadSlot && !protocolError &&
+            (aSource->getState() == UserConnection::STATE_IDLE ||
+             aSource->getState() == UserConnection::STATE_SND);
+    const bool slotWait = postClose && !protocolError && !hadSlot;
     dlCqi->setGrantedSlot(false);
 
     if(!tlsMismatch)
@@ -108,34 +113,29 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         dlCqi->setSlotWaits(dlCqi->getSlotWaits() + 1);
         dlCqi->setLastAttempt(GET_TICK());
         const int backoffMs = PeerConnectFilter::slotWaitBackoffMs(dlCqi->getSlotWaits());
-        noteConnectCooldown(dlCqi->getUser(), backoffMs);
         PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMs / (60 * 1000));
         if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
             markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
-    } else if(betweenFiles) {
+    } else if(softReconnect) {
         dlCqi->setLastAttempt(0);
-        clearConnectCooldown(dlCqi->getUser().user);
     } else if(tlsMismatch) {
         PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
         dlCqi->setErrors(dlCqi->getErrors() + 1);
         dlCqi->setLastAttempt(GET_TICK());
-        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
             markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     } else if(protocolError) {
         dlCqi->setErrors(-1);
         dlCqi->setLastAttempt(GET_TICK());
-        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::GIVE_UP_COOLDOWN_MS);
     } else {
         dlCqi->setErrors(dlCqi->getErrors() + 1);
         dlCqi->setLastAttempt(GET_TICK());
-        noteConnectCooldown(dlCqi->getUser(), PeerConnectFilter::connectBackoffMs(dlCqi->getErrors()));
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
             markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);
-    if(!slotWait && !betweenFiles) {
+    if(!slotWait && !softReconnect) {
         const string hub = (aSource && !aSource->getHubUrl().empty()) ? aSource->getHubUrl()
                 : dlCqi->getUser().hint;
         PeerConnectHub::rememberFailure(dlCqi->getUser().user, hub);

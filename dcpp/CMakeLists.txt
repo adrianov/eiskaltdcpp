@@ -90,6 +90,7 @@ set(DCPP_EXTRA_SOURCES
     HubReconnectFilter.cpp
     PeerConnectTls.cpp
     PeerConnectHub.cpp
+    PeerConnectHubSkip.cpp
     DownloadManagerSlots.cpp
     DownloadManagerSlotFail.cpp
     DownloadManagerTimer.cpp

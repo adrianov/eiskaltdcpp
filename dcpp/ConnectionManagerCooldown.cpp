@@ -26,82 +26,72 @@ HintedUser resolveUser(const UserPtr& user) {
     return HintedUser(user, ClientManager::getInstance()->resolveHubHint(user, Util::emptyString));
 }
 
-} // namespace
-
-bool ConnectionManager::connectCooldownActive(const HintedUser& user) const {
+bool latchActive(const unordered_map<string, uint64_t>& latch, const HintedUser& user) {
     if(!user.user)
         return false;
     std::unordered_set<string> keys;
     collectListPeerKeys(user, keys);
-    Lock l(cooldownCs);
+    const uint64_t now = GET_TICK();
     for(const auto& key : keys) {
-        auto i = connectCooldown.find(key);
-        if(i != connectCooldown.end() && GET_TICK() < i->second.until)
+        auto i = latch.find(key);
+        if(i != latch.end() && now < i->second)
             return true;
     }
     return false;
 }
 
-bool ConnectionManager::connectCooldownActive(const UserPtr& user) const {
-    if(!user)
-        return false;
-    return connectCooldownActive(resolveUser(user));
+void latchArm(unordered_map<string, uint64_t>& latch, const HintedUser& user, int ms) {
+    if(!user.user || ms <= 0)
+        return;
+    std::unordered_set<string> keys;
+    collectListPeerKeys(user, keys);
+    const uint64_t until = GET_TICK() + static_cast<uint64_t>(ms);
+    for(const auto& key : keys) {
+        auto& slot = latch[key];
+        if(until > slot)
+            slot = until;
+    }
 }
 
-void ConnectionManager::noteConnectCooldown(const HintedUser& user, int minBackoffMs) {
+void latchClear(unordered_map<string, uint64_t>& latch, const HintedUser& user) {
     if(!user.user)
         return;
     std::unordered_set<string> keys;
     collectListPeerKeys(user, keys);
-    Lock l(cooldownCs);
-    for(const auto& key : keys) {
-        auto& e = connectCooldown[key];
-        e.strikes = min(e.strikes + 1, PeerConnectFilter::MAX_CONNECT_ERRORS);
-        const int wait = max(minBackoffMs, PeerConnectFilter::connectBackoffMs(e.strikes));
-        const uint64_t until = GET_TICK() + static_cast<uint64_t>(wait);
-        if(until > e.until)
-            e.until = until;
-    }
-}
-
-void ConnectionManager::noteConnectCooldown(const UserPtr& user, int minBackoffMs) {
-    if(!user)
-        return;
-    noteConnectCooldown(resolveUser(user), minBackoffMs);
-}
-
-void ConnectionManager::clearConnectCooldown(const UserPtr& user) {
-    if(!user)
-        return;
-    std::unordered_set<string> keys;
-    collectListPeerKeys(resolveUser(user), keys);
-    Lock l(cooldownCs);
     for(const auto& key : keys)
-        connectCooldown.erase(key);
+        latch.erase(key);
 }
+
+} // namespace
 
 bool ConnectionManager::allowOutgoingConnect(const UserPtr& user) const {
-    return !connectCooldownActive(user);
+    if(!user)
+        return false;
+    // Lock order: cs then cooldownCs (same as fail / force / timer paths).
+    const HintedUser hinted = resolveUser(user);
+    Lock l(cs);
+    if(peerConnectInFlight(hinted))
+        return false;
+    Lock l2(cooldownCs);
+    return !latchActive(ctmLatch, hinted);
 }
 
-void ConnectionManager::noteOutgoingConnect(const UserPtr& user, int minBackoffMs) {
-    // Anti-spam only: arm until without counting a failure strike.
-    if(!user || minBackoffMs <= 0)
+void ConnectionManager::noteOutgoingConnect(const UserPtr& user) {
+    if(!user)
         return;
-    std::unordered_set<string> keys;
-    collectListPeerKeys(resolveUser(user), keys);
     Lock l(cooldownCs);
-    const uint64_t until = GET_TICK() + static_cast<uint64_t>(minBackoffMs);
-    for(const auto& key : keys) {
-        auto& e = connectCooldown[key];
-        if(until > e.until)
-            e.until = until;
-    }
+    latchArm(ctmLatch, resolveUser(user), PeerConnectFilter::CTM_LATCH_MS);
+}
+
+void ConnectionManager::clearOutgoingConnect(const UserPtr& user) {
+    if(!user)
+        return;
+    Lock l(cooldownCs);
+    latchClear(ctmLatch, resolveUser(user));
 }
 
 void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
-    // Peer granted a slot: drop CTM anti-spam so the next file can reconnect
-    // immediately. Failure / slot-wait paths re-arm backoff separately.
+    // Peer granted a download slot: allow an immediate follow-up CTM if needed.
     if(!user)
         return;
     const HintedUser hinted = resolveUser(user);
@@ -110,7 +100,7 @@ void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
         if(auto* cqi = findDownloadCqi(hinted))
             cqi->setGrantedSlot(true);
     }
-    clearConnectCooldown(user);
+    clearOutgoingConnect(user);
 }
 
 void ConnectionManager::forgetDownloadSlot(const UserPtr& user) {

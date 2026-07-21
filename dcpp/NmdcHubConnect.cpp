@@ -118,7 +118,7 @@ void NmdcHub::onRevConnectToMe(const string& param) {
     if(isActive()) {
         if(!cm->allowOutgoingConnect(u->getUser())) {
             PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
-                    _("connect cooldown (recent $ConnectToMe)"));
+                    _("recent $ConnectToMe still in flight"));
             return;
         }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, replying with $ConnectToMe");
@@ -126,13 +126,13 @@ void NmdcHub::onRevConnectToMe(const string& param) {
     } else if(BOOLSETTING(ALLOW_NATT) && u->getUser()->isSet(User::NAT_TRAVERSAL)) {
         if(!cm->allowOutgoingConnect(u->getUser())) {
             PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
-                    _("connect cooldown (recent $ConnectToMe)"));
+                    _("recent $ConnectToMe still in flight"));
             return;
         }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
         bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(PeerConnectTls::AUTO, *u);
         cm->nmdcExpect(u->getIdentity().getNick(), getMyNick(), getHubUrl());
-        cm->noteOutgoingConnect(u->getUser(), PeerConnectFilter::connectBackoffMs(0));
+        cm->noteOutgoingConnect(u->getUser());
         send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
