@@ -13,11 +13,7 @@
 #include "ClientManager.h"
 #include "Encoder.h"
 #include "LogManager.h"
-#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
-#include "PeerConnectFilter.h"
-#include "PeerConnectTls.h"
-#include "QueueManager.h"
 #include "UserConnection.h"
 #include "format.h"
 
@@ -53,125 +49,6 @@ bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
     }
 
     return true;
-}
-
-namespace {
-
-bool isPostHandshakeClose(UserConnection::States s) {
-    return s == UserConnection::STATE_SND || s == UserConnection::STATE_IDLE ||
-           s == UserConnection::STATE_GET || s == UserConnection::STATE_SEND;
-}
-
-} // namespace
-
-void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait) {
-    if(slotWait)
-        PeerConnectLog::queueSlotWaitGiveUp(cqi->getUser(), attempts);
-    else
-        PeerConnectLog::queueGiveUp(cqi->getUser(), attempts);
-    cqi->setErrors(-1);
-    cqi->setLastAttempt(GET_TICK());
-}
-
-void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi, bool forced) {
-    if(!cqi || cqi->getErrors() != -1)
-        return;
-    if(!forced && cqi->getLastAttempt() != 0 &&
-            GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(PeerConnectFilter::GIVE_UP_COOLDOWN_MS))
-        return;
-    cqi->setErrors(0);
-    cqi->setSlotWaits(0);
-    cqi->setLastAttempt(0);
-    cqi->setConnectAttempts(0);
-    clearOutgoingConnect(cqi->getUser().user);
-}
-
-void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError) {
-    // Nothing left to fetch (e.g. file list just finished): drop instead of
-    // slot-wait / Failed UI that would stick as "Connection closed".
-    if(QueueManager::getInstance()->hasDownload(dlCqi->getUser()) == QueueItem::PAUSED) {
-        putCQI(dlCqi);
-        return;
-    }
-
-    const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
-    const bool postClose = isPostHandshakeClose(aSource->getState()) && !protocolError;
-    const bool hadSlot = dlCqi->getGrantedSlot();
-    // Peer already uploaded at least one file on this socket, then dropped while
-    // idle or while we asked for the next file — reconnect for the rest without
-    // counting toward give-up. Latch (if still armed) paces quick fail loops.
-    const bool softReconnect = hadSlot && !protocolError &&
-            (aSource->getState() == UserConnection::STATE_IDLE ||
-             aSource->getState() == UserConnection::STATE_SND);
-    const bool slotWait = postClose && !protocolError && !hadSlot;
-    dlCqi->setGrantedSlot(false);
-
-    if(!tlsMismatch)
-        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
-
-    if(slotWait) {
-        dlCqi->setSlotWaits(dlCqi->getSlotWaits() + 1);
-        dlCqi->setLastAttempt(GET_TICK());
-        const int backoffMs = PeerConnectFilter::slotWaitBackoffMs(dlCqi->getSlotWaits());
-        PeerConnectLog::queueSlotWait(dlCqi->getUser(), dlCqi->getSlotWaits(), backoffMs / (60 * 1000));
-        if(PeerConnectFilter::shouldGiveUpSlotWait(dlCqi->getSlotWaits()))
-            markQueueGiveUp(dlCqi, dlCqi->getSlotWaits(), true);
-    } else if(softReconnect) {
-        dlCqi->setLastAttempt(0);
-    } else if(tlsMismatch) {
-        PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
-        dlCqi->setErrors(dlCqi->getErrors() + 1);
-        dlCqi->setLastAttempt(GET_TICK());
-        if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
-    } else if(protocolError) {
-        dlCqi->setErrors(-1);
-        dlCqi->setLastAttempt(GET_TICK());
-    } else {
-        dlCqi->setErrors(dlCqi->getErrors() + 1);
-        dlCqi->setLastAttempt(GET_TICK());
-        if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
-    }
-
-    dlCqi->setState(ConnectionQueueItem::WAITING);
-    if(!slotWait && !softReconnect) {
-        const string hub = (aSource && !aSource->getHubUrl().empty()) ? aSource->getHubUrl()
-                : dlCqi->getUser().hint;
-        PeerConnectHub::rememberFailure(dlCqi->getUser().user, hub);
-    }
-    fire(ConnectionManagerListener::Failed(), dlCqi, aError);
-}
-
-void ConnectionManager::failed(UserConnection* aSource, const string& aError, bool protocolError) {
-    Lock l(cs);
-
-    ConnectionQueueItem::Ptr dlCqi = nullptr;
-    if(aSource->getUser()) {
-        auto i = find(downloads.begin(), downloads.end(), aSource->getUser());
-        dlCqi = i != downloads.end() ? *i : findDownloadCqi(aSource->getHintedUser());
-    }
-
-    const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
-    const bool slotWait = isPostHandshakeClose(aSource->getState()) && !protocolError;
-
-    if(dlCqi && aSource->getUser() && !slotWait) {
-        if(!protocolError || (tlsMismatch && PeerConnectFilter::shouldLogTimeout(dlCqi->getErrors() + 1)))
-            PeerConnectLog::connectionFail(aSource, aError, protocolError);
-    }
-
-    if(aSource->isSet(UserConnection::FLAG_ASSOCIATED)) {
-        if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {
-            failDownloadQueue(dlCqi, aSource, aError, protocolError);
-        } else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
-            auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
-            if(i != uploads.end())
-                putCQI(*i);
-        }
-    } else if(dlCqi && aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
-        failDownloadQueue(dlCqi, aSource, aError, protocolError);
-    }
-    putConnection(aSource);
 }
 
 bool ConnectionManager::checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl)

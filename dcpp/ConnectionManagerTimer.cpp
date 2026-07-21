@@ -15,7 +15,6 @@
 #include "DownloadManager.h"
 #include "MappingManager.h"
 #include "PeerConnectFilter.h"
-#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
 
@@ -23,6 +22,7 @@ namespace dcpp {
 
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
     UserList passiveUsers;
+    UserList unreachableUsers;
     ConnectionQueueItem::List removed;
 
     {
@@ -45,6 +45,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
                             alias->getState() == ConnectionQueueItem::CONNECTING)) {
                         mergeQueueState(alias, cqi);
+                        removed.push_back(cqi);
+                        continue;
+                    }
+                    // Only skipped hubs still online (others left) — drop as unreachable.
+                    if(dropUnreachableDownload(cqi)) {
+                        unreachableUsers.push_back(cqi->getUser());
                         removed.push_back(cqi);
                         continue;
                     }
@@ -81,22 +87,10 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                         continue;
                     }
                     if(cqi->getLastAttempt() + PeerConnectFilter::CONNECT_TIMEOUT_MS < aTick) {
-                        cqi->setErrors(cqi->getErrors() + 1);
-                        // Zero lastAttempt: full CONNECTING wait already elapsed — hub-rotate now.
-                        cqi->setLastAttempt(0);
-                        const string timedOutHub = cqi->getUser().hint;
-                        PeerConnectHub::noteConnectTimeout(cqi->getUser().user, timedOutHub);
-                        PeerConnectHub::rememberFailure(cqi->getUser().user, timedOutHub);
-                        // Drop hint so the next resolve does not soft-boost this hub.
-                        cqi->setHubHint(Util::emptyString);
-                        clearOutgoingConnect(cqi->getUser().user);
-                        if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                            markQueueGiveUp(cqi, cqi->getErrors(), false);
-                        } else {
-                            PeerConnectLog::queueTimeout(cqi->getUser(), cqi->getErrors());
-                            fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
+                        if(onDownloadConnectTimeout(cqi)) {
+                            unreachableUsers.push_back(cqi->getUser());
+                            removed.push_back(cqi);
                         }
-                        cqi->setState(ConnectionQueueItem::WAITING);
                     }
                     continue;
                 }
@@ -176,6 +170,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
     for(auto& ui : passiveUsers) {
         QueueManager::getInstance()->removeSource(ui, QueueItem::Source::FLAG_PASSIVE);
+    }
+    for(auto& ui : unreachableUsers) {
+        QueueManager::getInstance()->removeSource(ui, QueueItem::Source::FLAG_UNREACHABLE);
     }
 }
 

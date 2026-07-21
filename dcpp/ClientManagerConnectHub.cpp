@@ -96,8 +96,11 @@ OnlineUser* ClientManager::findBestOnlineUser(const CID& cid, const string& hint
     if(OnlineUser* best = pick(true))
         return best;
 
-    // Every online hub timed out — clear the list and start again.
+    // Every online hub timed out. Rotate only if the peer was reached at least once
+    // (IP / slot-wait / download); otherwise leave skips so the timer can drop them.
     if(sawTimeoutSkip && anyViable) {
+        if(!PeerConnectHub::wasPeerReached(anyViable->getUser()))
+            return nullptr;
         PeerConnectHub::clearConnectTimeouts(anyViable->getUser());
         if(OnlineUser* best = pick(false))
             return best;
@@ -106,6 +109,23 @@ OnlineUser* ClientManager::findBestOnlineUser(const CID& cid, const string& hint
     if(priv)
         return nullptr;
 
+    return anyViable;
+}
+
+bool ClientManager::allHubsConnectTimedOut(const UserPtr& user) {
+    if(!user)
+        return false;
+    Lock l(cs);
+    OnlinePairC op = onlineUsers.equal_range(user->getCID());
+    bool anyViable = false;
+    for(auto i = op.first; i != op.second; ++i) {
+        OnlineUser* u = i->second;
+        if(!PeerConnectFilter::isViablePeer(*u))
+            continue;
+        anyViable = true;
+        if(!PeerConnectHub::isConnectTimeoutHub(user, u->getClient().getHubUrl()))
+            return false;
+    }
     return anyViable;
 }
 

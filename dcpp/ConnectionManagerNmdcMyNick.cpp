@@ -12,6 +12,7 @@
 
 #include "ClientManager.h"
 #include "CryptoManager.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "UserConnection.h"
 
@@ -106,6 +107,8 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
         if(matchedCqi) {
             aSource->setUser(matchedCqi->getUser());
             aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
+            // Inbound connect (active CTM) — peer reached us; no outgoing nmdcConnect.
+            PeerConnectHub::notePeerReached(matchedCqi->getUser().user);
         }
     }
 

@@ -13,6 +13,7 @@
 #include "ClientManager.h"
 #include "ConnectionManagerPeerMatch.h"
 #include "PeerConnectFilter.h"
+#include "PeerConnectHub.h"
 
 #include <unordered_set>
 
@@ -106,6 +107,7 @@ void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
 void ConnectionManager::forgetDownloadSlot(const UserPtr& user) {
     if(!user)
         return;
+    PeerConnectHub::notePeerReached(user);
     const HintedUser hinted = resolveUser(user);
     Lock l(cs);
     if(auto* cqi = findDownloadCqi(hinted))

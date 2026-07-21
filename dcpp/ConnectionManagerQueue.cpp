@@ -12,6 +12,7 @@
 #include "ConnectionManager.h"
 
 #include "MappingManager.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 
 namespace dcpp {
@@ -35,8 +36,12 @@ ConnectionQueueItem* ConnectionManager::getCQI(const HintedUser& user, bool down
 void ConnectionManager::putCQI(ConnectionQueueItem* cqi) {
     fire(ConnectionManagerListener::Removed(), cqi);
     if(cqi->getDownload()) {
+        const UserPtr user = cqi->getUser().user;
         dcassert(find(downloads.begin(), downloads.end(), cqi) != downloads.end());
         downloads.erase(remove(downloads.begin(), downloads.end(), cqi), downloads.end());
+        const bool stillQueued = find(downloads.begin(), downloads.end(), user) != downloads.end();
+        if(!stillQueued)
+            PeerConnectHub::clearPeerSession(user);
     } else {
         dcassert(find(uploads.begin(), uploads.end(), cqi) != uploads.end());
         uploads.erase(remove(uploads.begin(), uploads.end(), cqi), uploads.end());

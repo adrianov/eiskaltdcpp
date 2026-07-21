@@ -99,6 +99,11 @@ void queueTimeout(const HintedUser& user, int errors) {
     logMsg(withProfile(user, str(F_("Connection timeout for %1% (attempt %2%)") % userName(user) % errors)));
 }
 
+void queueUnreachable(const HintedUser& user) {
+    logMsg(withProfile(user, str(F_("Peer %1% unreachable on all hubs — removed from download queue sources")
+            % userName(user))));
+}
+
 void queueGiveUp(const HintedUser& user, int errors) {
     logMsg(withProfile(user, str(F_("Giving up connection to %1% after %2% failed attempts") % userName(user) % errors)));
 }

@@ -111,6 +111,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerPeerMatch.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
+    ConnectionManagerFailQueue.cpp
     ConnectionManagerNmdcHandshake.cpp
     ConnectionManagerNmdcMyNick.cpp
     ConnectionManagerAssoc.cpp

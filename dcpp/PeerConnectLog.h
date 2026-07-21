@@ -21,6 +21,7 @@ namespace PeerConnectLog {
 void queueAdded(const HintedUser& user);
 void queueStart(const HintedUser& user);
 void queueTimeout(const HintedUser& user, int errors);
+void queueUnreachable(const HintedUser& user);
 void queueGiveUp(const HintedUser& user, int errors);
 void queueSlotWaitGiveUp(const HintedUser& user, int slotWaits);
 void queueSlotWait(const HintedUser& user, int slotWaits, int backoffMin);

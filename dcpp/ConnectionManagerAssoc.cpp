@@ -76,6 +76,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
                 fire(ConnectionManagerListener::Connected(), cqi);
 
                 const string hub = !uc->getHubUrl().empty() ? uc->getHubUrl() : cqi->getUser().hint;
+                PeerConnectHub::notePeerReached(cqi->getUser().user);
                 PeerConnectHub::rememberSuccess(cqi->getUser().user, hub);
                 PeerConnectLog::connected(cqi->getUser(), true);
                 dcdebug("ConnectionManager::addDownloadConnection, leaving to downloadmanager\n");

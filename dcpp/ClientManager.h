@@ -155,6 +155,8 @@ public:
             int secureMode = PeerConnectTls::AUTO, string* usedHub = nullptr);
     void stopConnect(const HintedUser& user);
     OnlineUser* findBestOnlineUser(const CID& cid, const string& hintUrl, bool priv);
+    /** True when every viable online hub for the peer is in the connect-timeout skip list. */
+    bool allHubsConnectTimedOut(const UserPtr& user);
     void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
     void userCommand(const HintedUser& user, const UserCommand& uc, ParamMap& params, bool compatibility);
     int getMode(const string& aHubUrl) const;
