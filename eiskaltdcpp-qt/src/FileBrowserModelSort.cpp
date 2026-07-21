@@ -72,22 +72,29 @@ bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
 }
 
 void sortRecursive(int column, Qt::SortOrder order, FileBrowserItem *i){
-    static Compare<Qt::AscendingOrder> acomp;
-    static Compare<Qt::DescendingOrder> dcomp;
-
     if (column < 0 || !i || !i->childCount())
         return;
 
-    if (order == Qt::AscendingOrder)
-        acomp.sort(column, i->childItems);
-    else if (order == Qt::DescendingOrder)
-        dcomp.sort(column, i->childItems);
+    sortFileBrowserItemList(column, order, i->childItems);
 
     for (const auto &ii : i->childItems)
         sortRecursive(column, order, ii);
 }
 
 } // namespace
+
+void sortFileBrowserItemList(int column, Qt::SortOrder order, QList<FileBrowserItem*> &items) {
+    static Compare<Qt::AscendingOrder> acomp;
+    static Compare<Qt::DescendingOrder> dcomp;
+
+    if (column < 0 || items.isEmpty())
+        return;
+
+    if (order == Qt::AscendingOrder)
+        acomp.sort(column, items);
+    else if (order == Qt::DescendingOrder)
+        dcomp.sort(column, items);
+}
 
 void sortFileBrowserItems(int column, Qt::SortOrder order, FileBrowserItem *root) {
     sortRecursive(column, order, root);

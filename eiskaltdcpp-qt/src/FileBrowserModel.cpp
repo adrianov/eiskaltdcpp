@@ -57,18 +57,15 @@ QModelIndex FileBrowserModel::index(int row, int column, const QModelIndex &pare
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    FileBrowserItem *parentItem;
-
-    if (!parent.isValid())
-        parentItem = rootItem;
-    else
+    FileBrowserItem *parentItem = rootItem;
+    if (parent.isValid()) {
         parentItem = static_cast<FileBrowserItem*>(parent.internalPointer());
+        if (!parentItem)
+            return QModelIndex();
+    }
 
     FileBrowserItem *childItem = parentItem->child(row);
-    if (childItem)
-        return createIndex(row, column, childItem);
-    else
-        return QModelIndex();
+    return childItem ? createIndex(row, column, childItem) : QModelIndex();
 }
 
 QModelIndex FileBrowserModel::parent(const QModelIndex &index) const
@@ -77,6 +74,9 @@ QModelIndex FileBrowserModel::parent(const QModelIndex &index) const
         return QModelIndex();
 
     FileBrowserItem *childItem = static_cast<FileBrowserItem*>(index.internalPointer());
+    if (!childItem)
+        return QModelIndex();
+
     FileBrowserItem *parentItem = childItem->parent();
 
     if (parentItem == rootItem || !parentItem)
@@ -87,14 +87,15 @@ QModelIndex FileBrowserModel::parent(const QModelIndex &index) const
 
 int FileBrowserModel::rowCount(const QModelIndex &parent) const
 {
-    FileBrowserItem *parentItem;
     if (parent.column() > 0)
         return 0;
 
-    if (!parent.isValid())
-        parentItem = rootItem;
-    else
+    FileBrowserItem *parentItem = rootItem;
+    if (parent.isValid()) {
         parentItem = static_cast<FileBrowserItem*>(parent.internalPointer());
+        if (!parentItem)
+            return 0;
+    }
 
     return parentItem->childCount();
 }
@@ -156,12 +157,27 @@ void FileBrowserModel::highlightDuplicates(){
 }
 
 void FileBrowserModel::clear(){
-    beginRemoveRows(QModelIndex(), 0, (rowCount() >= 1? rowCount() : 1)-1);
-    {
-        qDeleteAll(rootItem->childItems);
-        rootItem->childItems.clear();
-    }
+    hash.clear();
+    if (rowCount() <= 0)
+        return;
+
+    beginRemoveRows(QModelIndex(), 0, rowCount() - 1);
+    qDeleteAll(rootItem->childItems);
+    rootItem->childItems.clear();
     endRemoveRows();
+}
+
+void FileBrowserModel::beginRebuild(){
+    beginResetModel();
+    hash.clear();
+    qDeleteAll(rootItem->childItems);
+    rootItem->childItems.clear();
+}
+
+void FileBrowserModel::endRebuild(){
+    if (rootItem && !rootItem->childItems.isEmpty())
+        sortFileBrowserItems(sortColumn, sortOrder, rootItem);
+    endResetModel();
 }
 
 void FileBrowserModel::repaint(){

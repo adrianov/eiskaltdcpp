@@ -11,4 +11,7 @@
 
 #include "FileBrowserModel.h"
 
+#include <QList>
+
+void sortFileBrowserItemList(int column, Qt::SortOrder order, QList<FileBrowserItem*> &items);
 void sortFileBrowserItems(int column, Qt::SortOrder order, FileBrowserItem *root);

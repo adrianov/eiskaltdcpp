@@ -27,6 +27,8 @@ public:
     explicit FileBrowserFilterProxy(bool treeMode = false, QObject *parent = nullptr);
 
     void sort(int column, Qt::SortOrder order) override;
+    QModelIndex mapToSource(const QModelIndex &proxyIndex) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
 
     void applyFilters(const QStringList &terms, qulonglong size, int sizeMode,
                       bool dirsOnly, bool filesOnly, const QStringList &exts,

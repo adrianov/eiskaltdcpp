@@ -32,6 +32,21 @@ void FileBrowserFilterProxy::sort(int column, Qt::SortOrder order) {
     sourceModel()->sort(column, order);
 }
 
+QModelIndex FileBrowserFilterProxy::mapToSource(const QModelIndex &proxyIndex) const {
+    // Stale view indexes can keep row/column/model but a null Mapping*; Qt then
+    // crashes in index_to_iterator (map_iter at +0x28). Cover flags/data/fetch.
+    if (!proxyIndex.isValid() || !proxyIndex.internalPointer())
+        return QModelIndex();
+    return QSortFilterProxyModel::mapToSource(proxyIndex);
+}
+
+QModelIndex FileBrowserFilterProxy::parent(const QModelIndex &child) const {
+    // parent() does not go through mapToSource; same null-Mapping* hazard on scroll.
+    if (!child.isValid() || !child.internalPointer())
+        return QModelIndex();
+    return QSortFilterProxyModel::parent(child);
+}
+
 void FileBrowserFilterProxy::applyFilters(const QStringList &terms, qulonglong size, int sizeMode,
                                           bool dirsOnly, bool filesOnly, const QStringList &exts,
                                           const QString &pathPrefix) {

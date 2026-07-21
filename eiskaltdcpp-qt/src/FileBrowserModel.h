@@ -126,6 +126,9 @@ public:
 
     /** */
     void clear();
+    /** Rebuild root children under beginResetModel / endResetModel. */
+    void beginRebuild();
+    void endRebuild();
     /** */
     void repaint();
     /** */

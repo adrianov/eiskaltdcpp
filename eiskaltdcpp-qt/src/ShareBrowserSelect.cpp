@@ -30,7 +30,8 @@ void ShareBrowser::changeRoot(dcpp::DirectoryListing::Directory *root){
     if (!root)
         return;
 
-    list_model->clear();
+    // Full reset so the filter proxy never sees silent appends/reorders.
+    list_model->beginRebuild();
 
     current_size = 0;
 
@@ -78,17 +79,10 @@ void ShareBrowser::changeRoot(dcpp::DirectoryListing::Directory *root){
         list_root->appendChild(child);
     }
 
-    label_RIGHT->setText(QString(tr("Total size: %1")).arg(WulforUtil::formatBytes(current_size)));
-
     list_model->highlightDuplicates();
+    list_model->endRebuild();
 
-    list_model->sort();
-
-    // changeRoot appends without insert signals; remap proxy under current filters.
-    if (proxy)
-        proxy->invalidate();
-    if (tree_proxy)
-        tree_proxy->invalidate();
+    label_RIGHT->setText(QString(tr("Total size: %1")).arg(WulforUtil::formatBytes(current_size)));
 }
 
 void ShareBrowser::slotRightPaneSelChanged(const QItemSelection &, const QItemSelection &){

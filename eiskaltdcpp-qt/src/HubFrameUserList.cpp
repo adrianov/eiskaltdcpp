@@ -60,12 +60,14 @@ void HubFrame::clearUsers(){
     Q_D(HubFrame);
 
     if (d->model){
+        // Detach the view from the proxy before clearing its source.
+        if (treeView_USERS->model() != d->model)
+            treeView_USERS->setModel(d->model);
         if (d->proxy && d->proxy->sourceModel())
             d->proxy->setSourceModel(nullptr);
         d->model->blockSignals(true);
         d->model->clear();
-        d-> model->blockSignals(false);
-        treeView_USERS->setModel(d->model);
+        d->model->blockSignals(false);
     }
 
     d->total_shared = 0;
