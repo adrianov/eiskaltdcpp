@@ -13,6 +13,7 @@
 
 #include "ClientManager.h"
 #include "ConnectionManager.h"
+#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 
 namespace dcpp {
@@ -21,6 +22,10 @@ namespace dcpp {
 bool QueueManager::addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad,
         const QueuedDownloadUsers* queuedPrefetched) {
     bool wantConnection = (qi->getPriority() != QueueItem::PAUSED) && !userQueue.getRunning(aUser);
+
+    // Silent/unreachable: block auto-search / ShareIndex re-attach. Explicit add/readd clears first.
+    if(PeerConnectHub::isUnreachablePeer(aUser.user))
+        return false;
 
     if(qi->isSource(aUser)) {
         if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
@@ -149,6 +154,9 @@ endCheck:
 void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
     // Walk the full file queue — userQueue.getNext() skips items that are not
     // download-eligible (e.g. already running from another source).
+    if(reason == QueueItem::Source::FLAG_UNREACHABLE)
+        PeerConnectHub::noteUnreachablePeer(aUser);
+
     bool isRunning = false;
     StringList listsToRemove;
     {
@@ -171,7 +179,9 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
             if(!qi->isFinished())
                 userQueue.remove(qi, aUser);
             qi->removeSource(aUser, reason);
-            fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
+            // Unreachable: one SourceRemoved after the walk (covers list-only / no-file cases).
+            if(reason != QueueItem::Source::FLAG_UNREACHABLE)
+                fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
             fire(QueueManagerListener::SourcesUpdated(), qi);
             setDirty();
         }
@@ -181,6 +191,9 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
         ConnectionManager::getInstance()->disconnect(aUser, true);
     for(const auto& target: listsToRemove)
         remove(target);
+
+    if(reason == QueueItem::Source::FLAG_UNREACHABLE)
+        fire(QueueManagerListener::SourceRemoved(), nullptr, aUser, reason);
 }
 
 } // namespace dcpp

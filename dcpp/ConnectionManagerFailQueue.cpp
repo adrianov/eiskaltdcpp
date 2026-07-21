@@ -46,7 +46,8 @@ bool ConnectionManager::dropUnreachableDownload(ConnectionQueueItem* cqi) {
             !PeerConnectFilter::shouldGiveUp(cqi->getErrors()))
         return false;
     PeerConnectLog::queueUnreachable(cqi->getUser());
-    PeerConnectHub::clearPeerSession(cqi->getUser().user);
+    // Before putCQI / async ShareIndex jobs — block re-attach immediately.
+    PeerConnectHub::noteUnreachablePeer(cqi->getUser().user);
     return true;
 }
 

@@ -23,11 +23,17 @@ namespace {
 FastCriticalSection skipCs;
 unordered_map<CID, unordered_set<string>> timeoutHubs;
 unordered_set<CID> reachedPeers;
+unordered_set<CID> unreachablePeers;
 enum { MAX_SKIP_USERS = 2048 };
 
 void trimSkipMap(const CID& cid) {
     if(timeoutHubs.size() >= MAX_SKIP_USERS && timeoutHubs.find(cid) == timeoutHubs.end())
         timeoutHubs.erase(timeoutHubs.begin());
+}
+
+void trimCidSet(unordered_set<CID>& set, const CID& cid) {
+    if(set.size() >= MAX_SKIP_USERS && set.find(cid) == set.end())
+        set.erase(set.begin());
 }
 
 } // namespace
@@ -62,9 +68,10 @@ void notePeerReached(const UserPtr& user) {
     if(!user)
         return;
     FastLock l(skipCs);
-    if(reachedPeers.size() >= MAX_SKIP_USERS && reachedPeers.find(user->getCID()) == reachedPeers.end())
-        reachedPeers.erase(reachedPeers.begin());
-    reachedPeers.insert(user->getCID());
+    const CID& cid = user->getCID();
+    trimCidSet(reachedPeers, cid);
+    reachedPeers.insert(cid);
+    unreachablePeers.erase(cid);
 }
 
 bool wasPeerReached(const UserPtr& user) {
@@ -72,6 +79,33 @@ bool wasPeerReached(const UserPtr& user) {
         return false;
     FastLock l(skipCs);
     return reachedPeers.find(user->getCID()) != reachedPeers.end();
+}
+
+void noteUnreachablePeer(const UserPtr& user) {
+    if(!user)
+        return;
+    FastLock l(skipCs);
+    const CID& cid = user->getCID();
+    trimCidSet(unreachablePeers, cid);
+    unreachablePeers.insert(cid);
+    reachedPeers.erase(cid);
+    timeoutHubs.erase(cid);
+}
+
+bool isUnreachableCid(const CID& cid) {
+    FastLock l(skipCs);
+    return unreachablePeers.find(cid) != unreachablePeers.end();
+}
+
+bool isUnreachablePeer(const UserPtr& user) {
+    return user && isUnreachableCid(user->getCID());
+}
+
+void clearUnreachablePeer(const UserPtr& user) {
+    if(!user)
+        return;
+    FastLock l(skipCs);
+    unreachablePeers.erase(user->getCID());
 }
 
 void clearPeerSession(const UserPtr& user) {

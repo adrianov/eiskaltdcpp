@@ -15,6 +15,7 @@
 #include "ConnectionManager.h"
 #include "Download.h"
 #include "HashManager.h"
+#include "PeerConnectHub.h"
 #include "Segment.h"
 #include "SettingsManager.h"
 
@@ -67,6 +68,8 @@ bool QueueManager::handlePartialResult(const UserPtr& aUser, const string& hubHi
             if(!wantConnection){
                 if(si == qi->getBadSources().end())
                     return false;
+            }else if(PeerConnectHub::isUnreachablePeer(aUser)){
+                return false;
             }else{
                 // add this user as partial file sharing source
                 qi->addSource(HintedUser(aUser,""));

@@ -65,6 +65,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerGet.cpp
     QueueManagerRemove.cpp
     QueueManagerAdd.cpp
+    QueueManagerAddUser.cpp
     QueueManagerListeners.cpp
     QueueManagerTarget.cpp
     NmdcHubLine.cpp

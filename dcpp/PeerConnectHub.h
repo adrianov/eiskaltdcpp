@@ -32,7 +32,12 @@ void clearConnectTimeouts(const UserPtr& user);
 /** Peer answered (slot-wait / inbound or associated download) — not unreachable. */
 void notePeerReached(const UserPtr& user);
 bool wasPeerReached(const UserPtr& user);
-/** Clear timeout skips and reached flag (CQI gone / source removed). */
+/** Session: dropped as silent/unreachable — ShareIndex must not auto-reattach. */
+void noteUnreachablePeer(const UserPtr& user);
+bool isUnreachablePeer(const UserPtr& user);
+bool isUnreachableCid(const CID& cid);
+void clearUnreachablePeer(const UserPtr& user);
+/** Clear timeout skips and reached flag (CQI gone). Keeps unreachable session flag. */
 void clearPeerSession(const UserPtr& user);
 void sortSources(HintedUserList& sources);
 void load();
