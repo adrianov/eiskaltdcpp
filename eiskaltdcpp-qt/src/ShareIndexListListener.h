@@ -44,4 +44,5 @@ private:
             const std::string& listPath) noexcept override;
     void on(dcpp::QueueManagerListener::SourceRemoved, dcpp::QueueItem*,
             const dcpp::UserPtr&, int reason) noexcept override;
+    void on(dcpp::QueueManagerListener::PeerUnreachable, const dcpp::UserPtr&) noexcept override;
 };

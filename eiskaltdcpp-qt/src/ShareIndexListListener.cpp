@@ -107,21 +107,21 @@ void ShareIndexListListener::on(QueueManagerListener::ListCached, const HintedUs
     enqueueListIngest(user.user, _q(listPath), _q(user.hint));
 }
 
-void ShareIndexListListener::on(QueueManagerListener::SourceRemoved, QueueItem *item,
-                                const UserPtr &user, int reason) noexcept
+void ShareIndexListListener::on(QueueManagerListener::PeerUnreachable, const UserPtr &user) noexcept
 {
     if (!user || !ShareIndex::getInstance())
         return;
+    ShareIndex::getInstance()->removeUser(_q(user->getCID().toBase32()));
+}
 
-    // item may be null: unreachable fires once after the full user-source walk.
-    if (reason == QueueItem::Source::FLAG_UNREACHABLE) {
-        ShareIndex::getInstance()->removeUser(_q(user->getCID().toBase32()));
-        return;
-    }
-
-    if (!item || reason != QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
+void ShareIndexListListener::on(QueueManagerListener::SourceRemoved, QueueItem *item,
+                                const UserPtr &user, int reason) noexcept
+{
+    if (!item || !user || reason != QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
         return;
     if (item->isSet(QueueItem::FLAG_USER_LIST))
+        return;
+    if (!ShareIndex::getInstance())
         return;
 
     ShareIndex::getInstance()->removeTth(

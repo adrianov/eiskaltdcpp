@@ -179,7 +179,7 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
             if(!qi->isFinished())
                 userQueue.remove(qi, aUser);
             qi->removeSource(aUser, reason);
-            // Unreachable: one SourceRemoved after the walk (covers list-only / no-file cases).
+            // Unreachable uses PeerUnreachable once after the walk (not per-item SourceRemoved).
             if(reason != QueueItem::Source::FLAG_UNREACHABLE)
                 fire(QueueManagerListener::SourceRemoved(), qi, aUser, reason);
             fire(QueueManagerListener::SourcesUpdated(), qi);
@@ -193,7 +193,7 @@ void QueueManager::removeSource(const UserPtr& aUser, int reason) noexcept {
         remove(target);
 
     if(reason == QueueItem::Source::FLAG_UNREACHABLE)
-        fire(QueueManagerListener::SourceRemoved(), nullptr, aUser, reason);
+        fire(QueueManagerListener::PeerUnreachable(), aUser);
 }
 
 } // namespace dcpp
