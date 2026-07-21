@@ -18,7 +18,7 @@
 /** Serialized ShareIndex jobs, including online-user queue matching. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, RemoveTth };
+enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, RemoveTth, RemoveUser };
 
 struct WriteJob {
     WriteKind kind = IngestList;

@@ -142,6 +142,8 @@ void ShareIndex::matchQueue(const UserList &) {}
 
 void ShareIndex::removeTth(const QString &, const QString &) {}
 
+void ShareIndex::removeUser(const QString &) {}
+
 qint64 ShareIndex::forceIngestListMs(const UserPtr &, const QString &, const QString &, const QString &)
 {
     return 0;

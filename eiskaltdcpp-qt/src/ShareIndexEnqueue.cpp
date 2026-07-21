@@ -106,6 +106,23 @@ void ShareIndex::removeTth(const QString &cid, const QString &tth)
     enqueueWrite(job);
 }
 
+void ShareIndex::removeUser(const QString &cid)
+{
+    if (cid.isEmpty())
+        return;
+    {
+        QMutexLocker lock(&writeMutex);
+        for (const WriteJob &j : writeQueue) {
+            if (j.kind == RemoveUser && j.cid == cid)
+                return;
+        }
+    }
+    WriteJob job;
+    job.kind = RemoveUser;
+    job.cid = cid;
+    enqueueWrite(job);
+}
+
 void ShareIndex::upsertFromSearch(const QVariantMap &map)
 {
     WriteJob job;

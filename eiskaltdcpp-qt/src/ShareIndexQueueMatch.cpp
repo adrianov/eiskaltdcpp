@@ -13,6 +13,7 @@
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/Encoder.h"
+#include "dcpp/PeerConnectHub.h"
 #include "dcpp/QueueManager.h"
 
 using namespace dcpp;
@@ -48,7 +49,8 @@ void ShareIndex::matchQueueSync(const UserList &users)
     unordered_map<string, UserPtr> online;
     for (const UserPtr &user : users) {
         // Online is enough: TTH+size is checked in matchSources; FNA drops stale rows.
-        if (user && user->isOnline())
+        // Skip session-unreachable (silent) peers — search/addSource clears that flag.
+        if (user && user->isOnline() && !PeerConnectHub::isUnreachablePeer(user))
             online.emplace(user->getCID().toBase32(), user);
     }
     if (online.empty())

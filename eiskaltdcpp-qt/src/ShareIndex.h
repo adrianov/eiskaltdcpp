@@ -67,6 +67,8 @@ public:
     void matchQueue(const dcpp::UserList &users);
     /** Drop stale (cid, tth) rows after File Not Available. */
     void removeTth(const QString &cid, const QString &tth);
+    /** Drop all indexed data for a silent/unreachable peer (cid). */
+    void removeUser(const QString &cid);
 
     /** Force re-index one list (ignores mtime skip); returns wall ms. CLI/bench. */
     qint64 forceIngestListMs(const dcpp::UserPtr &user, const QString &listPath,
@@ -149,6 +151,7 @@ private:
                         bool force = false);
     void matchQueueSync(const dcpp::UserList &users);
     void removeTthSync(const QString &cid, const QString &tth);
+    void removeUserSync(const QString &cid);
     /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);

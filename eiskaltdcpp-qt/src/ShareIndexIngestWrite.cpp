@@ -90,6 +90,32 @@ void ShareIndex::removeTthSync(const QString &cid, const QString &tth)
     refreshEntryCount(*con);
 }
 
+void ShareIndex::removeUserSync(const QString &cid)
+{
+    if (cid.isEmpty() || isStopping())
+        return;
+    duckdb::Connection *con = threadConn();
+    if (!con) {
+        setLastError(QStringLiteral("threadConn not open"));
+        return;
+    }
+    QString err;
+    auto locs = ShareIndexDb::query1(
+        *con,
+        "DELETE FROM share_locations WHERE user_id IN ("
+        "SELECT user_id FROM share_users WHERE cid = ?)",
+        ShareIndexDb::strVal(cid), &err);
+    if (!locs || locs->HasError()) {
+        setLastError(err.isEmpty() && locs ? QString::fromStdString(locs->GetError()) : err);
+        return;
+    }
+    ShareIndexDb::query1(*con, "DELETE FROM share_list_meta WHERE cid = ?",
+                         ShareIndexDb::strVal(cid));
+    if (!removeOrphans(*con))
+        return;
+    refreshEntryCount(*con);
+}
+
 bool ShareIndex::removeOrphans(duckdb::Connection &con)
 {
     QString err;

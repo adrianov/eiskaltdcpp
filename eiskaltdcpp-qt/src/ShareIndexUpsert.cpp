@@ -10,7 +10,12 @@
 #include "ShareIndex.h"
 #include "ShareIndexQueueCore.h"
 
+#include "dcpp/CID.h"
+#include "dcpp/PeerConnectHub.h"
+
 #ifdef USE_QT_SQLITE
+
+using namespace dcpp;
 
 namespace {
 
@@ -58,6 +63,9 @@ void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
             ShareIndexDb::execOk(*con, "ROLLBACK");
             return;
         }
+        const QString cid = map.value(QStringLiteral("CID")).toString();
+        if (cid.size() == 39 && PeerConnectHub::isUnreachableCid(CID(cid.toStdString())))
+            continue;
         if (!upsertRow(*con, searchMapToRow(map), SourceHubSearch)) {
             ShareIndexDb::execOk(*con, "ROLLBACK");
             return;

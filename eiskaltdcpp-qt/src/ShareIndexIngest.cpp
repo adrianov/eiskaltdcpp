@@ -14,6 +14,7 @@
 #include "ShareIndexQueueCore.h"
 #include "WulforUtil.h"
 #include "dcpp/ClientManager.h"
+#include "dcpp/PeerConnectHub.h"
 #include "dcpp/Util.h"
 
 #include <QElapsedTimer>
@@ -66,6 +67,8 @@ void ShareIndex::ingestListSync(const UserPtr &user, const QString &listPath,
                                 bool force)
 {
     if (!user || listPath.isEmpty())
+        return;
+    if (PeerConnectHub::isUnreachablePeer(user))
         return;
 
     open();

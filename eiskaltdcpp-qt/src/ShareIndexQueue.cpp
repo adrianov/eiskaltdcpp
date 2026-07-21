@@ -59,6 +59,9 @@ void ShareIndex::drainWriteQueue()
         case RemoveTth:
             removeTthSync(job.cid, job.tth);
             break;
+        case RemoveUser:
+            removeUserSync(job.cid);
+            break;
         case IngestList:
             ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
             break;
