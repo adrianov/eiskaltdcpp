@@ -97,7 +97,7 @@ OnlineUser* ClientManager::findBestOnlineUser(const CID& cid, const string& hint
         return best;
 
     // Every online hub timed out. Rotate only if the peer was reached at least once
-    // (IP / slot-wait / download); otherwise leave skips so the timer can drop them.
+    // (slot-wait / download); otherwise leave skips so the timer can drop them.
     if(sawTimeoutSkip && anyViable) {
         if(!PeerConnectHub::wasPeerReached(anyViable->getUser()))
             return nullptr;

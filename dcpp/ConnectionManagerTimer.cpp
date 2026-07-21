@@ -100,6 +100,11 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                    if(dropUnreachableDownload(cqi)) {
+                        unreachableUsers.push_back(cqi->getUser());
+                        removed.push_back(cqi);
+                        continue;
+                    }
                     markQueueGiveUp(cqi, cqi->getErrors(), false);
                     continue;
                 }

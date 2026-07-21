@@ -29,7 +29,7 @@ void rememberFailure(const UserPtr& user, const string& hub);
 void noteConnectTimeout(const UserPtr& user, const string& hub);
 bool isConnectTimeoutHub(const UserPtr& user, const string& hub);
 void clearConnectTimeouts(const UserPtr& user);
-/** Peer answered with an IP, slot-wait, or a live download — not unreachable. */
+/** Peer answered (slot-wait / inbound or associated download) — not unreachable. */
 void notePeerReached(const UserPtr& user);
 bool wasPeerReached(const UserPtr& user);
 /** Clear timeout skips and reached flag (CQI gone / source removed). */

@@ -13,26 +13,12 @@
 #include "Client.h"
 #include "ClientManager.h"
 #include "LogManager.h"
-#include "PeerConnectHub.h"
 #include "PeerConnectLog.h"
 #include "SettingsManager.h"
 #include "UserConnection.h"
 #include "format.h"
 
 namespace dcpp {
-
-namespace {
-
-void noteReachedConnecting(ConnectionQueueItem::List& downloads, const string& hubUrl) {
-    if(hubUrl.empty())
-        return;
-    for(auto* cqi : downloads) {
-        if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getUser().hint == hubUrl)
-            PeerConnectHub::notePeerReached(cqi->getUser().user);
-    }
-}
-
-} // namespace
 
 void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, const string& aNick, const string& hubUrl, const string& encoding, bool secure) {
     nmdcConnect(aServer, aPort, Util::emptyString, BufferedSocket::NAT_NONE, aNick, hubUrl, encoding, secure);
@@ -49,7 +35,6 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
     // Running transfers may open more sockets when ALLOW_SIM_UPLOADS is enabled.
     {
         Lock l(cs);
-        noteReachedConnecting(downloads, hubUrl);
         for(auto* existing : userConnections) {
             if(!existing->isSet(UserConnection::FLAG_UPLOAD) ||
                     !existing->isSet(UserConnection::FLAG_ASSOCIATED))
@@ -86,8 +71,6 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
 void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort, const string &localPort, BufferedSocket::NatRoles natRole, const string& aToken, bool secure) {
     if(shuttingDown)
         return;
-
-    PeerConnectHub::notePeerReached(aUser.getUser());
 
     UserConnection* uc = getConnection(false, secure);
     uc->setToken(aToken);

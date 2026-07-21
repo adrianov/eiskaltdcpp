@@ -157,7 +157,7 @@ private:
     void reviveDownloadQueue(ConnectionQueueItem* cqi, bool forced = false);
     /** CONNECTING timed out. True → drop CQI; peer is unreachable (caller removes queue sources). */
     bool onDownloadConnectTimeout(ConnectionQueueItem* cqi);
-    /** All online hubs timed out with no IP/slot-wait — log, clear session, caller removes CQI/sources. */
+    /** All hubs timed out or connect give-up, no peer response — caller removes CQI/sources. */
     bool dropUnreachableDownload(ConnectionQueueItem* cqi);
 
     bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);

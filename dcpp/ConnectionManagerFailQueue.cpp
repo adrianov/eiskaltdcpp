@@ -41,7 +41,9 @@ void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, 
 bool ConnectionManager::dropUnreachableDownload(ConnectionQueueItem* cqi) {
     if(!cqi || PeerConnectHub::wasPeerReached(cqi->getUser().user))
         return false;
-    if(!ClientManager::getInstance()->allHubsConnectTimedOut(cqi->getUser().user))
+    // All hubs timed out, or connect give-up with no peer response (slot-wait / download).
+    if(!ClientManager::getInstance()->allHubsConnectTimedOut(cqi->getUser().user) &&
+            !PeerConnectFilter::shouldGiveUp(cqi->getErrors()))
         return false;
     PeerConnectLog::queueUnreachable(cqi->getUser());
     PeerConnectHub::clearPeerSession(cqi->getUser().user);
@@ -55,15 +57,16 @@ bool ConnectionManager::onDownloadConnectTimeout(ConnectionQueueItem* cqi) {
     const string timedOutHub = cqi->getUser().hint;
     PeerConnectHub::noteConnectTimeout(cqi->getUser().user, timedOutHub);
     PeerConnectHub::rememberFailure(cqi->getUser().user, timedOutHub);
-    // Drop hint so the next resolve does not soft-boost this hub.
-    cqi->setHubHint(Util::emptyString);
     clearOutgoingConnect(cqi->getUser().user);
 
     if(dropUnreachableDownload(cqi)) {
-        // Clear Transfers "Connecting" before putCQI(Removed); same as timeout path.
+        // Keep hub hint for removePeerSources(samePeer); clear Transfers via Failed.
         fire(ConnectionManagerListener::Failed(), cqi, _("Connection timeout"));
         return true;
     }
+
+    // Drop hint so the next resolve does not soft-boost this hub.
+    cqi->setHubHint(Util::emptyString);
 
     if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
         markQueueGiveUp(cqi, cqi->getErrors(), false);
@@ -97,9 +100,7 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         return;
     }
 
-    // A download socket existed — peer answered (IP and/or inbound connect).
-    PeerConnectHub::notePeerReached(dlCqi->getUser().user);
-
+    // Reached is noted on MaxedOut / $MyNick match / associate — not on every socket fail.
     const bool tlsMismatch = protocolError && PeerConnectTls::isTlsMismatch(aError);
     const bool postClose = isPostHandshakeClose(aSource->getState()) && !protocolError;
     const bool hadSlot = dlCqi->getGrantedSlot();
@@ -115,6 +116,13 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
     if(!tlsMismatch)
         PeerConnectTls::scheduleRetry(dlCqi, aSource->isSecure(), protocolError, aSource->getState(), aError);
 
+    // Give-up without a peer response: leave errors at the threshold so the timer
+    // can dropUnreachable (markQueueGiveUp would set -1 and block that path).
+    auto giveUpConnect = [&]() {
+        if(PeerConnectHub::wasPeerReached(dlCqi->getUser().user))
+            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
+    };
+
     if(slotWait) {
         dlCqi->setSlotWaits(dlCqi->getSlotWaits() + 1);
         dlCqi->setLastAttempt(GET_TICK());
@@ -129,7 +137,7 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         dlCqi->setErrors(dlCqi->getErrors() + 1);
         dlCqi->setLastAttempt(GET_TICK());
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
+            giveUpConnect();
     } else if(protocolError) {
         dlCqi->setErrors(-1);
         dlCqi->setLastAttempt(GET_TICK());
@@ -137,7 +145,7 @@ void ConnectionManager::failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnec
         dlCqi->setErrors(dlCqi->getErrors() + 1);
         dlCqi->setLastAttempt(GET_TICK());
         if(PeerConnectFilter::shouldGiveUp(dlCqi->getErrors()))
-            markQueueGiveUp(dlCqi, dlCqi->getErrors(), false);
+            giveUpConnect();
     }
 
     dlCqi->setState(ConnectionQueueItem::WAITING);
