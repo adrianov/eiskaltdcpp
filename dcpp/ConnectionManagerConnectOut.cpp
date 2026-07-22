@@ -60,7 +60,6 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
         PeerConnectLog::tcpFail(aNick, aServer, aPort, e.getError());
         LogManager::getInstance()->message(str(F_("NMDC connect to %1%:%2% failed: %3%") % aServer % aPort % e.getError()));
         putConnection(uc);
-        delete uc;
     }
 }
 
@@ -91,7 +90,6 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
     } catch(const Exception& e) {
         PeerConnectLog::tcpFail(aUser.getIdentity().getNick(), aUser.getIdentity().getIp(), aPort, e.getError());
         putConnection(uc);
-        delete uc;
     }
 }
 

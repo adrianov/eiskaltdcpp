@@ -101,7 +101,6 @@ void ConnectionManager::accept(const Socket& sock, bool secure) noexcept {
         uc->accept(sock);
     } catch(const Exception&) {
         putConnection(uc);
-        delete uc;
     }
 }
 
