@@ -15,6 +15,7 @@
 #include "dcpp/Util.h"
 #include "dcpp/QueueItem.h"
 #include "dcpp/QueueManager.h"
+#include "dcpp/UserConnection.h"
 
 #include <QDir>
 
@@ -71,7 +72,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Added, dcpp::ConnectionQu
     emit coreCMAdded(params);
 }
 
-void TransferView::on(dcpp::ConnectionManagerListener::Connected, dcpp::ConnectionQueueItem* cqi) noexcept{
+void TransferView::on(dcpp::ConnectionManagerListener::Connected, dcpp::ConnectionQueueItem* cqi,
+                      dcpp::UserConnection* uc) noexcept{
 
     VarMap params;
 
@@ -79,6 +81,8 @@ void TransferView::on(dcpp::ConnectionManagerListener::Connected, dcpp::Connecti
 
     params["STAT"] = tr("Connected");
     params["SOFT_STAT"] = true;
+    if (uc && !uc->getRemoteIp().empty())
+        params["IP"] = _q(uc->getRemoteIp());
     fillDownloadTarget(params, cqi);
 
     if (offlineOrphan(params)) {

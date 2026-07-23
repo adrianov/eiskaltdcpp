@@ -34,7 +34,7 @@ public:
     typedef X<4> StatusChanged;
 
     virtual void on(Added, ConnectionQueueItem*) noexcept { }
-    virtual void on(Connected, ConnectionQueueItem*) noexcept { }
+    virtual void on(Connected, ConnectionQueueItem*, UserConnection*) noexcept { }
     virtual void on(Removed, ConnectionQueueItem*) noexcept { }
     virtual void on(Failed, ConnectionQueueItem*, const string&) noexcept { }
     virtual void on(StatusChanged, ConnectionQueueItem*) noexcept { }

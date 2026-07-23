@@ -73,7 +73,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
                 cqi->setErrors(0);
                 uc->setFlag(UserConnection::FLAG_ASSOCIATED);
 
-                fire(ConnectionManagerListener::Connected(), cqi);
+                fire(ConnectionManagerListener::Connected(), cqi, uc);
 
                 const string hub = !uc->getHubUrl().empty() ? uc->getHubUrl() : cqi->getUser().hint;
                 PeerConnectHub::notePeerReached(cqi->getUser().user);
@@ -108,13 +108,16 @@ void ConnectionManager::addUploadConnection(UserConnection* uc) {
             ConnectionQueueItem* cqi = getCQI(uc->getHintedUser(), false);
             cqi->setState(ConnectionQueueItem::ACTIVE);
             uc->setFlag(UserConnection::FLAG_ASSOCIATED);
-            fire(ConnectionManagerListener::Connected(), cqi);
+            fire(ConnectionManagerListener::Connected(), cqi, uc);
             PeerConnectLog::connected(cqi->getUser(), false);
             addConn = true;
         } else if(stale) {
             // Reconnect while a prior socket sat idle — reuse the slot.
             stale->unsetFlag(UserConnection::FLAG_ASSOCIATED);
             uc->setFlag(UserConnection::FLAG_ASSOCIATED);
+            auto i = find(uploads.begin(), uploads.end(), uc->getUser());
+            if(i != uploads.end())
+                fire(ConnectionManagerListener::Connected(), *i, uc);
             addConn = true;
         }
     }
