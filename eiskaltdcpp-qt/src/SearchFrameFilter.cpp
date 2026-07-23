@@ -12,6 +12,7 @@
 #include "SearchProxyModel.h"
 #include "SearchFileTypes.h"
 #include "SearchFrameLocal.h"
+#include "ShareIndex.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "ArenaWidgetManager.h"
@@ -166,5 +167,6 @@ void SearchFrame::slotStopSearch(){
 
     d->stop = true;
     d->waitingResults = false;
+    ShareIndex::getInstance()->cancelSearch();
     ClientManager::getInstance()->cancelSearch((void*)this);
 }

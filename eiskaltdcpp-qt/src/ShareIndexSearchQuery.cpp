@@ -11,10 +11,6 @@
 
 #ifdef USE_QT_SQLITE
 
-#include "dcpp/SearchManager.h"
-
-using namespace dcpp;
-
 namespace {
 
 static const char *kSelectCols =
@@ -34,72 +30,38 @@ QString matchToken(const QString &term)
     return s;
 }
 
-duckdb::unique_ptr<duckdb::MaterializedQueryResult>
-runBinds(duckdb::Connection &con, const std::string &sql, duckdb::vector<duckdb::Value> &binds, QString *err)
+void bindTokens(duckdb::vector<duckdb::Value> &binds, const QStringList &tokens)
 {
-    return ShareIndexDb::queryMat(con, sql, binds, err);
+    for (const QString &tok : tokens) {
+        binds.push_back(ShareIndexDb::strVal(tok));
+        binds.push_back(ShareIndexDb::strVal(tok));
+    }
+}
+
+QString fileTokenSql(int n)
+{
+    QString sql;
+    for (int i = 0; i < n; ++i)
+        sql += " AND (contains(name_cf, ?) OR contains(path_cf, ?))";
+    return sql;
+}
+
+QString locTokenSql(int n)
+{
+    QString sql;
+    for (int i = 0; i < n; ++i) {
+        sql += " AND (contains(coalesce(e.name_cf,f.name_cf), ?) "
+               "OR contains(coalesce(e.path_cf,f.path_cf), ?))";
+    }
+    return sql;
+}
+
+bool isInterrupt(const QString &err)
+{
+    return err.contains(QLatin1String("Interrupt"), Qt::CaseInsensitive);
 }
 
 } // namespace
-
-QString ShareIndex::filterSql(const SearchFilter &filter, duckdb::vector<duckdb::Value> &binds) const
-{
-    QStringList parts;
-
-    if (filter.dirsOnly) {
-        parts << "e.is_dir = 1";
-    } else if (filter.filesOnly) {
-        parts << "e.is_dir = 0";
-    }
-
-    if (!filter.extensions.isEmpty()) {
-        QStringList ph;
-        for (const QString &e : filter.extensions) {
-            ph << "?";
-            binds.push_back(ShareIndexDb::strVal(e.toUpper()));
-        }
-        parts << QString("coalesce(e.ext,f.ext) IN (%1)").arg(ph.join(','));
-    }
-
-    if (filter.size > 0 && filter.sizeMode != SearchManager::SIZE_DONTCARE) {
-        if (filter.sizeMode == SearchManager::SIZE_ATLEAST) {
-            parts << "coalesce(f.size,e.local_size,0) >= ?";
-            binds.push_back(ShareIndexDb::i64Val(filter.size));
-        } else if (filter.sizeMode == SearchManager::SIZE_ATMOST) {
-            parts << "coalesce(f.size,e.local_size,0) <= ?";
-            binds.push_back(ShareIndexDb::i64Val(filter.size));
-        }
-    }
-
-    if (parts.isEmpty())
-        return QString();
-    return " AND " + parts.join(" AND ");
-}
-
-QList<QVariantMap> ShareIndex::rowsFromResult(duckdb::MaterializedQueryResult &res)
-{
-    QList<QVariantMap> out;
-    const idx_t n = res.RowCount();
-    out.reserve(int(n));
-    for (idx_t r = 0; r < n; ++r) {
-        QVariantMap map;
-        map["FILE"] = ShareIndexDb::qstr(res.GetValue(0, r));
-        map["SIZE"] = quint64(ShareIndexDb::qi64(res.GetValue(1, r)));
-        map["TTH"] = ShareIndexDb::qstr(res.GetValue(2, r));
-        map["PATH"] = ShareIndexDb::qstr(res.GetValue(3, r));
-        map["NICK"] = ShareIndexDb::qstr(res.GetValue(4, r));
-        map["FSLS"] = res.GetValue(5, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(5, r)));
-        map["ASLS"] = res.GetValue(6, r).IsNull() ? 0 : quint64(ShareIndexDb::qi64(res.GetValue(6, r)));
-        map["IP"] = ShareIndexDb::qstr(res.GetValue(7, r));
-        map["HUB"] = ShareIndexDb::qstr(res.GetValue(8, r));
-        map["HOST"] = ShareIndexDb::qstr(res.GetValue(9, r));
-        map["CID"] = ShareIndexDb::qstr(res.GetValue(10, r));
-        map["ISDIR"] = ShareIndexDb::qi64(res.GetValue(11, r)) != 0;
-        map["EXT"] = ShareIndexDb::qstr(res.GetValue(12, r));
-        out.append(map);
-    }
-    return out;
-}
 
 QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFilter &filter)
 {
@@ -112,9 +74,9 @@ QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFi
         sql += filterSql(filter, binds);
         sql += " LIMIT ?";
         binds.push_back(ShareIndexDb::i64Val(filter.limit));
-        auto mat = runBinds(con, sql.toStdString(), binds, &err);
+        auto mat = ShareIndexDb::queryMat(con, sql.toStdString(), binds, &err);
         if (!mat) {
-            setLastError(err);
+            setLastError(isInterrupt(err) ? QString() : err);
             return {};
         }
         setLastError(QString());
@@ -130,26 +92,61 @@ QList<QVariantMap> ShareIndex::searchFts(duckdb::Connection &con, const SearchFi
     if (tokens.isEmpty())
         return {};
 
-    // Substring AND on case-folded name/path (FTS5 trigram drop-in semantics).
-    duckdb::vector<duckdb::Value> binds;
-    QString sql = QString(kSelectCols) + "WHERE 1=1";
-    for (const QString &tok : tokens) {
-        sql += " AND (contains(coalesce(e.name_cf,f.name_cf), ?) "
-               "OR contains(coalesce(e.path_cf,f.path_cf), ?))";
-        binds.push_back(ShareIndexDb::strVal(tok));
-        binds.push_back(ShareIndexDb::strVal(tok));
+    QList<QVariantMap> out;
+
+    // 1) Unique share_files first (canonical name/path). Skip locations with
+    //    overrides so display text still matches the query (override branch below).
+    if (!filter.dirsOnly) {
+        duckdb::vector<duckdb::Value> binds;
+        QString sql = QString(kSelectCols);
+        sql += "WHERE e.name_cf IS NULL AND e.path_cf IS NULL "
+               "AND e.file_id IN (SELECT file_id FROM share_files WHERE 1=1";
+        sql += fileTokenSql(tokens.size());
+        bindTokens(binds, tokens);
+        sql += " LIMIT ?)";
+        binds.push_back(ShareIndexDb::i64Val(filter.limit));
+        sql += filterSql(filter, binds);
+        sql += " LIMIT ?";
+        binds.push_back(ShareIndexDb::i64Val(filter.limit));
+
+        auto mat = ShareIndexDb::queryMat(con, sql.toStdString(), binds, &err);
+        if (!mat) {
+            setLastError(isInterrupt(err) ? QString() : err);
+            return {};
+        }
+        out = rowsFromResult(*mat);
+        if (out.size() >= filter.limit) {
+            setLastError(QString());
+            return out;
+        }
     }
+
+    // 2) Directories and/or per-location name/path overrides (smaller gated set).
+    const int remain = filter.limit - out.size();
+    if (remain <= 0)
+        return out;
+
+    duckdb::vector<duckdb::Value> binds;
+    QString sql = QString(kSelectCols) + "WHERE ";
+    sql += filter.filesOnly
+            ? "e.is_dir = 0 AND (e.name_cf IS NOT NULL OR e.path_cf IS NOT NULL)"
+            : filter.dirsOnly
+              ? "e.is_dir = 1"
+              : "(e.is_dir = 1 OR e.name_cf IS NOT NULL OR e.path_cf IS NOT NULL)";
+    sql += locTokenSql(tokens.size());
+    bindTokens(binds, tokens);
     sql += filterSql(filter, binds);
     sql += " LIMIT ?";
-    binds.push_back(ShareIndexDb::i64Val(filter.limit));
+    binds.push_back(ShareIndexDb::i64Val(remain));
 
-    auto mat = runBinds(con, sql.toStdString(), binds, &err);
+    auto mat = ShareIndexDb::queryMat(con, sql.toStdString(), binds, &err);
     if (!mat) {
-        setLastError(err);
-        return {};
+        setLastError(isInterrupt(err) ? QString() : err);
+        return out; // keep any file hits already found
     }
+    out += rowsFromResult(*mat);
     setLastError(QString());
-    return rowsFromResult(*mat);
+    return out;
 }
 
 #endif

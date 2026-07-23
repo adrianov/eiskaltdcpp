@@ -82,6 +82,8 @@ public:
     void stopWrites();
 
     QList<QVariantMap> search(const SearchFilter &filter);
+    /** Interrupt an in-flight local search (new Search / Stop). */
+    void cancelSearch();
 
     /** Unique index holders per TTH (nick + cid + size). size filter 0 = any. */
     struct IndexUser {
@@ -165,6 +167,10 @@ private:
     QString dbFile;
     std::unique_ptr<duckdb::DuckDB> duck;
     QHash<quintptr, std::shared_ptr<duckdb::Connection>> threadConns;
+    /** Connection running searchFts; interrupted by cancelSearch(). */
+    duckdb::Connection *activeSearchCon = nullptr;
+    QAtomicInt searchEpoch;
+    mutable QMutex searchMu;
 #endif
     QAtomicInt opened;
     /** One-time schema open. */

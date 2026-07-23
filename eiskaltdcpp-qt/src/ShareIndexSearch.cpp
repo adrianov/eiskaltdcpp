@@ -9,6 +9,16 @@
 
 #include "ShareIndex.h"
 
+void ShareIndex::cancelSearch()
+{
+#ifdef USE_QT_SQLITE
+    searchEpoch.fetchAndAddOrdered(1);
+    QMutexLocker lock(&searchMu);
+    if (activeSearchCon)
+        activeSearchCon->Interrupt();
+#endif
+}
+
 #ifdef USE_QT_SQLITE
 
 QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
@@ -20,7 +30,30 @@ QList<QVariantMap> ShareIndex::search(const SearchFilter &filter)
     if (!con)
         return {};
 
-    return searchFts(*con, filter);
+    // Interactive search: more RAM/threads than the write-path defaults.
+    ShareIndexDb::execOk(*con, "SET memory_limit='4GB'");
+    ShareIndexDb::execOk(*con, "SET threads=4");
+
+    const int epoch = searchEpoch.loadAcquire();
+    {
+        QMutexLocker lock(&searchMu);
+        if (activeSearchCon && activeSearchCon != con)
+            activeSearchCon->Interrupt();
+        activeSearchCon = con;
+    }
+
+    const QList<QVariantMap> rows = searchFts(*con, filter);
+
+    {
+        QMutexLocker lock(&searchMu);
+        if (activeSearchCon == con)
+            activeSearchCon = nullptr;
+    }
+
+    if (epoch != searchEpoch.loadAcquire())
+        return {};
+
+    return rows;
 }
 
 #endif

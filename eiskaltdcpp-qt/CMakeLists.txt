@@ -221,6 +221,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
+    src/ShareIndexSearchRows.cpp
     src/ShareIndexUsers.cpp
     src/ShareIndexCap.cpp
     src/ShareIndexVacuum.cpp

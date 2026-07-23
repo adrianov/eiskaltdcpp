@@ -71,6 +71,9 @@ void startLocalSearch(SearchFrame *frame, const QStringList &terms, bool isHash,
     filter.sizeMode = sizeMode;
     filter.limit = 500;
 
+    // Drop any prior full-table scan before starting another.
+    ShareIndex::getInstance()->cancelSearch();
+
     QPointer<SearchFrame> guard(frame);
     startDetached([guard, filter]() {
         ShareIndex *idx = ShareIndex::getInstance();

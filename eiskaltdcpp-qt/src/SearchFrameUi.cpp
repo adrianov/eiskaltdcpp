@@ -11,6 +11,7 @@
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
 #include "SearchLocalPath.h"
+#include "ShareIndex.h"
 #include "WulforUtil.h"
 
 #include "dcpp/SearchManager.h"
@@ -74,6 +75,7 @@ void SearchFrame::slotClear(){
     d->stop = true;
     d->waitingResults = false;
     d->currentSearch.clear();
+    ShareIndex::getInstance()->cancelSearch();
     ClientManager::getInstance()->cancelSearch((void*)this);
 
     if (d->resultFlush)
