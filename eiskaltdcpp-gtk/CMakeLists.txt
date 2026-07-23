@@ -40,7 +40,8 @@ aux_source_directory (${PROJECT_SOURCE_DIR}/src gtk_srcs)
 set (GTK_EXTRA_SOURCES
     wulforStartup.cc
     SearchClient.cc
-    SearchMenu.cc)
+    SearchMenu.cc
+    TransfersDownloadListeners.cc)
 foreach (_src ${GTK_EXTRA_SOURCES})
     set (_path ${PROJECT_SOURCE_DIR}/src/${_src})
     list (FIND gtk_srcs ${_path} _idx)
