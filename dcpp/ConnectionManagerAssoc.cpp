@@ -63,14 +63,14 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
                     !cqi->getUser().hint.empty() && !uc->getHubUrl().empty() &&
                     cqi->getUser().hint != uc->getHubUrl()) {
                 cqi = nullptr;
-            } else if(slotWaitActive(cqi)) {
-                putConnection(uc);
-                return;
             } else if(cqi->getState() == ConnectionQueueItem::WAITING ||
                     cqi->getState() == ConnectionQueueItem::CONNECTING) {
+                // Accept during slot-wait: peer may be granting a slot.
+                // Outgoing CTM stays paced by queueBackoff.
                 cqi->setState(ConnectionQueueItem::ACTIVE);
                 cqi->setSlotWaits(0);
                 cqi->setErrors(0);
+                cqi->setLastAttempt(0);
                 uc->setFlag(UserConnection::FLAG_ASSOCIATED);
 
                 fire(ConnectionManagerListener::Connected(), cqi, uc);

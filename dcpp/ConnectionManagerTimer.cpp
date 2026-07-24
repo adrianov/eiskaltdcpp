@@ -95,6 +95,14 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                     continue;
                 }
 
+                if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS) {
+                    QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
+                    if(DownloadManager::getInstance()->startDownload(prio))
+                        cqi->setState(ConnectionQueueItem::WAITING);
+                    else
+                        continue;
+                }
+
                 if(queueBackoffActive(cqi)) {
                     continue;
                 }
@@ -158,10 +166,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                             }
                         } else {
                             cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
+                            cqi->setLastAttempt(0);
                             fire(ConnectionManagerListener::Failed(), cqi, _("All download slots taken"));
                         }
-                    } else if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && startDown) {
-                        cqi->setState(ConnectionQueueItem::WAITING);
                     }
                 }
             }

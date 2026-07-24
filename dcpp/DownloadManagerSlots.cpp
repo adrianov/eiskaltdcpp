@@ -91,7 +91,6 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
 
     // Next close should use slot-wait backoff, not a between-files soft retry.
     ConnectionManager::getInstance()->forgetDownloadSlot(aSource->getUser());
-    aSource->setLastActivity(GET_TICK());
 
     const string nick = ClientManager::getInstance()->getNickOrCid(aSource->getHintedUser());
     const string file = Util::addBrackets(d->getTargetFileName());
@@ -104,6 +103,12 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
     }
 
     fire(DownloadManagerListener::Queued(), d, queuePos);
+
+    // disconnect() is async — free DOWNLOAD_SLOTS now so other sources can start.
+    // CM::failed still sees STATE_SND and applies slot-wait on the socket close.
+    const string reason = queuePos > 0 ?
+            str(F_("No slots (queue position %1%)") % queuePos) : _("No slots");
+    failDownload(aSource, reason);
 }
 
 void DownloadManager::on(UserConnectionListener::Send, UserConnection* aSource) noexcept {
