@@ -73,6 +73,7 @@ public:
     void setRequireFullFile(bool require) { requireFullFile = require; }
 
     QStringList fileTargets() const { return file_hash.keys(); }
+    QString fileTime(const QString &target) const;
 
 public Q_SLOTS:
     void beginBulkLoad() { ++bulkLoadDepth; }

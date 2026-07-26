@@ -109,6 +109,7 @@ set(QT_EXTRA_SOURCES
     src/FavoriteHubItem.cpp
     src/FavoriteHubModelMut.cpp
     src/FavoriteHubModelSort.cpp
+    src/FinishedTransfers.cpp
     src/FinishedTransfersInit.cpp
     src/FinishedTransfersItem.cpp
     src/FinishedTransfersListener.cpp
@@ -118,6 +119,7 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersModelMut.cpp
     src/FinishedTransfersModelView.cpp
     src/FinishedTransfersParams.cpp
+    src/FinishedTransfersDb.cpp
     src/FinishedTransfersDelete.cpp
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp

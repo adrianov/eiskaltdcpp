@@ -13,6 +13,7 @@
 #include "dcpp/SettingsManager.h"
 #include "dcpp/ShareManager.h"
 
+#include <QDateTime>
 #include <QFileInfo>
 #include <QSet>
 
@@ -54,15 +55,22 @@ template <bool isUpload>
 void FinishedTransfers<isUpload>::pruneMissingFiles()
 {
     const QStringList targets = model->fileTargets();
+    const QDateTime now = QDateTime::currentDateTime();
     for (const QString &qtarget : targets) {
         if (Util::fileExists(_tq(qtarget)))
+            continue;
+
+        // Large finishes may still be in FileMover (temp → target).
+        const QDateTime finished = QDateTime::fromString(
+            model->fileTime(qtarget), QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+        if (finished.isValid() && finished.secsTo(now) < 600)
             continue;
 
         try {
             FinishedManager::getInstance()->remove(false, _tq(qtarget));
         } catch (const std::exception&) {}
 
-        removeFileFromDB(qtarget);
+        removeFileDB(qtarget);
         model->remFile(qtarget);
     }
 }
@@ -81,7 +89,7 @@ void FinishedTransfers<isUpload>::deleteDiskFiles(const QStringList &files)
             FinishedManager::getInstance()->remove(isUpload, path);
         } catch (const std::exception&) {}
 
-        removeFileFromDB(f);
+        removeFileDB(f);
         model->remFile(f);
         parents.insert(QFileInfo(f).absolutePath());
     }

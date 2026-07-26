@@ -36,17 +36,13 @@ void FinishedTransfers<isUpload>::loadList()
                 continue;
 
             params.clear();
-
             getParams(it->second, it->first, params);
-
             model->addFile(params);
         }
 
         for (auto uit = user.begin(); uit != user.end(); ++uit) {
             params.clear();
-
             getParams(uit->second, uit->first, params);
-
             model->addUser(params);
         }
 
@@ -83,9 +79,11 @@ void FinishedTransfers<isUpload>::loadListFromDB()
 
             emit coreBeginBulkLoad();
 
-            q.exec("SELECT * FROM files LIMIT 0, 500;"); // temporary limitation
+            q.exec("SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
+                   "FROM files LIMIT 0, 500;");
             while (q.next()) {
                 int i = 0;
+                params["TARGET"]= q.value(i++);
                 params["FNAME"] = q.value(i++);
                 params["TIME"]  = q.value(i++);
                 params["PATH"]  = q.value(i++);
@@ -93,37 +91,34 @@ void FinishedTransfers<isUpload>::loadListFromDB()
                 params["TR"]    = q.value(i++);
                 params["SPEED"] = q.value(i++);
                 params["CRC32"] = q.value(i++);
-                params["TARGET"]= q.value(i++);
                 params["ELAP"]  = q.value(i++);
                 params["FULL"]  = q.value(i++);
 
                 if (!showDownloadParams(params))
                     continue;
 
-                if (!isUpload && !Util::fileExists(_tq(params["TARGET"].toString()))) {
-                    QSqlQuery del(db);
-                    del.prepare("DELETE FROM files WHERE TARGET = ?;");
-                    del.bindValue(0, params["TARGET"]);
-                    del.exec();
+                // Skip missing downloads in the UI only — do not DELETE here.
+                // Large downloads may still be moving from temp to target (FileMover).
+                if (!isUpload && !Util::fileExists(_tq(params["TARGET"].toString())))
                     continue;
-                }
 
-                emit coreAddedFile(params);
+                emit coreLoadedFile(params);
             }
 
             params.clear();
-            q.exec("SELECT * FROM users LIMIT 0, 500;");
+            q.exec("SELECT CID, NICK, TIME, FILES, TR, SPEED, ELAP, FULL "
+                   "FROM users LIMIT 0, 500;");
             while (q.next()) {
                 int i = 0;
+                params["CID"]  = q.value(i++);
                 params["NICK"] = q.value(i++);
                 params["TIME"]  = q.value(i++);
                 params["FILES"]  = q.value(i++);
                 params["TR"]    = q.value(i++);
                 params["SPEED"] = q.value(i++);
-                params["CID"] = q.value(i++);
                 params["ELAP"]  = q.value(i++);
                 params["FULL"]  = q.value(i++);
-                emit coreAddedUser(params);
+                emit coreLoadedUser(params);
             }
 
             emit coreEndBulkLoad();

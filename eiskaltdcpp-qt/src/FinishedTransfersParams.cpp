@@ -33,28 +33,6 @@ void FinishedTransfers<isUpload>::getParams(const FinishedFileItemPtr& item, con
     params["TARGET"]= _q(file);
     params["ELAP"]  = (qlonglong)item->getMilliSeconds();
     params["FULL"]  = item->isFull();
-
-#ifdef USE_QT_SQLITE
-    if (!db_opened)
-        return;
-
-    QSqlQuery q(db);
-    q.prepare("REPLACE INTO files "
-              "(FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, TARGET, ELAP, FULL) "
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
-    q.bindValue(0, params["FNAME"]);
-    q.bindValue(1, params["TIME"]);
-    q.bindValue(2, params["PATH"]);
-    q.bindValue(3, params["USERS"]);
-    q.bindValue(4, params["TR"]);
-    q.bindValue(5, params["SPEED"]);
-    q.bindValue(6, params["CRC32"]);
-    q.bindValue(7, params["TARGET"]);
-    q.bindValue(8, params["ELAP"]);
-    q.bindValue(9, params["FULL"]);
-
-    q.exec();
-#endif
 }
 
 template <bool isUpload>
@@ -75,30 +53,62 @@ void FinishedTransfers<isUpload>::getParams(const FinishedUserItemPtr& item, con
     params["CID"]   = _q(user->getCID().toBase32());
     params["ELAP"]  = (qlonglong)item->getMilliSeconds();
     params["FULL"]  = true;
+}
 
+template <bool isUpload>
+void FinishedTransfers<isUpload>::persistFile(const VarMap &params)
+{
 #ifdef USE_QT_SQLITE
-    if (!db_opened)
+    if (!db_opened || params["TARGET"].toString().isEmpty())
         return;
 
     QSqlQuery q(db);
-    q.prepare("REPLACE INTO users "
-              "(NICK, TIME, FILES, TR, SPEED, CID, ELAP, FULL)"
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
-    q.bindValue(0, params["NICK"]);
-    q.bindValue(1, params["TIME"]);
-    q.bindValue(2, params["FILES"]);
-    q.bindValue(3, params["TR"]);
-    q.bindValue(4, params["SPEED"]);
-    q.bindValue(5, params["CID"]);
-    q.bindValue(6, params["ELAP"]);
-    q.bindValue(7, params["FULL"]);
-
+    q.prepare("REPLACE INTO files "
+              "(TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+    q.bindValue(0, params["TARGET"]);
+    q.bindValue(1, params["FNAME"]);
+    q.bindValue(2, params["TIME"]);
+    q.bindValue(3, params["PATH"]);
+    q.bindValue(4, params["USERS"]);
+    q.bindValue(5, params["TR"]);
+    q.bindValue(6, params["SPEED"]);
+    q.bindValue(7, params["CRC32"]);
+    q.bindValue(8, params["ELAP"]);
+    q.bindValue(9, params["FULL"]);
     q.exec();
+#else
+    Q_UNUSED(params)
 #endif
 }
 
 template <bool isUpload>
-void FinishedTransfers<isUpload>::removeFileFromDB(const QString &target)
+void FinishedTransfers<isUpload>::persistUser(const VarMap &params)
+{
+#ifdef USE_QT_SQLITE
+    if (!db_opened || params["CID"].toString().isEmpty())
+        return;
+
+    QSqlQuery q(db);
+    q.prepare("REPLACE INTO users "
+              "(CID, NICK, TIME, FILES, TR, SPEED, ELAP, FULL) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
+    q.bindValue(0, params["CID"]);
+    q.bindValue(1, params["NICK"]);
+    q.bindValue(2, params["TIME"]);
+    q.bindValue(3, params["FILES"]);
+    q.bindValue(4, params["TR"]);
+    q.bindValue(5, params["SPEED"]);
+    q.bindValue(6, params["ELAP"]);
+    q.bindValue(7, params["FULL"]);
+    q.exec();
+#else
+    Q_UNUSED(params)
+#endif
+}
+
+template <bool isUpload>
+void FinishedTransfers<isUpload>::removeFileDB(const QString &target)
 {
 #ifdef USE_QT_SQLITE
     if (!db_opened || target.isEmpty())
@@ -108,6 +118,8 @@ void FinishedTransfers<isUpload>::removeFileFromDB(const QString &target)
     q.prepare("DELETE FROM files WHERE TARGET = ?;");
     q.bindValue(0, target);
     q.exec();
+#else
+    Q_UNUSED(target)
 #endif
 }
 
@@ -115,5 +127,9 @@ template void FinishedTransfers<true>::getParams(const FinishedFileItemPtr&, con
 template void FinishedTransfers<false>::getParams(const FinishedFileItemPtr&, const string&, VarMap&);
 template void FinishedTransfers<true>::getParams(const FinishedUserItemPtr&, const UserPtr&, VarMap&);
 template void FinishedTransfers<false>::getParams(const FinishedUserItemPtr&, const UserPtr&, VarMap&);
-template void FinishedTransfers<true>::removeFileFromDB(const QString&);
-template void FinishedTransfers<false>::removeFileFromDB(const QString&);
+template void FinishedTransfers<true>::persistFile(const VarMap&);
+template void FinishedTransfers<false>::persistFile(const VarMap&);
+template void FinishedTransfers<true>::persistUser(const VarMap&);
+template void FinishedTransfers<false>::persistUser(const VarMap&);
+template void FinishedTransfers<true>::removeFileDB(const QString&);
+template void FinishedTransfers<false>::removeFileDB(const QString&);

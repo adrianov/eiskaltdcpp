@@ -40,6 +40,12 @@ void FinishedTransfersModel::addFile(const QVariantMap &params){
     if (!item)
         return;
 
+    // Ignore stale async DB rows when a newer live update already landed.
+    const QString oldTime = item->data(COLUMN_FINISHED_TIME).toString();
+    const QString newTime = params["TIME"].toString();
+    if (!oldTime.isEmpty() && !newTime.isEmpty() && newTime < oldTime)
+        return;
+
     for (int i = 0; i < fileItem->columnCount(); i++){
         if (file_header_table[i] == "USERS"){
             QStringList users = params[file_header_table[i]].toString().split(" ");

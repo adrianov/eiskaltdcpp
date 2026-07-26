@@ -56,6 +56,11 @@ FinishedTransfersModel::~FinishedTransfersModel()
     delete fileItem;
 }
 
+QString FinishedTransfersModel::fileTime(const QString &target) const {
+    auto it = file_hash.constFind(target);
+    return it == file_hash.constEnd() ? QString() : it.value()->data(COLUMN_FINISHED_TIME).toString();
+}
+
 FinishedTransfersItem *FinishedTransfersModel::findFile(const QString &fname){
     if (fname.isEmpty())
         return nullptr;

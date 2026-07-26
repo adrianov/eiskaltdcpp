@@ -12,12 +12,18 @@
 #include "SearchFileTypes.h"
 #include "WulforSettings.h"
 
+#include <QCoreApplication>
+
 template <bool isUpload>
 FinishedTransfers<isUpload>::~FinishedTransfers(){
     QString key = (comboBox->currentIndex() == 0)? WS_FTRANSFERS_FILES_STATE : WS_FTRANSFERS_USERS_STATE;
     WVSET(key, treeView->header()->saveState());
 
     FinishedManager::getInstance()->removeListener(this);
+
+    // Flush queued persist/model slots from transfer threads before closing DB.
+    QCoreApplication::sendPostedEvents(this, QEvent::MetaCall);
+    QCoreApplication::sendPostedEvents(model, QEvent::MetaCall);
 
     model->clearModel();
 
@@ -75,8 +81,8 @@ void FinishedTransfers<isUpload>::slotClear() {
         return;
 
     QSqlQuery q(db);
-    q.exec("DROP TABLE files;");
-    q.exec("DROP TABLE users;");
+    q.exec("DELETE FROM files;");
+    q.exec("DELETE FROM users;");
 #endif
 }
 

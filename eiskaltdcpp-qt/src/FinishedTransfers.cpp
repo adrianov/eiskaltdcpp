@@ -11,3 +11,7 @@
 
 QString FinishedTransferProxy::uploadTitle(){ return tr("Finished uploads"); }
 QString FinishedTransferProxy::downloadTitle() { return tr("Finished downloads"); }
+
+void FinishedTransferProxy::slotPersistFile(const QVariantMap &params) { persistFile(params); }
+void FinishedTransferProxy::slotPersistUser(const QVariantMap &params) { persistUser(params); }
+void FinishedTransferProxy::slotRemoveFileFromDB(const QString &target) { removeFileDB(target); }

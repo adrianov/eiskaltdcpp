@@ -14,7 +14,7 @@
 
 template <bool isUpload>
 FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
-    FinishedTransferProxy(parent), db_opened(false), diskPruned(false)
+    FinishedTransferProxy(parent)
 {
     setupUi(this);
 
@@ -30,38 +30,27 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
 
     treeView->setModel(proxy);
 
-#ifdef USE_QT_SQLITE
-    db = QSqlDatabase::addDatabase("QSQLITE", (isUpload? "FinishedUploads" : "FinishedDownloads"));
-    db_file = _q(Util::getPath(Util::PATH_USER_CONFIG)) + (isUpload? "FinishedUploads.sqlite" : "FinishedDownloads.sqlite");
-
-    db.setDatabaseName(db_file);
-    db_opened = db.open();
-
-    if (db_opened){
-        QSqlQuery q(db);
-        q.exec("CREATE TABLE IF NOT EXISTS files (FNAME TEXT PRIMARY KEY, "
-               "TIME TEXT, PATH TEXT, USERS TEXT, TR TEXT, SPEED TEXT, CRC32 INTEGER, TARGET TEXT, ELAP TEXT, FULL INTEGER);");
-
-        q.exec("CREATE TABLE IF NOT EXISTS users (NICK TEXT PRIMARY KEY, "
-               "TIME TEXT, FILES TEXT, TR TEXT, SPEED TEXT, CID TEXT, ELAP TEXT, FULL INTEGER);");
-
-        q.exec("VACUUM;");
-    }
-#endif
-
-    loadList();
-
-    FinishedManager::getInstance()->addListener(this);
+    openDatabase();
 
     setUnload(false);
 
     treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
+    // Persist on the GUI thread — QSqlDatabase is not cross-thread safe.
+    QObject::connect(this, SIGNAL(coreAddedFile(VarMap)),   this, SLOT(slotPersistFile(VarMap)), Qt::QueuedConnection);
+    QObject::connect(this, SIGNAL(coreUpdatedFile(VarMap)), this, SLOT(slotPersistFile(VarMap)), Qt::QueuedConnection);
+    QObject::connect(this, SIGNAL(coreAddedUser(VarMap)),   this, SLOT(slotPersistUser(VarMap)), Qt::QueuedConnection);
+    QObject::connect(this, SIGNAL(coreUpdatedUser(VarMap)), this, SLOT(slotPersistUser(VarMap)), Qt::QueuedConnection);
+    QObject::connect(this, SIGNAL(coreRemovedFile(QString)), this, SLOT(slotRemoveFileFromDB(QString)), Qt::QueuedConnection);
+
     QObject::connect(this, SIGNAL(coreAddedFile(VarMap)),   model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreAddedUser(VarMap)),   model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreUpdatedFile(VarMap)), model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreUpdatedUser(VarMap)), model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
+    // DB load updates the model only — never re-persist (avoids clobbering live writes).
+    QObject::connect(this, SIGNAL(coreLoadedFile(VarMap)),  model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
+    QObject::connect(this, SIGNAL(coreLoadedUser(VarMap)),  model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreRemovedFile(QString)), model, SLOT(remFile(QString)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreRemovedUser(QString)), model, SLOT(remUser(QString)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreBeginBulkLoad()), model, SLOT(beginBulkLoad()), Qt::QueuedConnection);
@@ -69,6 +58,10 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
 
     QObject::connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
     SearchFileTypes::fillCombo(comboBox_FILETYPES, false);
+
+    // After signal wiring so async DB load and live events are not dropped.
+    FinishedManager::getInstance()->addListener(this);
+    loadList();
 
     QObject::connect(comboBox, SIGNAL(activated(int)), this, SLOT(slotTypeChanged(int)));
     QObject::connect(pushButton, SIGNAL(clicked()), this, SLOT(slotClear()));

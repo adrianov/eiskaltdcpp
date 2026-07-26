@@ -25,9 +25,7 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::AddedFile, bool up
     }
 
     VarMap params;
-
     getParams(item, file, params);
-
     emit coreAddedFile(params);
 }
 
@@ -36,9 +34,7 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::AddedUser, bool up
 {
     if (isUpload == upload){
         VarMap params;
-
         getParams(item, user, params);
-
         emit coreAddedUser(params);
     }
 }
@@ -48,9 +44,7 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::UpdatedFile, bool 
 {
     if (isUpload == upload && showDownload(file, item)){
         VarMap params;
-
         getParams(item, file, params);
-
         emit coreUpdatedFile(params);
     }
 }
@@ -58,29 +52,25 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::UpdatedFile, bool 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept
 {
-    if (isUpload == upload){
-        removeFileFromDB(_q(file));
+    if (isUpload == upload)
         emit coreRemovedFile(_q(file));
-    }
 }
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::on(FinishedManagerListener::UpdatedUser, bool upload, const dcpp::HintedUser &user) noexcept
 {
-    if (isUpload == upload){
-        const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
-        auto userit = umap.find(user);
-        if (userit == umap.end())
-            return;
+    if (isUpload != upload)
+        return;
 
-        const FinishedUserItemPtr &item = userit->second;
+    // Called from FinishedManager while cs is held.
+    const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
+    auto userit = umap.find(user);
+    if (userit == umap.end())
+        return;
 
-        VarMap params;
-
-        getParams(item, user, params);
-
-        emit coreUpdatedUser(params);
-    }
+    VarMap params;
+    getParams(userit->second, user, params);
+    emit coreUpdatedUser(params);
 }
 
 template <bool isUpload>

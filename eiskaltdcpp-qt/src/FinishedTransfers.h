@@ -52,12 +52,17 @@ Q_SIGNALS:
     void coreAddedUser(const VarMap&);
     void coreUpdatedFile(const VarMap&);
     void coreUpdatedUser(const VarMap&);
+    void coreLoadedFile(const VarMap&);
+    void coreLoadedUser(const VarMap&);
     void coreRemovedFile(const QString&);
     void coreRemovedUser(const QString&);
     void coreBeginBulkLoad();
     void coreEndBulkLoad();
 
 public Q_SLOTS:
+    void slotPersistFile(const VarMap&);
+    void slotPersistUser(const VarMap&);
+    void slotRemoveFileFromDB(const QString&);
     virtual void slotTypeChanged(int) = 0;
     virtual void slotClear() = 0;
     virtual void slotItemDoubleClicked(const QModelIndex &) = 0;
@@ -67,6 +72,11 @@ public Q_SLOTS:
     virtual void slotFilterText(const QString &) = 0;
     virtual void slotFileTypeChanged(int) = 0;
     virtual void slotSettingsChanged(const QString &key, const QString &) = 0;
+
+protected:
+    virtual void persistFile(const VarMap&) {}
+    virtual void persistUser(const VarMap&) {}
+    virtual void removeFileDB(const QString&) {}
 };
 
 template <bool isUpload>
@@ -116,9 +126,12 @@ private:
 
     void loadList();
     void loadListFromDB();
+    void openDatabase();
     void getParams(const FinishedFileItemPtr& item, const string& file, VarMap &params);
     void getParams(const FinishedUserItemPtr& item, const UserPtr& user, VarMap &params);
-    void removeFileFromDB(const QString &target);
+    void persistFile(const VarMap &params) override;
+    void persistUser(const VarMap &params) override;
+    void removeFileDB(const QString &target) override;
     void pruneMissingFiles();
     void deleteDiskFiles(const QStringList &files);
 
@@ -169,8 +182,8 @@ private:
     QSqlDatabase db;
     QString db_file;
 #endif
-    bool db_opened;
-    bool diskPruned;
+    bool db_opened = false;
+    bool diskPruned = false;
 };
 
 template <>
