@@ -38,9 +38,13 @@ public:
 
     template<typename... T>
     void fire(T&&... type) noexcept {
-        Lock l(listenerCS);
-        tmp = listeners;
-        for(auto i: tmp) {
+        // Copy under lock; notify unlocked so listeners can take other mutexes.
+        ListenerList copy;
+        {
+            Lock l(listenerCS);
+            copy = listeners;
+        }
+        for(auto i: copy) {
             i->on(std::forward<T>(type)...);
         }
     }
@@ -65,7 +69,6 @@ public:
 
 protected:
     ListenerList listeners;
-    ListenerList tmp;
     CriticalSection listenerCS;
 };
 

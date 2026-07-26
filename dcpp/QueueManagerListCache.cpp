@@ -14,27 +14,30 @@
 #include "ListCache.h"
 #include "PeerConnectLog.h"
 
+#include <utility>
+#include <vector>
+
 namespace dcpp {
 
 void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
-    StringList stale;
-
+    vector<pair<string, HintedUser>> lists;
     {
         Lock l(cs);
         for(auto& i: fileQueue.getQueue()) {
             QueueItem* qi = i.second;
             if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
                 continue;
-
-            const HintedUser& src = qi->getSources()[0].getUser();
-            if(src.user == aUser.user && src.hint == aUser.hint)
-                continue;
-
-            if(ConnectionManagerPeerMatch::samePeer(aUser, src))
-                stale.push_back(qi->getTarget());
+            lists.emplace_back(qi->getTarget(), qi->getSources()[0].getUser());
         }
     }
 
+    StringList stale;
+    for(const auto& e: lists) {
+        if(e.second.user == aUser.user && e.second.hint == aUser.hint)
+            continue;
+        if(ConnectionManagerPeerMatch::samePeer(aUser, e.second))
+            stale.push_back(e.first);
+    }
     for(auto& target: stale)
         remove(target);
 }
@@ -42,15 +45,22 @@ void QueueManager::purgeOtherListQueues(const HintedUser& aUser) {
 bool QueueManager::hasListQueued(const HintedUser& user) noexcept {
     if(!user.user)
         return false;
-    Lock l(cs);
-    QueueItem* qi = fileQueue.find(getListPath(user));
-    if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished())
-        return true;
-    for(const auto& i: fileQueue.getQueue()) {
-        if(!i.second->isSet(QueueItem::FLAG_USER_LIST) || i.second->isFinished()
-                || i.second->getSources().empty())
-            continue;
-        const HintedUser& src = i.second->getSources()[0].getUser();
+
+    const string listPath = getListPath(user);
+    vector<HintedUser> sources;
+    {
+        Lock l(cs);
+        QueueItem* qi = fileQueue.find(listPath);
+        if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished())
+            return true;
+        for(const auto& i: fileQueue.getQueue()) {
+            if(!i.second->isSet(QueueItem::FLAG_USER_LIST) || i.second->isFinished()
+                    || i.second->getSources().empty())
+                continue;
+            sources.push_back(i.second->getSources()[0].getUser());
+        }
+    }
+    for(const auto& src: sources) {
         if(ConnectionManagerPeerMatch::samePeer(user, src))
             return true;
     }

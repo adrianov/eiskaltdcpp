@@ -15,6 +15,9 @@
 #include "ConnectionManagerPeerMatch.h"
 #include "PeerConnectLog.h"
 
+#include <utility>
+#include <vector>
+
 namespace dcpp {
 
 void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
@@ -39,19 +42,35 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
     }
 
     if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST)) {
-        Lock l(cs);
-        QueueItem* qi = fileQueue.find(getListPath(aUser));
-        if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished()) {
-            qi->setFlag(aFlags);
-            if(!aInitialDir.empty())
-                qi->setTempTarget(aInitialDir);
-            return;
+        // getListPath/samePeer use ClientManager — never call them under QueueManager::cs.
+        const string listPath = getListPath(aUser);
+        {
+            Lock l(cs);
+            QueueItem* qi = fileQueue.find(listPath);
+            if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished()) {
+                qi->setFlag(aFlags);
+                if(!aInitialDir.empty())
+                    qi->setTempTarget(aInitialDir);
+                return;
+            }
         }
-        for(const auto& i: fileQueue.getQueue()) {
-            qi = i.second;
-            if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
+
+        vector<pair<string, HintedUser>> lists;
+        {
+            Lock l(cs);
+            for(const auto& i: fileQueue.getQueue()) {
+                QueueItem* qi = i.second;
+                if(!qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished() || qi->getSources().empty())
+                    continue;
+                lists.emplace_back(qi->getTarget(), qi->getSources()[0].getUser());
+            }
+        }
+        for(const auto& e: lists) {
+            if(!ConnectionManagerPeerMatch::samePeer(aUser, e.second))
                 continue;
-            if(!ConnectionManagerPeerMatch::samePeer(aUser, qi->getSources()[0].getUser()))
+            Lock l(cs);
+            QueueItem* qi = fileQueue.find(e.first);
+            if(!qi || !qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished())
                 continue;
             qi->setFlag(aFlags);
             if(!aInitialDir.empty())

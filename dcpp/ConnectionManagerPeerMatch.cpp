@@ -13,6 +13,8 @@
 #include "ClientManager.h"
 #include "User.h"
 
+#include <vector>
+
 namespace dcpp {
 namespace ConnectionManagerPeerMatch {
 
@@ -54,13 +56,20 @@ void forEachListPeer(const HintedUser& seed, const std::function<void(const Hint
     if(!seed.user)
         return;
     fn(seed);
+
+    // Snapshot aliases under ClientManager::cs, then invoke unlocked. Callbacks
+    // (tryUseCachedListAt → fire/processList) must not run while CM is held —
+    // that inverts with QueueManager::add → SourcesUpdated → getNicks.
+    vector<HintedUser> peers;
     ClientManager::getInstance()->visitOnlineUsers([&](OnlineUser* ou) {
         HintedUser peer(ou->getUser(), ou->getClient().getHubUrl());
         if(peer.user == seed.user && peer.hint == seed.hint)
             return;
         if(samePeer(seed, peer))
-            fn(peer);
+            peers.push_back(peer);
     });
+    for(const auto& peer: peers)
+        fn(peer);
 }
 
 /** Seed keys only: aliases with the same nick/IP+share hash to the same keys. */

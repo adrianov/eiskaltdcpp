@@ -18,6 +18,9 @@
 #include "SettingsManager.h"
 #include "ShareManager.h"
 
+#include <utility>
+#include <vector>
+
 namespace dcpp {
 
 void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& root, const HintedUser& aUser,
@@ -60,6 +63,9 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
     }
 
     const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
+    // Fire after releasing cs — listeners (DownloadQueue) call ClientManager::getNicks.
+    vector<QueueItem*> addedItems;
+    vector<pair<QueueItem*, bool>> sourceUpdates; // qi, fire SourceAdded
     {
         Lock l(cs);
 
@@ -72,7 +78,11 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
                 for(auto& i : ql) {
                     if(!i->isSource(aUser)) {
                         try {
-                            wantConnection = addSource(i, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0, &queued);
+                            bool updated = false;
+                            wantConnection = addSource(i, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0,
+                                                       &queued, false, &updated);
+                            if(updated)
+                                sourceUpdates.emplace_back(i, i->isSource(aUser));
                             sourceAdded = true;
                         } catch(...) { }
                     }
@@ -81,14 +91,14 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
                 if(!sourceAdded) {
                     throw QueueException(_("This file is already queued"));
                 }
-                goto connect;
+                goto notify;
             }
         }
 
         QueueItem* q = fileQueue.find(target);
         if(q == NULL) {
             q = fileQueue.add(target, aSize, aFlags, QueueItem::DEFAULT, tempTarget, GET_TIME(), root);
-            fire(QueueManagerListener::Added(), q);
+            addedItems.push_back(q);
         } else {
             if(q->getSize() != aSize) {
                 throw QueueException(_("A file with a different size already exists in the queue"));
@@ -104,10 +114,23 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
             q->setFlag(aFlags);
         }
 
-        wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0, &queued);
+        bool updated = false;
+        wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0,
+                                   &queued, false, &updated);
+        if(updated)
+            sourceUpdates.emplace_back(q, q->isSource(aUser));
     }
 
-connect:
+notify:
+    for(auto* q: addedItems)
+        fire(QueueManagerListener::Added(), q);
+    for(auto& u: sourceUpdates) {
+        if(u.second)
+            fire(QueueManagerListener::SourceAdded(), u.first, aUser);
+        fire(QueueManagerListener::SourcesUpdated(), u.first);
+        if(wantConnection && hasBusyAlias(u.first, aUser, queued))
+            wantConnection = false;
+    }
     if(wantConnection && aUser.user->isOnline())
         ConnectionManager::getInstance()->getDownloadConnection(aUser);
 }
@@ -116,12 +139,26 @@ void QueueManager::readd(const string& target, const HintedUser& aUser) {
     bool wantConnection = false;
     PeerConnectHub::clearUnreachablePeer(aUser.user);
     const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
+    QueueItem* updatedQi = nullptr;
+    bool fireSourceAdded = false;
     {
         Lock l(cs);
         QueueItem* q = fileQueue.find(target);
         if(q && q->isBadSource(aUser)) {
-            wantConnection = addSource(q, aUser, QueueItem::Source::FLAG_MASK, &queued);
+            bool updated = false;
+            wantConnection = addSource(q, aUser, QueueItem::Source::FLAG_MASK, &queued, false, &updated);
+            if(updated) {
+                updatedQi = q;
+                fireSourceAdded = q->isSource(aUser);
+            }
         }
+    }
+    if(updatedQi) {
+        if(fireSourceAdded)
+            fire(QueueManagerListener::SourceAdded(), updatedQi, aUser);
+        fire(QueueManagerListener::SourcesUpdated(), updatedQi);
+        if(wantConnection && hasBusyAlias(updatedQi, aUser, queued))
+            wantConnection = false;
     }
     if(wantConnection && aUser.user->isOnline())
         ConnectionManager::getInstance()->getDownloadConnection(aUser);

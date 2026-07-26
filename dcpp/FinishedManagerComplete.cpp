@@ -71,8 +71,14 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
     int64_t size = 0, pos = 0;
     if(!upload) {
         QueueManager::getInstance()->getSizeInfo(size, pos, file);
-        if (size == -1)
-            return;
+        if (size == -1) {
+            // Queue item may already be gone; recover size from the download tree.
+            auto* d = dynamic_cast<Download*>(t);
+            size = d ? d->getTigerTree().getFileSize() : 0;
+            pos = t->getStartPos();
+            if (size <= 0)
+                return;
+        }
     } else if(t->getType() == Transfer::TYPE_FULL_LIST) {
         file += ".xml";
         if(File::getSize(file) == -1) {
@@ -83,6 +89,11 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
         size = t->getSize();
     }
 
+    const int64_t fileSize = upload ? File::getSize(file) : size;
+    const int64_t transferred = upload ? t->getPos() : (pos + t->getPos());
+
+    // Fire under lock so listeners can safely read Finished*Item fields.
+    // Listeners only build a VarMap + queue a Qt signal (no SQLite I/O).
     Lock l(cs);
 
     if(!upload)
@@ -93,10 +104,10 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
         auto it = map.find(file);
         if(it == map.end()) {
             FinishedFileItemPtr p = new FinishedFileItem(
-                        pos + t->getPos(),
+                        transferred,
                         milliSeconds,
                         time,
-                        upload ? File::getSize(file) : size,
+                        fileSize,
                         t->getActual(),
                         crc32Checked,
                         user

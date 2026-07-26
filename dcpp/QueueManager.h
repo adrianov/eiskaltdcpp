@@ -154,8 +154,11 @@ private:
     StringList protectedFileLists;
 
     static string checkTarget(const string& aTarget, bool checkExsistence);
+    /** When notify is false, set *updated if SourcesUpdated is owed; caller fires and runs
+     *  hasBusyAlias outside QueueManager::cs. */
     bool addSource(QueueItem* qi, const HintedUser& aUser, Flags::MaskType addBad,
-            const QueuedDownloadUsers* queuedPrefetched = nullptr);
+            const QueuedDownloadUsers* queuedPrefetched = nullptr, bool notify = true,
+            bool* updated = nullptr);
     bool isBusyOnFile(const QueueItem* qi, const HintedUser& src, const QueuedDownloadUsers& queued);
     bool hasBusyAlias(const QueueItem* qi, const HintedUser& candidate, const QueuedDownloadUsers& queued);
 

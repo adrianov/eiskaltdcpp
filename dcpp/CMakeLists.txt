@@ -54,6 +54,7 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerSave.cpp
     QueueManagerSource.cpp
     QueueManagerSourceBusy.cpp
+    QueueManagerSourceRemove.cpp
     QueueManagerUserQueue.cpp
     QueueManagerUserQueueNext.cpp
     NaturalCompare.cpp
