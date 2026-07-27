@@ -92,63 +92,79 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
     const int64_t fileSize = upload ? File::getSize(file) : size;
     const int64_t transferred = upload ? t->getPos() : (pos + t->getPos());
 
-    // Fire under lock so listeners can safely read Finished*Item fields.
-    // Listeners only build a VarMap + queue a Qt signal (no SQLite I/O).
-    Lock l(cs);
-
-    if(!upload)
-        dlByTth[t->getTTH().toBase32()] = file;
+    // Update maps under lock; fire after unlock so Qt can block on SQLite persist.
+    bool fileAdded = false;
+    bool userAdded = false;
+    FinishedFileItemPtr fileItem;
+    FinishedUserItemPtr userItem;
 
     {
-        MapByFile& map = upload ? ULByFile : DLByFile;
-        auto it = map.find(file);
-        if(it == map.end()) {
-            FinishedFileItemPtr p = new FinishedFileItem(
-                        transferred,
-                        milliSeconds,
-                        time,
-                        fileSize,
-                        t->getActual(),
-                        crc32Checked,
-                        user
-                        );
-            map[file] = p;
-            fire(FinishedManagerListener::AddedFile(), upload, file, p);
-        } else {
-            it->second->update(
-                        crc32Checked ? 0 : t->getPos(),
-                        milliSeconds,
-                        time,
-                        t->getActual(),
-                        crc32Checked,
-                        user
-                        );
-            fire(FinishedManagerListener::UpdatedFile(), upload, file, it->second);
+        Lock l(cs);
+
+        if(!upload)
+            dlByTth[t->getTTH().toBase32()] = file;
+
+        {
+            MapByFile& map = upload ? ULByFile : DLByFile;
+            auto it = map.find(file);
+            if(it == map.end()) {
+                fileItem = new FinishedFileItem(
+                            transferred,
+                            milliSeconds,
+                            time,
+                            fileSize,
+                            t->getActual(),
+                            crc32Checked,
+                            user
+                            );
+                map[file] = fileItem;
+                fileAdded = true;
+            } else {
+                it->second->update(
+                            crc32Checked ? 0 : t->getPos(),
+                            milliSeconds,
+                            time,
+                            t->getActual(),
+                            crc32Checked,
+                            user
+                            );
+                fileItem = it->second;
+            }
+        }
+
+        {
+            MapByUser& map = upload ? ULByUser : DLByUser;
+            auto it = map.find(user);
+            if(it == map.end()) {
+                userItem = new FinishedUserItem(
+                            t->getPos(),
+                            milliSeconds,
+                            time,
+                            file
+                            );
+                map[user] = userItem;
+                userAdded = true;
+            } else {
+                it->second->update(
+                            t->getPos(),
+                            milliSeconds,
+                            time,
+                            file
+                            );
+                userItem = it->second;
+            }
         }
     }
 
-    {
-        MapByUser& map = upload ? ULByUser : DLByUser;
-        auto it = map.find(user);
-        if(it == map.end()) {
-            FinishedUserItemPtr p = new FinishedUserItem(
-                        t->getPos(),
-                        milliSeconds,
-                        time,
-                        file
-                        );
-            map[user] = p;
-            fire(FinishedManagerListener::AddedUser(), upload, user, p);
-        } else {
-            it->second->update(
-                        t->getPos(),
-                        milliSeconds,
-                        time,
-                        file
-                        );
-            fire(FinishedManagerListener::UpdatedUser(), upload, user);
-        }
-    }
+    if(fileAdded)
+        fire(FinishedManagerListener::AddedFile(), upload, file, fileItem);
+    else
+        fire(FinishedManagerListener::UpdatedFile(), upload, file, fileItem);
+
+    if(userAdded)
+        fire(FinishedManagerListener::AddedUser(), upload, user, userItem);
+    else
+        fire(FinishedManagerListener::UpdatedUser(), upload, user);
 }
 
 void FinishedManager::on(QueueManagerListener::CRCChecked, Download* d) noexcept {

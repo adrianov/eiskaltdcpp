@@ -72,6 +72,7 @@ void FinishedTransfers<isUpload>::loadListFromDB()
     {
         QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", conn);
         db.setDatabaseName(db_file);
+        db.setConnectOptions(QStringLiteral("QSQLITE_BUSY_TIMEOUT=5000"));
 
         if (db.open()) {
             QSqlQuery q(db);
@@ -97,11 +98,8 @@ void FinishedTransfers<isUpload>::loadListFromDB()
                 if (!showDownloadParams(params))
                     continue;
 
-                // Skip missing downloads in the UI only — do not DELETE here.
-                // Large downloads may still be moving from temp to target (FileMover).
-                if (!isUpload && !Util::fileExists(_tq(params["TARGET"].toString())))
-                    continue;
-
+                // Keep rows even if the target is briefly missing (Complete persists
+                // before FileMover finishes; pruneMissingFiles cleans up later).
                 emit coreLoadedFile(params);
             }
 

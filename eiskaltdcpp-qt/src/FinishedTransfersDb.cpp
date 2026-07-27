@@ -79,6 +79,7 @@ void FinishedTransfers<isUpload>::openDatabase()
     db_file = _q(Util::getPath(Util::PATH_USER_CONFIG)) + (isUpload? "FinishedUploads.sqlite" : "FinishedDownloads.sqlite");
 
     db.setDatabaseName(db_file);
+    db.setConnectOptions(QStringLiteral("QSQLITE_BUSY_TIMEOUT=5000"));
     db_opened = db.open();
 
     if (!db_opened)

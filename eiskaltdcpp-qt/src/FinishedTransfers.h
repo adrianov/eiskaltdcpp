@@ -60,9 +60,6 @@ Q_SIGNALS:
     void coreEndBulkLoad();
 
 public Q_SLOTS:
-    void slotPersistFile(const VarMap&);
-    void slotPersistUser(const VarMap&);
-    void slotRemoveFileFromDB(const QString&);
     virtual void slotTypeChanged(int) = 0;
     virtual void slotClear() = 0;
     virtual void slotItemDoubleClicked(const QModelIndex &) = 0;
@@ -157,26 +154,9 @@ private:
     FinishedTransferProxyModel *proxy;
     FinishedTransfersModel *model;
 
-    static bool isFileListPath(const std::string &file) {
-        return isFinishedFileList(file);
-    }
-
-    bool showDownload(const std::string &file, const FinishedFileItemPtr &item) const {
-        if (isUpload)
-            return true;
-        return item->isFull() && !isFileListPath(file);
-    }
-
-    bool showDownloadParams(const VarMap &params) const {
-        if (isUpload)
-            return true;
-        if (!params["FULL"].toBool())
-            return false;
-
-        const string target = _tq(params["TARGET"].toString());
-        const string path = _tq(params["PATH"].toString() + params["FNAME"].toString());
-        return !isFileListPath(target) && !isFileListPath(path);
-    }
+    static bool isFileListPath(const std::string &file);
+    bool showDownload(const std::string &file, const FinishedFileItemPtr &item) const;
+    bool showDownloadParams(const VarMap &params) const;
 
 #ifdef USE_QT_SQLITE
     QSqlDatabase db;

@@ -21,8 +21,7 @@ FinishedTransfers<isUpload>::~FinishedTransfers(){
 
     FinishedManager::getInstance()->removeListener(this);
 
-    // Flush queued persist/model slots from transfer threads before closing DB.
-    QCoreApplication::sendPostedEvents(this, QEvent::MetaCall);
+    // Flush queued model slots from transfer threads before teardown.
     QCoreApplication::sendPostedEvents(model, QEvent::MetaCall);
 
     model->clearModel();

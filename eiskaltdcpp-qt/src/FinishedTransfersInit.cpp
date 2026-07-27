@@ -37,13 +37,7 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
     treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // Persist on the GUI thread — QSqlDatabase is not cross-thread safe.
-    QObject::connect(this, SIGNAL(coreAddedFile(VarMap)),   this, SLOT(slotPersistFile(VarMap)), Qt::QueuedConnection);
-    QObject::connect(this, SIGNAL(coreUpdatedFile(VarMap)), this, SLOT(slotPersistFile(VarMap)), Qt::QueuedConnection);
-    QObject::connect(this, SIGNAL(coreAddedUser(VarMap)),   this, SLOT(slotPersistUser(VarMap)), Qt::QueuedConnection);
-    QObject::connect(this, SIGNAL(coreUpdatedUser(VarMap)), this, SLOT(slotPersistUser(VarMap)), Qt::QueuedConnection);
-    QObject::connect(this, SIGNAL(coreRemovedFile(QString)), this, SLOT(slotRemoveFileFromDB(QString)), Qt::QueuedConnection);
-
+    // Persist is done in the listener (thread-safe SQLite). Signals only update the model.
     QObject::connect(this, SIGNAL(coreAddedFile(VarMap)),   model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreAddedUser(VarMap)),   model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreUpdatedFile(VarMap)), model, SLOT(addFile(VarMap)), Qt::QueuedConnection);

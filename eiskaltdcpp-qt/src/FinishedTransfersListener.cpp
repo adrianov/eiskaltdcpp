@@ -15,7 +15,16 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::AddedFile, bool up
     if (isUpload != upload)
         return;
 
-    if (!showDownload(file, item)) {
+    VarMap params;
+    bool show = false;
+    {
+        auto lock = FinishedManager::getInstance()->lock();
+        show = showDownload(file, item);
+        if (show)
+            getParams(item, file, params);
+    }
+
+    if (!show) {
         if (!isUpload && isFileListPath(file)) {
             try {
                 FinishedManager::getInstance()->remove(false, file);
@@ -24,36 +33,50 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::AddedFile, bool up
         return;
     }
 
-    VarMap params;
-    getParams(item, file, params);
+    persistFile(params);
     emit coreAddedFile(params);
 }
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept
 {
-    if (isUpload == upload){
-        VarMap params;
+    if (isUpload != upload)
+        return;
+
+    VarMap params;
+    {
+        auto lock = FinishedManager::getInstance()->lock();
         getParams(item, user, params);
-        emit coreAddedUser(params);
     }
+    persistUser(params);
+    emit coreAddedUser(params);
 }
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::on(FinishedManagerListener::UpdatedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept
 {
-    if (isUpload == upload && showDownload(file, item)){
-        VarMap params;
+    if (isUpload != upload)
+        return;
+
+    VarMap params;
+    {
+        auto lock = FinishedManager::getInstance()->lock();
+        if (!showDownload(file, item))
+            return;
         getParams(item, file, params);
-        emit coreUpdatedFile(params);
     }
+    persistFile(params);
+    emit coreUpdatedFile(params);
 }
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::on(FinishedManagerListener::RemovedFile, bool upload, const std::string &file) noexcept
 {
-    if (isUpload == upload)
-        emit coreRemovedFile(_q(file));
+    if (isUpload != upload)
+        return;
+
+    removeFileDB(_q(file));
+    emit coreRemovedFile(_q(file));
 }
 
 template <bool isUpload>
@@ -62,14 +85,16 @@ void FinishedTransfers<isUpload>::on(FinishedManagerListener::UpdatedUser, bool 
     if (isUpload != upload)
         return;
 
-    // Called from FinishedManager while cs is held.
-    const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
-    auto userit = umap.find(user);
-    if (userit == umap.end())
-        return;
-
     VarMap params;
-    getParams(userit->second, user, params);
+    {
+        auto lock = FinishedManager::getInstance()->lock();
+        const FinishedManager::MapByUser &umap = FinishedManager::getInstance()->getMapByUser(isUpload);
+        auto userit = umap.find(user);
+        if (userit == umap.end())
+            return;
+        getParams(userit->second, user, params);
+    }
+    persistUser(params);
     emit coreUpdatedUser(params);
 }
 
