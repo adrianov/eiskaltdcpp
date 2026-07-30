@@ -77,11 +77,25 @@ void FinishedTransfers<isUpload>::loadListFromDB()
         if (db.open()) {
             QSqlQuery q(db);
             VarMap params;
+            // TIME is "%Y-%m-%d %H:%M:%S" — lexicographic ORDER BY matches chronology.
+            static const int keep = 500;
+            const QString keepStr = QString::number(keep);
+
+            // Cap the DB to the newest rows; unordered LIMIT used to restore the oldest.
+            q.exec(QStringLiteral(
+                "DELETE FROM files WHERE rowid NOT IN ("
+                "SELECT rowid FROM ("
+                "SELECT rowid FROM files ORDER BY TIME DESC LIMIT %1));").arg(keepStr));
+            q.exec(QStringLiteral(
+                "DELETE FROM users WHERE rowid NOT IN ("
+                "SELECT rowid FROM ("
+                "SELECT rowid FROM users ORDER BY TIME DESC LIMIT %1));").arg(keepStr));
 
             emit coreBeginBulkLoad();
 
-            q.exec("SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
-                   "FROM files LIMIT 0, 500;");
+            q.exec(QStringLiteral(
+                "SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
+                "FROM files ORDER BY TIME DESC LIMIT %1;").arg(keepStr));
             while (q.next()) {
                 int i = 0;
                 params["TARGET"]= q.value(i++);
@@ -104,8 +118,9 @@ void FinishedTransfers<isUpload>::loadListFromDB()
             }
 
             params.clear();
-            q.exec("SELECT CID, NICK, TIME, FILES, TR, SPEED, ELAP, FULL "
-                   "FROM users LIMIT 0, 500;");
+            q.exec(QStringLiteral(
+                "SELECT CID, NICK, TIME, FILES, TR, SPEED, ELAP, FULL "
+                "FROM users ORDER BY TIME DESC LIMIT %1;").arg(keepStr));
             while (q.next()) {
                 int i = 0;
                 params["CID"]  = q.value(i++);
