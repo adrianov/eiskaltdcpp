@@ -42,40 +42,49 @@ void ShareIndex::drainWriteQueue()
             }
         }
 
-        switch (job.kind) {
-        case OpenDb:
-            open();
-            break;
-        case MatchQueue: {
-            dcpp::UserList users = job.users;
-            {
-                QMutexLocker lock(&writeMutex);
-                const dcpp::UserList pending = takeMatchUsers();
-                users.insert(users.end(), pending.begin(), pending.end());
+        try {
+            switch (job.kind) {
+            case OpenDb:
+                open();
+                break;
+            case MatchQueue: {
+                dcpp::UserList users = job.users;
+                {
+                    QMutexLocker lock(&writeMutex);
+                    const dcpp::UserList pending = takeMatchUsers();
+                    users.insert(users.end(), pending.begin(), pending.end());
+                }
+                matchQueueSync(users);
+                break;
             }
-            matchQueueSync(users);
-            break;
-        }
-        case RemoveTth:
-            removeTthSync(job.cid, job.tth);
-            break;
-        case RemoveUser:
-            removeUserSync(job.cid);
-            break;
-        case IngestList:
-            ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
-            break;
-        case UpsertSearch: {
-            QList<QVariantMap> maps;
-            maps.append(job.map);
-            {
-                QMutexLocker lock(&writeMutex);
-                maps.append(takeHubUpserts());
+            case RemoveTth:
+                removeTthSync(job.cid, job.tth);
+                break;
+            case RemoveUser:
+                removeUserSync(job.cid);
+                break;
+            case IngestList:
+                ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
+                break;
+            case UpsertSearch: {
+                QList<QVariantMap> maps;
+                maps.append(job.map);
+                {
+                    QMutexLocker lock(&writeMutex);
+                    maps.append(takeHubUpserts());
+                }
+                upsertFromSearchBatchSync(maps);
+                break;
             }
-            upsertFromSearchBatchSync(maps);
-            break;
+            }
+        } catch (const std::exception &e) {
+            setLastError(QString::fromUtf8(e.what()));
+        } catch (...) {
+            setLastError(QStringLiteral("share index write failed"));
         }
-        }
+
+        if (ShareIndexDb::isFatalErr(lastError()))
+            recoverDb();
     }
 }
 

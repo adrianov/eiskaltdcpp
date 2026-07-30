@@ -162,6 +162,8 @@ private:
     void refreshEntryCount(duckdb::Connection &con);
     void reclaimFreePages(duckdb::Connection &con);
     void drainWriteQueue();
+    /** Drop poisoned DuckDB handle and reopen (after FatalException). */
+    void recoverDb();
     void rememberListMeta(const QString &cid, const QString &listPath, int rowCount);
 
     QString dbFile;

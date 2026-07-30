@@ -111,6 +111,9 @@ void ShareIndex::removeUserSync(const QString &cid)
     }
     ShareIndexDb::query1(*con, "DELETE FROM share_list_meta WHERE cid = ?",
                          ShareIndexDb::strVal(cid));
+    // Drop the user row(s) even if file-orphan batches fail later.
+    ShareIndexDb::query1(*con, "DELETE FROM share_users WHERE cid = ?",
+                         ShareIndexDb::strVal(cid));
     if (!removeOrphans(*con))
         return;
     refreshEntryCount(*con);
@@ -119,16 +122,44 @@ void ShareIndex::removeUserSync(const QString &cid)
 bool ShareIndex::removeOrphans(duckdb::Connection &con)
 {
     QString err;
-    if (!ShareIndexDb::execOk(con,
-            "DELETE FROM share_files f WHERE NOT EXISTS ("
-            "SELECT 1 FROM share_locations l WHERE l.file_id = f.file_id)",
-            &err)) {
-        setLastError(err.isEmpty() ? QStringLiteral("orphan files") : err);
-        return false;
+    // Batch file orphans — a single huge DELETE on multi‑GB indexes has
+    // triggered DuckDB FatalException during commit (v1.4).
+    for (int pass = 0; pass < 512; ++pass) {
+        if (!ShareIndexDb::execOk(con,
+                "CREATE OR REPLACE TEMP TABLE share_orphan_files AS "
+                "SELECT file_id FROM share_files WHERE file_id NOT IN ("
+                "SELECT file_id FROM share_locations WHERE file_id IS NOT NULL) "
+                "LIMIT 5000",
+                &err)) {
+            setLastError(err.isEmpty() ? QStringLiteral("orphan files") : err);
+            return false;
+        }
+        qint64 n = 0;
+        if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_orphan_files",
+                                     &n, &err)) {
+            ShareIndexDb::execOk(con, "DROP TABLE IF EXISTS share_orphan_files");
+            setLastError(err.isEmpty() ? QStringLiteral("orphan files") : err);
+            return false;
+        }
+        if (n <= 0) {
+            ShareIndexDb::execOk(con, "DROP TABLE IF EXISTS share_orphan_files");
+            break;
+        }
+        if (!ShareIndexDb::execOk(con,
+                "DELETE FROM share_files WHERE file_id IN "
+                "(SELECT file_id FROM share_orphan_files)",
+                &err)) {
+            ShareIndexDb::execOk(con, "DROP TABLE IF EXISTS share_orphan_files");
+            setLastError(err.isEmpty() ? QStringLiteral("orphan files") : err);
+            return false;
+        }
+        ShareIndexDb::execOk(con, "DROP TABLE IF EXISTS share_orphan_files");
+        if (n < 5000)
+            break;
     }
     if (!ShareIndexDb::execOk(con,
-            "DELETE FROM share_users u WHERE NOT EXISTS ("
-            "SELECT 1 FROM share_locations l WHERE l.user_id = u.user_id)",
+            "DELETE FROM share_users WHERE user_id NOT IN "
+            "(SELECT user_id FROM share_locations)",
             &err)) {
         setLastError(err.isEmpty() ? QStringLiteral("orphan users") : err);
         return false;

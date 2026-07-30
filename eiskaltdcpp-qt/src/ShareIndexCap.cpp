@@ -37,24 +37,24 @@ qint64 metaValue(duckdb::Connection &con, const QString &key, qint64 fallback = 
 
 bool metaTableExists(duckdb::Connection &con)
 {
-    auto res = con.Query(
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_name = 'share_index_meta' LIMIT 1");
-    return !res->HasError() && res->RowCount() > 0;
+    qint64 one = 0;
+    return ShareIndexDb::scalarI64(con,
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_name = 'share_index_meta' LIMIT 1",
+            &one);
 }
 
 } // namespace
 
 void ShareIndex::refreshEntryCount(duckdb::Connection &con)
 {
-    auto res = con.Query("SELECT count(*)::BIGINT FROM share_locations");
-    if (res->HasError() || res->RowCount() == 0) {
-        setLastError(QString::fromStdString(res->GetError()));
+    QString err;
+    qint64 n = 0;
+    if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_locations", &n, &err)) {
+        setLastError(err);
         return;
     }
-    QString err;
-    if (!upsertMeta(con, QStringLiteral("entry_count"),
-                    ShareIndexDb::qi64(res->GetValue(0, 0)), &err))
+    if (!upsertMeta(con, QStringLiteral("entry_count"), n, &err))
         setLastError(err);
 }
 
@@ -74,13 +74,13 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
     // Recount when missing or stuck at 0 (stale meta after a partial migrate).
     if (metaValue(con, QStringLiteral("entry_count")) <= 0) {
         QString err;
-        auto res = con.Query("SELECT count(*)::BIGINT FROM share_locations");
-        if (res->HasError() || res->RowCount() == 0) {
-            setLastError(QString::fromStdString(res->GetError()));
+        qint64 n = 0;
+        if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_locations",
+                                     &n, &err)) {
+            setLastError(err);
             return false;
         }
-        if (!upsertMeta(con, QStringLiteral("entry_count"),
-                        ShareIndexDb::qi64(res->GetValue(0, 0)), &err)) {
+        if (!upsertMeta(con, QStringLiteral("entry_count"), n, &err)) {
             setLastError(err);
             return false;
         }
@@ -97,10 +97,11 @@ void ShareIndex::pruneExcess(duckdb::Connection &con)
 {
     // File-list rows mirror lists cached on disk and are replaced per user;
     // only hub-search rows grow without bound, so the cap applies to them.
-    auto cnt = con.Query("SELECT count(*)::BIGINT FROM share_locations WHERE source = 2");
-    if (cnt->HasError() || cnt->RowCount() == 0)
+    qint64 hubCount = 0;
+    if (!ShareIndexDb::scalarI64(con,
+            "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2", &hubCount))
         return;
-    const qint64 excess = ShareIndexDb::qi64(cnt->GetValue(0, 0)) - kMaxHubEntries;
+    const qint64 excess = hubCount - kMaxHubEntries;
     if (excess <= 0)
         return;
 

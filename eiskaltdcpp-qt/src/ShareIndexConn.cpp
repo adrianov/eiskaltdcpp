@@ -41,4 +41,22 @@ void ShareIndex::releaseThreadDb()
     disconnectThreadDb();
 }
 
+void ShareIndex::recoverDb()
+{
+    cancelSearch();
+    opened.storeRelease(0);
+    {
+        QMutexLocker lock(&searchMu);
+        activeSearchCon = nullptr;
+    }
+    {
+        QMutexLocker lock(&connMutex);
+        threadConns.clear();
+    }
+    duck.reset();
+    open();
+    if (isOpen())
+        setLastError(QString());
+}
+
 #endif
