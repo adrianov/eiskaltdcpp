@@ -77,13 +77,20 @@ void ShareIndex::drainWriteQueue()
                 break;
             }
             }
+        } catch (const duckdb::FatalException &e) {
+            ShareIndexDb::noteType(duckdb::ExceptionType::FATAL);
+            setLastError(QString::fromUtf8(e.what()));
+        } catch (const duckdb::InternalException &e) {
+            ShareIndexDb::noteType(duckdb::ExceptionType::INTERNAL);
+            setLastError(QString::fromUtf8(e.what()));
         } catch (const std::exception &e) {
+            ShareIndexDb::noteType(duckdb::ErrorData(e).Type());
             setLastError(QString::fromUtf8(e.what()));
         } catch (...) {
             setLastError(QStringLiteral("share index write failed"));
         }
 
-        if (ShareIndexDb::isFatalErr(lastError()))
+        if (ShareIndexDb::takeFatal())
             recoverDb();
     }
 }

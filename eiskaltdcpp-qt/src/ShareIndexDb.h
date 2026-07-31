@@ -11,9 +11,8 @@
 
 #ifdef USE_QT_SQLITE
 
-#include <duckdb.hpp>
+#include "ShareIndexDbQuery.h"
 
-#include <QString>
 #include <QVariant>
 
 /** DuckDB Value helpers for ShareIndex (Qt ↔ DuckDB). */
@@ -69,112 +68,6 @@ inline qint64 qi64(const duckdb::Value &v)
     if (v.IsNull())
         return 0;
     return v.GetValue<int64_t>();
-}
-
-inline void setErr(QString *err, const QString &msg)
-{
-    if (err)
-        *err = msg;
-}
-
-inline bool execOk(duckdb::Connection &con, const std::string &sql, QString *err = nullptr)
-{
-    try {
-        auto res = con.Query(sql);
-        if (!res || res->HasError()) {
-            setErr(err, res ? QString::fromStdString(res->GetError())
-                            : QStringLiteral("null result"));
-            return false;
-        }
-        return true;
-    } catch (const std::exception &e) {
-        // FatalException during commit must not abort the process.
-        setErr(err, QString::fromUtf8(e.what()));
-        return false;
-    } catch (...) {
-        setErr(err, QStringLiteral("duckdb error"));
-        return false;
-    }
-}
-
-inline bool scalarI64(duckdb::Connection &con, const std::string &sql, qint64 *out,
-                      QString *err = nullptr)
-{
-    try {
-        auto res = con.Query(sql);
-        if (!res || res->HasError() || res->RowCount() == 0) {
-            setErr(err, res && res->HasError() ? QString::fromStdString(res->GetError())
-                                               : QStringLiteral("empty"));
-            return false;
-        }
-        if (out)
-            *out = qi64(res->GetValue(0, 0));
-        return true;
-    } catch (const std::exception &e) {
-        setErr(err, QString::fromUtf8(e.what()));
-        return false;
-    } catch (...) {
-        setErr(err, QStringLiteral("duckdb error"));
-        return false;
-    }
-}
-
-inline bool isFatalErr(const QString &err)
-{
-    return err.contains(QLatin1String("FATAL"), Qt::CaseInsensitive)
-            || err.contains(QLatin1String("INTERNAL Error"), Qt::CaseInsensitive);
-}
-
-/** Materialized query with bound parameters (C++14-safe). */
-inline duckdb::unique_ptr<duckdb::MaterializedQueryResult>
-queryMat(duckdb::Connection &con, const std::string &sql, duckdb::vector<duckdb::Value> &binds,
-         QString *err = nullptr)
-{
-    try {
-        auto pending = con.PendingQuery(sql, binds, duckdb::QueryResultOutputType::FORCE_MATERIALIZED);
-        if (!pending || pending->HasError()) {
-            setErr(err, pending ? QString::fromStdString(pending->GetError())
-                                : QStringLiteral("pending"));
-            return nullptr;
-        }
-        auto qres = pending->Execute();
-        if (!qres || qres->HasError()) {
-            setErr(err, qres ? QString::fromStdString(qres->GetError())
-                             : QStringLiteral("execute"));
-            return nullptr;
-        }
-        auto *mat = dynamic_cast<duckdb::MaterializedQueryResult *>(qres.get());
-        if (!mat) {
-            setErr(err, QStringLiteral("not materialized"));
-            return nullptr;
-        }
-        qres.release();
-        return duckdb::unique_ptr<duckdb::MaterializedQueryResult>(mat);
-    } catch (const std::exception &e) {
-        setErr(err, QString::fromUtf8(e.what()));
-        return nullptr;
-    } catch (...) {
-        setErr(err, QStringLiteral("duckdb error"));
-        return nullptr;
-    }
-}
-
-inline duckdb::unique_ptr<duckdb::MaterializedQueryResult>
-query1(duckdb::Connection &con, const std::string &sql, const duckdb::Value &a, QString *err = nullptr)
-{
-    duckdb::vector<duckdb::Value> binds;
-    binds.push_back(a);
-    return queryMat(con, sql, binds, err);
-}
-
-inline duckdb::unique_ptr<duckdb::MaterializedQueryResult>
-query2(duckdb::Connection &con, const std::string &sql, const duckdb::Value &a, const duckdb::Value &b,
-       QString *err = nullptr)
-{
-    duckdb::vector<duckdb::Value> binds;
-    binds.push_back(a);
-    binds.push_back(b);
-    return queryMat(con, sql, binds, err);
 }
 
 /** In-memory dedup key for list walking (not stored): file with TTH →
