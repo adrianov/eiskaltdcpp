@@ -5,125 +5,370 @@
 	<emoticon file="!.png"><name text=":!:"/></emoticon>
 	<emoticon file="!$$.png"><name text=":???:"/></emoticon>
 	<emoticon file="!$.png"><name text=":?:"/></emoticon>
-	<emoticon file="!Abiohazard.png"><name text=":зараза:"/></emoticon>
-	<emoticon file="!Aradiation.png"><name text=":радиация:"/></emoticon>
-	<emoticon file="!goto.png"><name text=":вперёд:"/></emoticon>
-	<emoticon file="!man.png"><name text=":чувак:"/></emoticon>
-	<emoticon file="!women.png"><name text=":чувиха:"/></emoticon>
-	<emoticon file="!no mat.png"><name text=":цензура:"/></emoticon>
-	<emoticon file="!Stop.png"><name text=":стоп:"/></emoticon>
-	<emoticon file="!toleft.png"><name text=":влево:"/></emoticon>
-	<emoticon file="!toright.png"><name text=":вправо:"/></emoticon>
-	<emoticon file="!Wmoon.png"><name text=":луна:"/></emoticon>
-	<emoticon file="!Wsun.png"><name text=":солнце:"/></emoticon>
-	<emoticon file="!Wrain.png"><name text=":гроза:"/></emoticon>
-	<emoticon file="!XP.png"><name text=":ХР:"/></emoticon>
+	<emoticon file="!Abiohazard.png">
+		<name text=":зараза:"/>
+		<name text=":zaraza:"/>
+	</emoticon>
+	<emoticon file="!Aradiation.png">
+		<name text=":радиация:"/>
+		<name text=":radiation:"/>
+	</emoticon>
+	<emoticon file="!goto.png">
+		<name text=":вперёд:"/>
+		<name text=":gogo:"/>
+	</emoticon>
+	<emoticon file="!man.png">
+		<name text=":чувак:"/>
+		<name text=":boy:"/>
+	</emoticon>
+	<emoticon file="!women.png">
+		<name text=":чувиха:"/>
+		<name text=":girla:"/>
+	</emoticon>
+	<emoticon file="!no mat.png">
+		<name text=":цензура:"/>
+		<name text=":censored:"/>
+	</emoticon>
+	<emoticon file="!Stop.png">
+		<name text=":стоп:"/>
+		<name text=":stopp:"/>
+	</emoticon>
+	<emoticon file="!toleft.png">
+		<name text=":влево:"/>
+		<name text=":left:"/>
+	</emoticon>
+	<emoticon file="!toright.png">
+		<name text=":вправо:"/>
+		<name text=":right:"/>
+	</emoticon>
+	<emoticon file="!Wmoon.png">
+		<name text=":луна:"/>
+		<name text=":moon:"/>
+	</emoticon>
+	<emoticon file="!Wsun.png">
+		<name text=":солнце:"/>
+		<name text=":sun:"/>
+	</emoticon>
+	<emoticon file="!Wrain.png">
+		<name text=":гроза:"/>
+		<name text=":groza:"/>
+	</emoticon>
+	<emoticon file="!XP.png">
+		<name text=":ХР:"/>
+		<name text=":XP:"/>
+	</emoticon>
 	<emoticon file="+-1.png"><name text=":-1:"/></emoticon>
 	<emoticon file="+1.png"><name text=":+1:"/></emoticon>
-	<emoticon file="+Beer.png"><name text=":пыво:"/></emoticon>
-	<emoticon file="+cup.png"><name text=":кубок:"/></emoticon>
-	<emoticon file="+Gift.png"><name text=":подарок:"/></emoticon>
-	<emoticon file="+hrtred.png"><name text=":сердце:"/></emoticon>
-	<emoticon file="hearts.png"><name text=":сердца:"/></emoticon>
-	<emoticon file="+Kiss.png"><name text=":чмок:"/></emoticon>
-	<emoticon file="+medal.png"><name text=":орден:"/></emoticon>
-	<emoticon file="+PM.png"><name text=":ЛС:"/></emoticon>
-	<emoticon file="+Rose.png"><name text=":+роза:"/></emoticon>
-	<emoticon file="0bomb.png"><name text=":бомба:"/></emoticon>
-	<emoticon file="0boyan.png"><name text=":баян:"/></emoticon>
-	<emoticon file="0clock.png"><name text=":часы:"/></emoticon>
-	<emoticon file="0coffee.png"><name text=":чифир:"/></emoticon>
-	<emoticon file="0dynamic.png"><name text=":звук:"/></emoticon>
-	<emoticon file="0flame.png"><name text=":огонь:"/></emoticon>
-	<emoticon file="0ganj.png"><name text=":ганж:"/></emoticon>
-	<emoticon file="0gunAK.png"><name text=":АК:"/></emoticon>
-	<emoticon file="0gunM16.png"><name text=":М16:"/></emoticon>
-	<emoticon file="0idea.png"><name text=":идея:"/></emoticon>
+	<emoticon file="+Beer.png">
+		<name text=":пыво:"/>
+		<name text=":pivo:"/>
+	</emoticon>
+	<emoticon file="+cup.png">
+		<name text=":кубок:"/>
+		<name text=":cubok:"/>
+	</emoticon>
+	<emoticon file="+Gift.png">
+		<name text=":подарок:"/>
+		<name text=":surprise:"/>
+	</emoticon>
+	<emoticon file="+hrtred.png">
+		<name text=":сердце:"/>
+		<name text=":heart:"/>
+	</emoticon>
+	<emoticon file="hearts.png">
+		<name text=":сердца:"/>
+		<name text=":hearts:"/>
+	</emoticon>
+	<emoticon file="+Kiss.png">
+		<name text=":чмок:"/>
+		<name text=":kissyy:"/>
+	</emoticon>
+	<emoticon file="+medal.png">
+		<name text=":орден:"/>
+		<name text=":medal:"/>
+	</emoticon>
+	<emoticon file="+PM.png">
+		<name text=":ЛС:"/>
+		<name text=":PM:"/>
+	</emoticon>
+	<emoticon file="+Rose.png">
+		<name text=":+роза:"/>
+		<name text=":+rose:"/>
+	</emoticon>
+	<emoticon file="0bomb.png">
+		<name text=":бомба:"/>
+		<name text=":bomb:"/>
+	</emoticon>
+	<emoticon file="0boyan.png">
+		<name text=":баян:"/>
+		<name text=":bajan:"/>
+	</emoticon>
+	<emoticon file="0clock.png">
+		<name text=":часы:"/>
+		<name text=":times:"/>
+	</emoticon>
+	<emoticon file="0coffee.png">
+		<name text=":чифир:"/>
+		<name text=":tea hard:"/>
+	</emoticon>
+	<emoticon file="0dynamic.png">
+		<name text=":звук:"/>
+		<name text=":sound:"/>
+	</emoticon>
+	<emoticon file="0flame.png">
+		<name text=":огонь:"/>
+		<name text=":fire:"/>
+	</emoticon>
+	<emoticon file="0ganj.png">
+		<name text=":ганж:"/>
+		<name text=":ganje:"/>
+	</emoticon>
+	<emoticon file="0gunAK.png">
+		<name text=":АК:"/>
+		<name text=":AK:"/>
+	</emoticon>
+	<emoticon file="0gunM16.png">
+		<name text=":М16:"/>
+		<name text=":M16:"/>
+	</emoticon>
+	<emoticon file="0idea.png">
+		<name text=":идея:"/>
+		<name text=":idea:"/>
+	</emoticon>
 	<emoticon file="0martini.png"><name text=":40%:"/></emoticon>
-	<emoticon file="0melody.png"><name text=":ноты:"/></emoticon>
-	<emoticon file="0pizza.png"><name text=":пицца:"/></emoticon>
-	<emoticon file="0pyrate.png"><name text=":флак:"/></emoticon>
-	<emoticon file="0star_red.png"><name text=":звезда:"/></emoticon>
-	<emoticon file="0teddy.png"><name text=":тедди:"/></emoticon>
-	<emoticon file="0tort.png"><name text=":торт:"/></emoticon>
-	<emoticon file="0TV.png"><name text=":ТВ:"/></emoticon>
-	<emoticon file="0PC.png"><name text=":ПиСи:"/></emoticon>
-	<emoticon file="0wall.png"><name text=":стена:"/></emoticon>
-	<emoticon file="0WC.png"><name text=":толчок:"/></emoticon>
-	<emoticon file="Smile2.png"><name text=":)"/></emoticon>
+	<emoticon file="0melody.png">
+		<name text=":ноты:"/>
+		<name text=":notes:"/>
+	</emoticon>
+	<emoticon file="0pizza.png">
+		<name text=":пицца:"/>
+		<name text=":pizza:"/>
+	</emoticon>
+	<emoticon file="0pyrate.png">
+		<name text=":флак:"/>
+		<name text=":flack:"/>
+	</emoticon>
+	<emoticon file="0star_red.png">
+		<name text=":звезда:"/>
+		<name text=":star:"/>
+	</emoticon>
+	<emoticon file="0teddy.png">
+		<name text=":тедди:"/>
+		<name text=":teddy:"/>
+	</emoticon>
+	<emoticon file="0tort.png">
+		<name text=":торт:"/>
+		<name text=":tort:"/>
+	</emoticon>
+	<emoticon file="0TV.png">
+		<name text=":ТВ:"/>
+		<name text=":TV:"/>
+	</emoticon>
+	<emoticon file="0PC.png">
+		<name text=":ПиСи:"/>
+		<name text=":PiCi:"/>
+	</emoticon>
+	<emoticon file="0wall.png">
+		<name text=":стена:"/>
+		<name text=":wall:"/>
+	</emoticon>
+	<emoticon file="0WC.png">
+		<name text=":толчок:"/>
+		<name text=":toilet:"/>
+	</emoticon>
+	<emoticon file="Smile2.png">
+		<name text=":)"/>
+		<name text=":-)"/>
+	</emoticon>
 	<emoticon file="Smile1.png"><name text="=]"/></emoticon>
 	<emoticon file="Smile3.png"><name text="8)"/></emoticon>
-	<emoticon file="kind.png"><name text=":добрый:"/></emoticon>
+	<emoticon file="kind.png">
+		<name text=":добрый:"/>
+		<name text=":likely:"/>
+	</emoticon>
 	<emoticon file="podarok.png"><name text="O_O"/></emoticon>
-	<emoticon file="so_happy.png"><name text=":доволен:"/></emoticon>
+	<emoticon file="so_happy.png">
+		<name text=":доволен:"/>
+		<name text=":happined:"/>
+	</emoticon>
 	<emoticon file="smile_cruel.png"><name text=">:)"/></emoticon>
 	<emoticon file="smile_cruel2.png"><name text=">)"/></emoticon>
 	<emoticon file="smile_mad.png"><name text=">B)"/></emoticon>
-	<emoticon file="smilehe.png"><name text=":хи:"/></emoticon>
-	<emoticon file="smilehee.png"><name text=":хе-хе:"/></emoticon>
-	<emoticon file="happy1.png"><name text=":аххаха:"/></emoticon>
+	<emoticon file="smilehe.png">
+		<name text=":хи:"/>
+		<name text=":hi-hi:"/>
+	</emoticon>
+	<emoticon file="smilehee.png">
+		<name text=":хе-хе:"/>
+		<name text=":he-he-he:"/>
+	</emoticon>
+	<emoticon file="happy1.png">
+		<name text=":аххаха:"/>
+		<name text=":ahhaha:"/>
+	</emoticon>
 	<emoticon file="Happy2.png"><name text="8-)"/></emoticon>
-	<emoticon file="Happy3.png"><name text=":рад:"/></emoticon>
-	<emoticon file="applause.png"><name text=":хлопаю:"/></emoticon>
-	<emoticon file="Happy4.png"><name text=":урра:"/></emoticon>
-	<emoticon file="Happy5.png"><name text=":Э"/></emoticon>
+	<emoticon file="Happy3.png">
+		<name text=":рад:"/>
+		<name text=":happy:"/>
+	</emoticon>
+	<emoticon file="applause.png">
+		<name text=":хлопаю:"/>
+		<name text=":applause:"/>
+	</emoticon>
+	<emoticon file="Happy4.png">
+		<name text=":урра:"/>
+		<name text=":yeeeee:"/>
+	</emoticon>
+	<emoticon file="Happy5.png">
+		<name text=":Э"/>
+		<name text=":-3"/>
+	</emoticon>
 	<emoticon file="happy6.png"><name text=":-D"/></emoticon>
 	<emoticon file="happyvery.png"><name text=":veryhappy:"/></emoticon>
 	<emoticon file="happy_niger.png"><name text=":|)"/></emoticon>
-	<emoticon file="Lol1.png"><name text=":лол:"/></emoticon>
-	<emoticon file="Lol2.png"><name text=":эххе:"/></emoticon>
-	<emoticon file="Lol3.png"><name text=":гг:"/></emoticon>
-	<emoticon file="Lol4.png"><name text=":Ыыы:"/></emoticon>
-	<emoticon file="Lol5.png"><name text=":ааа:"/></emoticon>
-	<emoticon file="Lol6.png"><name text=":пацталом:"/></emoticon>
+	<emoticon file="Lol1.png">
+		<name text=":лол:"/>
+		<name text=":lol:"/>
+	</emoticon>
+	<emoticon file="Lol2.png">
+		<name text=":эххе:"/>
+		<name text=":hehe:"/>
+	</emoticon>
+	<emoticon file="Lol3.png">
+		<name text=":гг:"/>
+		<name text=":gg:"/>
+	</emoticon>
+	<emoticon file="Lol4.png">
+		<name text=":Ыыы:"/>
+		<name text=":bwahhh:"/>
+	</emoticon>
+	<emoticon file="Lol5.png">
+		<name text=":ааа:"/>
+		<name text=":aaa:"/>
+	</emoticon>
+	<emoticon file="Lol6.png">
+		<name text=":пацталом:"/>
+		<name text=":pactalom:"/>
+	</emoticon>
 	<emoticon file="blink1.png"><name text=";)"/></emoticon>
 	<emoticon file="blink2.png"><name text=";-)"/></emoticon>
-	<emoticon file="blink3.png"><name text="В-)"/></emoticon>
+	<emoticon file="blink3.png">
+		<name text="В-)"/>
+		<name text="B-)"/>
+	</emoticon>
 	<emoticon file="cool1.png"><name text="В-."/></emoticon>
-	<emoticon file="cool2.png"><name text="ВD"/></emoticon>
+	<emoticon file="cool2.png">
+		<name text="ВD"/>
+		<name text="BD"/>
+	</emoticon>
 	<emoticon file="plevok.png"><name text=":тьфу:"/></emoticon>
-	<emoticon file="beee.png"><name text=":бе:"/></emoticon>
+	<emoticon file="beee.png">
+		<name text=":бе:"/>
+		<name text=":fuuu:"/>
+	</emoticon>
 	<emoticon file="beee1.png"><name text=":}"/></emoticon>
-	<emoticon file="beee2.png"><name text=":Р"/></emoticon>
-	<emoticon file="beee3.png"><name text=":Ь"/></emoticon>
-	<emoticon file="blush1.png"><name text="^_^"/></emoticon>
+	<emoticon file="beee2.png">
+		<name text=":Р"/>
+		<name text=":P"/>
+	</emoticon>
+	<emoticon file="beee3.png">
+		<name text=":Ь"/>
+		<name text=":fueeh:"/>
+	</emoticon>
+	<emoticon file="blush1.png">
+		<name text="^_^"/>
+		<name text=":blush:"/>
+	</emoticon>
 	<emoticon file="blush2.png"><name text=":-."/></emoticon>
-	<emoticon file="blush6.png"><name text=":ой:"/></emoticon>
+	<emoticon file="blush6.png">
+		<name text=":ой:"/>
+		<name text=":oops:"/>
+	</emoticon>
 	<emoticon file="angel.png"><name text="0:)"/></emoticon>
-	<emoticon file="blush5.png"><name text=":паинька:"/></emoticon>
-	<emoticon file="blush4.png"><name text=":ля-ля:"/></emoticon>
-	<emoticon file="whistle.png"><name text=":свищу:"/></emoticon>
-	<emoticon file="hm1.png"><name text=":Хмм:"/></emoticon>
-	<emoticon file="hm2.png"><name text=":хм:"/></emoticon>
+	<emoticon file="blush5.png">
+		<name text=":паинька:"/>
+		<name text=":painka:"/>
+	</emoticon>
+	<emoticon file="blush4.png">
+		<name text=":ля-ля:"/>
+		<name text=":la-la:"/>
+	</emoticon>
+	<emoticon file="whistle.png">
+		<name text=":свищу:"/>
+		<name text=":svist:"/>
+	</emoticon>
+	<emoticon file="hm1.png">
+		<name text=":Хмм:"/>
+		<name text=":ponder:"/>
+		<name text=":Hmm:"/>
+	</emoticon>
+	<emoticon file="hm2.png">
+		<name text=":хм:"/>
+		<name text=":huh:"/>
+		<name text=":hm:"/>
+	</emoticon>
 	<emoticon file="sad1.png"><name text=":("/></emoticon>
-	<emoticon file="sad2.png"><name text=":хз:"/></emoticon>
+	<emoticon file="sad2.png">
+		<name text=":хз:"/>
+		<name text=":hz:"/>
+	</emoticon>
 	<emoticon file="sad3.png"><name text="|("/></emoticon>
 	<emoticon file="sad5.png"><name text="O~O"/></emoticon>
 	<emoticon file="sad6.png"><name text="|:|"/></emoticon>
 	<emoticon file="sad7.png"><name text=":\"/></emoticon>
-	<emoticon file="blush3.png"><name text=":нупжлст:"/></emoticon>
-	<emoticon file="pray.png"><name text=":молюсь:"/></emoticon>
+	<emoticon file="blush3.png">
+		<name text=":нупжлст:"/>
+		<name text=":please:"/>
+	</emoticon>
+	<emoticon file="pray.png">
+		<name text=":молюсь:"/>
+		<name text=":molus:"/>
+	</emoticon>
 	<emoticon file="cry!.png"><name text=":'("/></emoticon>
-	<emoticon file="cry.png"><name text=":плакалъ:"/></emoticon>
-	<emoticon file="crylol.png"><name text=":рыдаю:"/></emoticon>
+	<emoticon file="cry.png">
+		<name text=":плакалъ:"/>
+		<name text=":cryyen:"/>
+	</emoticon>
+	<emoticon file="crylol.png">
+		<name text=":рыдаю:"/>
+		<name text=":cryin:"/>
+	</emoticon>
 	<emoticon file="bad1.png"><name text=":$"/></emoticon>
 	<emoticon file="bad3.png"><name text="8[]"/></emoticon>
-	<emoticon file="bad4.png"><name text=":фингал:"/></emoticon>
+	<emoticon file="bad4.png">
+		<name text=":фингал:"/>
+		<name text=":fingal:"/>
+	</emoticon>
 	<emoticon file="bad5.png"><name text="8$"/></emoticon>
 	<emoticon file="sick1.png"><name text=":sick:"/></emoticon>
-	<emoticon file="sick2.png"><name text=":блювать:"/></emoticon>
-	<emoticon file="sick3.png"><name text=":грипп:"/></emoticon>
-	<emoticon file="Frozen.png"><name text=":замэрз:"/></emoticon>
+	<emoticon file="sick2.png">
+		<name text=":блювать:"/>
+		<name text=":bueee:"/>
+	</emoticon>
+	<emoticon file="sick3.png">
+		<name text=":грипп:"/>
+		<name text=":gripp:"/>
+	</emoticon>
+	<emoticon file="Frozen.png">
+		<name text=":замэрз:"/>
+		<name text=":zamerz:"/>
+	</emoticon>
 	<emoticon file="crazy_niger.png"><name text="(8D"/></emoticon>
-	<emoticon file="crazy.png"><name text=":гы:"/></emoticon>
+	<emoticon file="crazy.png">
+		<name text=":гы:"/>
+		<name text=":gy:"/>
+	</emoticon>
 	<emoticon file="crazy2.png"><name text=":[)"/></emoticon>
-	<emoticon file="crazy_tooth.png"><name text="8-Э"/></emoticon>
+	<emoticon file="crazy_tooth.png">
+		<name text="8-Э"/>
+		<name text="8-3"/>
+	</emoticon>
 	<emoticon file="crazy3.png"><name text="%D"/></emoticon>
 	<emoticon file="crazy_mad.png"><name text=">8D"/></emoticon>
 	<emoticon file="diablo1.png"><name text="}:-D>"/></emoticon>
 	<emoticon file="cruel2.png"><name text=">>:("/></emoticon>
 	<emoticon file="cruel3.png"><name text=">8@"/></emoticon>
-	<emoticon file="cruel4.png"><name text=">:(]"/></emoticon>
+	<emoticon file="cruel4.png"><name text=">:[]"/></emoticon>
 	<emoticon file="cruel1.png"><name text=">:("/></emoticon>
 	<emoticon file="cruel5.png"><name text=";$"/></emoticon>
 	<emoticon file="cruelvery.png"><name text=">:@"/></emoticon>
@@ -134,146 +379,526 @@
 	<emoticon file="surprise1.png"><name text="8|"/></emoticon>
 	<emoticon file="Surprise2.png"><name text="8o"/></emoticon>
 	<emoticon file="surprise3.png"><name text="8'"/></emoticon>
-	<emoticon file="strah1.png"><name text=":ужоснах:"/></emoticon>
-	<emoticon file="strah2.png"><name text=":ужос:"/></emoticon>
-	<emoticon file="amazement.png"><name text=":челюсть отвисла:"/></emoticon>
-	<emoticon file="strah4.png"><name text=":жубы штучат:"/></emoticon>
+	<emoticon file="strah1.png">
+		<name text=":ужоснах:"/>
+		<name text=":scary very:"/>
+	</emoticon>
+	<emoticon file="strah2.png">
+		<name text=":ужос:"/>
+		<name text=":scary:"/>
+	</emoticon>
+	<emoticon file="amazement.png">
+		<name text=":челюсть отвисла:"/>
+		<name text=":tooth over:"/>
+	</emoticon>
+	<emoticon file="strah4.png">
+		<name text=":жубы штучат:"/>
+		<name text=":tooth dude:"/>
+	</emoticon>
 	<emoticon file="shout1.png"><name text="8O"/></emoticon>
 	<emoticon file="shout_happy.png"><name text="8D"/></emoticon>
 	<emoticon file="nagolove.png"><name text=":Topsy:"/></emoticon>
-	<emoticon file="sleep1.png"><name text=":сплю:"/></emoticon>
-	<emoticon file="sleep2.png"><name text=":дремлю:"/></emoticon>
-	<emoticon file="sleep3.png"><name text=":зеваю:"/></emoticon>
+	<emoticon file="sleep1.png">
+		<name text=":сплю:"/>
+		<name text=":sleep:"/>
+	</emoticon>
+	<emoticon file="sleep2.png">
+		<name text=":дремлю:"/>
+		<name text=":sleepy:"/>
+	</emoticon>
+	<emoticon file="sleep3.png">
+		<name text=":зеваю:"/>
+		<name text=":zevaju:"/>
+	</emoticon>
 	<emoticon file="mm1.png"><name text=":ммм:"/></emoticon>
-	<emoticon file="mm2.png"><name text=":мм:"/></emoticon>
-	<emoticon file="sigh.png"><name text=":слушаю:"/></emoticon>
-	<emoticon file="telephon.png"><name text=":телефон:"/></emoticon>
-	<emoticon file="hi.png"><name text=":превед:"/></emoticon>
-	<emoticon file="bye.png"><name text=":бб:"/></emoticon>
-	<emoticon file="1th.png"><name text=":1ыйнах:"/></emoticon>
-	<emoticon file="2nd.png"><name text=":2ойнах:"/></emoticon>
-	<emoticon file="3rd.png"><name text=":3ийнах:"/></emoticon>
-	<emoticon file="man.png"><name text=":головастик:"/></emoticon>
-	<emoticon file="a_cat.png"><name text=":кот:"/></emoticon>
-	<emoticon file="a_dog.png"><name text=":пёс:"/></emoticon>
-	<emoticon file="suslik.png"><name text=":суслик:"/></emoticon>
-	<emoticon file="kroleg.png"><name text=":кролег:"/></emoticon>
-	<emoticon file="kolhozneg.png"><name text=":колхознег:"/></emoticon>
-	<emoticon file="russian.png"><name text=":мужик:"/></emoticon>
-	<emoticon file="download.png"><name text=":качаю:"/></emoticon>
-	<emoticon file="fhyu.png"><name text=":фхуу:"/></emoticon>
-	<emoticon file="big boss.png"><name text=":босс:"/></emoticon>
-	<emoticon file="proud.png"><name text=":гордый:"/></emoticon>
-	<emoticon file="resent.png"><name text=":танувас:"/></emoticon>
+	<emoticon file="mm2.png">
+		<name text=":мм:"/>
+		<name text=":mm:"/>
+	</emoticon>
+	<emoticon file="sigh.png">
+		<name text=":слушаю:"/>
+		<name text=":listen:"/>
+	</emoticon>
+	<emoticon file="telephon.png">
+		<name text=":телефон:"/>
+		<name text=":telephone:"/>
+	</emoticon>
+	<emoticon file="hi.png">
+		<name text=":превед:"/>
+		<name text=":hi:"/>
+	</emoticon>
+	<emoticon file="bye.png">
+		<name text=":бб:"/>
+		<name text=":bb:"/>
+	</emoticon>
+	<emoticon file="1th.png">
+		<name text=":1ыйнах:"/>
+		<name text=":1th:"/>
+	</emoticon>
+	<emoticon file="2nd.png">
+		<name text=":2ойнах:"/>
+		<name text=":2th:"/>
+	</emoticon>
+	<emoticon file="3rd.png">
+		<name text=":3ийнах:"/>
+		<name text=":3th:"/>
+	</emoticon>
+	<emoticon file="man.png">
+		<name text=":головастик:"/>
+		<name text=":golovastik:"/>
+	</emoticon>
+	<emoticon file="a_cat.png">
+		<name text=":кот:"/>
+		<name text=":cat:"/>
+	</emoticon>
+	<emoticon file="a_dog.png">
+		<name text=":пёс:"/>
+		<name text=":dog:"/>
+	</emoticon>
+	<emoticon file="suslik.png">
+		<name text=":суслик:"/>
+		<name text=":suslik:"/>
+	</emoticon>
+	<emoticon file="kroleg.png">
+		<name text=":кролег:"/>
+		<name text=":rabbit:"/>
+	</emoticon>
+	<emoticon file="kolhozneg.png">
+		<name text=":колхознег:"/>
+		<name text=":kolhozneg:"/>
+	</emoticon>
+	<emoticon file="russian.png">
+		<name text=":мужик:"/>
+		<name text=":man:"/>
+	</emoticon>
+	<emoticon file="download.png">
+		<name text=":качаю:"/>
+		<name text=":loaded:"/>
+	</emoticon>
+	<emoticon file="fhyu.png">
+		<name text=":фхуу:"/>
+		<name text=":fhuu:"/>
+	</emoticon>
+	<emoticon file="big boss.png">
+		<name text=":босс:"/>
+		<name text=":boss:"/>
+	</emoticon>
+	<emoticon file="proud.png">
+		<name text=":гордый:"/>
+		<name text=":gordy:"/>
+	</emoticon>
+	<emoticon file="resent.png">
+		<name text=":танувас:"/>
+		<name text=":goass:"/>
+	</emoticon>
 	<emoticon file="rich.png"><name text="$)"/></emoticon>
-	<emoticon file="alien.png"><name text=":гуманоид:"/></emoticon>
-	<emoticon file="shrek.png"><name text=":шрэк:"/></emoticon>
+	<emoticon file="alien.png">
+		<name text=":гуманоид:"/>
+		<name text=":humanoid:"/>
+	</emoticon>
+	<emoticon file="shrek.png">
+		<name text=":шрэк:"/>
+		<name text=":shrek:"/>
+	</emoticon>
 	<emoticon file="cyclope.png"><name text="O-)"/></emoticon>
-	<emoticon file="Zombie.png"><name text=":зомби:"/></emoticon>
-	<emoticon file="kruger.png"><name text=":Крюгер:"/></emoticon>
-	<emoticon file="witch.png"><name text=":ведьма:"/></emoticon>
-	<emoticon file="vampire.png"><name text=":упырь:"/></emoticon>
-	<emoticon file="girl_bad.png"><name text=":злайа:"/></emoticon>
-	<emoticon file="elf.png"><name text=":эльф:"/></emoticon>
-	<emoticon file="viking.png"><name text=":викинг:"/></emoticon>
-	<emoticon file="king.png"><name text=":король:"/></emoticon>
-	<emoticon file="joker.png"><name text=":шут:"/></emoticon>
+	<emoticon file="Zombie.png">
+		<name text=":зомби:"/>
+		<name text=":zombi:"/>
+	</emoticon>
+	<emoticon file="kruger.png">
+		<name text=":Крюгер:"/>
+		<name text=":Kruger:"/>
+	</emoticon>
+	<emoticon file="witch.png">
+		<name text=":ведьма:"/>
+		<name text=":vedma:"/>
+	</emoticon>
+	<emoticon file="vampire.png">
+		<name text=":упырь:"/>
+		<name text=":upyr:"/>
+	</emoticon>
+	<emoticon file="girl_bad.png">
+		<name text=":злайа:"/>
+		<name text=":zlaja:"/>
+	</emoticon>
+	<emoticon file="elf.png">
+		<name text=":эльф:"/>
+		<name text=":elf:"/>
+	</emoticon>
+	<emoticon file="viking.png">
+		<name text=":викинг:"/>
+		<name text=":viking:"/>
+	</emoticon>
+	<emoticon file="king.png">
+		<name text=":король:"/>
+		<name text=":king:"/>
+	</emoticon>
+	<emoticon file="joker.png">
+		<name text=":шут:"/>
+		<name text=":shut:"/>
+	</emoticon>
 	<emoticon file="clown.png"><name text=":o)"/></emoticon>
-	<emoticon file="girl_princess.png"><name text=":прынцесса:"/></emoticon>
-	<emoticon file="Flirt1.png"><name text=":флирт:"/></emoticon>
+	<emoticon file="girl_princess.png">
+		<name text=":прынцесса:"/>
+		<name text=":princess:"/>
+	</emoticon>
+	<emoticon file="Flirt1.png">
+		<name text=":флирт:"/>
+		<name text=":loved:"/>
+	</emoticon>
 	<emoticon file="Flirt2.png"><name text=";*"/></emoticon>
-	<emoticon file="flirt brunette.png"><name text=":брюнетка:"/></emoticon>
-	<emoticon file="Love1.png"><name text=":лав:"/></emoticon>
+	<emoticon file="flirt brunette.png">
+		<name text=":брюнетка:"/>
+		<name text=":girl2:"/>
+	</emoticon>
+	<emoticon file="Love1.png">
+		<name text=":лав:"/>
+		<name text=":love:"/>
+	</emoticon>
 	<emoticon file="crazy_love.png"><name text="8P"/></emoticon>
-	<emoticon file="Love2.png"><name text=":поцелуй:"/></emoticon>
-	<emoticon file="Love3.png"><name text=":влюблён:"/></emoticon>
+	<emoticon file="Love2.png">
+		<name text=":поцелуй:"/>
+		<name text=":kissed:"/>
+	</emoticon>
+	<emoticon file="Love3.png">
+		<name text=":влюблён:"/>
+		<name text=":lovely:"/>
+	</emoticon>
 	<emoticon file="kiss.png"><name text=":*"/></emoticon>
-	<emoticon file="love_kiss.png"><name text=":кисс:"/></emoticon>
-	<emoticon file="Rose1.png"><name text=":с розой:"/></emoticon>
-	<emoticon file="Rose2.png"><name text=":в зубах:"/></emoticon>
-	<emoticon file="gift.png"><name text=":респект:"/></emoticon>
-	<emoticon file="girl_alcohol.png"><name text=":пьанайа:"/></emoticon>
+	<emoticon file="love_kiss.png">
+		<name text=":кисс:"/>
+		<name text=":kiss:"/>
+	</emoticon>
+	<emoticon file="Rose1.png">
+		<name text=":с розой:"/>
+		<name text=":with roze:"/>
+	</emoticon>
+	<emoticon file="Rose2.png">
+		<name text=":в зубах:"/>
+		<name text=":tooth roze:"/>
+	</emoticon>
+	<emoticon file="gift.png">
+		<name text=":респект:"/>
+		<name text=":respect:"/>
+	</emoticon>
+	<emoticon file="girl_alcohol.png">
+		<name text=":пьанайа:"/>
+		<name text=":drunky:"/>
+	</emoticon>
 	<emoticon file="smokecool.png"><name text=":q"/></emoticon>
 	<emoticon file="drugs.png"><name text=":>"/></emoticon>
-	<emoticon file="rest.png"><name text=":отдых:"/></emoticon>
-	<emoticon file="dance.png"><name text=":дэнс:"/></emoticon>
+	<emoticon file="rest.png">
+		<name text=":отдых:"/>
+		<name text=":sunday:"/>
+	</emoticon>
+	<emoticon file="dance.png">
+		<name text=":дэнс:"/>
+		<name text=":dance:"/>
+	</emoticon>
 	<emoticon file="party.png"><name text=":party:"/></emoticon>
-	<emoticon file="gum.png"><name text=":бубльгум:"/></emoticon>
-	<emoticon file="pop-corn.png"><name text=":в кино:"/></emoticon>
-	<emoticon file="guitarist.png"><name text=":гитарист:"/></emoticon>
-	<emoticon file="shout.png"><name text=":ару:"/></emoticon>
-	<emoticon file="rocker.png"><name text=":рокер:"/></emoticon>
-	<emoticon file="rockerhayer.png"><name text=":хайер:"/></emoticon>
-	<emoticon file="punk1.png"><name text=":панк:"/></emoticon>
-	<emoticon file="raper.png"><name text=":рэпер:"/></emoticon>
-	<emoticon file="Baby.png"><name text=":дитё:"/></emoticon>
-	<emoticon file="popa.png"><name text=":попа:"/></emoticon>
+	<emoticon file="gum.png">
+		<name text=":бубльгум:"/>
+		<name text=":bublhum:"/>
+	</emoticon>
+	<emoticon file="pop-corn.png">
+		<name text=":в кино:"/>
+		<name text=":moovie:"/>
+	</emoticon>
+	<emoticon file="guitarist.png">
+		<name text=":гитарист:"/>
+		<name text=":guitary:"/>
+	</emoticon>
+	<emoticon file="shout.png">
+		<name text=":ару:"/>
+		<name text=":aru:"/>
+	</emoticon>
+	<emoticon file="rocker.png">
+		<name text=":рокер:"/>
+		<name text=":poker:"/>
+	</emoticon>
+	<emoticon file="rockerhayer.png">
+		<name text=":хайер:"/>
+		<name text=":hayer:"/>
+	</emoticon>
+	<emoticon file="punk1.png">
+		<name text=":панк:"/>
+		<name text=":punk:"/>
+	</emoticon>
+	<emoticon file="raper.png">
+		<name text=":рэпер:"/>
+		<name text=":rappy:"/>
+	</emoticon>
+	<emoticon file="Baby.png">
+		<name text=":дитё:"/>
+		<name text=":kind:"/>
+	</emoticon>
+	<emoticon file="popa.png">
+		<name text=":попа:"/>
+		<name text=":ass:"/>
+	</emoticon>
 	<emoticon file="bag.png"><name text=":bag:"/></emoticon>
-	<emoticon file="Givy.png"><name text=":Гиви:"/></emoticon>
-	<emoticon file="lumumba.png"><name text=":лумумба:"/></emoticon>
-	<emoticon file="niger.png"><name text=":нигер:"/></emoticon>
-	<emoticon file="user.png"><name text=":юзер:"/></emoticon>
-	<emoticon file="read.png"><name text=":читаю:"/></emoticon>
-	<emoticon file="rulez.png"><name text=":рулесы:"/></emoticon>
+	<emoticon file="Givy.png">
+		<name text=":Гиви:"/>
+		<name text=":Givi:"/>
+	</emoticon>
+	<emoticon file="lumumba.png">
+		<name text=":лумумба:"/>
+		<name text=":lumumba:"/>
+	</emoticon>
+	<emoticon file="niger.png">
+		<name text=":нигер:"/>
+		<name text=":niger:"/>
+	</emoticon>
+	<emoticon file="user.png">
+		<name text=":юзер:"/>
+		<name text=":user:"/>
+	</emoticon>
+	<emoticon file="read.png">
+		<name text=":читаю:"/>
+		<name text=":ready:"/>
+	</emoticon>
+	<emoticon file="rulez.png">
+		<name text=":рулесы:"/>
+		<name text=":rulesy:"/>
+	</emoticon>
 	<emoticon file="botanik1.png"><name text="B|"/></emoticon>
-	<emoticon file="botanik2.png"><name text=":ботаник:"/></emoticon>
-	<emoticon file="kenny.png"><name text=":Кенни:"/></emoticon>
+	<emoticon file="botanik2.png">
+		<name text=":ботаник:"/>
+		<name text=":botanik:"/>
+	</emoticon>
+	<emoticon file="kenny.png">
+		<name text=":Кенни:"/>
+		<name text=":Kenny:"/>
+	</emoticon>
 	<emoticon file="rip3.png"><name text=":без кожи:"/></emoticon>
-	<emoticon file="apstenur.png"><name text=":апстену:"/></emoticon>
-	<emoticon file="Suicid.png"><name text=":суицид:"/></emoticon>
-	<emoticon file="death.png"><name text=":смерть:"/></emoticon>
-	<emoticon file="rip2.png"><name text=":помер:"/></emoticon>
-	<emoticon file="rip1.png"><name text=":роджер:"/></emoticon>
-	<emoticon file="pirate1.png"><name text=":пират:"/></emoticon>
-	<emoticon file="pirate2.png"><name text=":головорез:"/></emoticon>
-	<emoticon file="kick.png"><name text=":гопнег:"/></emoticon>
-	<emoticon file="kachok.png"><name text=":качок:"/></emoticon>
-	<emoticon file="superman.png"><name text=":супермэн:"/></emoticon>
-	<emoticon file="pilot.png"><name text=":пилот:"/></emoticon>
-	<emoticon file="trinity.png"><name text=":Тринити:"/></emoticon>
-	<emoticon file="gun tommy.png"><name text=":томмиган:"/></emoticon>
-	<emoticon file="ment.png"><name text=":мент:"/></emoticon>
-	<emoticon file="doctor.png"><name text=":санитар:"/></emoticon>
-	<emoticon file="comando.png"><name text=":ВДВ:"/></emoticon>
-	<emoticon file="security.png"><name text=":секьюрити:"/></emoticon>
-	<emoticon file="ninja.png"><name text=":нинзя:"/></emoticon>
-	<emoticon file="hide.png"><name text=":спряталсо:"/></emoticon>
-	<emoticon file="au!.png"><name text=":ау:"/></emoticon>
-	<emoticon file="ku-ku.png"><name text=":куку:"/></emoticon>
-	<emoticon file="search1.png"><name text=":Шэрлок:"/></emoticon>
-	<emoticon file="search2.png"><name text=":ищу:"/></emoticon>
-	<emoticon file="v nosu.png"><name text=":в носу:"/></emoticon>
-	<emoticon file="dnt spk.png"><name text=":Х"/></emoticon>
-	<emoticon file="secret.png"><name text=":секрет:"/></emoticon>
+	<emoticon file="apstenur.png">
+		<name text=":апстену:"/>
+		<name text=":gowall:"/>
+	</emoticon>
+	<emoticon file="Suicid.png">
+		<name text=":суицид:"/>
+		<name text=":suicide:"/>
+	</emoticon>
+	<emoticon file="death.png">
+		<name text=":смерть:"/>
+		<name text=":death:"/>
+	</emoticon>
+	<emoticon file="rip2.png">
+		<name text=":помер:"/>
+		<name text=":deadly:"/>
+	</emoticon>
+	<emoticon file="rip1.png">
+		<name text=":роджер:"/>
+		<name text=":roger:"/>
+	</emoticon>
+	<emoticon file="pirate1.png">
+		<name text=":пират:"/>
+		<name text=":pirat:"/>
+	</emoticon>
+	<emoticon file="pirate2.png">
+		<name text=":головорез:"/>
+		<name text=":golovores:"/>
+	</emoticon>
+	<emoticon file="kick.png">
+		<name text=":гопнег:"/>
+		<name text=":gopneg:"/>
+	</emoticon>
+	<emoticon file="kachok.png">
+		<name text=":качок:"/>
+		<name text=":kachok:"/>
+	</emoticon>
+	<emoticon file="superman.png">
+		<name text=":супермэн:"/>
+		<name text=":superman:"/>
+	</emoticon>
+	<emoticon file="pilot.png">
+		<name text=":пилот:"/>
+		<name text=":pilot:"/>
+	</emoticon>
+	<emoticon file="trinity.png">
+		<name text=":Тринити:"/>
+		<name text=":Trinity:"/>
+	</emoticon>
+	<emoticon file="gun tommy.png">
+		<name text=":томмиган:"/>
+		<name text=":tommigun:"/>
+	</emoticon>
+	<emoticon file="ment.png">
+		<name text=":мент:"/>
+		<name text=":cop:"/>
+	</emoticon>
+	<emoticon file="doctor.png">
+		<name text=":санитар:"/>
+		<name text=":doctor:"/>
+	</emoticon>
+	<emoticon file="comando.png">
+		<name text=":ВДВ:"/>
+		<name text=":VDV:"/>
+	</emoticon>
+	<emoticon file="security.png">
+		<name text=":секьюрити:"/>
+		<name text=":security:"/>
+	</emoticon>
+	<emoticon file="ninja.png">
+		<name text=":нинзя:"/>
+		<name text=":ninja:"/>
+	</emoticon>
+	<emoticon file="hide.png">
+		<name text=":спряталсо:"/>
+		<name text=":hidden:"/>
+	</emoticon>
+	<emoticon file="au!.png">
+		<name text=":ау:"/>
+		<name text=":au:"/>
+	</emoticon>
+	<emoticon file="ku-ku.png">
+		<name text=":куку:"/>
+		<name text=":kuku:"/>
+	</emoticon>
+	<emoticon file="search1.png">
+		<name text=":Шэрлок:"/>
+		<name text=":sherlock:"/>
+	</emoticon>
+	<emoticon file="search2.png">
+		<name text=":ищу:"/>
+		<name text=":search:"/>
+	</emoticon>
+	<emoticon file="v nosu.png">
+		<name text=":в носу:"/>
+		<name text=":in nose:"/>
+	</emoticon>
+	<emoticon file="dnt spk.png">
+		<name text=":Х"/>
+		<name text=":X"/>
+	</emoticon>
+	<emoticon file="secret.png">
+		<name text=":секрет:"/>
+		<name text=":secret:"/>
+	</emoticon>
 	<emoticon file="nono.png"><name text=":не шали:"/></emoticon>
-	<emoticon file="recall.png"><name text=":эй:"/></emoticon>
-	<emoticon file="victory.png"><name text=":победа:"/></emoticon>
-	<emoticon file="cool3.png"><name text=":класс:"/></emoticon>
-	<emoticon file="cool4.png"><name text=":кул:"/></emoticon>
-	<emoticon file="yes!.png"><name text=":йес!:"/></emoticon>
-	<emoticon file="yo.png"><name text=":йоу:"/></emoticon>
-	<emoticon file="P_Rose.png"><name text=":розочка:"/></emoticon>
-	<emoticon file="P.png"><name text=":пять:"/></emoticon>
-	<emoticon file="P_vo.png"><name text=":во!:"/></emoticon>
+	<emoticon file="recall.png">
+		<name text=":эй:"/>
+		<name text=":hey:"/>
+	</emoticon>
+	<emoticon file="victory.png">
+		<name text=":победа:"/>
+		<name text=":victory:"/>
+	</emoticon>
+	<emoticon file="cool3.png">
+		<name text=":класс:"/>
+		<name text=":klass:"/>
+	</emoticon>
+	<emoticon file="cool4.png">
+		<name text=":кул:"/>
+		<name text=":cool:"/>
+	</emoticon>
+	<emoticon file="yes!.png">
+		<name text=":йес!:"/>
+		<name text=":yes!:"/>
+	</emoticon>
+	<emoticon file="yo.png">
+		<name text=":йоу:"/>
+		<name text=":jou:"/>
+	</emoticon>
+	<emoticon file="P_Rose.png">
+		<name text=":розочка:"/>
+		<name text=":rozochka:"/>
+	</emoticon>
+	<emoticon file="P.png">
+		<name text=":пять:"/>
+		<name text=":pjat:"/>
+	</emoticon>
+	<emoticon file="P_vo.png">
+		<name text=":во!:"/>
+		<name text=":vo!:"/>
+	</emoticon>
 	<emoticon file="P_cooll.png"><name text=":Vm:"/></emoticon>
 	<emoticon file="P_coolr.png"><name text=":mV:"/></emoticon>
-	<emoticon file="P_diablo.png"><name text=":вилы:"/></emoticon>
-	<emoticon file="P_dulya.png"><name text=":фига:"/></emoticon>
-	<emoticon file="P_fuckU2.png"><name text=":фак:"/></emoticon>
-	<emoticon file="P_gun.png"><name text=":ствол:"/></emoticon>
-	<emoticon file="P_gun1.png"><name text=":револьвер:"/></emoticon>
-	<emoticon file="P_kick.png"><name text=":кулак:"/></emoticon>
-	<emoticon file="P_kosyak.png"><name text=":косяк:"/></emoticon>
-	<emoticon file="P_left.png"><name text=":вот там:"/></emoticon>
-	<emoticon file="P_OK.png"><name text=":ОК:"/></emoticon>
-	<emoticon file="P_rup.png"><name text=":рулез:"/></emoticon>
-	<emoticon file="P_rdown.png"><name text=":сакс:"/></emoticon>
+	<emoticon file="P_diablo.png">
+		<name text=":вилы:"/>
+		<name text=":vily:"/>
+	</emoticon>
+	<emoticon file="P_dulya.png">
+		<name text=":фига:"/>
+		<name text=":dulja:"/>
+	</emoticon>
+	<emoticon file="P_fuckU2.png">
+		<name text=":фак:"/>
+		<name text=":fuck:"/>
+	</emoticon>
+	<emoticon file="P_gun.png">
+		<name text=":ствол:"/>
+		<name text=":pistol:"/>
+	</emoticon>
+	<emoticon file="P_gun1.png">
+		<name text=":револьвер:"/>
+		<name text=":revolver:"/>
+	</emoticon>
+	<emoticon file="P_kick.png">
+		<name text=":кулак:"/>
+		<name text=":handa:"/>
+	</emoticon>
+	<emoticon file="P_kosyak.png">
+		<name text=":косяк:"/>
+		<name text=":cigarette:"/>
+	</emoticon>
+	<emoticon file="P_left.png">
+		<name text=":вот там:"/>
+		<name text=":not here:"/>
+	</emoticon>
+	<emoticon file="P_OK.png">
+		<name text=":ОК:"/>
+		<name text=":OK:"/>
+	</emoticon>
+	<emoticon file="P_rup.png">
+		<name text=":рулез:"/>
+		<name text=":rules:"/>
+	</emoticon>
+	<emoticon file="P_rdown.png">
+		<name text=":сакс:"/>
+		<name text=":suxx:"/>
+	</emoticon>
 	<emoticon file="P_rockleft.png"><name text="\_/m"/></emoticon>
 	<emoticon file="P_rockright.png"><name text="m\_/"/></emoticon>
 	<emoticon file="P_rrockl.png"><name text="\m/_"/></emoticon>
 	<emoticon file="P_rrockr.png"><name text="_\m/"/></emoticon>
-	<emoticon file="P_sekira.png"><name text=":секира:"/></emoticon>
-	<emoticon file="P_stop.png"><name text=":стой:"/></emoticon>
-	<emoticon file="P_U.png"><name text=":ты:"/></emoticon>
-	<emoticon file="P_victory.png"><name text=":виктори:"/></emoticon>
+	<emoticon file="P_sekira.png">
+		<name text=":секира:"/>
+		<name text=":sekira:"/>
+	</emoticon>
+	<emoticon file="P_stop.png">
+		<name text=":стой:"/>
+		<name text=":stop:"/>
+	</emoticon>
+	<emoticon file="P_U.png">
+		<name text=":ты:"/>
+		<name text=":you:"/>
+	</emoticon>
+	<emoticon file="P_victory.png">
+		<name text=":виктори:"/>
+		<name text=":pvictory:"/>
+	</emoticon>
+	<emoticon file="girl_cry.png"><name text=":gcry:"/></emoticon>
+	<emoticon file="bad2.png">
+		<name text="&gt;_&lt;"/>
+		<name text="&gt;&lt;"/>
+	</emoticon>
+	<emoticon file="facepalm.png"><name text=":facepalm:"/></emoticon>
+	<emoticon file="crazy0_o.png"><name text="8&amp;"/></emoticon>
+	<emoticon file="crazy1.png"><name text="%&amp;"/></emoticon>
+	<emoticon file="fool.png"><name text=":fool:"/></emoticon>
+	<emoticon file="fox.png"><name text=":fox:"/></emoticon>
+	<emoticon file="girl_open.png">
+		<name text=":сиськи:"/>
+		<name text=":tits:"/>
+	</emoticon>
+	<emoticon file="wub.png"><name text=":gflirt:"/></emoticon>
+	<emoticon file="hello.png"><name text=":hello:"/></emoticon>
+	<emoticon file="girl_guitar.png"><name text=":gguit:"/></emoticon>
+	<emoticon file="music.png">
+		<name text=":музыка:"/>
+		<name text=":music:"/>
+	</emoticon>
+	<emoticon file="writer.png"><name text=":writer:"/></emoticon>
+	<emoticon file="yay.png"><name text=":yay:"/></emoticon>
 </emoticons-map>
