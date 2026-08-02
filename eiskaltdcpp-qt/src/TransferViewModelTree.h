@@ -45,7 +45,7 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
 {
     if (!item || !group || newTarget.isEmpty() || group->target == newTarget)
         return false;
-    if (!item->download || !group->download || !group->cid.isEmpty())
+    if (item->download != group->download || !group->cid.isEmpty())
         return false;
     if (group->childCount() != 1 || group->childItems.first() != item)
         return false;
@@ -55,7 +55,8 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
     group->fail = false;
     group->percent = 0.0;
     group->smoothTleft = -1;
-    group->fpos = p.contains("FPOS") ? p.value("FPOS").toLongLong() : 0;
+    // Downloads: queue FPOS. Uploads: reset completed-segment counter for the new file.
+    group->fpos = item->download && p.contains("FPOS") ? p.value("FPOS").toLongLong() : 0;
     group->dpos = group->fpos;
     if (p.contains("ESIZE"))
         group->updateColumn(COLUMN_TRANSFER_SIZE, p.value("ESIZE"));

@@ -55,6 +55,12 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(),
                                                tr("Downloaded "), tr("Uploaded ")))
             p.remove("STAT");
+        // Consecutive upload parts: keep ETA smoothing; ignore gap resets (-1 / 0).
+        if (!vbol(p["DOWN"]) && p.contains("TLEFT") && vlng(p["TLEFT"]) < 0)
+            p.remove("TLEFT");
+        if (!vbol(p["DOWN"]) && p.contains("SPEED") && vdbl(p["SPEED"]) <= 0
+                && vdbl(item->data(COLUMN_TRANSFER_SPEED)) > 0)
+            p.remove("SPEED");
     }
 
     if (p.contains("SPEED"))
@@ -90,7 +96,8 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
     item->fail = vbol(p["FAIL"]);
-    if (!item->fail)
+    // Uploads: segment-complete (finished) is set in completeUpload and cleared in initTransfer.
+    if (!item->fail && item->download)
         item->finished = false;
     if (p.contains("TTH"))
         item->tth = vstr(p["TTH"]);
@@ -105,7 +112,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (TransferViewTree::wantsParent(p, fname)) {
         TransferViewItem *existing = nullptr;
         const QString oldTarget = from ? from->target : QString();
-        if (from && from != rootItem && !findParent(newTarget, &existing, true)
+        const bool isDown = vbol(p["DOWN"]);
+        if (from && from != rootItem
+                && !findParent(newTarget, &existing, isDown, vstr(p["IP"]))
                 && TransferViewTree::retargetGroup(item, from, newTarget, p)) {
             pendingTargetRemoves.remove(oldTarget);
             to = from;
@@ -120,12 +129,22 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         else if (!(showTranferedFilesOnly && TransferViewTree::isHiddenName(fname)))
             TransferViewTree::attach(item, to);
 
-        if (from && from != rootItem && from != to && !from->childCount()
+        if (from && from != rootItem && from != to
                 && rootItem->childItems.contains(from)) {
-            beginRemoveRows(QModelIndex(), from->row(), from->row());
-            rootItem->childItems.removeAt(from->row());
-            delete from;
-            endRemoveRows();
+            if (!from->childCount()) {
+                beginRemoveRows(QModelIndex(), from->row(), from->row());
+                rootItem->childItems.removeAt(from->row());
+                delete from;
+                endRemoveRows();
+            } else {
+                // Keep leftover upload hubs for a possible next file (no remove flash).
+                updateParent(from);
+                const QModelIndex pidx = createIndexForItem(from);
+                if (pidx.isValid()) {
+                    emit dataChanged(index(pidx.row(), 0, pidx.parent()),
+                                     index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
+                }
+            }
         }
         sort(sortColumn, sortOrder);
     }
@@ -133,7 +152,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (showTranferedFilesOnly && TransferViewTree::isHiddenName(fname))
         return;
 
-    if (item->parent() != rootItem && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
+    // Download parents only — upload parents use fpos for completed segment bytes.
+    if (item->download && item->parent() != rootItem
+            && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
         item->parent()->fpos = vlng(p["FPOS"]);
 
     const QModelIndex idx = createIndexForItem(item);

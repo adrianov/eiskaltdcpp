@@ -67,8 +67,8 @@ void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) n
     const QString stat = s.continuing ? uploadProgressStat(s.sent, s.fileSize) : tr("Upload starting...");
     applyUploadMetrics(params, s, stat);
     applyUploadSpeed(params, ul, s);
-    if (!s.continuing)
-        params["SOFT_STAT"] = true;
+    // Keep one stable row across consecutive parts (progress/ETA smoothing).
+    params["SOFT_STAT"] = true;
 
     if (IPFilter::getInstance()){
         if (!IPFilter::getInstance()->OK(vstr(params["IP"]).toStdString(), eDIRECTION_OUT)){
@@ -122,26 +122,23 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     VarMap params;
     getParams(params, ul);
     const UploadUiState s = uploadState(ul);
-    const QString tickKey = uploadTickKey(ul);
+    clearUploadUiThrottle(uploadTickKey(ul));
 
-    if (!s.fileDone) {
-        applyUploadMetrics(params, s, uploadProgressStat(s.sent, s.fileSize));
-        applyUploadSpeed(params, ul, s);
-        emit coreUMTick(params);
-        emit coreUpdateParents();
-        return;
-    }
-
-    clearUploadUiThrottle(tickKey);
-    applyUploadMetrics(params, s, tr("Upload complete"));
-    applyUploadSpeed(params, ul, s);
-    params["SPEED"] = 0.0;
-    params["TLEFT"] = qlonglong(-1);
+    const QString stat = s.fileDone ? tr("Upload complete")
+                                    : uploadProgressStat(s.sent, s.fileSize);
+    applyUploadMetrics(params, s, stat);
+    params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["DOWN"] = false;
     params["FAIL"] = false;
+    if (s.fileDone) {
+        params["SPEED"] = 0.0;
+        params["TLEFT"] = qlonglong(-1);
+    } else {
+        // Next part often follows on the same connection — do not flash speed/ETA to 0.
+        params["SOFT_STAT"] = true;
+    }
 
     emit coreUMComplete(params);
-    emit coreUpdateParents();
 }
 
 void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, const std::string& reason) noexcept{
@@ -151,12 +148,11 @@ void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, con
     getParams(params, ul);
     const UploadUiState s = uploadState(ul);
     applyUploadMetrics(params, s, _q(reason));
-    applyUploadSpeed(params, ul, s);
+    params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["SPEED"] = 0.0;
     params["TLEFT"] = qlonglong(-1);
     params["DOWN"] = false;
     params["FAIL"] = true;
 
     emit coreUMFailed(params);
-    emit coreUpdateParents();
 }

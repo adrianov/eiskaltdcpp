@@ -23,6 +23,22 @@ void TransferViewModel::initTransfer(const VarMap &params){
             return;
     }
 
+    // Reuse the row for the next file/parts — clear complete state before applying metrics.
+    if (item) {
+        TransferViewItem *scope = item->download ? nullptr : uploadScope(item);
+        const bool nextFile = scope && scope->finished;
+        item->finished = false;
+        if (scope) {
+            if (nextFile) {
+                scope->fpos = 0;
+                scope->dpos = 0;
+                scope->percent = 0.0;
+                scope->smoothTleft = -1;
+            }
+            scope->finished = false;
+        }
+    }
+
     updateTransfer(params);
 }
 

@@ -48,7 +48,9 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
     for (const auto &i : p->childItems){
         if (!i->fail) {
-            const double childSpeed = vdbl(i->data(COLUMN_TRANSFER_SPEED));
+            // Upload part gaps keep a held child speed; do not count finished segments.
+            const double childSpeed = (!p->download && i->finished)
+                    ? 0.0 : vdbl(i->data(COLUMN_TRANSFER_SPEED));
             speed += childSpeed;
             if (childSpeed > 0)
                 active++;
@@ -88,11 +90,21 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         ? qBound(0.0, (double)(p->dpos * 100.0) / totalSize, 100.0) : 0.0;
     p->percent = progress;
 
-    qint64 timeLeft = speed > 0 ? (totalSize - p->dpos) / speed : 0;
-
     speed = TransferDisplay::roundSpeed(speed);
-    p->smoothTleft = TransferDisplay::smoothTimeLeft(p->smoothTleft, timeLeft);
-    timeLeft = p->smoothTleft;
+    // Consecutive upload parts: all children briefly finished — keep speed/ETA, do not flash to 0.
+    const bool uploadGap = !p->download && speed <= 0 && totalSize > 0
+            && p->fpos < totalSize && !p->finished;
+    qint64 timeLeft;
+    if (uploadGap) {
+        const double prev = vdbl(p->data(COLUMN_TRANSFER_SPEED));
+        if (prev > 0)
+            speed = prev;
+        timeLeft = p->smoothTleft > 0 ? p->smoothTleft : 0;
+    } else {
+        timeLeft = speed > 0 ? (totalSize - p->dpos) / speed : 0;
+        p->smoothTleft = TransferDisplay::smoothTimeLeft(p->smoothTleft, timeLeft);
+        timeLeft = p->smoothTleft;
+    }
 
     // Keep progress wording while sources briefly idle between segments (speed→0).
     if (!p->finished && (active || p->dpos > 0 || p->percent > 0))

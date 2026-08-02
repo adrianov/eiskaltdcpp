@@ -81,7 +81,8 @@ bool matchesRemove(const TransferViewItem *item, bool download, const QString &h
         return false;
     if (download || hub.isEmpty())
         return true;
-    return item->data(COLUMN_TRANSFER_HOST).toString() == hub;
+    const QString itemHub = item->data(COLUMN_TRANSFER_HOST).toString();
+    return itemHub.isEmpty() || itemHub == hub;
 }
 
 } // namespace TransferViewRemove

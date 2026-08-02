@@ -55,7 +55,7 @@ public:
     QString target;
     /** Child: segment or file bytes in flight. Parent: displayed aggregate. */
     qlonglong dpos;
-    /** Download parent only: committed queue bytes (FPOS); never store aggregate here. */
+    /** Download parent: committed queue bytes. Upload parent/row: completed segment bytes. */
     qlonglong fpos;
     qint64 queuePos;
     double percent;
@@ -133,6 +133,10 @@ public Q_SLOTS:
     void updateTransferPos(const VarMap&, qint64);
     /** */
     void finishParent(const VarMap&);
+    /** Final upload metrics, then drop the row/group when the file is fully sent and idle. */
+    void completeUpload(const VarMap&);
+    /** Upload failure: keep error text, prune group if the file is already fully sent. */
+    void failUpload(const VarMap&);
     /** */
     void updateParents();
     /** Just resort*/
@@ -146,17 +150,21 @@ private Q_SLOTS:
     void flushPendingTargetRemoves();
 
 private:
-    inline QString      vstr(const QVariant &var) { return var.toString(); }
-    inline int          vint(const QVariant &var) { return var.toInt(); }
-    inline double       vdbl(const QVariant &var) { return var.toDouble(); }
-    inline qlonglong    vlng(const QVariant &var) { return var.toLongLong(); }
-    inline bool         vbol(const QVariant &var) { return var.toBool(); }
+    inline QString      vstr(const QVariant &var) const { return var.toString(); }
+    inline int          vint(const QVariant &var) const { return var.toInt(); }
+    inline double       vdbl(const QVariant &var) const { return var.toDouble(); }
+    inline qlonglong    vlng(const QVariant &var) const { return var.toLongLong(); }
+    inline bool         vbol(const QVariant &var) const { return var.toBool(); }
 
     /** */
     void updateParent(TransferViewItem*);
     void pruneEmptyParents();
     bool shouldRemoveStaleRow(const TransferViewItem *item) const;
     void dropTransferRow(TransferViewItem *item);
+    TransferViewItem *findUploadRow(const VarMap &params);
+    TransferViewItem *uploadScope(TransferViewItem *item) const;
+    bool uploadFullyIdle(TransferViewItem *scope) const;
+    void settleUpload(const VarMap &params, bool segmentDone);
     /** */
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);

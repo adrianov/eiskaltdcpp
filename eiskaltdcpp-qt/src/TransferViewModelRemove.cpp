@@ -92,16 +92,5 @@ void TransferViewModel::removeTransfer(const VarMap &params){
         dropTransferRow(item);
         return;
     }
-
-    if (!download && !hub.isEmpty()) {
-        i = transfer_hash.find(cid);
-        while (i != transfer_hash.end() && i.key() == cid) {
-            TransferViewItem *item = i.value();
-            if (!item->download) {
-                dropTransferRow(item);
-                return;
-            }
-            ++i;
-        }
-    }
+    // No hub-agnostic fallback: do not drop another hub's upload for the same CID.
 }
