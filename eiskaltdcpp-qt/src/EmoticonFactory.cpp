@@ -14,6 +14,7 @@
 #include <QDir>
 #include <QFile>
 #include <QtDebug>
+#include <QSizePolicy>
 
 #include <math.h>
 
@@ -76,8 +77,12 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
     QString emoTheme = WSGET(WS_APP_EMOTICON_THEME);
 
     for (const auto &i : list){
-        // DPR-aware pixmap so chat layout uses legacy logical size, not raw pixels.
-        const QPixmap px = WulforUtil::scalePixmap(i->pixmap, emoticonLogicalSide(i->pixmap));
+        // Physical pixels via HQ scale, but dpr=1.0 for QTextDocument ImageResource.
+        // HTML width/height stay logical (~20); text engine scales physical	o logical
+        // (e.g. 40	o20 on @2x) so Retina stays sharp without relying on DPR honor.
+        const int logical = emoticonLogicalSide(i->pixmap);
+        QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
+        px.setDevicePixelRatio(1.0);
         to->addResource(QTextDocument::ImageResource,
                         QUrl(emoTheme + "/emoticon" + QString().setNum(i->id)),
                         px);
@@ -106,14 +111,16 @@ void EmoticonFactory::fillLayout(QLayout *l, QSize &recommendedSize){
 
         const int logical = emoticonLogicalSide(i->pixmap);
         const QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
-        lbl->setPixmap(px);
-        // Qt5 QPixmap::size() is physical pixels when DPR is set; size labels logically.
-        lbl->resize(QSize(logical, logical) + QSize(2, 2));
+        const QSize cell = QSize(logical, logical) + QSize(2, 2);
         lbl->setContentsMargins(1, 1, 1, 1);
+        lbl->setPixmap(px);
+        // resize() is ignored by FlowLayout; pin logical cell size explicitly.
+        lbl->setFixedSize(cell);
+        lbl->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         lbl->setToolTip(map.keys(i).first());
 
-        w += lbl->width();
-        h  = lbl->height();
+        w += cell.width();
+        h  = cell.height();
 
         l->addWidget(lbl);
     }
