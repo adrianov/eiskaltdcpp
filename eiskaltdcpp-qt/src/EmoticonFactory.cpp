@@ -79,9 +79,13 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
     QString emoTheme = WSGET(WS_APP_EMOTICON_THEME);
 
     for (const auto &i : list){
+        // Provide DPR-sized pixels; HTML width/height keep layout at 24 logical.
+        const int pixelSide = qMax(1, qRound(EMOTICON_LOGICAL_SIDE * WulforUtil::iconDeviceRatio()));
+        const QImage img = i->pixmap.toImage().scaled(
+            pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         to->addResource( QTextDocument::ImageResource,
                          QUrl(emoTheme + "/emoticon" + QString().setNum(i->id)),
-                         i->pixmap.toImage()
+                         img
                        );
     }
 
@@ -127,8 +131,9 @@ QString EmoticonFactory::convertEmoticons(const QString &html){
                 if (buf.startsWith(it.key())){
                     EmoticonObject *obj = it.value();
 
-                    QString img = QString("<img alt=\"%1\" title=\"%1\" align=\"center\" source=\"%2/emoticon%3\" />")
+                    QString img = QString("<img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" />")
                                   .arg(it.key())
+                                  .arg(EMOTICON_LOGICAL_SIDE)
                                   .arg(emoTheme)
                                   .arg(obj->id);
 
@@ -144,8 +149,9 @@ QString EmoticonFactory::convertEmoticons(const QString &html){
                 if (buf.startsWith(" "+it.key()+" ")){
                     EmoticonObject *obj = it.value();
 
-                    QString img = QString(" <img alt=\"%1\" title=\"%1\" align=\"center\" source=\"%2/emoticon%3\" /> ")
+                    QString img = QString(" <img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" /> ")
                                   .arg(it.key())
+                                  .arg(EMOTICON_LOGICAL_SIDE)
                                   .arg(emoTheme)
                                   .arg(obj->id);
 
@@ -159,8 +165,9 @@ QString EmoticonFactory::convertEmoticons(const QString &html){
                 else if (buf.startsWith(" "+it.key()+"\n")){
                     EmoticonObject *obj = it.value();
 
-                    QString img = QString(" <img alt=\"%1\" title=\"%1\" align=\"center\" source=\"%2/emoticon%3\" />\n")
+                    QString img = QString(" <img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" />\n")
                                   .arg(it.key())
+                                  .arg(EMOTICON_LOGICAL_SIDE)
                                   .arg(emoTheme)
                                   .arg(obj->id);
 
@@ -267,8 +274,10 @@ void EmoticonFactory::fillLayout(QLayout *l, QSize &recommendedSize){
     for (const auto &i : list){
         EmoticonLabel *lbl = new EmoticonLabel();
 
-        lbl->setPixmap(i->pixmap);
-        lbl->resize(i->pixmap.size()+QSize(2, 2));
+        // Hi-res pack -> Retina-aware 24px logical via smooth downscale (not NN upscale).
+        const QPixmap px = WulforUtil::scalePixmap(i->pixmap, EMOTICON_LOGICAL_SIDE);
+        lbl->setPixmap(px);
+        lbl->resize(px.size() + QSize(2, 2));
         lbl->setContentsMargins(1, 1, 1, 1);
         lbl->setToolTip(map.keys(i).first());
 

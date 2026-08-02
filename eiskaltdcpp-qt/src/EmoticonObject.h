@@ -17,6 +17,9 @@
 #include <QLabel>
 #include <QMouseEvent>
 
+// On-screen emoticon size in logical pixels (pack PNGs may be larger).
+static const int EMOTICON_LOGICAL_SIDE = 24;
+
 class EmoticonLabel: public QLabel{
 Q_OBJECT
 public:

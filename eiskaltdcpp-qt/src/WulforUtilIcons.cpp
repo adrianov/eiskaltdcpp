@@ -40,7 +40,9 @@ qreal WulforUtil::iconDeviceRatio()
 }
 
 // Render a pixmap at the physical resolution of the screen so icons stay sharp on Retina.
-QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide)
+// Prefer SmoothTransformation when the source has enough pixels (theme icons, hi-res
+// emoticon packs). FastTransformation remains available for tiny pixel-art upscales.
+QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide, Qt::TransformationMode mode)
 {
     if (source.isNull() || logicalSide <= 0)
         return source;
@@ -58,7 +60,7 @@ QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide)
 #endif
 
     QPixmap result = QPixmap::fromImage(
-        source.toImage().scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        source.toImage().scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, mode));
 #if QT_VERSION >= 0x050000
     result.setDevicePixelRatio(dpr);
 #endif

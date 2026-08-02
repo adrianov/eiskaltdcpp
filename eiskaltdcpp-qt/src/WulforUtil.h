@@ -185,7 +185,8 @@ public Q_SLOTS:
     static void bindActionIcon(QAction *act, Icons icon);
 
     static qreal iconDeviceRatio();
-    static QPixmap scalePixmap(const QPixmap &source, int logicalSide);
+    static QPixmap scalePixmap(const QPixmap &source, int logicalSide,
+                               Qt::TransformationMode mode = Qt::SmoothTransformation);
 
     static void headerMenu(QTreeView*);
 
