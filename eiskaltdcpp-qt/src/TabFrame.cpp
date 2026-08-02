@@ -16,11 +16,7 @@
 #include "DebugHelper.h"
 #include "GlobalTimer.h"
 
-#if QT_VERSION >= 0x050000
 #include <QtWidgets>
-#else
-#include <QtGui>
-#endif
 
 #include <QPushButton>
 #include <QWheelEvent>
@@ -58,7 +54,6 @@ TabFrame::TabFrame(QWidget *parent) :
 
     connect(GlobalTimer::getInstance(), SIGNAL(second()), this, SLOT(redraw()));
 }
-
 
 TabFrame::~TabFrame(){
     DEBUG_BLOCK

@@ -10,11 +10,7 @@
 #include "CustomFontModel.h"
 #include "WulforUtil.h"
 
-#if QT_VERSION >= 0x050000
 #include <QtWidgets>
-#else
-#include <QtGui>
-#endif
 
 #include <QFontDialog>
 #include <QList>

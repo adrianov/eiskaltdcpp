@@ -19,34 +19,20 @@
 #include <QRegExp>
 #include <QUrl>
 
-#if QT_VERSION >= 0x050000
 #include <QUrlQuery>
-#endif
 
 QString hubFrameMagnetTitle(const QString &link)
 {
     QString magnet = link;
 
-#if QT_VERSION >= 0x050000
     QUrlQuery u;
-#else
-    QUrl u;
-#endif
 
     if (!magnet.contains("+")) {
-#if QT_VERSION >= 0x050000
         u.setQuery(magnet.toUtf8());
-#else
-        u.setEncodedUrl(magnet.toUtf8());
-#endif
     } else {
         QString encoded = magnet;
         encoded.replace("+", "%20");
-#if QT_VERSION >= 0x050000
         u.setQuery(encoded.toUtf8());
-#else
-        u.setEncodedUrl(encoded.toUtf8());
-#endif
     }
 
     if (u.hasQueryItem("kt")) {
@@ -61,13 +47,8 @@ QString hubFrameMagnetTitle(const QString &link)
         if (keywords.isEmpty())
             keywords = HubFrame::tr("Invalid keywords");
 
-#if QT_VERSION >= 0x050000
         return hub.isEmpty() ? keywords.toHtmlEscaped()
                              : keywords.toHtmlEscaped() + " (" + hub.toHtmlEscaped() + ")";
-#else
-        return hub.isEmpty() ? Qt::escape(keywords)
-                             : Qt::escape(keywords) + " (" + Qt::escape(hub) + ")";
-#endif
     }
 
     QString name, tth;
@@ -132,13 +113,8 @@ bool hubFrameTryBbCode(QString &input, QString &output)
             if (link.startsWith("="))
                 link.remove(0, 1);
             if (!title.isEmpty()){
-#if QT_VERSION >= 0x050000
                 output += "<a href=\"" + link + "\" title=\"" + title.toHtmlEscaped() + "\">"
                         + title.toHtmlEscaped() + "</a>";
-#else
-                output += "<a href=\"" + link + "\" title=\"" + Qt::escape(title) + "\">"
-                        + Qt::escape(title) + "</a>";
-#endif
                 input.remove(0, chunk.length());
                 return true;
             }

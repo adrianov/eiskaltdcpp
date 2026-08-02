@@ -25,9 +25,7 @@
 #include <QTableWidget>
 #include <QTabWidget>
 
-#if QT_VERSION >= 0x050000
 #include <QScroller>
-#endif
 
 Settings::Settings(): is_dirty(false)
 {
@@ -144,7 +142,6 @@ void Settings::init(){
 }
 
 void Settings::setMouseScroller(QWidget *w){
-#if QT_VERSION >= 0x050000
     QScroller::grabGesture(w, QScroller::LeftMouseButtonGesture);
     QScroller *scroller = QScroller::scroller(w);
     QScrollerProperties properties = scroller->scrollerProperties();
@@ -152,7 +149,6 @@ void Settings::setMouseScroller(QWidget *w){
     properties.setScrollMetric(QScrollerProperties::VerticalOvershootPolicy, overshootPolicy);
     properties.setScrollMetric(QScrollerProperties::HorizontalOvershootPolicy, overshootPolicy);
     scroller->setScrollerProperties(properties);
-#endif
 }
 
 QWidget *Settings::prepareWidget(QWidget *w)

@@ -22,9 +22,6 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QProcess>
-#if QT_VERSION >= 0x050000
-#include <QUrlQuery>
-#endif
 
 using namespace dcpp;
 
@@ -52,29 +49,6 @@ bool WulforUtil::openUrl(const QString &url){
     }
     else if (url.startsWith("magnet:")){
         const QString magnet = url;
-
-#if QT_VERSION >= 0x050000
-        QUrlQuery u;
-#else
-        QUrl u;
-#endif
-
-        if (!magnet.contains("+")) {
-#if QT_VERSION >= 0x050000
-                u.setQuery(magnet.toUtf8());
-#else
-                u.setEncodedUrl(magnet.toUtf8());
-#endif
-        } else {
-            QString _l = magnet;
-
-            _l.replace("+", "%20");
-#if QT_VERSION >= 0x050000
-                u.setQuery(_l.toUtf8());
-#else
-                u.setEncodedUrl(_l.toUtf8());
-#endif
-        }
 
         StringMap params;
         magnet::parseUri(magnet.toStdString(), params);

@@ -30,10 +30,8 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QApplication>
-#if QT_VERSION >= 0x050000
 #include <QGuiApplication>
 #include <QScreen>
-#endif
 #include <QInputDialog>
 #include <QDesktopServices>
 #include <QUrl>
@@ -55,9 +53,6 @@
 #include <QRegExp>
 #include <QProcess>
 
-#if QT_VERSION >= 0x050000
-#include <QUrlQuery>
-#endif
 
 #include "SearchFrame.h"
 #include "extra/magnet.h"

@@ -15,10 +15,8 @@
 #include <QPixmap>
 #include <QDir>
 #include <QResource>
-#if QT_VERSION >= 0x050000
 #include <QGuiApplication>
 #include <QScreen>
-#endif
 
 #include "icons/gv.xpm"
 
@@ -26,7 +24,6 @@ static const int PXMTHEMESIDE = THEME_ICON_SIZE;
 
 qreal WulforUtil::iconDeviceRatio()
 {
-#if QT_VERSION >= 0x050000
     qreal dpr = 1.0;
     const auto screens = QGuiApplication::screens();
     for (const QScreen *screen : screens) {
@@ -34,9 +31,6 @@ qreal WulforUtil::iconDeviceRatio()
             dpr = qMax(dpr, screen->devicePixelRatio());
     }
     return dpr;
-#else
-    return 1.0;
-#endif
 }
 
 // Render a pixmap at the physical resolution of the screen so icons stay sharp on Retina.
@@ -50,20 +44,13 @@ QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide, Qt::Tran
     const qreal dpr = iconDeviceRatio();
     const int pixelSide = qMax(1, qRound(logicalSide * dpr));
 
-#if QT_VERSION >= 0x050000
     if (source.width() == pixelSide && source.height() == pixelSide
             && qFuzzyCompare(source.devicePixelRatio(), dpr))
         return source;
-#else
-    if (source.width() == pixelSide && source.height() == pixelSide)
-        return source;
-#endif
 
     QPixmap result = QPixmap::fromImage(
         source.toImage().scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, mode));
-#if QT_VERSION >= 0x050000
     result.setDevicePixelRatio(dpr);
-#endif
     return result;
 }
 

@@ -95,10 +95,8 @@
 #include "WulforUtil.h"
 #include "AppTheme.h"
 
-#if QT_VERSION >= 0x050000
 #include <QGuiApplication>
 #include <QScreen>
-#endif
 
 static void bindSpeedLimitIcon(QAction *act, bool enabled)
 {
@@ -483,11 +481,9 @@ void MainWindow::init(){
 
     WulforUtil *WU = WulforUtil::getInstance();
     connect(WU, SIGNAL(iconsLoaded()), this, SLOT(updateActionIcons()));
-#if QT_VERSION >= 0x050000
     connect(qApp, SIGNAL(screenAdded(QScreen*)), WU, SLOT(loadIcons()));
     connect(qApp, SIGNAL(screenRemoved(QScreen*)), WU, SLOT(loadIcons()));
     connect(qApp, SIGNAL(primaryScreenChanged(QScreen*)), WU, SLOT(loadIcons()));
-#endif
 
     loadSettings();
 

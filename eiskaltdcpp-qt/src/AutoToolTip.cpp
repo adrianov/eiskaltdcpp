@@ -34,11 +34,7 @@ bool AutoToolTipDelegate::helpEvent(QHelpEvent* e, QAbstractItemView* view,
             QVariant tooltip = index.data(Qt::DisplayRole);
             if ( tooltip.canConvert<QString>() ) {
                 QToolTip::showText(e->globalPos(),
-#if QT_VERSION >= 0x050000
                                    QString("<div>%1</div>").arg(tooltip.toString().toHtmlEscaped()),
-#else
-                                   QString("<div>%1</div>").arg(Qt::escape(tooltip.toString())),
-#endif
                                    view);
                 return true;
             }

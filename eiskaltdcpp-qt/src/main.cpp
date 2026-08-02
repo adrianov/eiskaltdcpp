@@ -13,9 +13,7 @@
 Q_IMPORT_PLUGIN (QWindowsAudioPlugin);
 Q_IMPORT_PLUGIN (QWindowsIntegrationPlugin);
 Q_IMPORT_PLUGIN (QSQLiteDriverPlugin);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
 Q_IMPORT_PLUGIN (QWindowsVistaStylePlugin);
-#endif // QT_VERSION
 #elif defined(__linux) // defined(_WIN32)
 Q_IMPORT_PLUGIN (QXcbIntegrationPlugin);
 Q_IMPORT_PLUGIN (QSQLiteDriverPlugin);
@@ -50,7 +48,6 @@ using namespace std;
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QObject>
-#include <QTextCodec>
 
 #include <locale.h>
 
@@ -76,21 +73,12 @@ bool dockClickHandler(id self,SEL _cmd,...)
 
 int main(int argc, char *argv[])
 {
-#if QT_VERSION < 0x050000
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
-#endif
     setlocale(LC_ALL, "");
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
     EiskaltApp app(argc, argv, _q(dcpp::Util::getLoginName()+"EDCPP"));
 

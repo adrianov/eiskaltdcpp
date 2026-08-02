@@ -64,9 +64,6 @@
 #include <QShortcut>
 #include <QHeaderView>
 
-#if QT_VERSION >= 0x050000
-#include <QUrlQuery>
-#endif
 
 #include <QtDebug>
 
@@ -88,8 +85,6 @@ static inline void clearLayout(QLayout *l){
 
     l->invalidate();
 }
-
-
 
 HubFrame::HubFrame(QWidget *parent, QString hub="", QString encoding="")
     : QWidget(parent)
@@ -142,7 +137,6 @@ HubFrame::HubFrame(QWidget *parent, QString hub="", QString encoding="")
 
     FavoriteManager::getInstance()->addListener(this);
 }
-
 
 HubFrame::~HubFrame(){
     Q_D(HubFrame);
@@ -577,7 +571,7 @@ void HubFrame::init(){
     load();
 
     d->completer = new QCompleter(this);
-    d->completer->setMaxVisibleItems(10); // This property was introduced in Qt 4.6.
+    d->completer->setMaxVisibleItems(10);
     plainTextEdit_INPUT->setCompleter(d->completer, d->model);
 
     syncFieldHeights();
@@ -636,7 +630,6 @@ void HubFrame::initMenu(){
     connect(copyURL,    SIGNAL(triggered()), this, SLOT(slotCopyHubURL()));
     connect(close_wnd,  SIGNAL(triggered()), this, SLOT(slotClose()));
 }
-
 
 void HubFrame::save(){
     Q_D(HubFrame);
@@ -1030,7 +1023,6 @@ bool HubFrame::parseForCmd(QString line, QWidget *wg){
         double ratio;
         double up   = static_cast<double>(SETTING(TOTAL_UPLOAD));
         double down = static_cast<double>(SETTING(TOTAL_DOWNLOAD));
-
 
         if (down > 0)
             ratio = up / down;
@@ -2093,7 +2085,6 @@ void HubFrame::slotInputContextMenu(){
             QMenu *ss = nullptr;
             if (!list.isEmpty()) {
                 ss = new QMenu(tr("Suggestions"), this);
-
 
                 for (const auto &s : list)
                     ss->addAction(s);

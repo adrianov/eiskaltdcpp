@@ -50,7 +50,6 @@
 #endif
 
 #include <QObject>
-#include <QTextCodec>
 
 #include <iostream>
 #include <string>
@@ -76,9 +75,6 @@ int runApplication(EiskaltApp &app)
 #endif
 
     HashManager::getInstance()->setPriority(Thread::IDLE);
-#if QT_VERSION < 0x050000
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
-#endif
     app.setOrganizationName("EiskaltDC++ Team");
     app.setApplicationName("EiskaltDC++ Qt");
     app.setApplicationVersion(QString::fromStdString(eiskaltdcppVersionString));
@@ -105,9 +101,7 @@ int runApplication(EiskaltApp &app)
         std::cout << QObject::tr("Application icons has been loaded").toStdString() << std::endl;
 
     app.setWindowIcon(WICON(WulforUtil::eiICON_APPL));
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 1))
     app.setAttribute(Qt::AA_DisableWindowContextHelpButton);
-#endif
 
     ArenaWidgetManager::newInstance();
 

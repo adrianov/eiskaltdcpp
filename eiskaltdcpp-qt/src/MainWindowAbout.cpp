@@ -27,7 +27,6 @@ void MainWindow::slotAboutOpenUrl(){
 
     QAction *act = qobject_cast<QAction *>(sender());
 
-#if QT_VERSION >= 0x050000
     const QHash<QAction*, QUrl> urlsTable = {
         { d->aboutHomepage,     QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/#description") },
         { d->aboutBuilds,       QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/#packages-and-installers") },
@@ -36,15 +35,6 @@ void MainWindow::slotAboutOpenUrl(){
         { d->aboutWiki,         QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/wiki") },
         { d->aboutChangelog,    QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/blob/master/ChangeLog.txt") },
     };
-#else
-    QHash<QAction*, QUrl> urlsTable;
-    urlsTable.insert( d->aboutHomepage,     QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/#description") );
-    urlsTable.insert( d->aboutBuilds,       QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/#packages-and-installers") );
-    urlsTable.insert( d->aboutSource,       QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/") );
-    urlsTable.insert( d->aboutIssues,       QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/issues") );
-    urlsTable.insert( d->aboutWiki,         QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/wiki") );
-    urlsTable.insert( d->aboutChangelog,    QUrl("https://github.com/eiskaltdcpp/eiskaltdcpp/blob/master/ChangeLog.txt") );
-#endif
 
     if (urlsTable.contains(act)) {
         QDesktopServices::openUrl(urlsTable[act]);

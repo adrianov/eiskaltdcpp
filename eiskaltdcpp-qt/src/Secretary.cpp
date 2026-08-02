@@ -49,7 +49,6 @@ Secretary::Secretary(QWidget *parent)
     if (WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance())
         EmoticonFactory::getInstance()->addEmoticons(textEdit_MESSAGES->document());
 
-
     connect(this, SIGNAL(coreStatusMsg(const QString, const QString, const QString, const QString)),
             this, SLOT(addStatus(const QString, const QString, const QString, const QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreChatMessage(const QString, const QString, const QString, const QString)),
@@ -126,7 +125,6 @@ bool Secretary::eventFilter(QObject *obj, QEvent *e){
             return true;
         }
 
-#if QT_VERSION >= 0x050000
         if (controlModifier) {
             if (k_e->key() == Qt::Key_Equal || k_e->key() == Qt::Key_Plus){
                 textEdit_MESSAGES->zoomIn();
@@ -139,7 +137,6 @@ bool Secretary::eventFilter(QObject *obj, QEvent *e){
                 return true;
             }
         }
-#endif
     }
     else if (e->type() == QEvent::MouseButtonPress){
         QMouseEvent *m_e = reinterpret_cast<QMouseEvent*>(e);

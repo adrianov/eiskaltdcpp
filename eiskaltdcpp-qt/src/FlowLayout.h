@@ -47,11 +47,7 @@
 #include <QWidgetItem>
 #include <QStyle>
 
-#if QT_VERSION >= 0x050000
 #include <QtWidgets>
-#else
-#include <QtGui>
-#endif
 
 class FlowLayout : public QLayout
 {

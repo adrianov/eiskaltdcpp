@@ -18,11 +18,7 @@
 #include <QAbstractItemView>
 #include <QFuture>
 
-#if QT_VERSION >= 0x050000
 #include <QtConcurrent>
-#else
-#include <QtConcurrentFilter>
-#endif
 
 using namespace dcpp;
 
