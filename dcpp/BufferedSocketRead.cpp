@@ -32,7 +32,7 @@ namespace dcpp {
 using std::min;
 
 void BufferedSocket::threadRead() {
-    if(state != RUNNING || disconnecting)
+    if(state != RUNNING || disconnecting || !sock)
         return;
 
     int left = (mode == MODE_DATA) ? ThrottleManager::getInstance()->read(sock.get(), &inbuf[0], (int)inbuf.size()) : sock->read(&inbuf[0], (int)inbuf.size());

@@ -45,6 +45,8 @@ public:
             copy = listeners;
         }
         for(auto i: copy) {
+            if(!i)
+                continue;
             i->on(std::forward<T>(type)...);
         }
     }

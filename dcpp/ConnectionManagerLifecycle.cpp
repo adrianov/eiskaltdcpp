@@ -10,6 +10,7 @@
 #include "stdinc.h"
 #include "ConnectionManager.h"
 
+#include "BufferedSocket.h"
 #include "Client.h"
 #include "ClientManager.h"
 #include "UserConnection.h"
@@ -56,6 +57,7 @@ void ConnectionManager::shutdown() {
 
     TimerManager::getInstance()->removeListener(this);
     shuttingDown = true;
+    BufferedSocket::beginShutdown();
     disconnect();
 
     {

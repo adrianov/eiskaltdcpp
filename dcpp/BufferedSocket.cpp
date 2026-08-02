@@ -39,6 +39,7 @@ BufferedSocket::BufferedSocket(char aSeparator) :
 }
 
 Atomic<long,memory_ordering_strong> BufferedSocket::sockets(0);
+std::atomic<bool> BufferedSocket::s_shuttingDown{false};
 
 BufferedSocket::~BufferedSocket() {
     sockets.dec();
@@ -83,7 +84,8 @@ bool BufferedSocket::checkEvents() {
         if(p.first == SHUTDOWN) {
             return false;
         } else if(p.first == UPDATED) {
-            fire(BufferedSocketListener::Updated());
+            if(!disconnecting)
+                fire(BufferedSocketListener::Updated());
             continue;
         }
 
@@ -114,7 +116,7 @@ bool BufferedSocket::checkEvents() {
 }
 
 void BufferedSocket::checkSocket() {
-    if(disconnecting)
+    if(disconnecting || !sock)
         return;
 
     int waitFor = sock->wait(POLL_TIMEOUT, Socket::WAIT_READ);
@@ -143,7 +145,14 @@ int BufferedSocket::run() {
         }
     }
     dcdebug("BufferedSocket::run() end %p\n", (void*)this);
+    std::shared_ptr<Semaphore> done;
+    {
+        Lock l(cs);
+        done = stopSignal;
+    }
     delete this;
+    if(done)
+        done->signal();
     return 0;
 }
 
@@ -161,11 +170,42 @@ void BufferedSocket::fail(const string& aError) {
 void BufferedSocket::shutdown() {
     Lock l(cs);
     disconnecting = true;
+    if(!stopSignal)
+        stopSignal = std::make_shared<Semaphore>();
     // Wake the worker without closing or mutating its socket from this thread.
     if(sock.get()) {
         sock->Socket::shutdown();
     }
     addTask(SHUTDOWN, 0);
+}
+
+bool BufferedSocket::isWorker() const {
+#ifdef _WIN32
+    return threadId != 0 && threadId == ::GetCurrentThreadId();
+#else
+    return threadHandle != 0 && pthread_equal(threadHandle, pthread_self());
+#endif
+}
+
+void BufferedSocket::joinShutdown() {
+    removeListeners();
+
+    std::shared_ptr<Semaphore> done;
+    bool waitForStop = false;
+    {
+        Lock l(cs);
+        disconnecting = true;
+        if(!stopSignal)
+            stopSignal = std::make_shared<Semaphore>();
+        done = stopSignal;
+        waitForStop = !isWorker();
+        if(sock.get())
+            sock->Socket::shutdown();
+        addTask(SHUTDOWN, 0);
+    }
+
+    if(waitForStop)
+        done->wait(30000);
 }
 
 void BufferedSocket::addTask(Tasks task, TaskData* data) {

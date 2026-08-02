@@ -62,11 +62,19 @@ public:
         return new BufferedSocket(sep);
     }
 
+    /** Signal app shutdown; putSocket() joins workers only after this. */
+    static void beginShutdown() {
+        s_shuttingDown.store(true, std::memory_order_release);
+    }
+
     static void putSocket(BufferedSocket* aSock) {
-        if(aSock) {
-            aSock->removeListeners();
+        if(!aSock)
+            return;
+        // Normal teardown stays fire-and-forget; join only during app shutdown.
+        if(s_shuttingDown.load(std::memory_order_acquire))
+            aSock->joinShutdown();
+        else
             aSock->shutdown();
-        }
     }
 
     static bool waitShutdown() {
@@ -176,6 +184,8 @@ public:
     unique_ptr<Socket> sock;
     State state;
     std::atomic<bool> disconnecting;
+    // Kept alive across delete this so putSocket can wait for the worker to finish.
+    std::shared_ptr<Semaphore> stopSignal;
 
     virtual int run();
 
@@ -187,12 +197,15 @@ public:
 
     void fail(const string& aError);
     static Atomic<long,memory_ordering_strong> sockets;
+    static std::atomic<bool> s_shuttingDown;
 
     bool checkEvents();
     void checkSocket();
 
     void setSocket(unique_ptr<Socket> s);
     void shutdown();
+    void joinShutdown();
+    bool isWorker() const;
     void addTask(Tasks task, TaskData* data);
 };
 
