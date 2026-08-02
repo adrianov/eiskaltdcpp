@@ -46,6 +46,7 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     // Downloads: committed fpos + in-flight segment bytes (never reuse aggregate dpos as base).
     qlonglong progressPos = p->download ? p->fpos : 0;
 
+    bool betweenParts = false;
     for (const auto &i : p->childItems){
         if (!i->fail) {
             // Upload part gaps keep a held child speed; do not count finished segments.
@@ -57,6 +58,8 @@ void TransferViewModel::updateParent(TransferViewItem *p){
             else if (i->queuePos > 0 && (bestQueuePos == 0 || i->queuePos < bestQueuePos))
                 bestQueuePos = i->queuePos;
         }
+        if (!p->download && i->finished && !i->fail)
+            betweenParts = true;
 
         if (!hubs.contains(vstr(i->data(COLUMN_TRANSFER_HOST))))
             hubs.append(vstr(i->data(COLUMN_TRANSFER_HOST)));
@@ -91,9 +94,9 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     p->percent = progress;
 
     speed = TransferDisplay::roundSpeed(speed);
-    // Consecutive upload parts: all children briefly finished — keep speed/ETA, do not flash to 0.
+    // Hold speed/ETA only between parts (finished child waiting), not on a real stall.
     const bool uploadGap = !p->download && speed <= 0 && totalSize > 0
-            && p->fpos < totalSize && !p->finished;
+            && p->fpos < totalSize && !p->finished && betweenParts;
     qint64 timeLeft;
     if (uploadGap) {
         const double prev = vdbl(p->data(COLUMN_TRANSFER_SPEED));

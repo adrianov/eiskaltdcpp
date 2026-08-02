@@ -127,6 +127,7 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     const QString stat = s.fileDone ? tr("Upload complete")
                                     : uploadProgressStat(s.sent, s.fileSize);
     applyUploadMetrics(params, s, stat);
+    // Bytes for this Upload only (TransmitDone fires Complete once, then removes it).
     params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["DOWN"] = false;
     params["FAIL"] = false;
@@ -148,7 +149,6 @@ void TransferView::on(dcpp::UploadManagerListener::Failed, dcpp::Upload* ul, con
     getParams(params, ul);
     const UploadUiState s = uploadState(ul);
     applyUploadMetrics(params, s, _q(reason));
-    params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["SPEED"] = 0.0;
     params["TLEFT"] = qlonglong(-1);
     params["DOWN"] = false;

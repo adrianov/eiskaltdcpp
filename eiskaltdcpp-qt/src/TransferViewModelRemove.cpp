@@ -92,5 +92,20 @@ void TransferViewModel::removeTransfer(const VarMap &params){
         dropTransferRow(item);
         return;
     }
-    // No hub-agnostic fallback: do not drop another hub's upload for the same CID.
+
+    // Host string mismatch: only safe when this CID has a single upload row.
+    if (!download && !hub.isEmpty()) {
+        TransferViewItem *only = nullptr;
+        int uploads = 0;
+        i = transfer_hash.find(cid);
+        while (i != transfer_hash.end() && i.key() == cid) {
+            if (!i.value()->download) {
+                only = i.value();
+                ++uploads;
+            }
+            ++i;
+        }
+        if (uploads == 1)
+            dropTransferRow(only);
+    }
 }

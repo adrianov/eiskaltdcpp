@@ -76,15 +76,24 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
     if (!item)
         return;
 
-    // Segment done; peer connections often stay in STATE_GET until disconnect.
-    if (segmentDone)
-        item->finished = true;
-
     TransferViewItem *scope = uploadScope(item);
     if (!scope)
         return;
 
-    scope->fpos += vlng(params.value("SEGP"));
+    // SEGP is per-Upload getPos() (one Complete per Upload). Skip fails and
+    // double-settles so a retry cannot push fpos past the real total early.
+    const bool alreadySettled = item->finished;
+    if (segmentDone && !alreadySettled) {
+        item->finished = true;
+        item->fail = false;
+        const qlonglong seg = vlng(params.value("SEGP"));
+        if (seg > 0)
+            scope->fpos += seg;
+    } else if (!segmentDone) {
+        item->fail = true;
+        item->finished = false;
+    }
+
     if (!uploadFullyIdle(scope)) {
         // Same row across consecutive parts; refresh parent after finished is set.
         if (scope->cid.isEmpty()) {
