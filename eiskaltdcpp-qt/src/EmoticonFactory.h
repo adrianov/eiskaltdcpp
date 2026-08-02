@@ -12,7 +12,6 @@
 #include <QObject>
 #include <QList>
 #include <QtXml>
-#include <QImage>
 #include <QTextDocument>
 #include <QLayout>
 #include <QSize>
@@ -37,7 +36,6 @@ public:
     void unload(){ this->clear(); }
 
     void addEmoticons(QTextDocument *to);
-    QString convertEmoticons(const QString &html);
     void fillLayout(QLayout *l, QSize &recommendedSize);
     const EmoticonMap &getEmoticons() { return map; }
 

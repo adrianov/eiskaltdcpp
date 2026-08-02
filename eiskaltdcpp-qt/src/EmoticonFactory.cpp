@@ -13,10 +13,7 @@
 
 #include <QDir>
 #include <QFile>
-#include <QString>
 #include <QtDebug>
-#include <QApplication>
-#include <QLabel>
 
 #include <math.h>
 
@@ -79,14 +76,11 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
     QString emoTheme = WSGET(WS_APP_EMOTICON_THEME);
 
     for (const auto &i : list){
-        // Provide DPR-sized pixels; HTML width/height keep layout at 24 logical.
-        const int pixelSide = qMax(1, qRound(EMOTICON_LOGICAL_SIDE * WulforUtil::iconDeviceRatio()));
-        const QImage img = i->pixmap.toImage().scaled(
-            pixelSide, pixelSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        to->addResource( QTextDocument::ImageResource,
-                         QUrl(emoTheme + "/emoticon" + QString().setNum(i->id)),
-                         img
-                       );
+        // DPR-aware pixmap so chat layout uses legacy logical size, not raw pixels.
+        const QPixmap px = WulforUtil::scalePixmap(i->pixmap, emoticonLogicalSide(i->pixmap));
+        to->addResource(QTextDocument::ImageResource,
+                        QUrl(emoTheme + "/emoticon" + QString().setNum(i->id)),
+                        px);
     }
 
     if (!docs.contains(to)){
@@ -96,106 +90,48 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
     }
 }
 
-QString EmoticonFactory::convertEmoticons(const QString &html){
-    if (html.isEmpty() || list.isEmpty() || map.isEmpty())
-        return html;
+void EmoticonFactory::fillLayout(QLayout *l, QSize &recommendedSize){
+    if (!l)
+        return;
 
-    QString emoTheme = WSGET(WS_APP_EMOTICON_THEME);
-    QString out = "";
-    QString buf = html;
+    int w = 0, h = 0, total = list.size();
 
-    auto it = map.end();
-    auto begin = map.begin();
-
-    bool force_emot = WBGET(WB_APP_FORCE_EMOTICONS);
-
-    if (!force_emot){
-        buf.prepend(" ");
-        buf.append(" ");
+    if (!total){
+        recommendedSize = QSize(50, 50);
+        return;
     }
 
-    while (!buf.isEmpty()){
-        if (buf.startsWith("<a href=") && buf.indexOf("</a>") > 0){
-            QString add = buf.left(buf.indexOf("</a>")) + "</a>";
+    for (const auto &i : list){
+        EmoticonLabel *lbl = new EmoticonLabel();
 
-            out += add;
-            buf.remove(0, add.length());
+        const int logical = emoticonLogicalSide(i->pixmap);
+        const QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
+        lbl->setPixmap(px);
+        // Qt5 QPixmap::size() is physical pixels when DPR is set; size labels logically.
+        lbl->resize(QSize(logical, logical) + QSize(2, 2));
+        lbl->setContentsMargins(1, 1, 1, 1);
+        lbl->setToolTip(map.keys(i).first());
 
-            continue;
-        }
+        w += lbl->width();
+        h  = lbl->height();
 
-        bool found = false;
-
-        for (it = map.end()-1; it != begin-1; --it){
-            if (force_emot){
-                if (buf.startsWith(it.key())){
-                    EmoticonObject *obj = it.value();
-
-                    QString img = QString("<img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" />")
-                                  .arg(it.key())
-                                  .arg(EMOTICON_LOGICAL_SIDE)
-                                  .arg(emoTheme)
-                                  .arg(obj->id);
-
-                    out += img + " ";
-                    buf.remove(0, it.key().length());
-
-                    found = true;
-
-                    break;
-                }
-            }
-            else{
-                if (buf.startsWith(" "+it.key()+" ")){
-                    EmoticonObject *obj = it.value();
-
-                    QString img = QString(" <img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" /> ")
-                                  .arg(it.key())
-                                  .arg(EMOTICON_LOGICAL_SIDE)
-                                  .arg(emoTheme)
-                                  .arg(obj->id);
-
-                    out += img;
-                    buf.remove(0, it.key().length()+1);
-
-                    found = true;
-
-                    break;
-                }
-                else if (buf.startsWith(" "+it.key()+"\n")){
-                    EmoticonObject *obj = it.value();
-
-                    QString img = QString(" <img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" />\n")
-                                  .arg(it.key())
-                                  .arg(EMOTICON_LOGICAL_SIDE)
-                                  .arg(emoTheme)
-                                  .arg(obj->id);
-
-                    out += img;
-                    buf.remove(0, it.key().length()+2);
-
-                    found = true;
-
-                    break;
-                }
-            }
-        }
-
-        if (!found){
-            out += buf.at(0);
-
-            buf.remove(0, 1);
-        }
+        l->addWidget(lbl);
     }
 
-    if (!force_emot){
-        if (out.startsWith(" "))
-            out.remove(0, 1);
-        if (out.endsWith(" "))
-            out.remove(out.length()-1, 1);
-    }
+    int square = w*h;
+    int dim = static_cast<int>(sqrt(square));
+    int extra = (dim/total);//for margins
 
-    return out;
+    //10 extra pixels
+    recommendedSize.setHeight(dim+extra+10);
+    recommendedSize.setWidth(dim+extra+10);
+}
+
+void EmoticonFactory::clear(){
+    qDeleteAll(list);
+
+    map.clear();
+    list.clear();
 }
 
 void EmoticonFactory::createEmoticonMap(const QDomNode &root){
@@ -237,13 +173,13 @@ void EmoticonFactory::createEmoticonMap(const QDomNode &root){
         }
 
         int registered = 0;
-        for (const auto &node : emoTexts){
-            QDomElement el = node.toElement();
+        for (const auto &textNode : emoTexts){
+            QDomElement textEl = textNode.toElement();
 
-            if (el.isNull())
+            if (textEl.isNull())
                 continue;
 
-            QString text = el.attribute("text").toUtf8();
+            QString text = textEl.attribute("text").toUtf8();
 
             if (text.isEmpty() || map.contains(text))
                 continue;
@@ -258,49 +194,6 @@ void EmoticonFactory::createEmoticonMap(const QDomNode &root){
         else
             delete emot;
     }
-}
-
-void EmoticonFactory::fillLayout(QLayout *l, QSize &recommendedSize){
-    if (!l)
-        return;
-
-    int w = 0, h = 0, total = list.size();
-
-    if (!total){
-        recommendedSize = QSize(50, 50);
-        return;
-    }
-
-    for (const auto &i : list){
-        EmoticonLabel *lbl = new EmoticonLabel();
-
-        // Hi-res pack -> Retina-aware 24px logical via smooth downscale (not NN upscale).
-        const QPixmap px = WulforUtil::scalePixmap(i->pixmap, EMOTICON_LOGICAL_SIDE);
-        lbl->setPixmap(px);
-        lbl->resize(px.size() + QSize(2, 2));
-        lbl->setContentsMargins(1, 1, 1, 1);
-        lbl->setToolTip(map.keys(i).first());
-
-        w += lbl->width();
-        h  = lbl->height();
-
-        l->addWidget(lbl);
-    }
-
-    int square = w*h;
-    int dim = static_cast<int>(sqrt(square));
-    int extra = (dim/total);//for margins
-
-    //10 extra pixels
-    recommendedSize.setHeight(dim+extra+10);
-    recommendedSize.setWidth(dim+extra+10);
-}
-
-void EmoticonFactory::clear(){
-    qDeleteAll(list);
-
-    map.clear();
-    list.clear();
 }
 
 QDomNode EmoticonFactory::findSectionByName(const QDomNode &node, const QString &name){
@@ -319,6 +212,7 @@ QDomNode EmoticonFactory::findSectionByName(const QDomNode &node, const QString 
 
     return QDomNode();
 }
+
 void EmoticonFactory::getSubSectionsByName(const QDomNode &node, EmoticonFactory::DomNodeList &list, const QString &name){
     Q_UNUSED(name)
 

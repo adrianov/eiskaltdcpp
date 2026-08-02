@@ -83,7 +83,7 @@ QString HubFrame::LinkParser::parseForLinks(QString input, bool use_emot){
 
             const auto appendSmile = [&](){
                 output += QString("<img alt=\"%1\" title=\"%1\" width=\"%2\" height=\"%2\" align=\"center\" source=\"%3/emoticon%4\" />")
-                              .arg(emo_text).arg(EMOTICON_LOGICAL_SIDE).arg(emo_theme).arg(obj->id);
+                              .arg(emo_text).arg(emoticonLogicalSide(obj->pixmap)).arg(emo_theme).arg(obj->id);
                 input.remove(0, emo_text.length());
                 smile_found = true;
             };

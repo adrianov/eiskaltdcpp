@@ -17,8 +17,19 @@
 #include <QLabel>
 #include <QMouseEvent>
 
-// On-screen emoticon size in logical pixels (pack PNGs may be larger).
+// Legacy on-screen size for hi-res packs (e.g. 72px default theme assets).
 static const int EMOTICON_LOGICAL_SIDE = 24;
+
+// Keep small packs at native size; downscale only when larger than 24.
+// Divide by DPR so a already-scaled pixmap is not treated as native pixels.
+static inline int emoticonLogicalSide(const QPixmap &source)
+{
+    if (source.isNull())
+        return EMOTICON_LOGICAL_SIDE;
+    const qreal dpr = qMax(qreal(1), source.devicePixelRatio());
+    const int side = qMax(qRound(source.width() / dpr), qRound(source.height() / dpr));
+    return qMin(side, EMOTICON_LOGICAL_SIDE);
+}
 
 class EmoticonLabel: public QLabel{
 Q_OBJECT
