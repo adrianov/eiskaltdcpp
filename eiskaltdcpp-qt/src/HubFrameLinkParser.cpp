@@ -14,8 +14,30 @@
 
 #include <QUrl>
 
+#include <algorithm>
+
 QString hubFrameMagnetTitle(const QString &link);
 bool hubFrameTryBbCode(QString &input, QString &output);
+
+static bool isColonWrappedEmoticon(const QString &text)
+{
+    return text.length() >= 3 && text.startsWith(':') && text.endsWith(':');
+}
+
+// Flylink-style symbol triggers (8|, ><, 8&) glue to other smilies without spaces.
+static bool isSymbolEmoticon(const QString &text)
+{
+    if (text.isEmpty() || isColonWrappedEmoticon(text))
+        return false;
+    return text.contains('|') || text.contains('&') || text.contains('<') || text.contains('>');
+}
+
+static bool okEmoticonStart(const QString &output)
+{
+    if (output.isEmpty() || output.endsWith(' ') || output.endsWith('\t'))
+        return true;
+    return output.endsWith("\" />") || output.endsWith("/>");
+}
 
 QString HubFrame::LinkParser::parseForLinks(QString input, bool use_emot){
     if (input.isEmpty())
@@ -31,7 +53,7 @@ QString HubFrame::LinkParser::parseForLinks(QString input, bool use_emot){
     if (use_emot && WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance())
         emoticons = EmoticonFactory::getInstance()->getEmoticons();
 
-    const QString emo_theme = WSGET(WS_APP_EMOTICON_THEME);
+    const QString emo_theme = WSGET(WS_APP_EMOTICON_THEME, "default");
     const bool force_emot = WBGET(WB_APP_FORCE_EMOTICONS);
 
     while (!input.isEmpty()){
@@ -76,7 +98,11 @@ QString HubFrame::LinkParser::parseForLinks(QString input, bool use_emot){
             break;
 
         bool smile_found = false;
-        for (const QString &emo_text : emoticons.keys()){
+        QStringList emo_keys = emoticons.keys();
+        std::sort(emo_keys.begin(), emo_keys.end(), [](const QString &a, const QString &b){
+            return a.length() > b.length();
+        });
+        for (const QString &emo_text : emo_keys){
             EmoticonObject *obj = emoticons[emo_text];
             if (!input.startsWith(emo_text) || !obj)
                 continue;
@@ -93,14 +119,19 @@ QString HubFrame::LinkParser::parseForLinks(QString input, bool use_emot){
                 break;
             }
 
-            if (!(output.endsWith(' ') || output.endsWith('\t') || output.isEmpty()))
+            const bool colonWrapped = isColonWrappedEmoticon(emo_text);
+            const bool symbolEmot = isSymbolEmoticon(emo_text);
+
+            if (!colonWrapped && !symbolEmot && !okEmoticonStart(output))
                 continue;
 
             const int emo_len = emo_text.length();
-            const bool nextSpace = (input.length() == emo_len) ||
-                                   (input.length() > emo_len &&
-                                    (input.at(emo_len) == ' ' || input.at(emo_len) == '\t'));
-            if (!nextSpace)
+            const bool okEnd = (input.length() == emo_len) ||
+                               colonWrapped ||
+                               symbolEmot ||
+                               (input.length() > emo_len &&
+                                (input.at(emo_len) == ' ' || input.at(emo_len) == '\t'));
+            if (!okEnd)
                 continue;
 
             appendSmile();

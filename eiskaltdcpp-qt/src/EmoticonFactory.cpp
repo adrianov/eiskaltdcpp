@@ -34,7 +34,9 @@ EmoticonFactory::~EmoticonFactory(){
 void EmoticonFactory::load(){
     const QString emoTheme = WSGET(WS_APP_EMOTICON_THEME, "default");
 
-    if (emoTheme.isEmpty() || (currentTheme == emoTheme))
+    if (emoTheme.isEmpty())
+        return;
+    if (currentTheme == emoTheme && !map.isEmpty())
         return;
 
     if (!QDir(WulforUtil::getInstance()->getEmoticonsPath() + emoTheme).exists())
@@ -50,24 +52,24 @@ void EmoticonFactory::load(){
     if (!f.open(QIODevice::ReadOnly))
         return;
 
-    clear();
-
     QDomDocument dom;
     QString err_msg = "";
     int err_line = 0, err_col = 0;
 
-    if (dom.setContent(&f, &err_msg, &err_line, &err_col))
-        createEmoticonMap(dom);
-    else{
+    if (!dom.setContent(&f, &err_msg, &err_line, &err_col)){
         qDebug() << err_line << ":" << err_col << " " << err_msg;
+        f.close();
+        return;
     }
 
     f.close();
 
+    clear();
+    createEmoticonMap(dom);
+    currentTheme = emoTheme;
+
     for (const auto &d : docs)
         addEmoticons(d);
-
-    currentTheme = emoTheme;
 }
 
 void EmoticonFactory::addEmoticons(QTextDocument *to){
@@ -78,8 +80,8 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
 
     for (const auto &i : list){
         // Physical pixels via HQ scale, but dpr=1.0 for QTextDocument ImageResource.
-        // HTML width/height stay logical (~20); text engine scales physical	o logical
-        // (e.g. 40	o20 on @2x) so Retina stays sharp without relying on DPR honor.
+        // HTML width/height stay logical (~20); text engine scales physical->logical
+        // (e.g. 40->20 on @2x) so Retina stays sharp without relying on DPR honor.
         const int logical = emoticonLogicalSide(i->pixmap);
         QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
         px.setDevicePixelRatio(1.0);

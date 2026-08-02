@@ -777,6 +777,13 @@ if (APPLE)
             VERBATIM)
     endif (USE_QT_SQLITE AND DuckDB_LIBRARY)
 
+    # data/ installs before this bundle copy; re-install emoticons so a stale
+    # build-tree Resources/emoticons/*.xml cannot clobber the source map.
+    if (WITH_EMOTICONS)
+        install (DIRECTORY ${CMAKE_SOURCE_DIR}/data/emoticons/
+                 DESTINATION ${CLIENT_DATA_DIR}/emoticons)
+    endif (WITH_EMOTICONS)
+
     set (CPACK_BINARY_DRAGNDROP ON)
 endif (APPLE)
 

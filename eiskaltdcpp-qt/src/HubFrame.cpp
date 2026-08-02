@@ -2160,6 +2160,9 @@ void HubFrame::slotSettingsChanged(const QString &key, const QString &value){
 
             for (const auto &l : frame_SMILES->findChildren<EmoticonLabel*>())
                 connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
+
+            if (WBGET(WB_APP_ENABLE_EMOTICON))
+                EmoticonFactory::getInstance()->addEmoticons(textEdit_CHAT->document());
         }
     }
     else if (key == "hubframe/chat-background-color" || key == "hubframe/change-chat-background-color")
@@ -2189,6 +2192,7 @@ void HubFrame::slotBoolSettingsChanged(const QString &key, int value){
             for (const auto &l : frame_SMILES->findChildren<EmoticonLabel*>())
                 connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
 
+            EmoticonFactory::getInstance()->addEmoticons(textEdit_CHAT->document());
         }
         else{
             if (EmoticonFactory::getInstance())

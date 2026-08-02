@@ -72,7 +72,7 @@ static bool parseBasicBBCode(const QString &tag, const QString &txt, QString &in
     if (input.startsWith(bbCode1) && input.indexOf(bbCode2) >= bbCode1.length()){
         input.remove(0, bbCode1.length());
         const int c_len = input.indexOf(bbCode2);
-        const QString chunk = HubFrame::LinkParser::parseForLinks(input.left(c_len), false);
+        const QString chunk = HubFrame::LinkParser::parseForLinks(input.left(c_len), true);
         output += QString("<%1>").arg(txt) + chunk + QString("</%1>").arg(txt);
         input.remove(0, c_len + bbCode2.length());
         return true;
@@ -99,7 +99,7 @@ bool hubFrameTryBbCode(QString &input, QString &output)
             QColor bbColor;
             bbColor.setNamedColor(exp.cap(1));
             output += "<font color=\"" + AppTheme::readableChatColor(bbColor).name() + "\">"
-                    + HubFrame::LinkParser::parseForLinks(exp.cap(2), false) + "</font>";
+                    + HubFrame::LinkParser::parseForLinks(exp.cap(2), true) + "</font>";
             input.remove(0, chunk.length());
             return true;
         }
