@@ -93,7 +93,8 @@ void TransferViewModel::removeTransfer(const VarMap &params){
         return;
     }
 
-    // Host string mismatch: only safe when this CID has a single upload row.
+    // Host mismatch: drop only when this CID has one upload. Reached only when
+    // the loop above matched nothing (matched rows return after dropTransferRow).
     if (!download && !hub.isEmpty()) {
         TransferViewItem *only = nullptr;
         int uploads = 0;
