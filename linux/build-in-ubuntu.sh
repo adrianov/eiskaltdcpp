@@ -26,14 +26,7 @@ CMAKE_OPTIONS=".. \
     -DWITH_SOUNDS=ON \
     "
 
-if [ "${USE_QT}" = "qt4" ]
-then
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-        -DUSE_QT=ON \
-        -DUSE_QT_QML=ON \
-        -DUSE_QT5=OFF \
-        "
-elif [ "${USE_QT}" = "qt5" ]
+if [ "${USE_QT}" = "qt5" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DUSE_QT=OFF \
@@ -42,7 +35,7 @@ then
         "
 fi
 
-if [ "${USE_QT}" = "qt4" ] || [ "${USE_QT}" = "qt5" ]
+if [ "${USE_QT}" = "qt5" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DDBUS_NOTIFY=ON \

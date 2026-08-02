@@ -20,13 +20,9 @@ libattr (optional, see cmake keys)
 ----------------
 :eiskaltdcpp-qt:
 ----------------
-libqtcore4, libqtgui4, libqt4-network, libqt4-xml (>= 4.6.0)
-libqt4-script (>= 4.6.0) (optional, see cmake keys)
-libqt4-dbus (>= 4.6.0) (optional, see cmake keys)
-or
-libqt5core5a, libqt5gui5, libqt5widgets5, libqt5network5, libqt5xml5 (>= 5.0.2)
-libqt5script5 (>= 5.0.2) (optional, see cmake keys)
-libqt5dbus5 (>= 5.0.2) (optional, see cmake keys)
+libqt5core5a, libqt5gui5, libqt5widgets5, libqt5network5, libqt5xml5 (>= 5.15.0)
+libqt5script5 (>= 5.15.0) (optional, see cmake keys)
+libqt5dbus5 (>= 5.15.0) (optional, see cmake keys)
 .
 libaspell (optional, see cmake keys)
 -----------------
@@ -92,7 +88,7 @@ libattr-dev (optional, see cmake keys)
 ----------------
 :eiskaltdcpp-qt:
 ----------------
-Qt4 (>= 4.6.0) or Qt5 (>= 5.4.2)
+Qt5 (>= 5.15.0)
 libaspell-dev (optional, see cmake keys)
 -----------------
 :eiskaltdcpp-gtk:
@@ -150,10 +146,8 @@ Keys for cmake
 ----------------
 :eiskaltdcpp-qt:
 ----------------
--DUSE_QT=ON/OFF (default: OFF)
-    Build EiskaltDC++ with Qt interface using Qt 4.x libraries
 -DUSE_QT5=ON/OFF (default: ON)
-    Build EiskaltDC++ with Qt interface using Qt 5.x libraries
+    Build EiskaltDC++ with Qt interface using Qt 5.x libraries (>= 5.15)
 -DUSE_ASPELL=ON/OFF (default: ON)
     Use or not use aspell
 -DLOCAL_ASPELL_DATA=ON/OFF (default: OFF)
@@ -169,7 +163,7 @@ Keys for cmake
 -DUSE_JS=ON/OFF (default: OFF)
     Enable/disable QtScript basic support
 -DUSE_QT_QML=ON/OFF (default: OFF)
-    Enable/disable Qt Declarative UI support. Work only with Qt >= 4.7.0
+    Enable/disable Qt Declarative UI support
 -DUSE_QT_SQLITE=ON/OFF (default: ON)
     Build with SQLite (FinishedTransfers) and DuckDB ShareIndex.
     On macOS, install DuckDB via Homebrew (`brew install duckdb`); packaging
@@ -268,7 +262,7 @@ And other standard cmake keys...
 mkdir -p builddir && cd builddir
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
-      -DUSE_QT=ON \
+      -DUSE_QT5=ON \
       -DUSE_GTK=ON \
       -DUSE_JS=ON \
       -DUSE_ASPELL=ON \
@@ -302,7 +296,7 @@ cd builddir
 cmake .. \
       -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
       -DCMAKE_CXX_FLAGS='-I/opt/local/include -stdlib=libc++' \
-      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON -DUSE_QT=ON
+      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON -DUSE_QT5=ON
 make -j4
 sudo make install
 

@@ -3,31 +3,23 @@ project (eiskaltdcpp-qt)
 
 include_directories(${PROJECT_BINARY_DIR})
 
-if (USE_QT)
-    find_package (Qt4 4.7.0 COMPONENTS QtCore QtGui QtXml QtNetwork REQUIRED)
-elseif (USE_QT5)
-    find_package (Qt5Core          5.0.2 REQUIRED)
-    find_package (Qt5Gui           5.0.2 REQUIRED)
-    find_package (Qt5Widgets       5.0.2 REQUIRED)
-    find_package (Qt5Xml           5.0.2 REQUIRED)
-    find_package (Qt5Network       5.0.2 REQUIRED)
-    # This is temporary workaround which fixes build with Qt5 on Travis CI:
-    find_package (Qt5LinguistTools       REQUIRED)
-    find_package (Qt5Multimedia    5.0.2 REQUIRED)
-    find_package (Qt5Concurrent    5.0.2 REQUIRED)
-endif ()
+find_package (Qt5Core          5.15.0 REQUIRED)
+find_package (Qt5Gui           5.15.0 REQUIRED)
+find_package (Qt5Widgets       5.15.0 REQUIRED)
+find_package (Qt5Xml           5.15.0 REQUIRED)
+find_package (Qt5Network       5.15.0 REQUIRED)
+# This is temporary workaround which fixes build with Qt5 on Travis CI:
+find_package (Qt5LinguistTools       REQUIRED)
+find_package (Qt5Multimedia    5.15.0 REQUIRED)
+find_package (Qt5Concurrent    5.15.0 REQUIRED)
 
 set (QT_USE_QTNETWORK 1)
 set (QT_USE_QTXML 1)
 set (QT_USE_QTWEBKIT 0)
 
 if (USE_QT_QML)
-    if (USE_QT)
-        find_package (Qt4 4.7.0 COMPONENTS QtDeclarative REQUIRED)
-    elseif (USE_QT5)
-        find_package (Qt5Declarative 5.0.2 REQUIRED)
-        find_package (Qt5XmlPatterns 5.0.2 REQUIRED)
-    endif ()
+    find_package (Qt5Declarative 5.15.0 REQUIRED)
+    find_package (Qt5XmlPatterns 5.15.0 REQUIRED)
     add_definitions(-DUSE_QML)
     set (QT_USE_QTDECLARATIVE 1)
     set (USE_JS ON)
@@ -41,11 +33,7 @@ if (APPLE OR HAIKU)
 endif ()
 
 if (DBUS_NOTIFY)
-    if (USE_QT)
-        find_package (Qt4 4.6.0 COMPONENTS QtDBus REQUIRED)
-    elseif (USE_QT5)
-        find_package (Qt5DBus 5.0.2 REQUIRED)
-    endif (USE_QT)
+    find_package (Qt5DBus 5.15.0 REQUIRED)
     add_definitions (-DDBUS_NOTIFY)
     set (QT_USE_QTDBUS 1)
     message (STATUS "Building with Qt DBus support")
@@ -54,11 +42,7 @@ else (DBUS_NOTIFY)
 endif (DBUS_NOTIFY)
 
 if (USE_JS)
-    if (USE_QT)
-        find_package (Qt4 4.6.0 COMPONENTS QtScript REQUIRED)
-    elseif (USE_QT5)
-        find_package (Qt5Script 5.0.2 REQUIRED)
-    endif ()
+    find_package (Qt5Script 5.15.0 REQUIRED)
     add_definitions (-DUSE_JS)
     set (QT_USE_QTSCRIPT 1)
     message (STATUS "Building with Qt Script support")
@@ -67,11 +51,7 @@ else (USE_JS)
 endif (USE_JS)
 
 if (USE_QT_SQLITE)
-    if (USE_QT)
-        find_package (Qt4 4.6.0 COMPONENTS QtSql REQUIRED)
-    elseif (USE_QT5)
-        find_package (Qt5Sql 5.0.2 REQUIRED)
-    endif (USE_QT)
+    find_package (Qt5Sql 5.15.0 REQUIRED)
     find_package (DuckDB REQUIRED)
     add_definitions (-DUSE_QT_SQLITE)
     set (QT_USE_QTSQL 1)
@@ -379,22 +359,13 @@ if (NOT USE_JS)
             ${PROJECT_SOURCE_DIR}/src/ScriptManagerDialog.h)
 endif (NOT USE_JS)
 
-if (USE_QT)
-    #Create moc files
-    QT4_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn)
-    #Create .h files from ui files
-    QT4_WRAP_UI (U_SRCS ${UI_FORMS})
-elseif (USE_QT5)
-    #Create moc files
-    QT5_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn)
-    #Create .h files from ui files
-    QT5_WRAP_UI (U_SRCS ${UI_FORMS})
-endif()
+#Create moc files
+QT5_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn)
+#Create .h files from ui files
+QT5_WRAP_UI (U_SRCS ${UI_FORMS})
 
-if (USE_QT5 AND NOT USE_QT)
-    set (QT_LRELEASE_EXECUTABLE ${Qt5_LRELEASE_EXECUTABLE})
-    get_target_property(QT_RCC_EXECUTABLE Qt5::rcc LOCATION)
-endif()
+set (QT_LRELEASE_EXECUTABLE ${Qt5_LRELEASE_EXECUTABLE})
+get_target_property(QT_RCC_EXECUTABLE Qt5::rcc LOCATION)
 
 #Create translations
 file (MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/translations/)
@@ -457,36 +428,30 @@ execute_process (COMMAND ${QT_RCC_EXECUTABLE} -binary  ${DEFAULT_QRC_FILE}
                                               -o ${PROJECT_BINARY_DIR}/default.rcc
                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/)
 
-if (USE_QT)
-    include (${QT_USE_FILE})
-    include_directories (${QT_INCLUDES})
-    list (APPEND LIBS ${QT_LIBRARIES})
-elseif (USE_QT5)
-    include_directories (${Qt5Core_INCLUDE_DIRS}
-                         ${Qt5Gui_INCLUDE_DIRS}
-                         ${Qt5Widgets_INCLUDE_DIRS}
-                         ${Qt5Xml_INCLUDE_DIRS}
-                         ${Qt5Multimedia_INCLUDE_DIRS}
-                         ${Qt5Concurrent_INCLUDE_DIRS}
-                         ${Qt5Declarative_INCLUDE_DIRS}
-                         ${Qt5XmlPatterns_INCLUDE_DIRS}
-                         ${Qt5DBus_INCLUDE_DIRS}
-                         ${Qt5Script_INCLUDE_DIRS}
-                         ${Qt5Sql_INCLUDE_DIRS}
-                         ${Qt5Network_INCLUDE_DIRS})
-    list (APPEND LIBS ${Qt5Core_LIBRARIES}
-                      ${Qt5Gui_LIBRARIES}
-                      ${Qt5Widgets_LIBRARIES}
-                      ${Qt5Xml_LIBRARIES}
-                      ${Qt5Multimedia_LIBRARIES}
-                      ${Qt5Concurrent_LIBRARIES}
-                      ${Qt5Declarative_LIBRARIES}
-                      ${Qt5XmlPatterns_LIBRARIES}
-                      ${Qt5DBus_LIBRARIES}
-                      ${Qt5Script_LIBRARIES}
-                      ${Qt5Sql_LIBRARIES}
-                      ${Qt5Network_LIBRARIES})
-endif ()
+include_directories (${Qt5Core_INCLUDE_DIRS}
+                     ${Qt5Gui_INCLUDE_DIRS}
+                     ${Qt5Widgets_INCLUDE_DIRS}
+                     ${Qt5Xml_INCLUDE_DIRS}
+                     ${Qt5Multimedia_INCLUDE_DIRS}
+                     ${Qt5Concurrent_INCLUDE_DIRS}
+                     ${Qt5Declarative_INCLUDE_DIRS}
+                     ${Qt5XmlPatterns_INCLUDE_DIRS}
+                     ${Qt5DBus_INCLUDE_DIRS}
+                     ${Qt5Script_INCLUDE_DIRS}
+                     ${Qt5Sql_INCLUDE_DIRS}
+                     ${Qt5Network_INCLUDE_DIRS})
+list (APPEND LIBS ${Qt5Core_LIBRARIES}
+                  ${Qt5Gui_LIBRARIES}
+                  ${Qt5Widgets_LIBRARIES}
+                  ${Qt5Xml_LIBRARIES}
+                  ${Qt5Multimedia_LIBRARIES}
+                  ${Qt5Concurrent_LIBRARIES}
+                  ${Qt5Declarative_LIBRARIES}
+                  ${Qt5XmlPatterns_LIBRARIES}
+                  ${Qt5DBus_LIBRARIES}
+                  ${Qt5Script_LIBRARIES}
+                  ${Qt5Sql_LIBRARIES}
+                  ${Qt5Network_LIBRARIES})
 
 if (USE_QT_SQLITE)
     include_directories (${DuckDB_INCLUDE_DIRS})
@@ -774,36 +739,22 @@ if (INSTALL_METAINFO)
 endif ()
 
 if (APPLE)
-    if (USE_QT)
-        install (DIRECTORY ${QT_LIBRARY_DIR}/QtGui.framework/Resources/qt_menu.nib
-                 DESTINATION ${PROJECT_NAME_GLOBAL}.app/Contents/Resources)
-
-        install (CODE "
-                    file(WRITE \"\${CMAKE_INSTALL_PREFIX}/${qtconf_dest_dir}/qt.conf\" \"\")")
-
-        install (CODE "
-                    file(GLOB_RECURSE QTPLUGINS
-                        \"\${CMAKE_INSTALL_PREFIX}/${plugin_dest_dir}/plugins/*${CMAKE_SHARED_LIBRARY_SUFFIX}\")
-                    include(BundleUtilities)
-                    fixup_bundle(\"${APPS}\" \"\${QTPLUGINS}\" \"${DIRS}\")")
-    elseif (USE_QT5)
-        if (${_qt5Core_install_prefix} STREQUAL "")
-        message(WARNING "Warning! \"_qt5Core_install_prefix\" is not set, macdeployqt found in PATH will be used")
-        set (MACDEPLOYQT "macdeployqt")
-        else (${_qt5Core_install_prefix} STREQUAL "")
-        set (MACDEPLOYQT "${_qt5Core_install_prefix}/bin/macdeployqt")
-        endif (${_qt5Core_install_prefix} STREQUAL "")
-        # Help macdeployqt find Homebrew-linked libs (DuckDB, aspell, …).
-        if (DuckDB_LIBRARY)
-            get_filename_component (_MAC_LIBPATH "${DuckDB_LIBRARY}" DIRECTORY)
-        else (DuckDB_LIBRARY)
-            set (_MAC_LIBPATH "/opt/homebrew/lib")
-        endif (DuckDB_LIBRARY)
-        install (CODE "
-                    execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=1
-                        -libpath=${_MAC_LIBPATH}
-                        WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})")
-    endif (USE_QT)
+    if (${_qt5Core_install_prefix} STREQUAL "")
+    message(WARNING "Warning! \"_qt5Core_install_prefix\" is not set, macdeployqt found in PATH will be used")
+    set (MACDEPLOYQT "macdeployqt")
+    else (${_qt5Core_install_prefix} STREQUAL "")
+    set (MACDEPLOYQT "${_qt5Core_install_prefix}/bin/macdeployqt")
+    endif (${_qt5Core_install_prefix} STREQUAL "")
+    # Help macdeployqt find Homebrew-linked libs (DuckDB, aspell, …).
+    if (DuckDB_LIBRARY)
+        get_filename_component (_MAC_LIBPATH "${DuckDB_LIBRARY}" DIRECTORY)
+    else (DuckDB_LIBRARY)
+        set (_MAC_LIBPATH "/opt/homebrew/lib")
+    endif (DuckDB_LIBRARY)
+    install (CODE "
+                execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=1
+                    -libpath=${_MAC_LIBPATH}
+                    WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})")
 
     # Explicitly embed DuckDB (macdeployqt may miss non-Qt dylibs). Self-contained .app.
     if (USE_QT_SQLITE AND DuckDB_LIBRARY)

@@ -20,12 +20,7 @@ then
                              libpcre2-dev \
                              libminiupnpc-dev
 
-    if [ "${USE_QT}" = "qt4" ]
-    then
-        sudo apt-get install -qq libqt4-dev \
-                                 qt4-dev-tools \
-                                 libaspell-dev
-    elif [ "${USE_QT}" = "qt5" ]
+    if [ "${USE_QT}" = "qt5" ]
     then
         sudo apt-get install -qq qtbase5-dev \
                                  qttools5-dev \

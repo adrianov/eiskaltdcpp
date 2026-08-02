@@ -19,10 +19,6 @@ jobs:
       
     - os: linux
       dist: bionic
-      env: TARGET=linux64 USE_QT=qt4
-      
-    - os: linux
-      dist: bionic
       env: TARGET=linux64 USE_GTK=gtk3
       
     - os: linux
