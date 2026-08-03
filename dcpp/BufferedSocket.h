@@ -62,7 +62,7 @@ public:
         return new BufferedSocket(sep);
     }
 
-    /** Signal app shutdown; putSocket() joins workers only after this. */
+    /** Signal app shutdown; waitShutdown() may be used after this. */
     static void beginShutdown() {
         s_shuttingDown.store(true, std::memory_order_release);
     }
@@ -70,11 +70,9 @@ public:
     static void putSocket(BufferedSocket* aSock) {
         if(!aSock)
             return;
-        // Normal teardown stays fire-and-forget; join only during app shutdown.
-        if(s_shuttingDown.load(std::memory_order_acquire))
-            aSock->joinShutdown();
-        else
-            aSock->shutdown();
+        // Always join: fire-and-forget left Client/UserConnection listeners
+        // callable after the owner was deleted (hub close / reconnect race).
+        aSock->joinShutdown();
     }
 
     static bool waitShutdown() {

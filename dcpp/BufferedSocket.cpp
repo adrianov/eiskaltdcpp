@@ -163,7 +163,9 @@ void BufferedSocket::fail(const string& aError) {
 
     if(state == RUNNING || state == STARTING) {
         state = FAILED;
-        fire(BufferedSocketListener::Failed(), aError);
+        // Owner-initiated disconnect/shutdown: listeners may already be dying.
+        if(!disconnecting)
+            fire(BufferedSocketListener::Failed(), aError);
     }
 }
 
