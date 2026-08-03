@@ -79,10 +79,10 @@ void EmoticonFactory::addEmoticons(QTextDocument *to){
     QString emoTheme = WSGET(WS_APP_EMOTICON_THEME);
 
     for (const auto &i : list){
-        // Physical pixels via HQ scale, but dpr=1.0 for QTextDocument ImageResource.
-        // HTML width/height stay logical (~20); text engine scales physical->logical
-        // (e.g. 40->20 on @2x) so Retina stays sharp without relying on DPR honor.
-        const int logical = emoticonLogicalSide(i->pixmap);
+        // Physical pixels via HQ scale (20 logical → 40/60/80 at @2/@3/@4), but
+        // dpr=1.0 for QTextDocument ImageResource. HTML width/height stay 20;
+        // text engine scales physical->logical so Retina stays sharp.
+        const int logical = emoticonLogicalSide();
         QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
         px.setDevicePixelRatio(1.0);
         to->addResource(QTextDocument::ImageResource,
@@ -111,7 +111,7 @@ void EmoticonFactory::fillLayout(QLayout *l, QSize &recommendedSize){
     for (const auto &i : list){
         EmoticonLabel *lbl = new EmoticonLabel();
 
-        const int logical = emoticonLogicalSide(i->pixmap);
+        const int logical = emoticonLogicalSide();
         const QPixmap px = WulforUtil::scalePixmap(i->pixmap, logical);
         const QSize cell = QSize(logical, logical) + QSize(2, 2);
         lbl->setContentsMargins(1, 1, 1, 1);

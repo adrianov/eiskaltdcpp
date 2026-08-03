@@ -18,19 +18,14 @@
 #include <QMouseEvent>
 #include <QMargins>
 
-// On-screen size for hi-res packs (e.g. 72px default theme assets).
-// 20 matches visual weight of older padded 24px art more closely than a full 24 box.
+// Chat + smile-selector size: always 20 virtual (logical) pixels.
+// Physical pixels come from WulforUtil::scalePixmap(source, 20):
+//   @2x → 40, @3x → 60, @4x → 80 (rare). Hi-res 240px packs stay sharp.
 static const int EMOTICON_LOGICAL_SIDE = 20;
 
-// Keep small packs at native size; downscale only when larger than the cap.
-// Divide by DPR so an already-scaled pixmap is not treated as native pixels.
-static inline int emoticonLogicalSide(const QPixmap &source)
+static inline int emoticonLogicalSide()
 {
-    if (source.isNull())
-        return EMOTICON_LOGICAL_SIDE;
-    const qreal dpr = qMax(qreal(1), source.devicePixelRatio());
-    const int side = qMax(qRound(source.width() / dpr), qRound(source.height() / dpr));
-    return qMin(side, EMOTICON_LOGICAL_SIDE);
+    return EMOTICON_LOGICAL_SIDE;
 }
 
 class EmoticonLabel: public QLabel{
