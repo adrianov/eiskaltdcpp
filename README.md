@@ -218,7 +218,6 @@ But you may send donations to project contributors (developers, maintainers, tra
 * [Review of DC clients for Linux](https://tehnick.github.io/dc_clients/) (in Russian)
 * [DC++ and programs based on it at Wikipedia](https://en.wikipedia.org/wiki/DC%2B%2B) (in English)
 * [DC++ and programs based on it at Wikipedia](https://ru.wikipedia.org/wiki/DC%2B%2B) (in Russian)
-* [Valknut and programs based on it at Wikipedia](https://en.wikipedia.org/wiki/Valknut_\(software\)) (in English)
 * [EiskaltDC++ at Wikipedia](https://ru.wikipedia.org/wiki/EiskaltDC%2B%2B) (in Russian)
 
 
