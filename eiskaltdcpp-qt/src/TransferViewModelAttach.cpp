@@ -16,6 +16,8 @@ void TransferViewModel::initTransfer(const VarMap &params){
         return;
 
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
+    if (!vbol(params["DOWN"]))
+        cancelIdleUploadPrune(vstr(params["CID"]), hub);
     TransferViewItem *item = nullptr;
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
         addConnection(params);

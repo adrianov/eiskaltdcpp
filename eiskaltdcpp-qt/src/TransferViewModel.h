@@ -10,6 +10,7 @@
 #pragma once
 
 #include <QAbstractItemModel>
+#include <QHash>
 #include <QMultiHash>
 #include <QSet>
 #include <QSize>
@@ -150,6 +151,8 @@ private Q_SLOTS:
     void flushPendingTargetRemoves();
 
 private:
+    /** Drop a Connected/Connecting upload row that never reached Starting. */
+    void pruneIdleUpload(QString key, int gen, VarMap params);
     inline QString      vstr(const QVariant &var) const { return var.toString(); }
     inline int          vint(const QVariant &var) const { return var.toInt(); }
     inline double       vdbl(const QVariant &var) const { return var.toDouble(); }
@@ -165,11 +168,16 @@ private:
     TransferViewItem *uploadScope(TransferViewItem *item) const;
     bool uploadFullyIdle(TransferViewItem *scope) const;
     void settleUpload(const VarMap &params, bool segmentDone);
+    void armIdleUploadPrune(const VarMap &params);
+    void cancelIdleUploadPrune(const QString &cid, const QString &hub);
+    static QString idleUploadKey(const QString &cid, const QString &hub);
     /** */
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);
     /** */
     QMultiHash<QString, TransferViewItem*> transfer_hash;
+    /** Generation per upload row so Starting/Removed cancel pending idle prunes. */
+    QHash<QString, int> idleUploadGen;
     QSet<QString> pendingTargetRemoves;
     bool flushTargetsQueued = false;
     /** */

@@ -10,6 +10,8 @@
 #include "TransferViewModel.h"
 #include "TransferViewRemoveUtil.h"
 
+#include <QTimer>
+
 using namespace TransferViewRemove;
 
 void TransferViewModel::dropTransferRow(TransferViewItem *item) {
@@ -63,6 +65,8 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const QString cid = vstr(params["CID"]);
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
+    if (!download)
+        cancelIdleUploadPrune(cid, hub);
     const QString dlPrefix = tr("Downloaded ");
     const QString ulPrefix = tr("Uploaded ");
 
@@ -109,4 +113,46 @@ void TransferViewModel::removeTransfer(const VarMap &params){
         if (uploads == 1)
             dropTransferRow(only);
     }
+}
+
+QString TransferViewModel::idleUploadKey(const QString &cid, const QString &hub) {
+    return cid + QLatin1Char('|') + hub;
+}
+
+void TransferViewModel::cancelIdleUploadPrune(const QString &cid, const QString &hub) {
+    if (cid.isEmpty())
+        return;
+    ++idleUploadGen[idleUploadKey(cid, hub)];
+}
+
+void TransferViewModel::armIdleUploadPrune(const VarMap &params) {
+    if (vbol(params["DOWN"]) || vbol(params["FAIL"]) || vstr(params["CID"]).isEmpty())
+        return;
+    // Only bare Connected/Connecting rows — Starting always has a file name.
+    if (!vstr(params.value("FNAME")).isEmpty())
+        return;
+
+    const QString key = idleUploadKey(vstr(params["CID"]), vstr(params["HOST"]));
+    const int gen = ++idleUploadGen[key];
+    QTimer::singleShot(10000, this, [this, key, gen, params]() {
+        pruneIdleUpload(key, gen, params);
+    });
+}
+
+void TransferViewModel::pruneIdleUpload(QString key, int gen, VarMap params) {
+    if (idleUploadGen.value(key) != gen)
+        return;
+
+    TransferViewItem *item = nullptr;
+    const QString hub = vstr(params["HOST"]);
+    if (!findTransfer(vstr(params["CID"]), false, &item, hub) && !hub.isEmpty())
+        findTransfer(vstr(params["CID"]), false, &item, QString());
+    if (!item || item->download || item->fail || item->finished)
+        return;
+    if (item->dpos > 0 || item->percent > 0.0 || !item->target.isEmpty())
+        return;
+    if (!item->data(COLUMN_TRANSFER_FNAME).toString().isEmpty())
+        return;
+
+    removeTransfer(params);
 }

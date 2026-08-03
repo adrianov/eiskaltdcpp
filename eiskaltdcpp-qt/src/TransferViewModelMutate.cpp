@@ -43,6 +43,10 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         return;
     }
 
+    if (!vbol(params["DOWN"]) && vbol(params.value("SOFT_STAT"))
+            && vstr(params.value("FNAME")).isEmpty() && !vbol(params["FAIL"]))
+        armIdleUploadPrune(params);
+
     VarMap p = params;
     // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).
     const bool sameTarget = !p.contains("TARGET") || vstr(p["TARGET"]) == item->target;
