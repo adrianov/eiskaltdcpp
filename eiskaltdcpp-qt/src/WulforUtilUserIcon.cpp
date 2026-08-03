@@ -75,7 +75,3 @@ QPixmap *WulforUtil::getUserIcon(const UserPtr &id, bool isAway, bool isOp, cons
 
     return userIconCache[x][y];
 }
-
-
-
-// Render a pixmap at the physical resolution of the screen so icons stay sharp on Retina.

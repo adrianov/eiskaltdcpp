@@ -97,21 +97,6 @@ void SettingsGUI::initBasic()
         }
         comboBox_LANGS->setCurrentIndex(k);
 
-        const QString users = WU->getClientIconsPath() + "/user/";
-        i = 0;
-        k = -1;
-        for (const QString &f : QDir(users).entryList(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot)){
-            if (!f.isEmpty()){
-                comboBox_USERS->addItem(f);
-
-                if (f == WSGET(WS_APP_USERTHEME))
-                    k = i;
-
-                ++i;
-            }
-        }
-        comboBox_USERS->setCurrentIndex(k);
-
         const QString icons = WU->getClientIconsPath() + "/appl/";
         i = 0;
         k = -1;

@@ -58,7 +58,6 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WS_ADLS_STATE,            "");
     settings.setValue(WS_APP_THEME,             "");
     settings.setValue(WS_APP_ICONTHEME,         "default");
-    settings.setValue(WS_APP_USERTHEME,         "default");
     settings.setValue(WS_APP_SHARED_FILES_COLOR,"#1f8f1f");
     settings.setValue(WS_APP_QUEUED_FILES_COLOR,"#007aff");
     settings.setValue(WS_NOTIFY_SOUNDS,         "");

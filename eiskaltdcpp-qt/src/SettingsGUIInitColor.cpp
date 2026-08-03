@@ -132,7 +132,6 @@ void SettingsGUI::initColors()
     connect(listWidget_CHATCOLOR, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(slotChatColorItemClicked(QListWidgetItem*)));
     connect(toolButton_LANGBROWSE, SIGNAL(clicked()), this, SLOT(slotBrowseLng()));
     connect(comboBox_LANGS, SIGNAL(activated(int)), this, SLOT(slotLngIndexChanged(int)));
-    connect(comboBox_USERS, SIGNAL(activated(int)), this, SLOT(slotUsersChanged()));
     connect(comboBox_ICONS, SIGNAL(activated(int)), this, SLOT(slotIconsChanged()));
     connect(toolButton_H_COLOR, SIGNAL(clicked()), this, SLOT(slotGetColor()));
     connect(toolButton_SHAREDFILES, SIGNAL(clicked()), this, SLOT(slotGetColor()));

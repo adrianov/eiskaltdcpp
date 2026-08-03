@@ -115,6 +115,3 @@ void SettingsGUI::slotIconsChanged(){
     WulforUtil::getInstance()->loadIcons();
 }
 
-void SettingsGUI::slotUsersChanged(){
-    WSSET(WS_APP_USERTHEME, comboBox_USERS->currentText());
-}

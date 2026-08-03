@@ -52,7 +52,6 @@ void WulforSettings::fillOldConfigMaps() {
     strmap.insert(WS_ADLS_STATE,            "");
     strmap.insert(WS_APP_THEME,             "");
     strmap.insert(WS_APP_ICONTHEME,         "default");
-    strmap.insert(WS_APP_USERTHEME,         "default");
     strmap.insert(WS_APP_SHARED_FILES_COLOR,"#1f8f1f");
     strmap.insert(WS_APP_QUEUED_FILES_COLOR,"#007aff");
     strmap.insert(WS_NOTIFY_SOUNDS,         "");

@@ -44,8 +44,8 @@ QString WulforUtil::findAppIconsPath() const
 
 QString WulforUtil::findUserIconsPath() const
 {
-    // Try to find icons directory
-    const QString user_theme = WSGET(WS_APP_USERTHEME);
+    // Single built-in user-status icon pack.
+    const QString user_theme = QStringLiteral("default");
 
     QStringList settings_path_list = {
         QDir::currentPath() + "/icons/user/" + user_theme,
