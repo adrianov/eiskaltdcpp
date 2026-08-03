@@ -27,6 +27,23 @@ bool isPostHandshakeClose(UserConnection::States s) {
            s == UserConnection::STATE_GET || s == UserConnection::STATE_SEND;
 }
 
+/** Prefer hub-matched upload CQI so sim-upload disconnects drop the right Transfers row. */
+ConnectionQueueItem* findUploadCqi(ConnectionQueueItem::List& uploads, UserConnection* uc) {
+    if(!uc || !uc->getUser())
+        return nullptr;
+    ConnectionQueueItem* fallback = nullptr;
+    const string& hub = uc->getHubUrl();
+    for(auto* cqi : uploads) {
+        if(cqi->getUser().user != uc->getUser())
+            continue;
+        if(!hub.empty() && cqi->getUser().hint == hub)
+            return cqi;
+        if(!fallback)
+            fallback = cqi;
+    }
+    return fallback;
+}
+
 } // namespace
 
 void ConnectionManager::markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait) {
@@ -179,9 +196,8 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
         if(aSource->isSet(UserConnection::FLAG_DOWNLOAD) && dlCqi) {
             failDownloadQueue(dlCqi, aSource, aError, protocolError);
         } else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
-            auto i = find(uploads.begin(), uploads.end(), aSource->getUser());
-            if(i != uploads.end())
-                putCQI(*i);
+            if(auto* ulCqi = findUploadCqi(uploads, aSource))
+                putCQI(ulCqi);
         }
     } else if(dlCqi && aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
         failDownloadQueue(dlCqi, aSource, aError, protocolError);
