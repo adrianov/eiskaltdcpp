@@ -34,6 +34,9 @@ class QAction;
 class QHeaderView;
 class QAbstractItemView;
 
+// Logical (virtual) side length in the user list; physical pixels come from
+// scalePixmap(sourceCell, USERLIST_ICON_SIZE) using the screen devicePixelRatio.
+// Hi-res sheets (e.g. 85px cells in a 9×32 pack) stay sharp on 2x/3x/4x displays.
 #define USERLIST_ICON_SIZE      16
 #define USERLIST_XPM_COLUMNS    9
 #define USERLIST_XPM_ROWS       32

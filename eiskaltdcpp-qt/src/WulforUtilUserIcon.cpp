@@ -15,16 +15,37 @@
 #include "dcpp/AdcHub.h"
 #include "dcpp/OnlineUser.h"
 
+#include <QtGlobal>
+
 using namespace dcpp;
 
 bool WulforUtil::loadUserIconsFromFile(QString file){
-    if (userIcons->load(file, "PNG")){
-        clearUserIconCache();
+    // Sheet is USERLIST_XPM_COLUMNS × USERLIST_XPM_ROWS square cells.
+    // Physical cell size may be larger than USERLIST_ICON_SIZE (Retina source);
+    // getUserIcon() crops by cell then scalePixmap() down to logical pixels.
+    QImage img;
+    if (!img.load(file, "PNG"))
+        return false;
 
-        return true;
+    if (img.width() % USERLIST_XPM_COLUMNS
+            || img.height() % USERLIST_XPM_ROWS) {
+        qWarning("usericons: %s size %dx%d is not divisible by %dx%d grid",
+                 qPrintable(file), img.width(), img.height(),
+                 USERLIST_XPM_COLUMNS, USERLIST_XPM_ROWS);
+        return false;
     }
 
-    return false;
+    const int cellW = img.width() / USERLIST_XPM_COLUMNS;
+    const int cellH = img.height() / USERLIST_XPM_ROWS;
+    if (cellW != cellH) {
+        qWarning("usericons: %s cells are %dx%d (want square)",
+                 qPrintable(file), cellW, cellH);
+        return false;
+    }
+
+    *userIcons = img;
+    clearUserIconCache();
+    return true;
 }
 
 void WulforUtil::clearUserIconCache(){
