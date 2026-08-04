@@ -155,5 +155,6 @@ void TransferViewModel::pruneUpload(QString key, int gen, VarMap params) {
         return;
     }
 
-    removeTransfer(params);
+    // Drop the row we found — removeTransfer(CID/HOST) can hit a sibling instead.
+    dropTransferRow(item);
 }
