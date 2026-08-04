@@ -134,9 +134,9 @@ public Q_SLOTS:
     void updateTransferPos(const VarMap&, qint64);
     /** */
     void finishParent(const VarMap&);
-    /** Final upload metrics, then drop the row/group when the file is fully sent and idle. */
+    /** Final upload metrics; drop after a short grace if no next Starting. */
     void completeUpload(const VarMap&);
-    /** Upload failure: keep error text, prune group if the file is already fully sent. */
+    /** Upload failure: keep error briefly, then drop if Starting never arrives. */
     void failUpload(const VarMap&);
     /** */
     void updateParents();
@@ -151,8 +151,8 @@ private Q_SLOTS:
     void flushPendingTargetRemoves();
 
 private:
-    /** Drop a Connected/Connecting upload row that never reached Starting. */
-    void pruneIdleUpload(QString key, int gen, VarMap params);
+    /** Drop the upload row/group after grace — any UI state — if Starting never arrived. */
+    void pruneUpload(QString key, int gen, VarMap params);
     inline QString      vstr(const QVariant &var) const { return var.toString(); }
     inline int          vint(const QVariant &var) const { return var.toInt(); }
     inline double       vdbl(const QVariant &var) const { return var.toDouble(); }
@@ -168,15 +168,15 @@ private:
     TransferViewItem *uploadScope(TransferViewItem *item) const;
     bool uploadFullyIdle(TransferViewItem *scope) const;
     void settleUpload(const VarMap &params, bool segmentDone);
-    void armIdleUploadPrune(const VarMap &params);
-    void cancelIdleUploadPrune(const QString &cid, const QString &hub);
+    void armUploadPrune(const VarMap &params);
+    void cancelUploadPrune(const QString &cid, const QString &hub);
     static QString idleUploadKey(const QString &cid, const QString &hub);
     /** */
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);
     /** */
     QMultiHash<QString, TransferViewItem*> transfer_hash;
-    /** Generation per upload row so Starting/Removed cancel pending idle prunes. */
+    /** Generation per upload row so Starting/Removed cancel pending auto-prunes. */
     QHash<QString, int> idleUploadGen;
     QSet<QString> pendingTargetRemoves;
     bool flushTargetsQueued = false;

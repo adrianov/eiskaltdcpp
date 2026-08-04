@@ -66,7 +66,7 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
     if (!download)
-        cancelIdleUploadPrune(cid, hub);
+        cancelUploadPrune(cid, hub);
     const QString dlPrefix = tr("Downloaded ");
     const QString ulPrefix = tr("Uploaded ");
 
@@ -119,40 +119,41 @@ QString TransferViewModel::idleUploadKey(const QString &cid, const QString &hub)
     return cid + QLatin1Char('|') + hub;
 }
 
-void TransferViewModel::cancelIdleUploadPrune(const QString &cid, const QString &hub) {
+void TransferViewModel::cancelUploadPrune(const QString &cid, const QString &hub) {
     if (cid.isEmpty())
         return;
     ++idleUploadGen[idleUploadKey(cid, hub)];
 }
 
-void TransferViewModel::armIdleUploadPrune(const VarMap &params) {
-    if (vbol(params["DOWN"]) || vbol(params["FAIL"]) || vstr(params["CID"]).isEmpty())
-        return;
-    // Only bare Connected/Connecting rows — Starting always has a file name.
-    if (!vstr(params.value("FNAME")).isEmpty())
+void TransferViewModel::armUploadPrune(const VarMap &params) {
+    if (vbol(params["DOWN"]) || vstr(params["CID"]).isEmpty())
         return;
 
     const QString key = idleUploadKey(vstr(params["CID"]), vstr(params["HOST"]));
     const int gen = ++idleUploadGen[key];
+    // Grace for multi-file bursts; peers parked in STATE_GET still get cleared.
     QTimer::singleShot(10000, this, [this, key, gen, params]() {
-        pruneIdleUpload(key, gen, params);
+        pruneUpload(key, gen, params);
     });
 }
 
-void TransferViewModel::pruneIdleUpload(QString key, int gen, VarMap params) {
+void TransferViewModel::pruneUpload(QString key, int gen, VarMap params) {
     if (idleUploadGen.value(key) != gen)
         return;
 
-    TransferViewItem *item = nullptr;
-    const QString hub = vstr(params["HOST"]);
-    if (!findTransfer(vstr(params["CID"]), false, &item, hub) && !hub.isEmpty())
-        findTransfer(vstr(params["CID"]), false, &item, QString());
-    if (!item || item->download || item->fail || item->finished)
+    // Timer fired and Starting/Removed never cancelled it — drop this row.
+    // Only collapse a whole upload group when every child is already settled.
+    TransferViewItem *item = findUploadRow(params);
+    if (!item || item->download)
         return;
-    if (item->dpos > 0 || item->percent > 0.0 || !item->target.isEmpty())
+
+    TransferViewItem *scope = uploadScope(item);
+    if (scope && scope->cid.isEmpty() && uploadFullyIdle(scope)) {
+        const QList<TransferViewItem*> children = scope->childItems;
+        for (TransferViewItem *child : children)
+            dropTransferRow(child);
         return;
-    if (!item->data(COLUMN_TRANSFER_FNAME).toString().isEmpty())
-        return;
+    }
 
     removeTransfer(params);
 }

@@ -17,7 +17,7 @@ void TransferViewModel::initTransfer(const VarMap &params){
 
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
     if (!vbol(params["DOWN"]))
-        cancelIdleUploadPrune(vstr(params["CID"]), hub);
+        cancelUploadPrune(vstr(params["CID"]), hub);
     TransferViewItem *item = nullptr;
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
         addConnection(params);
@@ -82,4 +82,8 @@ void TransferViewModel::addConnection(const VarMap &params){
 
     TransferViewTree::attach(item, parent);
     emit layoutChanged();
+
+    // Added alone never reaches updateTransfer — still drop if Starting never comes.
+    if (!bDownload && fname.isEmpty())
+        armUploadPrune(params);
 }

@@ -104,28 +104,32 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
                                  index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
             }
         }
+        // Failures only — partial completes must not prune or the group parent/fpos is lost.
+        if (item->fail)
+            armUploadPrune(params);
         return;
     }
 
-    // Keep rows for a possible next file on the same connections (no remove flash).
-    if (!segmentDone)
-        return;
-
-    if (scope->cid.isEmpty()) {
-        for (const auto &child : scope->childItems)
-            child->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+    // Failures keep their error text; completed files show Upload complete.
+    // Either way, drop after grace if the peer stays idle (no next Starting).
+    if (segmentDone) {
+        if (scope->cid.isEmpty()) {
+            for (const auto &child : scope->childItems)
+                child->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+        }
+        item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+        item->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload complete"));
+        scope->finished = true;
+        scope->percent = 100.0;
+        scope->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+        scope->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload complete"));
+        const QModelIndex idx = createIndexForItem(scope);
+        if (idx.isValid()) {
+            emit dataChanged(index(idx.row(), 0, idx.parent()),
+                             index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+        }
     }
-    item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
-    item->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload complete"));
-    scope->finished = true;
-    scope->percent = 100.0;
-    scope->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
-    scope->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload complete"));
-    const QModelIndex idx = createIndexForItem(scope);
-    if (idx.isValid()) {
-        emit dataChanged(index(idx.row(), 0, idx.parent()),
-                         index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
-    }
+    armUploadPrune(params);
 }
 
 void TransferViewModel::completeUpload(const VarMap &params){

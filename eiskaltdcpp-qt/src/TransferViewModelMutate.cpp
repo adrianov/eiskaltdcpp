@@ -43,9 +43,12 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         return;
     }
 
+    // Soft Connected/Connecting only. Do not re-arm over finished/failed rows —
+    // that would reset the grace timer forever while the peer stays parked.
     if (!vbol(params["DOWN"]) && vbol(params.value("SOFT_STAT"))
-            && vstr(params.value("FNAME")).isEmpty() && !vbol(params["FAIL"]))
-        armIdleUploadPrune(params);
+            && vstr(params.value("FNAME")).isEmpty() && !vbol(params["FAIL"])
+            && !item->finished && !item->fail)
+        armUploadPrune(params);
 
     VarMap p = params;
     // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).
