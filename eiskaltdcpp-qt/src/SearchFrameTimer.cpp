@@ -29,14 +29,16 @@ void SearchFrame::slotTimer(){
         uint64_t now = GlobalTimer::getInstance()->getTicks()*1000;
         float fraction  = 100.0f*(now - d->searchStartTime)/(d->searchEndTime - d->searchStartTime);
         if (fraction >= 100.0) {
-            fraction = 100.0;
+            // Progress ended: restore Search/Stop UI only (no cancel; late results OK).
             d->waitingResults = false;
+            pushButton_STOP->hide();
+            pushButton_SEARCH->show();
+        } else {
+            progressBar->setFormat(tr("Searching for %1 ...").arg(d->target));
+            progressBar->setValue(static_cast<unsigned>(fraction));
         }
-        const QString msg = tr("Searching for %1 ...").arg(d->target);
-        progressBar->setFormat(msg);
-        progressBar->setValue(static_cast<unsigned>(fraction));
     }
-    else {
+    if (!d->waitingResults) {
         progressBar->setFormat(QString());
         progressBar->setValue(0);
     }
