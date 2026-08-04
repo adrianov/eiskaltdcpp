@@ -48,7 +48,7 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (!vbol(params["DOWN"]) && vbol(params.value("SOFT_STAT"))
             && vstr(params.value("FNAME")).isEmpty() && !vbol(params["FAIL"])
             && !item->finished && !item->fail)
-        armUploadPrune(params);
+        armUploadPrune(params, 10000);
 
     VarMap p = params;
     // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).

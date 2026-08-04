@@ -65,8 +65,6 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const QString cid = vstr(params["CID"]);
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
-    if (!download)
-        cancelUploadPrune(cid, hub);
     const QString dlPrefix = tr("Downloaded ");
     const QString ulPrefix = tr("Uploaded ");
 
@@ -93,6 +91,9 @@ void TransferViewModel::removeTransfer(const VarMap &params){
             ++i;
             continue;
         }
+        // Cancel prune only when the row actually goes away.
+        if (!download)
+            cancelUploadPrune(cid, hub);
         dropTransferRow(item);
         return;
     }
@@ -110,8 +111,10 @@ void TransferViewModel::removeTransfer(const VarMap &params){
             }
             ++i;
         }
-        if (uploads == 1)
+        if (uploads == 1) {
+            cancelUploadPrune(cid, hub);
             dropTransferRow(only);
+        }
     }
 }
 
@@ -125,14 +128,14 @@ void TransferViewModel::cancelUploadPrune(const QString &cid, const QString &hub
     ++idleUploadGen[idleUploadKey(cid, hub)];
 }
 
-void TransferViewModel::armUploadPrune(const VarMap &params) {
-    if (vbol(params["DOWN"]) || vstr(params["CID"]).isEmpty())
+void TransferViewModel::armUploadPrune(const VarMap &params, int delayMs) {
+    if (vbol(params["DOWN"]) || vstr(params["CID"]).isEmpty() || delayMs < 0)
         return;
 
     const QString key = idleUploadKey(vstr(params["CID"]), vstr(params["HOST"]));
     const int gen = ++idleUploadGen[key];
-    // Grace for multi-file bursts; peers parked in STATE_GET still get cleared.
-    QTimer::singleShot(10000, this, [this, key, gen, params]() {
+    // Idle Connected uses a longer grace; Upload complete/fail dismiss sooner.
+    QTimer::singleShot(delayMs, this, [this, key, gen, params]() {
         pruneUpload(key, gen, params);
     });
 }

@@ -28,7 +28,16 @@ void TransferViewModel::initTransfer(const VarMap &params){
     // Reuse the row for the next file/parts — clear complete state before applying metrics.
     if (item) {
         TransferViewItem *scope = item->download ? nullptr : uploadScope(item);
-        const bool nextFile = scope && scope->finished;
+        // Mid-file parts keep fpos. Reset only after a full file, or when a leaf
+        // row changes TARGET (grouped retarget/move is handled in updateTransfer).
+        const qlonglong size = scope
+                ? scope->data(COLUMN_TRANSFER_SIZE).toLongLong() : 0;
+        const QString newTarget = vstr(params.value("TARGET"));
+        const bool leafRetarget = scope == item && !item->target.isEmpty()
+                && !newTarget.isEmpty() && newTarget != item->target;
+        const bool fullyDone = scope && scope->finished
+                && (scope->percent >= 100.0 || (size > 0 && scope->fpos >= size));
+        const bool nextFile = leafRetarget || fullyDone;
         item->finished = false;
         if (scope) {
             if (nextFile) {
@@ -85,5 +94,5 @@ void TransferViewModel::addConnection(const VarMap &params){
 
     // Added alone never reaches updateTransfer — still drop if Starting never comes.
     if (!bDownload && fname.isEmpty())
-        armUploadPrune(params);
+        armUploadPrune(params, 10000);
 }

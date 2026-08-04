@@ -168,7 +168,8 @@ private:
     TransferViewItem *uploadScope(TransferViewItem *item) const;
     bool uploadFullyIdle(TransferViewItem *scope) const;
     void settleUpload(const VarMap &params, bool segmentDone);
-    void armUploadPrune(const VarMap &params);
+    /** Arm auto-drop; delayMs keeps Connected grace longer than Upload complete. */
+    void armUploadPrune(const VarMap &params, int delayMs);
     void cancelUploadPrune(const QString &cid, const QString &hub);
     static QString idleUploadKey(const QString &cid, const QString &hub);
     /** */

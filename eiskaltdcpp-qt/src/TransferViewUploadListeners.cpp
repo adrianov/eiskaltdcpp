@@ -131,6 +131,7 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["DOWN"] = false;
     params["FAIL"] = false;
+    params["FILE_DONE"] = s.fileDone;
     if (s.fileDone) {
         params["SPEED"] = 0.0;
         params["TLEFT"] = qlonglong(-1);

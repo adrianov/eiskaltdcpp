@@ -94,6 +94,18 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
         item->finished = false;
     }
 
+    // Last segment of a leaf row: align fpos if earlier parts under-counted.
+    // Do not snap a group parent — siblings may still be uploading.
+    const bool fileDone = segmentDone && vbol(params.value("FILE_DONE"));
+    if (fileDone && scope == item) {
+        const qlonglong size = scope->data(COLUMN_TRANSFER_SIZE).toLongLong();
+        if (size > 0 && scope->fpos < size)
+            scope->fpos = size;
+    }
+
+    // Brief flash for complete/fail; Starting cancels if the next file arrives.
+    static const int donePruneMs = 2000;
+
     if (!uploadFullyIdle(scope)) {
         // Same row across consecutive parts; refresh parent after finished is set.
         if (scope->cid.isEmpty()) {
@@ -104,9 +116,9 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
                                  index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
             }
         }
-        // Failures only — partial completes must not prune or the group parent/fpos is lost.
-        if (item->fail)
-            armUploadPrune(params);
+        // Failures, or fileDone while siblings still busy — not mid-file parts.
+        if (item->fail || fileDone)
+            armUploadPrune(params, donePruneMs);
         return;
     }
 
@@ -129,7 +141,7 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
                              index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
         }
     }
-    armUploadPrune(params);
+    armUploadPrune(params, donePruneMs);
 }
 
 void TransferViewModel::completeUpload(const VarMap &params){
