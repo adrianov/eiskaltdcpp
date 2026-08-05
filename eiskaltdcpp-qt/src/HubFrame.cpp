@@ -34,6 +34,7 @@
 #include "EmoticonFactory.h"
 
 #include "dcpp/LogManager.h"
+#include "dcpp/ClientManagerHubGuard.h"
 #include "dcpp/User.h"
 #include "dcpp/UserCommand.h"
 #include "dcpp/CID.h"
@@ -1491,25 +1492,25 @@ void HubFrame::getPassword(){
 }
 
 void HubFrame::follow(QString redirect){
-    if(!redirect.isEmpty()) {
-        if(ClientManager::getInstance()->isConnected(_tq(redirect))) {
-            addStatus(tr("The hub is trying to redirect you to a hub you are already connected to. Disconnecting."));
-            return;
-        }
+    if(redirect.isEmpty())
+        return;
 
-        string url = _tq(redirect);
-
-        Q_D(HubFrame);
-        // the client is dead, long live the client!
-        d->client->removeListener(this);
-        HubManager::getInstance()->unregisterHubUrl(_q(d->client->getHubUrl()));
-        ClientManager::getInstance()->putClient(d->client);
-        clearUsers();
-        d->client = ClientManager::getInstance()->getClient(url);
-
-        d->client->addListener(this);
-        d->client->connect();
+    Q_D(HubFrame);
+    const string url = _tq(redirect);
+    if(ClientManagerHubGuard::hasActiveHub(url, d->client)) {
+        addStatus(tr("Redirect skipped: already connected to that hub."));
+        return;
     }
+
+    // the client is dead, long live the client!
+    d->client->removeListener(this);
+    HubManager::getInstance()->unregisterHubUrl(_q(d->client->getHubUrl()));
+    ClientManager::getInstance()->putClient(d->client);
+    clearUsers();
+    d->client = ClientManager::getInstance()->getClient(url);
+
+    d->client->addListener(this);
+    d->client->connect();
 }
 
 void HubFrame::syncFieldHeights(){

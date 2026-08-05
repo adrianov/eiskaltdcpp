@@ -42,7 +42,8 @@ set (GTK_EXTRA_SOURCES
     SearchClient.cc
     SearchMenu.cc
     TransfersDownloadListeners.cc
-    hubClientEvents.cc)
+    hubClientEvents.cc
+    hubClientOps.cc)
 foreach (_src ${GTK_EXTRA_SOURCES})
     set (_path ${PROJECT_SOURCE_DIR}/src/${_src})
     list (FIND gtk_srcs ${_path} _idx)

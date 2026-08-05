@@ -9,6 +9,7 @@
 #include "WulforSettings.h"
 
 #include "dcpp/ClientManager.h"
+#include "dcpp/ClientManagerHubGuard.h"
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/LogManager.h"
 #include "dcpp/PeerConnectFilter.h"
@@ -86,10 +87,9 @@ void HubFrame::on(ClientListener::UserRemoved, Client*, const OnlineUser &user) 
     emit coreUserRemoved(user.getUser(), user.getIdentity());
 }
 
-void HubFrame::on(ClientListener::Redirect, Client*, const string &link) noexcept{
-    if(ClientManager::getInstance()->isConnected(link)) {
-        emit coreStatusMsg(tr("The hub is trying to redirect you to a hub you are already connected to. Disconnecting."));
-
+void HubFrame::on(ClientListener::Redirect, Client *c, const string &link) noexcept{
+    if(ClientManagerHubGuard::hasActiveHub(link, c)) {
+        emit coreStatusMsg(tr("Redirect skipped: already connected to that hub."));
         return;
     }
 
