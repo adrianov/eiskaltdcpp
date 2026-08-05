@@ -1507,10 +1507,10 @@ Favorite user</source>
         <translation>Пароль</translation>
     </message>
     <message>
-        <location filename="../src/HubFrame.cpp" line="2667"/>
-        <location filename="../src/HubFrame.cpp" line="3811"/>
-        <source>Redirect request received to a hub that&apos;s already connected</source>
-        <translation>Получен запрос перенаправления к уже подключенному хабу</translation>
+        <location filename="../src/HubFrame.cpp"/>
+        <location filename="../src/HubFrameClient.cpp"/>
+        <source>Redirect skipped: already connected to that hub.</source>
+        <translation>Перенаправление пропущено: уже подключены к этому хабу.</translation>
     </message>
     <message>
         <location filename="../src/HubFrame.cpp" line="2739"/>

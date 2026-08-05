@@ -402,9 +402,21 @@ msgstr "UPnP: %1%"
 msgid "%1% (Nick unknown)"
 msgstr "%1% (Ник неизвестен)"
 
-#: ../NmdcHub.cpp:680
+#: ../NmdcHubLineExt.cpp
 msgid "Hub topic:"
 msgstr "Тема хаба:"
+
+#: ../NmdcHubLineExt.cpp
+msgid "Nick \"%1%\" rejected by hub rules; switching to \"%2%\"..."
+msgstr "Ник «%1%» не подходит под правила хаба; пробую «%2%»..."
+
+#: ../ClientConnect.cpp
+msgid "Already connected: %1%"
+msgstr "Уже подключены: %1%"
+
+#: ../ClientConnect.cpp
+msgid "Redirect skipped: already connected to that hub."
+msgstr "Перенаправление пропущено: уже подключены к этому хабу."
 
 #: ../PerFolderLimit.cpp:87
 msgid "Too small share to download from "
