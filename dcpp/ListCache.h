@@ -36,8 +36,6 @@ public:
     static bool tryParseList(const HintedUser& user, const string& listPath, bool& hasEntries);
     /** True when parse succeeds and the list has File/Directory XML tags. */
     static bool listHasEntries(const HintedUser& user, const string& listPath);
-    /** Copy an unreadable list under PATH_USER_LOCAL/BadFileLists/ for research. */
-    static void saveBadList(const string& listPath);
     /** Downloaded XML/XML.BZ2 byte size, or -1 when no size was recorded. */
     static int64_t fileSize(const CID& cid);
     static void saveListMeta(const CID& cid, int64_t shareSize, int64_t fileSize,

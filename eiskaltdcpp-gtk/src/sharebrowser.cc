@@ -22,7 +22,6 @@
 #include <iostream>
 #include <dcpp/ADLSearch.h>
 #include <dcpp/FavoriteManager.h>
-#include <dcpp/ListCache.h>
 #include <dcpp/ShareManager.h>
 #include <dcpp/Text.h>
 #include "search.hh"
@@ -199,12 +198,7 @@ bool ShareBrowser::buildList_gui()
         listing.getRoot()->setName(nick);
 
         if (full) {
-            try {
-                listing.loadFile(file);
-            } catch (const Exception&) {
-                ListCache::saveBadList(file);
-                throw;
-            }
+            listing.loadFile(file);
             // Search ADL
             ADLSearchManager::getInstance()->matchListing(listing);
         }

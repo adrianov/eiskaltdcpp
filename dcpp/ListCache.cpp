@@ -63,29 +63,6 @@ bool ListCache::listHasEntries(const HintedUser& user, const string& listPath) {
     return tryParseList(user, listPath, hasEntries) && hasEntries;
 }
 
-void ListCache::saveBadList(const string& listPath) {
-    const int64_t sz = File::getSize(listPath);
-    if(listPath.empty() || sz <= 0)
-        return;
-
-    const string dir = Util::getPath(Util::PATH_USER_LOCAL) + "BadFileLists" PATH_SEPARATOR_STR;
-    if(listPath.size() >= dir.size() &&
-            Util::strnicmp(listPath.c_str(), dir.c_str(), dir.size()) == 0)
-        return;
-
-    string dest = dir + Util::getFileName(listPath);
-    const int64_t have = File::getSize(dest);
-    if(have == sz)
-        return;
-    if(have != -1)
-        dest += "." + Util::toString(sz) + "." + Util::toString((int64_t)time(nullptr));
-
-    try {
-        File::ensureDirectory(dest);
-        File::copyFile(listPath, dest);
-    } catch(const Exception&) { }
-}
-
 bool ListCache::matchesUserShare(const HintedUser& user, const string& listBase) {
     if(!matchesShare(user.user))
         return false;

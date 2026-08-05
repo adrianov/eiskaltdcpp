@@ -113,10 +113,12 @@ void QueueManager::putDownloadBody(Download* d, bool finished, HintedUserList& g
         const int64_t share = ClientManager::getInstance()->getBytesShared(d->getUser());
         bool hasEntries = false;
         const bool parsed = ListCache::tryParseList(d->getHintedUser(), listName, hasEntries);
-        if(parsed && !hasEntries) {
-            // Empty FileListing (no File/Directory tags): drop or DownloadManager loops.
+        if(!parsed || !hasEntries) {
+            // Empty stub or unreadable garbage: drop file and queue item.
             try { File::deleteFile(listName); } catch(const Exception&) { }
-            LogManager::getInstance()->message(str(F_("%1%: rejected implausible file list (%2% bytes, share %3%)")
+            LogManager::getInstance()->message(str((parsed
+                    ? F_("%1%: rejected implausible file list (%2% bytes, share %3%)")
+                    : F_("%1%: unreadable file list (%2% bytes, share %3%)"))
                     % ClientManager::getInstance()->getNickOrCid(d->getHintedUser())
                     % listBytes % Util::formatBytes(share)));
             fire(QueueManagerListener::Removed(), q);
@@ -126,10 +128,7 @@ void QueueManager::putDownloadBody(Download* d, bool finished, HintedUserList& g
             return;
         }
         q->addSegment(Segment(0, q->getSize()));
-        if(parsed && hasEntries)
-            ListCache::saveListMeta(d->getUser()->getCID(), share, listBytes);
-        else if(!parsed)
-            ListCache::saveBadList(listName);
+        ListCache::saveListMeta(d->getUser()->getCID(), share, listBytes);
     } else if(d->getType() == Transfer::TYPE_FILE) {
         q->addSegment(d->getSegment());
         if(wasEmpty)

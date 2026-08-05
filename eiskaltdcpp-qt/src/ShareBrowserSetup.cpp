@@ -18,7 +18,6 @@
 
 #include "dcpp/ADLSearch.h"
 #include "dcpp/ClientManager.h"
-#include "dcpp/ListCache.h"
 
 #include <QHeaderView>
 #include <QAction>
@@ -146,7 +145,6 @@ void ShareBrowser::buildList(){
     try {
         listing.loadFile(file.toStdString());
     } catch (const Exception &e) {
-        ListCache::saveBadList(file.toStdString());
         emit die(tr("Share browser error: %1").arg(_q(e.what())));
         return;
     }
