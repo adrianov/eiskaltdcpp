@@ -44,6 +44,8 @@ void NmdcHub::onLineHubSetup(const string& cmd, const string& param, const strin
                 supportFlags |= SUPPORTS_NOGETINFO;
             else if(i == "UserIP2")
                 supportFlags |= SUPPORTS_USERIP2;
+            else if(i == "TLS")
+                supportFlags |= SUPPORTS_TLS;
         }
     } else if(cmd == "$UserCommand") {
         string::size_type i = 0;

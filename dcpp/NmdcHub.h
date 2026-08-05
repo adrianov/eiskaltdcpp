@@ -84,7 +84,9 @@ private:
         SUPPORTS_NOGETINFO = 0x02,
         SUPPORTS_USERIP2 = 0x04,
         /** Hub rejected $ConnectToMe with TLS "S" port suffix (e.g. some PtokaX). */
-        SUPPORTS_NO_SECURE_CTM = 0x08
+        SUPPORTS_NO_SECURE_CTM = 0x08,
+        /** Hub $Supports listed TLS — safe to set TLS/NAT bits in $MyINFO. */
+        SUPPORTS_TLS = 0x10
     };
 
     mutable CriticalSection cs;

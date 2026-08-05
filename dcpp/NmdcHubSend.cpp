@@ -92,39 +92,36 @@ void NmdcHub::myInfo(bool alwaysSend) {
         modeChar = 'A';
     else
         modeChar = 'P';
-    string uploadSpeed;
-    int upLimit = ThrottleManager::getInstance()->getUpLimit();
-    if (upLimit > 0 && BOOLSETTING(THROTTLE_ENABLE)) {
-        uploadSpeed = Util::toString(upLimit) + " KiB/s";
-    } else {
-        uploadSpeed = SETTING(UPLOAD_SPEED);
-    }
-    if(Util::getAway()) {
+    const int upLimit = ThrottleManager::getInstance()->getUpLimit();
+    const string uploadSpeed = (upLimit > 0 && BOOLSETTING(THROTTLE_ENABLE))
+        ? Util::toString(upLimit) + "KiB/s" : SETTING(UPLOAD_SPEED);
+    if(Util::getAway())
         StatusMode |= Identity::AWAY;
-    }
-    if(BOOLSETTING(ALLOW_NATT) && !isActive()) {
-        StatusMode |= Identity::NAT;
-    }
-    if (CryptoManager::getInstance()->TLSOk()) {
-        StatusMode |= Identity::TLS;
+    // TLS/NAT bits: only if hub $Supports TLS (YnHub rejects them otherwise).
+    if(supportFlags & SUPPORTS_TLS) {
+        if(BOOLSETTING(ALLOW_NATT) && !isActive())
+            StatusMode |= Identity::NAT;
+        if(CryptoManager::getInstance()->TLSOk())
+            StatusMode |= Identity::TLS;
     }
 
-    bool gslotf = BOOLSETTING(SHOW_FREE_SLOTS_DESC);
-    string gslot = "["+Util::toString(UploadManager::getInstance()->getFreeSlots())+"]";
-    string uMin = (SETTING(MIN_UPLOAD_SPEED) == 0) ? Util::emptyString : ",O:" + Util::toString(SETTING(MIN_UPLOAD_SPEED));
-    string myInfoA =
+    string desc = getCurrentDescription();
+    if(BOOLSETTING(SHOW_FREE_SLOTS_DESC))
+        desc.insert(0, "[" + Util::toString(UploadManager::getInstance()->getFreeSlots()) + "]");
+    desc.erase(std::remove_if(desc.begin(), desc.end(), [](char c){ return c == '<' || c == '>'; }), desc.end());
+    const string uMin = ((supportFlags & SUPPORTS_TLS) && SETTING(MIN_UPLOAD_SPEED) != 0)
+        ? ",O:" + Util::toString(SETTING(MIN_UPLOAD_SPEED)) : Util::emptyString;
+    const string myInfoA =
             "$MyINFO $ALL " + fromUtf8(getMyNick()) + " " +
-            fromUtf8(escape((gslotf ? gslot :"")+getCurrentDescription())) + " <"+ getClientId().c_str() + ",M:" + modeChar + ",H:" + getCounts();
-    string myInfoB = ",S:" + Util::toString(SETTING(SLOTS));
-    string myInfoC = uMin +
+            fromUtf8(escape(desc)) + " <" + getClientId() + ",M:" + modeChar + ",H:" + getCounts();
+    const string myInfoB = ",S:" + Util::toString(SETTING(SLOTS));
+    const string myInfoC = uMin +
             ">$ $" + uploadSpeed + StatusMode + "$" + fromUtf8(escape(SETTING(EMAIL))) + '$';
-    string myInfoD = ShareManager::getInstance()->getShareSizeString() + "$|";
-    // we always send A and C; however, B (slots) and D (share size) can frequently change so we delay them if needed
+    const string myInfoD = ShareManager::getInstance()->getShareSizeString() + "$|";
     if(alwaysSend ||
             ((lastMyInfoA != myInfoA || lastMyInfoC != myInfoC) && lastUpdate + 2*60*1000 < GET_TICK())
             ||
             ((lastMyInfoB != myInfoB || lastMyInfoD != myInfoD) && lastUpdate + 15*60*1000 < GET_TICK())) {
-        dcdebug("MyInfo %s...\n", getMyNick().c_str());
         send(myInfoA + myInfoB + myInfoC + myInfoD);
         lastMyInfoA = myInfoA;
         lastMyInfoB = myInfoB;
