@@ -96,7 +96,8 @@ void Client::connect() {
     }
 
     setAutoReconnect(true);
-    if(HubReconnectFilter::todayCount(getHubUrl()) == 0)
+    // Do not undo reconnect()'s delay=0; only seed a default for cold connects.
+    if(!urgentReconnect && getReconnDelay() != 0 && HubReconnectFilter::todayCount(getHubUrl()) == 0)
         setReconnDelay(HubReconnectFilter::delaySec(1));
     reloadSettings(true);
     setRegistered(false);
@@ -128,6 +129,7 @@ void Client::send(const char* aMessage, size_t aLen) {
 }
 
 void Client::on(Connected) noexcept {
+    urgentReconnect = false;
     setSearchBlocked(false);
     updateActivity();
     ip = sock->getIp();

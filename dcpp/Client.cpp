@@ -36,7 +36,7 @@ uint32_t idCounter = 0;
 Client::Client(const string& hubURL, char separator_, bool secure_, Socket::Protocol proto_) :
     myIdentity(ClientManager::getInstance()->getMe(), 0), uniqueId(++idCounter),
     reconnDelay(120), reconnAttempts(0), lastActivity(GET_TICK()), registered(false), autoReconnect(false), searchBlocked(false),
-    encoding(Text::hubDefaultCharset), state(STATE_DISCONNECTED), sock(0),
+    encoding(Text::hubDefaultCharset), state(STATE_DISCONNECTED), sock(0), urgentReconnect(false),
     hubUrl(hubURL), separator(separator_), proto(proto_),
     secure(secure_), countType(COUNT_UNCOUNTED)
 {

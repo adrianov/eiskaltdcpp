@@ -22,17 +22,22 @@
 namespace dcpp {
 
 void Client::reconnect() {
-    disconnect(true);
     HubReconnectFilter::clearToday(getHubUrl());
     setReconnAttempts(0);
     setAutoReconnect(true);
     setReconnDelay(0);
-}
+    urgentReconnect = true;
+    FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
 
-void Client::resetReconnBackoff() {
-    HubReconnectFilter::clearToday(getHubUrl());
-    setReconnAttempts(0);
-    setReconnDelay(HubReconnectFilter::delaySec(1));
+    // Drop the current socket on the UI thread (removeListener first so an
+    // in-flight Failed cannot schedule "Reconnect planned"), then connect now.
+    state = STATE_DISCONNECTED;
+    if(sock) {
+        sock->removeListener(this);
+        BufferedSocket::putSocket(sock);
+        sock = 0;
+    }
+    connect();
 }
 
 void Client::scheduleReconnectBackoff() {
@@ -52,11 +57,25 @@ void Client::onConnectFailed(const string& aLine) {
     FavoriteManager::getInstance()->removeUserCommand(getHubUrl());
     if(sock)
         sock->removeListener(this);
-    const int today = HubReconnectFilter::todayCount(getHubUrl());
-    if(getAutoReconnect() && HubReconnectFilter::shouldGiveUp(today)) {
+
+    if(urgentReconnect) {
+        // Manual Reconnect: never publish "Reconnect planned in 1 minute".
+        // Stay urgent until Connected; bound retries via today count.
+        setAutoReconnect(true);
+        setReconnDelay(0);
+        const int today = HubReconnectFilter::noteDisconnect(getHubUrl());
+        setReconnAttempts(today);
+        if(HubReconnectFilter::shouldGiveUp(today)) {
+            urgentReconnect = false;
+            setAutoReconnect(false);
+            fire(ClientListener::StatusMessage(), this,
+                 str(F_("Giving up hub reconnect after %1% failed attempts today") % today),
+                 ClientListener::FLAG_NORMAL);
+        }
+    } else if(getAutoReconnect() && HubReconnectFilter::shouldGiveUp(HubReconnectFilter::todayCount(getHubUrl()))) {
         setAutoReconnect(false);
         fire(ClientListener::StatusMessage(), this,
-             str(F_("Giving up hub reconnect after %1% failed attempts today") % today),
+             str(F_("Giving up hub reconnect after %1% failed attempts today") % HubReconnectFilter::todayCount(getHubUrl())),
              ClientListener::FLAG_NORMAL);
     } else if(getAutoReconnect()) {
         scheduleReconnectBackoff();
@@ -83,9 +102,19 @@ bool Client::tryAlternateNick() {
          str(F_("Nick \"%1%\" is taken, trying \"%2%\"...") % oldNick % next),
          ClientListener::FLAG_NORMAL);
 
-    disconnect(true);
+    // Socket thread: do not putSocket/connect here. Mark DISCONNECTED with
+    // delay 0 so Second retries immediately (Failed is suppressed on
+    // graceless disconnect).
+    state = STATE_DISCONNECTED;
+    if(sock) {
+        sock->removeListener(this);
+        disconnect(true);
+    }
     setAutoReconnect(true);
-    resetReconnBackoff();
+    HubReconnectFilter::clearToday(getHubUrl());
+    setReconnAttempts(0);
+    setReconnDelay(0);
+    updateActivity();
     return true;
 }
 

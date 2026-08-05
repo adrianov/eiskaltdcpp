@@ -136,7 +136,6 @@ public:
     void shutdown();
     bool isActive() const;
     bool handleRedirect(const string& targetUrl);
-    void resetReconnBackoff();
     void send(const string& aMessage) { send(aMessage.c_str(), aMessage.length()); }
     void send(const char* aMessage, size_t aLen);
 
@@ -210,6 +209,8 @@ protected:
     void scheduleReconnectBackoff();
     void onConnectFailed(const string& aLine);
     void storeHubNick();
+    /** Toolbar/menu Reconnect: skip planned backoff once; see reconnect(). */
+    bool urgentReconnect;
 
     // TimerManagerListener
     virtual void on(Second, uint64_t aTick) noexcept;
