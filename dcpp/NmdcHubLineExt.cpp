@@ -162,14 +162,14 @@ void NmdcHub::onLineHubExt(const string& cmd, const string& param) {
         return;
     }
     if(cmd == "$NickRule") {
-        nickRule = make_unique<NickRule>();
+        nickRule = std::make_unique<NickRule>();
         parseNickFields(*nickRule, param);
         applyNickRule(true);
         return;
     }
     if(cmd == "$BadNick") {
         if(!nickRule && !param.empty()) {
-            nickRule = make_unique<NickRule>();
+            nickRule = std::make_unique<NickRule>();
             parseNickFields(*nickRule, param);
         }
         if(applyNickRule(false)) {
