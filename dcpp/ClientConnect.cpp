@@ -87,7 +87,7 @@ void Client::reloadSettings(bool updateNick) {
 void Client::connect() {
     if(ClientManagerHubGuard::hasActiveHub(getHubUrl(), this)) {
         setAutoReconnect(false);
-        fire(ClientListener::StatusMessage(), this, str(F_("Already connected to %1%") % getHubUrl()), ClientListener::FLAG_NORMAL);
+        fire(ClientListener::StatusMessage(), this, str(F_("Already connected: %1%") % getHubUrl()), ClientListener::FLAG_NORMAL);
         return;
     }
 
@@ -171,10 +171,11 @@ void Client::disconnect(bool graceLess) {
 }
 
 bool Client::handleRedirect(const string& targetUrl) {
+    // Block same TLS URL as self, or another tab on same host:port (plain↔TLS upgrade is allowed).
     if(!ClientManagerHubGuard::sameHubUrl(targetUrl, getHubUrl()) && !ClientManagerHubGuard::hasActiveHub(targetUrl, this))
         return false;
     setAutoReconnect(false);
-    fire(ClientListener::StatusMessage(), this, _("The hub is trying to redirect you to a hub you are already connected to. Disconnecting."), ClientListener::FLAG_NORMAL);
+    fire(ClientListener::StatusMessage(), this, _("Redirect skipped: already connected to that hub."), ClientListener::FLAG_NORMAL);
     return true;
 }
 

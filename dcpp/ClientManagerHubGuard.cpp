@@ -19,28 +19,39 @@ namespace ClientManagerHubGuard {
 
 namespace {
 
-void hubEndpoint(const string& url, string& host, string& port) {
+void hubEndpoint(const string& url, string& scheme, string& host, string& port) {
     string proto, file, query, fragment;
     Util::decodeUrl(url, proto, host, port, file, query, fragment);
-    if(!port.empty() || host.empty())
-        return;
-    if(Util::stricmp(proto.c_str(), "nmdcs") == 0 || Util::stricmp(proto.c_str(), "dchub") == 0 || proto.empty())
+    if(Util::stricmp(proto.c_str(), "nmdcs") == 0)
+        scheme = "nmdcs";
+    else if(Util::stricmp(proto.c_str(), "adcs") == 0)
+        scheme = "adcs";
+    else if(Util::stricmp(proto.c_str(), "adc") == 0)
+        scheme = "adc";
+    else
+        scheme = "nmdc"; // empty / dchub / nmdc
+    if(port.empty() && !host.empty() && (scheme == "nmdc" || scheme == "nmdcs"))
         port = "411";
+}
+
+bool matchHub(const string& a, const string& b, bool withScheme) {
+    if(a == b)
+        return true;
+
+    string aScheme, aHost, aPort, bScheme, bHost, bPort;
+    hubEndpoint(a, aScheme, aHost, aPort);
+    hubEndpoint(b, bScheme, bHost, bPort);
+    if(aHost.empty() || bHost.empty())
+        return false;
+    if(Util::stricmp(aHost.c_str(), bHost.c_str()) != 0 || aPort != bPort)
+        return false;
+    return !withScheme || aScheme == bScheme;
 }
 
 } // namespace
 
 bool sameHubUrl(const string& a, const string& b) {
-    if(a == b)
-        return true;
-
-    string aHost, aPort, bHost, bPort;
-    hubEndpoint(a, aHost, aPort);
-    hubEndpoint(b, bHost, bPort);
-    if(aHost.empty() || bHost.empty())
-        return false;
-
-    return Util::stricmp(aHost.c_str(), bHost.c_str()) == 0 && aPort == bPort;
+    return matchHub(a, b, true);
 }
 
 bool hasActiveHub(const string& url, const Client* exclude) {
@@ -53,7 +64,8 @@ bool hasActiveHub(const string& url, const string& name, const Client* exclude) 
     for(auto c: cm->getClients()) {
         if(c == exclude || !c->isConnected())
             continue;
-        if(sameHubUrl(c->getHubUrl(), url))
+        // Host+port only: plain and TLS to the same hub count as one presence.
+        if(matchHub(c->getHubUrl(), url, false))
             return true;
         if(!name.empty() && Util::stricmp(c->getHubName().c_str(), name.c_str()) == 0)
             return true;

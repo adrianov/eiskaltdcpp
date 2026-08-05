@@ -17,9 +17,10 @@ class Client;
 
 namespace ClientManagerHubGuard {
 
+/** Same URL including TLS mode (empty/dchub/nmdc = plain NMDC). Used for redirect self-checks. */
 bool sameHubUrl(const string& a, const string& b);
 bool hasActiveHub(const string& url, const Client* exclude);
-/** True if a connected hub matches url (host/port) or, when non-empty, hub name. */
+/** True if a live hub shares host+port (any TLS mode) or, when non-empty, hub name. */
 bool hasActiveHub(const string& url, const string& name, const Client* exclude);
 
 } // namespace ClientManagerHubGuard
