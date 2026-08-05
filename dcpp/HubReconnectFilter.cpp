@@ -21,15 +21,9 @@ namespace HubReconnectFilter {
 
 namespace {
 
+// Short first waits: hubs often drop once (ghost nick / connection test).
 constexpr int DELAYS_SEC[] = {
-    60,      // 1 min
-    120,     // 2 min
-    300,     // 5 min
-    900,     // 15 min
-    3600,    // 1 hour
-    10800,   // 3 hours
-    43200,   // 12 hours
-    86400    // 1 day
+    15, 30, 60, 120, 300, 900, 3600, 86400
 };
 
 struct DayCount {
@@ -75,15 +69,19 @@ int delaySec(int attempts) {
 
 string delayLabel(int attempts) {
     switch(min(max(attempts, 1), MAX_ATTEMPTS)) {
-    case 1: return _("1 minute");
-    case 2: return _("2 minutes");
-    case 3: return _("5 minutes");
-    case 4: return _("15 minutes");
-    case 5: return _("1 hour");
-    case 6: return _("3 hours");
-    case 7: return _("12 hours");
+    case 1: return _("15 seconds");
+    case 2: return _("30 seconds");
+    case 3: return _("1 minute");
+    case 4: return _("2 minutes");
+    case 5: return _("5 minutes");
+    case 6: return _("15 minutes");
+    case 7: return _("1 hour");
     default: return _("1 day");
     }
+}
+
+string manualDelayLabel() {
+    return _("5 seconds");
 }
 
 int noteDisconnect(const string& hubUrl) {

@@ -818,3 +818,51 @@ msgstr "DHT снова включен"
 #: ../../dht/UDPSocket.cpp:258
 msgid "DHT disabled: "
 msgstr "DHT отключен: "
+
+#: ../ClientReconnect.cpp
+msgid "Reconnecting at %1% (in %2%)"
+msgstr "Переподключение в %1% (через %2%)"
+
+#: ../ClientReconnect.cpp
+msgid "Giving up after %1% failed reconnects today"
+msgstr "Прекращаю переподключение: %1% неудач за сегодня"
+
+#: ../ClientReconnect.cpp
+msgid "Nick \"%1%\" is taken; switching to \"%2%\"..."
+msgstr "Ник «%1%» занят; пробую «%2%»..."
+
+#: ../HubReconnectFilter.cpp
+msgid "5 seconds"
+msgstr "5 секунд"
+
+#: ../HubReconnectFilter.cpp
+msgid "15 seconds"
+msgstr "15 секунд"
+
+#: ../HubReconnectFilter.cpp
+msgid "30 seconds"
+msgstr "30 секунд"
+
+#: ../HubReconnectFilter.cpp
+msgid "1 minute"
+msgstr "1 минуту"
+
+#: ../HubReconnectFilter.cpp
+msgid "2 minutes"
+msgstr "2 минуты"
+
+#: ../HubReconnectFilter.cpp
+msgid "5 minutes"
+msgstr "5 минут"
+
+#: ../HubReconnectFilter.cpp
+msgid "15 minutes"
+msgstr "15 минут"
+
+#: ../HubReconnectFilter.cpp
+msgid "1 hour"
+msgstr "1 час"
+
+#: ../HubReconnectFilter.cpp
+msgid "1 day"
+msgstr "1 день"

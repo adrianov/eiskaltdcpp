@@ -13,19 +13,23 @@
 
 namespace dcpp {
 
-/** Per-hub reconnect delay from that hub's disconnect count today. */
+/** Per-hub reconnect delay from today's disconnect count. */
 namespace HubReconnectFilter {
 
 constexpr int MAX_ATTEMPTS = 8;
+/** Wait after manual Reconnect so the hub can release the old session. */
+constexpr int MANUAL_DELAY_SEC = 5;
 
 bool shouldGiveUp(int attempts);
 int delaySec(int attempts);
 string delayLabel(int attempts);
+/** Label for MANUAL_DELAY_SEC (gettext). */
+string manualDelayLabel();
 
-/** Count a disconnect for hubUrl today; returns today's total for that hub. */
+/** Count a disconnect; returns today's total for hubUrl. */
 int noteDisconnect(const string& hubUrl);
 int todayCount(const string& hubUrl);
-/** Manual reconnect / nick retry — start today's count over for this hub. */
+/** Manual Reconnect / nick retry — reset today's count for hubUrl. */
 void clearToday(const string& hubUrl);
 
 } // namespace HubReconnectFilter

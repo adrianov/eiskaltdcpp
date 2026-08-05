@@ -22,6 +22,7 @@
 #include "SettingsManager.h"
 #include "Socket.h"
 #include "Text.h"
+#include "Util.h"
 #include "version.h"
 
 namespace dcpp {
@@ -96,7 +97,7 @@ void Client::connect() {
     }
 
     setAutoReconnect(true);
-    // Do not undo reconnect()'s delay=0; only seed a default for cold connects.
+    // Do not overwrite manual Reconnect's 5s delay; seed backoff only for cold connects.
     if(!urgentReconnect && getReconnDelay() != 0 && HubReconnectFilter::todayCount(getHubUrl()) == 0)
         setReconnDelay(HubReconnectFilter::delaySec(1));
     reloadSettings(true);
@@ -129,7 +130,6 @@ void Client::send(const char* aMessage, size_t aLen) {
 }
 
 void Client::on(Connected) noexcept {
-    urgentReconnect = false;
     setSearchBlocked(false);
     updateActivity();
     ip = sock->getIp();
@@ -151,8 +151,23 @@ void Client::on(Connected) noexcept {
 }
 
 void Client::disconnect(bool graceLess) {
-    if(sock)
-        sock->disconnect(graceLess);
+    if(!graceLess) {
+        // Protocol/hub close: socket Failed carries the reason + reconnect logic.
+        if(sock)
+            sock->disconnect(false);
+        return;
+    }
+    // UI/user leave (Reconnect uses its own path). Graceless socket disconnect
+    // suppresses Failed, so tear down here. Empty reason → no "Fail:" status.
+    setAutoReconnect(false);
+    urgentReconnect = false;
+    updateCounts(true);
+    if(sock) {
+        sock->removeListener(this);
+        BufferedSocket::putSocket(sock);
+        sock = 0;
+    }
+    on(Failed(), Util::emptyString);
 }
 
 bool Client::handleRedirect(const string& targetUrl) {

@@ -28,6 +28,20 @@
 
 namespace dcpp {
 
+namespace {
+
+bool isHubBan(const string& text) {
+    return Util::findSubString(text, "banned") != string::npos
+        || Util::findSubString(text, "забанен") != string::npos;
+}
+
+void stopOnBan(Client& c, const string& text) {
+    if(isHubBan(text))
+        c.setAutoReconnect(false);
+}
+
+} // namespace
+
 void NmdcHub::onLine(const string& aLine) noexcept {
     if(aLine.empty())
         return;
@@ -43,15 +57,13 @@ void NmdcHub::onLine(const string& aLine) noexcept {
     }
 
     if(aLine[0] != '$') {
-        if(state != STATE_NORMAL && Util::findSubString(aLine, "banned") != string::npos)
-            setAutoReconnect(false);
-
         string line = toUtf8(aLine);
         if(line[0] != '<') {
             const string text = unescape(line);
             // Corrupted framing or embedded protocol (e.g. nulls + "$Search …") — drop.
             if(hasControlChars(text) || text.find("$Search") != string::npos)
                 return;
+            stopOnBan(*this, text);
             stopInfectedConnect(text);
             noteSecureCtmRejected(text);
             noteSearchDenied(*this, text);
@@ -65,7 +77,9 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             // Malformed "<…$Search…" with no nick close — was shown as status.
             if(hasControlChars(line) || line.find('$') != string::npos)
                 return;
-            fire(ClientListener::StatusMessage(), this, unescape(line));
+            const string text = unescape(line);
+            stopOnBan(*this, text);
+            fire(ClientListener::StatusMessage(), this, text);
             return;
         }
 
@@ -73,7 +87,9 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         if(!isNickLike(nick))
             return;
         if((line.length() - 1) <= i) {
-            fire(ClientListener::StatusMessage(), this, unescape(line));
+            const string text = unescape(line);
+            stopOnBan(*this, text);
+            fire(ClientListener::StatusMessage(), this, text);
             return;
         }
 
@@ -88,6 +104,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
         }
 
         string body = unescape(message);
+        stopOnBan(*this, body);
         stopInfectedConnect(body, nick);
         noteSecureCtmRejected(body);
         // Rate-limit text is specific; honor it from any nick (hub scripts vary).

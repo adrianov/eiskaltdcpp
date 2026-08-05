@@ -98,9 +98,9 @@ void HubFrame::on(ClientListener::Redirect, Client*, const string &link) noexcep
 }
 
 void HubFrame::on(ClientListener::Failed, Client*, const string &msg) noexcept{
-    QString status = tr("Fail: %1...").arg(_q(msg));
-
-    emit coreStatusMsg(status);
+    // Empty msg = user disconnect/reconnect: still clear users, no Fail status.
+    if(!msg.empty())
+        emit coreStatusMsg(tr("Fail: %1...").arg(_q(msg)));
     emit coreFailed();
     emit coreHubUpdated();
 }
