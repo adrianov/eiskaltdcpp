@@ -133,6 +133,15 @@ void NmdcHub::myInfo(bool alwaysSend) {
 
 void NmdcHub::search(int aSizeType, int64_t aSize, int aFileType, const string& aString, const string&, const StringList&) {
     checkstate();
+    const bool active = !passiveSearch();
+    // Short TTH search ($SA / $SP) when the hub listed TTHS in $Supports.
+    if((supportFlags & SUPPORTS_SEARCH_TTHS) && aFileType == SearchManager::TYPE_TTH) {
+        if(active)
+            send("$SA " + aString + ' ' + getLocalIp() + ':' + SearchManager::getInstance()->getPort() + '|');
+        else
+            send("$SP " + aString + ' ' + fromUtf8(getMyNick()) + '|');
+        return;
+    }
     char c1 = (aSizeType == SearchManager::SIZE_DONTCARE) ? 'F' : 'T';
     char c2 = (aSizeType == SearchManager::SIZE_ATLEAST) ? 'F' : 'T';
     // NMDC has no Audio & Video type; send Any and let the client filter by extensions.
@@ -144,7 +153,7 @@ void NmdcHub::search(int aSizeType, int64_t aSize, int aFileType, const string& 
         tmp[i] = '$';
     }
     string tmp2;
-    if(isActive() && !BOOLSETTING(SEARCH_PASSIVE)) {
+    if(active) {
         tmp2 = getLocalIp() + ':' + SearchManager::getInstance()->getPort();
     } else {
         tmp2 = "Hub:" + fromUtf8(getMyNick());

@@ -83,6 +83,7 @@ void NmdcHub::on(Connected) noexcept {
         return;
     }
     supportFlags = 0;
+    nickRule.reset();
     lastMyInfoA.clear();
     lastMyInfoB.clear();
     lastMyInfoC.clear();

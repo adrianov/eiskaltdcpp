@@ -72,6 +72,7 @@ set(DCPP_EXTRA_SOURCES
     NmdcHubLine.cpp
     NmdcHubLineProfile.cpp
     NmdcHubLineHub.cpp
+    NmdcHubLineExt.cpp
     NmdcHubLineLists.cpp
     NmdcHubConnect.cpp
     AdcHubConnect.cpp

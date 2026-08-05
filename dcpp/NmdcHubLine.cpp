@@ -163,16 +163,15 @@ void NmdcHub::onLine(const string& aLine) noexcept {
             fire(ClientListener::Redirect(), this, param);
     } else if(cmd == "$HubIsFull")
         fire(ClientListener::HubFull(), this);
-    else if(cmd == "$HubTopic") {
-        string line = toUtf8(aLine);
-        line.replace(0, 9, _("Hub topic:"));
-        fire(ClientListener::StatusMessage(), this, unescape(line), ClientListener::FLAG_NORMAL);
-    } else if(cmd == "$ValidateDenide") {
+    else if(cmd == "$ValidateDenide") {
         if(tryAlternateNick())
             return;
         disconnect(false);
         fire(ClientListener::NickTaken(), this);
-    } else if(cmd == "$UserIP" || cmd == "$NickList" || cmd == "$OpList")
+    } else if(cmd == "$HubTopic" || cmd == "$GetHubURL" || cmd == "$SearchRule" ||
+              cmd == "$NickRule" || cmd == "$BadNick")
+        onLineHubExt(cmd, param);
+    else if(cmd == "$UserIP" || cmd == "$NickList" || cmd == "$OpList")
         onLineUserLists(cmd, param);
     else if(cmd == "$To:")
         onLineTo(param);

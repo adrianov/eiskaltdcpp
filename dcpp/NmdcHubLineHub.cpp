@@ -46,6 +46,8 @@ void NmdcHub::onLineHubSetup(const string& cmd, const string& param, const strin
                 supportFlags |= SUPPORTS_USERIP2;
             else if(i == "TLS")
                 supportFlags |= SUPPORTS_TLS;
+            else if(i == "TTHS")
+                supportFlags |= SUPPORTS_SEARCH_TTHS;
         }
     } else if(cmd == "$UserCommand") {
         string::size_type i = 0;
@@ -93,7 +95,11 @@ void NmdcHub::onLineHubSetup(const string& cmd, const string& param, const strin
             lock = lockParam;
 
         if(CryptoManager::getInstance()->isExtended(lock)) {
-            StringList feat = { "UserCommand", "NoGetINFO", "NoHello", "UserIP2", "TTHSearch", "ZPipe0" };
+            // Extra flags match FlylinkDC++ hub $Supports (without proprietary ExtJSON2).
+            StringList feat = {
+                "UserCommand", "NoGetINFO", "NoHello", "UserIP2", "TTHSearch", "ZPipe0",
+                "HubURL", "NickRule", "SearchRule", "HubTopic", "TTHS"
+            };
             if(CryptoManager::getInstance()->TLSOk())
                 feat.push_back("TLS");
 #ifdef WITH_DHT

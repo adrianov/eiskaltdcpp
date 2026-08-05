@@ -19,6 +19,8 @@
 #pragma once
 
 #include <list>
+#include <memory>
+#include <vector>
 
 #include "TimerManager.h"
 #include "SettingsManager.h"
@@ -34,6 +36,8 @@
 namespace dcpp {
 
 using std::list;
+using std::unique_ptr;
+using std::vector;
 
 #ifdef LUA_SCRIPT
 struct NmdcHubScriptInstance : public ScriptInstance {
@@ -86,7 +90,18 @@ private:
         /** Hub rejected $ConnectToMe with TLS "S" port suffix (e.g. some PtokaX). */
         SUPPORTS_NO_SECURE_CTM = 0x08,
         /** Hub $Supports listed TLS — safe to set TLS/NAT bits in $MyINFO. */
-        SUPPORTS_TLS = 0x10
+        SUPPORTS_TLS = 0x10,
+        /** Hub accepts short TTH search $SA / $SP (TTHS). */
+        SUPPORTS_SEARCH_TTHS = 0x20
+    };
+
+    /** Constraints from $NickRule / $BadNick (NMDC NickRule extension). */
+    struct NickRule {
+        unsigned minLen = 0;
+        unsigned maxLen = 0;
+        vector<char> badChars;
+        vector<string> prefixes;
+        void convert(string& nick) const;
     };
 
     mutable CriticalSection cs;
@@ -94,6 +109,7 @@ private:
     unordered_map<string, OnlineUser*, CaseStringHash, CaseStringEq> users;
 
     int supportFlags;
+    unique_ptr<NickRule> nickRule;
 
     uint64_t lastUpdate;
     string lastMyInfoA;
@@ -142,6 +158,15 @@ private:
     void onLineHubSetup(const string& cmd, const string& param, const string& aLine);
     void onLineUserLists(const string& cmd, const string& param);
     void onLineTo(const string& param);
+    void onLineHubExt(const string& cmd, const string& param);
+    void raiseSearchFloor(int seconds);
+    /** True when searches use Hub:nick / $SP (passive mode or SEARCH_PASSIVE). */
+    bool passiveSearch() const;
+    void reconnectForNick();
+    /** Rewrite current nick from nickRule; reconnect if requested and nick changed. */
+    bool applyNickRule(bool reconnectIfChanged);
+    static void fillNickField(NickRule& rule, const string& key, const string& val);
+    static void parseNickFields(NickRule& rule, const string& param);
 
     string checkNick(const string& aNick) override;
 
