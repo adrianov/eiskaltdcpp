@@ -29,8 +29,15 @@ public:
     /** True when the online user's reported share size matches cached metadata. */
     static bool matchesShare(const UserPtr& user);
     static bool matchesUserShare(const HintedUser& user, const string& listBase);
-    /** False when the list has no File/Directory XML tags (or is unparseable). */
+    /**
+     * Parse a list file. Returns false if unreadable; when true, hasEntries is set from
+     * File/Directory XML tags (empty stub => false).
+     */
+    static bool tryParseList(const HintedUser& user, const string& listPath, bool& hasEntries);
+    /** True when parse succeeds and the list has File/Directory XML tags. */
     static bool listHasEntries(const HintedUser& user, const string& listPath);
+    /** Copy an unreadable list under PATH_USER_LOCAL/BadFileLists/ for research. */
+    static void saveBadList(const string& listPath);
     /** Downloaded XML/XML.BZ2 byte size, or -1 when no size was recorded. */
     static int64_t fileSize(const CID& cid);
     static void saveListMeta(const CID& cid, int64_t shareSize, int64_t fileSize,

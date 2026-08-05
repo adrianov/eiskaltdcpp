@@ -20,10 +20,11 @@
 
 #include "sharebrowser.hh"
 #include <iostream>
+#include <dcpp/ADLSearch.h>
 #include <dcpp/FavoriteManager.h>
+#include <dcpp/ListCache.h>
 #include <dcpp/ShareManager.h>
 #include <dcpp/Text.h>
-#include <dcpp/ADLSearch.h>
 #include "search.hh"
 #include "settingsmanager.hh"
 #include "UserCommandMenu.hh"
@@ -198,8 +199,12 @@ bool ShareBrowser::buildList_gui()
         listing.getRoot()->setName(nick);
 
         if (full) {
-            listing.loadFile(file);
-
+            try {
+                listing.loadFile(file);
+            } catch (const Exception&) {
+                ListCache::saveBadList(file);
+                throw;
+            }
             // Search ADL
             ADLSearchManager::getInstance()->matchListing(listing);
         }

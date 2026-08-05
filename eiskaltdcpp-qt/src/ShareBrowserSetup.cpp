@@ -16,8 +16,9 @@
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
 
-#include "dcpp/ClientManager.h"
 #include "dcpp/ADLSearch.h"
+#include "dcpp/ClientManager.h"
+#include "dcpp/ListCache.h"
 
 #include <QHeaderView>
 #include <QAction>
@@ -144,10 +145,15 @@ void ShareBrowser::save(){
 void ShareBrowser::buildList(){
     try {
         listing.loadFile(file.toStdString());
+    } catch (const Exception &e) {
+        ListCache::saveBadList(file.toStdString());
+        emit die(tr("Share browser error: %1").arg(_q(e.what())));
+        return;
+    }
+    try {
         listing.getRoot()->setName(nick.toStdString());
         ADLSearchManager::getInstance()->matchListing(listing);
-    }
-    catch (const Exception &e){
+    } catch (const Exception &e) {
         emit die(tr("Share browser error: %1").arg(_q(e.what())));
     }
 }

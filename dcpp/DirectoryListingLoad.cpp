@@ -31,7 +31,8 @@ namespace dcpp {
 
 bool DirectoryListing::loadFile(const string& path) {
     string actualPath;
-    if(dcpp::File::getSize(path + ".bz2") != -1) {
+    const string extIn = Util::getFileExt(path);
+    if(Util::stricmp(extIn, ".bz2") != 0 && dcpp::File::getSize(path + ".bz2") != -1) {
         actualPath = path + ".bz2";
     }
 
@@ -62,11 +63,11 @@ string DirectoryListing::loadXML(InputStream& is, bool updating, bool* hasEntrie
 
     SimpleXMLReader(&ll).parse(is, SETTING(MAX_FILELIST_SIZE) ? (size_t)SETTING(MAX_FILELIST_SIZE)*1024*1024 : 0);
 
-    // Drop empty / nest-only complete dirs (keeps Incomplete placeholders).
-    getRoot()->pruneEmptyDirs();
-
     if(hasEntries)
         *hasEntries = ll.hasEntries();
+
+    // Drop empty / nest-only complete dirs (keeps Incomplete placeholders).
+    getRoot()->pruneEmptyDirs();
 
     return ll.getBase();
 }
