@@ -31,6 +31,7 @@ using namespace dcpp;
 
 SideBarView::SideBarView ( QWidget* parent ) : QTreeView(parent), _model(nullptr) {
     installEventFilter(this);
+    viewport()->installEventFilter(this);
 
     _model = new SideBarModel(this);
     
@@ -68,11 +69,25 @@ SideBarView::~SideBarView() {
 }
 
 bool SideBarView::eventFilter ( QObject *obj, QEvent *e) {
-    if (obj == this && e->type() == QEvent::Resize) {
+    if (obj != this && obj != viewport())
+        return QObject::eventFilter(obj, e);
+
+    switch (e->type()) {
+    case QEvent::Resize:
         slotUpdateHeaderSize();
+        break;
+    case QEvent::Show:
+        if (obj == this) {
+            // Hubs are inserted before the dock is mapped. Geometry may already
+            // be set (no Resize on show); width is ready after layout.
+            QMetaObject::invokeMethod(this, "slotUpdateHeaderSize", Qt::QueuedConnection);
+        }
+        break;
+    default:
+        break;
     }
-    
-    return QObject::eventFilter (obj , e);
+
+    return QObject::eventFilter(obj, e);
 }
 
 void SideBarView::activated ( ArenaWidget *awgt ) {
