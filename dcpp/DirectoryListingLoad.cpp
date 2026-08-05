@@ -29,25 +29,27 @@
 
 namespace dcpp {
 
-void DirectoryListing::loadFile(const string& path) {
+bool DirectoryListing::loadFile(const string& path) {
     string actualPath;
     if(dcpp::File::getSize(path + ".bz2") != -1) {
         actualPath = path + ".bz2";
     }
 
     auto ext = Util::getFileExt(actualPath.empty() ? path : actualPath);
+    bool hasEntries = false;
 
     {
         dcpp::File file(actualPath.empty() ? path : actualPath, dcpp::File::READ, dcpp::File::OPEN);
         if(Util::stricmp(ext, ".bz2") == 0) {
             FilteredInputStream<UnBZFilter, false> f(&file);
-            loadXML(f, false);
+            loadXML(f, false, &hasEntries);
         } else if(Util::stricmp(ext, ".xml") == 0) {
-            loadXML(file, false);
+            loadXML(file, false, &hasEntries);
         } else {
             throw Exception(_("Invalid file list extension (must be .xml or .bz2)"));
         }
     }
+    return hasEntries;
 }
 
 string DirectoryListing::updateXML(const string& xml) {
@@ -55,13 +57,16 @@ string DirectoryListing::updateXML(const string& xml) {
     return loadXML(mis, true);
 }
 
-string DirectoryListing::loadXML(InputStream& is, bool updating) {
+string DirectoryListing::loadXML(InputStream& is, bool updating, bool* hasEntries) {
     ListLoader ll(getRoot(), updating);
 
     SimpleXMLReader(&ll).parse(is, SETTING(MAX_FILELIST_SIZE) ? (size_t)SETTING(MAX_FILELIST_SIZE)*1024*1024 : 0);
 
     // Drop empty / nest-only complete dirs (keeps Incomplete placeholders).
     getRoot()->pruneEmptyDirs();
+
+    if(hasEntries)
+        *hasEntries = ll.hasEntries();
 
     return ll.getBase();
 }

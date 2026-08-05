@@ -123,10 +123,11 @@ public:
     DirectoryListing(const HintedUser& aUser);
     ~DirectoryListing();
 
-    void loadFile(const string& path);
+    /** Load list from disk; returns true if it had File/Directory XML elements. */
+    bool loadFile(const string& path);
 
     string updateXML(const std::string&);
-    string loadXML(InputStream& xml, bool updating);
+    string loadXML(InputStream& xml, bool updating, bool* hasEntries = nullptr);
 
     void download(const string& aDir, const string& aTarget, bool highPrio);
     void download(Directory* aDir, const string& aTarget, bool highPrio);

@@ -29,6 +29,7 @@ ListLoader::ListLoader(DirectoryListing::Directory* root, bool aUpdating) :
     base("/"),
     inListing(false),
     updating(aUpdating),
+    sawEntry(false),
     m_is_mediainfo_list(false),
     m_is_first_check_mediainfo_list(false)
 {
@@ -52,6 +53,7 @@ static const string sHIT = "HIT";
 void ListLoader::startTag(const string& name, StringPairList& attribs, bool simple) {
     if(inListing) {
         if(name == sFile) {
+            sawEntry = true;
             const string& n = getAttrib(attribs, sName, 0);
             if(n.empty())
                 return;
@@ -99,6 +101,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 
             cur->files.insert(f);
         } else if(name == sDirectory) {
+            sawEntry = true;
             const string& n = getAttrib(attribs, sName, 0);
             if(n.empty()) {
                 throw SimpleXMLException(_("Directory missing name attribute"));

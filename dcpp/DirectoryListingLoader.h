@@ -32,12 +32,15 @@ public:
     void endTag(const string& name) override;
 
     const string& getBase() const { return base; }
+    /** True when the listing body contained at least one File or Directory tag. */
+    bool hasEntries() const { return sawEntry; }
 
 private:
     DirectoryListing::Directory* cur;
     string base;
     bool inListing;
     bool updating;
+    bool sawEntry;
     bool m_is_mediainfo_list;
     bool m_is_first_check_mediainfo_list;
 };

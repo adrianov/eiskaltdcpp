@@ -29,9 +29,7 @@ public:
     /** True when the online user's reported share size matches cached metadata. */
     static bool matchesShare(const UserPtr& user);
     static bool matchesUserShare(const HintedUser& user, const string& listBase);
-    /** False when the on-disk list is missing or zero bytes. */
-    static bool isPlausibleList(int64_t listSize);
-    /** False when the list parses to no files and no directories (stub / wrong-peer). */
+    /** False when the list has no File/Directory XML tags (or is unparseable). */
     static bool listHasEntries(const HintedUser& user, const string& listPath);
     /** Downloaded XML/XML.BZ2 byte size, or -1 when no size was recorded. */
     static int64_t fileSize(const CID& cid);

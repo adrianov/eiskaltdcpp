@@ -48,16 +48,10 @@ bool ListCache::matchesShare(const UserPtr& user) {
     return ClientManager::getInstance()->getBytesShared(user) == saved;
 }
 
-bool ListCache::isPlausibleList(int64_t listSize) {
-    return listSize > 0;
-}
-
 bool ListCache::listHasEntries(const HintedUser& user, const string& listPath) {
     try {
         DirectoryListing dl(user);
-        dl.loadFile(listPath);
-        const DirectoryListing::Directory* root = dl.getRoot();
-        return root && (!root->files.empty() || !root->directories.empty());
+        return dl.loadFile(listPath);
     } catch(const Exception&) {
         return false;
     }
@@ -69,7 +63,7 @@ bool ListCache::matchesUserShare(const HintedUser& user, const string& listBase)
     const string path = findListFile(listBase);
     if(path.empty())
         return false;
-    return isPlausibleList(File::getSize(path)) && listHasEntries(user, path);
+    return listHasEntries(user, path);
 }
 
 int64_t ListCache::fileSize(const CID& cid) {

@@ -111,9 +111,8 @@ void QueueManager::putDownloadBody(Download* d, bool finished, HintedUserList& g
         const string listName = q->getListName();
         const int64_t listBytes = File::getSize(listName);
         const int64_t share = ClientManager::getInstance()->getBytesShared(d->getUser());
-        if(!ListCache::isPlausibleList(listBytes) ||
-                !ListCache::listHasEntries(d->getHintedUser(), listName)) {
-            // Empty or unparseable stub: drop file and queue item, or DownloadManager loops.
+        if(!ListCache::listHasEntries(d->getHintedUser(), listName)) {
+            // No File/Directory elements after parse: drop file and queue item, or DownloadManager loops.
             try { File::deleteFile(listName); } catch(const Exception&) { }
             LogManager::getInstance()->message(str(F_("%1%: rejected implausible file list (%2% bytes, share %3%)")
                     % ClientManager::getInstance()->getNickOrCid(d->getHintedUser())
