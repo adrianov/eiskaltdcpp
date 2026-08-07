@@ -57,11 +57,14 @@ Client::~Client() {
 }
 
 void Client::shutdown() {
-    if(sock) {
-        // Drop before join so an in-flight Failed cannot re-enter this Client.
-        sock->removeListener(this);
-        BufferedSocket::putSocket(sock);
-        sock = 0;
+    // TimerManager still runs during early ConnectionManager::shutdown(); clear
+    // connected state and sock before join/delete so send/search paths bail out.
+    state = STATE_DISCONNECTED;
+    BufferedSocket* s = sock;
+    sock = 0;
+    if(s) {
+        s->removeListener(this);
+        BufferedSocket::putSocket(s);
     }
 }
 

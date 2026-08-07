@@ -67,6 +67,7 @@ public:
     void blockRetry(const UserPtr& user);
 
     void shutdown();
+    bool isShuttingDown() const { return shuttingDown; }
 
     /** Find a suitable port to listen on, and start doing it */
     void listen();

@@ -120,12 +120,11 @@ void Client::connect() {
 }
 
 void Client::send(const char* aMessage, size_t aLen) {
-    if(!isReady()) {
-        dcassert(0);
+    BufferedSocket* s = sock;
+    if(!isReady() || !s)
         return;
-    }
     updateActivity();
-    sock->write(aMessage, aLen);
+    s->write(aMessage, aLen);
     COMMAND_DEBUG((Util::stricmp(getEncoding(), Text::utf8) != 0 ? Text::toUtf8(aMessage, getEncoding()) : aMessage), DebugManager::HUB_OUT, getIpPort());
 }
 

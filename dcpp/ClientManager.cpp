@@ -81,6 +81,8 @@ void ClientManager::putClient(Client* aClient) {
         Lock l(cs);
         clients.remove(aClient);
     }
+    // shutdown() sets DISCONNECTED; block Second-tick reconnect before delete.
+    aClient->setAutoReconnect(false);
     aClient->shutdown();
     delete aClient;
 }

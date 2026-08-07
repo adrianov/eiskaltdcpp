@@ -34,6 +34,10 @@ struct PartsInfoReqParam{
 };
 
 void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
+    // Hub sockets are torn down while TimerManager is still alive.
+    if(ConnectionManager::getInstance()->isShuttingDown())
+        return;
+
     string searchString;
     SearchManager::TypeModes searchType = SearchManager::TYPE_TTH;
     vector<const PartsInfoReqParam*> params;
