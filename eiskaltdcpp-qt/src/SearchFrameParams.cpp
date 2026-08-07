@@ -15,6 +15,7 @@
 
 #include "dcpp/SettingsManager.h"
 #include "dcpp/SearchResult.h"
+#include "dcpp/ClientManager.h"
 
 using namespace dcpp;
 
@@ -45,12 +46,17 @@ void SearchFrame::getParams(SearchFrame::VarMap &map, const dcpp::SearchResultPt
         map["ISDIR"] = true;
     }
 
-    map["NICK"]    = WulforUtil::getInstance()->getNicks(ptr->getUser()->getCID());
+    const QString hubUrl = _q(ptr->getHubURL());
+    map["NICK"]    = WulforUtil::getInstance()->getNicks(ptr->getUser()->getCID(), hubUrl);
     map["FSLS"]    = ptr->getFreeSlots();
     map["ASLS"]    = ptr->getSlots();
-    map["IP"]      = _q(ptr->getIP());
+    // Hub-relayed NMDC $SR has empty IP; fall back to known identity IP (UserIP).
+    QString ip = _q(ptr->getIP());
+    if (ip.isEmpty())
+        ip = _q(ClientManager::getInstance()->getField(ptr->getUser()->getCID(), ptr->getHubURL(), "I4"));
+    map["IP"]      = ip;
     map["HUB"]     = _q(ptr->getHubName());
-    map["HOST"]    = _q(ptr->getHubURL());
+    map["HOST"]    = hubUrl;
     map["CID"]     = _q(ptr->getUser()->getCID().toBase32());
 }
 

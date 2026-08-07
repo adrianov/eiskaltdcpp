@@ -80,8 +80,6 @@ public:
     /** Drop cached queue flag so the next isQueued() lookup runs again. */
     void clearQueued();
 
-    unsigned count;
-
     QString cid;
 
     bool isDir;

@@ -10,8 +10,53 @@
 #include "SearchModel.h"
 #include "SearchLocalPath.h"
 
+#include <QSet>
+
+namespace {
+
+QString sourceIp(const SearchItem *item) {
+    QString ip = item->data(COLUMN_SF_IP).toString().trimmed();
+    if (ip == QLatin1String("0.0.0.0"))
+        ip.clear();
+    return ip;
+}
+
+/** Distinct sources: same IP once; nick merges with that IP when present, else alone; else CID. */
+int uniqueSourceCount(const SearchItem *item) {
+    QSet<QString> ips;
+    QSet<QString> nicksWithIp;
+    QSet<QString> nicksNoIp;
+    QSet<QString> cidsOnly;
+
+    auto add = [&](const SearchItem *it) {
+        const QString ip = sourceIp(it);
+        const QString nick = it->data(COLUMN_SF_NICK).toString();
+        if (!ip.isEmpty()) {
+            ips.insert(ip);
+            if (!nick.isEmpty())
+                nicksWithIp.insert(nick);
+        } else if (!nick.isEmpty()) {
+            nicksNoIp.insert(nick);
+        } else {
+            cidsOnly.insert(it->cid);
+        }
+    };
+
+    add(item);
+    for (const SearchItem *child : item->childItems)
+        add(child);
+
+    int n = ips.size() + cidsOnly.size();
+    for (const QString &nick : nicksNoIp) {
+        if (!nicksWithIp.contains(nick))
+            ++n;
+    }
+    return n;
+}
+
+} // namespace
+
 SearchItem::SearchItem(const QList<QVariant> &data, SearchItem *parent) :
-    count(0),
     isDir(false),
     itemData(data),
     parentItem(parent)
@@ -26,7 +71,6 @@ SearchItem::~SearchItem()
 
 void SearchItem::appendChild(SearchItem *item) {
     childItems.append(item);
-    count = childItems.size();
 }
 
 SearchItem *SearchItem::child(int row) {
@@ -43,7 +87,7 @@ int SearchItem::columnCount() const {
 
 QVariant SearchItem::data(int column) const {
     if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem)
-        return childItems.size()+1;
+        return uniqueSourceCount(this);
 
     return itemData.value(column);
 }
@@ -60,8 +104,8 @@ int SearchItem::row() const {
 }
 
 bool SearchItem::exists(const QString &user_cid) const {
-    if (childItems.isEmpty())
-        return cid == user_cid;
+    if (cid == user_cid)
+        return true;
 
     for (const auto &child : childItems) {
         if (child->cid == user_cid)

@@ -110,7 +110,7 @@ bool SearchModel::addResult
     parent->appendChild(item);
     endInsertRows();
 
-    // Count column display depends on child count; notify without a full resort.
+    // Count column (unique sources) changed; notify without a full resort.
     if (parentIdx.isValid())
         emit dataChanged(parentIdx, parentIdx);
 
