@@ -52,11 +52,10 @@ void ConnectionManager::blockRetry(const UserPtr& user) {
 
 void ConnectionManager::shutdown() {
     // Idempotent: Qt/GTK/daemon may close peers before destroying hub widgets.
-    if(shuttingDown)
+    if(shuttingDown.exchange(true))
         return;
 
     TimerManager::getInstance()->removeListener(this);
-    shuttingDown = true;
     BufferedSocket::beginShutdown();
     disconnect();
 

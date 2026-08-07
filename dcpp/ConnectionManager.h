@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -67,7 +68,7 @@ public:
     void blockRetry(const UserPtr& user);
 
     void shutdown();
-    bool isShuttingDown() const { return shuttingDown; }
+    bool isShuttingDown() const { return shuttingDown.load(); }
 
     /** Find a suitable port to listen on, and start doing it */
     void listen();
@@ -122,7 +123,7 @@ private:
     Server* server;
     Server* secureServer;
 
-    bool shuttingDown;
+    std::atomic<bool> shuttingDown;
 
     friend class Singleton<ConnectionManager>;
     ConnectionManager();

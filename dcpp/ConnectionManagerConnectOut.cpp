@@ -25,7 +25,7 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
 }
 
 void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, const string& localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, const string& encoding, bool secure) {
-    if(shuttingDown)
+    if(isShuttingDown())
         return;
 
     if(checkHubCCBlock(aServer, aPort, hubUrl))
@@ -68,7 +68,7 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
 }
 
 void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort, const string &localPort, BufferedSocket::NatRoles natRole, const string& aToken, bool secure) {
-    if(shuttingDown)
+    if(isShuttingDown())
         return;
 
     UserConnection* uc = getConnection(false, secure);
