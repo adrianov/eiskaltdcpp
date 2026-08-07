@@ -35,7 +35,7 @@ void SearchModel::removeItem(const SearchItem *item){
 
     beginRemoveRows(parentIndex, row, row);
 
-    p->childItems.removeAt(row);
+    p->removeChild(row);
 
     if (tths.value(item->data(COLUMN_SF_TTH).toString()) == item)
         tths.remove(item->data(COLUMN_SF_TTH).toString());
@@ -50,6 +50,10 @@ void SearchModel::removeItem(const SearchItem *item){
     endRemoveRows();
 
     delete item;
+
+    // Parent Count column (unique sources) changed when a grouped child was removed.
+    if (p != rootItem && parentIndex.isValid())
+        emit dataChanged(parentIndex, parentIndex);
 }
 
 void SearchModel::setFilterRole(int role){

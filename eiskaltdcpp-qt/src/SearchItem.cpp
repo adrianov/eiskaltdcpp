@@ -71,6 +71,12 @@ SearchItem::~SearchItem()
 
 void SearchItem::appendChild(SearchItem *item) {
     childItems.append(item);
+    countChecked = false;
+}
+
+void SearchItem::removeChild(int row) {
+    childItems.removeAt(row);
+    countChecked = false;
 }
 
 SearchItem *SearchItem::child(int row) {
@@ -86,8 +92,13 @@ int SearchItem::columnCount() const {
 }
 
 QVariant SearchItem::data(int column) const {
-    if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem)
-        return uniqueSourceCount(this);
+    if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem) {
+        if (!countChecked) {
+            countCached = uniqueSourceCount(this);
+            countChecked = true;
+        }
+        return countCached;
+    }
 
     return itemData.value(column);
 }

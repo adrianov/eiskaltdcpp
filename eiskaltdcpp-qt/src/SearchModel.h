@@ -63,6 +63,7 @@ public:
     virtual ~SearchItem();
 
     void appendChild(SearchItem *child);
+    void removeChild(int row);
 
     SearchItem *child(int row);
     int childCount() const;
@@ -93,6 +94,8 @@ private:
     mutable QString localCached;
     mutable bool queuedChecked = false;
     mutable bool queuedCached = false;
+    mutable bool countChecked = false;
+    mutable int countCached = 0;
 };
 
 class SearchModel : public QAbstractItemModel
