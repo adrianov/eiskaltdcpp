@@ -33,6 +33,8 @@ void SearchFrame::slotTimer(){
             d->waitingResults = false;
             pushButton_STOP->hide();
             pushButton_SEARCH->show();
+            // ShareIndex may have gained media (list ingest) while results arrived.
+            requeueMissingMedia();
         } else {
             progressBar->setFormat(tr("Searching for %1 ...").arg(d->target));
             progressBar->setValue(static_cast<unsigned>(fraction));

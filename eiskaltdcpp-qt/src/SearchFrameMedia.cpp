@@ -45,3 +45,11 @@ void SearchFrame::applyOptionalColumns()
     h->setSectionHidden(COLUMN_SF_MVIDEO, !d->model->hasVideo());
     h->setSectionHidden(COLUMN_SF_MAUDIO, !d->model->hasAudio());
 }
+
+void SearchFrame::requeueMissingMedia()
+{
+    Q_D(SearchFrame);
+    if (!d->model || !d->mediaEnrich)
+        return;
+    d->mediaEnrich->queue(d->model->missingMediaTths());
+}

@@ -169,4 +169,5 @@ void SearchFrame::slotStopSearch(){
     d->waitingResults = false;
     ShareIndex::getInstance()->cancelSearch();
     ClientManager::getInstance()->cancelSearch((void*)this);
+    requeueMissingMedia();
 }

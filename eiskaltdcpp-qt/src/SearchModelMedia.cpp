@@ -59,6 +59,17 @@ bool SearchModel::hasMedia(const QString &tth) const
             || !item->data(COLUMN_SF_MAUDIO).toString().isEmpty();
 }
 
+QStringList SearchModel::missingMediaTths() const
+{
+    QStringList out;
+    for (auto it = tths.constBegin(); it != tths.constEnd(); ++it) {
+        if (it.key().isEmpty() || !it.value() || hasMedia(it.key()))
+            continue;
+        out << it.key();
+    }
+    return out;
+}
+
 void SearchModel::applyMediaByTth(const QHash<QString, QVariantMap> &media)
 {
     QList<SearchItem*> updated;

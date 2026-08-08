@@ -175,6 +175,8 @@ private:
     void download(const VarMap&);
     /** Hide Bitrate/Resolution/Video/Audio when no result has that field. */
     void applyOptionalColumns();
+    /** Second ShareIndex media pass after the search progress window ends. */
+    void requeueMissingMedia();
     bool contextDownloads(Menu::Action act, const QModelIndexList &list);
     bool contextMoreActions(Menu::Action act, const QModelIndexList &list);
     bool contextUserActions(Menu::Action act, const QModelIndexList &list);

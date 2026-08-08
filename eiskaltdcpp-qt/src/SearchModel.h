@@ -13,6 +13,7 @@
 #include <QHash>
 #include <QList>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 #include "search/SearchItem.h"
@@ -69,6 +70,8 @@ public:
     void applyMediaByTth(const QHash<QString, QVariantMap> &media);
     /** True when the TTH root already has any media field. */
     bool hasMedia(const QString &tth) const;
+    /** File TTHs still missing media (for a late ShareIndex enrich pass). */
+    QStringList missingMediaTths() const;
 
     /** True when any result row has that media field filled. */
     bool hasBitrate() const { return hasBitrate_; }
