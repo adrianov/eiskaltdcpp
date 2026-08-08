@@ -137,16 +137,16 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
     src/SearchFrameMedia.cpp
-    src/SearchLocalPath.cpp
+    src/search/SearchLocalPath.cpp
     src/SearchFileTypes.cpp
-    src/SearchModelSort.cpp
+    src/search/SearchItemSort.cpp
     src/SearchModelAdd.cpp
     src/SearchModelMedia.cpp
     src/SearchModelData.cpp
     src/SearchModelMutate.cpp
     src/SearchModelNav.cpp
     src/SearchProxyModel.cpp
-    src/SearchItem.cpp
+    src/search/SearchItem.cpp
     src/ReciprocalList.cpp
     src/ReciprocalListPeer.cpp
     src/ShareIndexListListener.cpp

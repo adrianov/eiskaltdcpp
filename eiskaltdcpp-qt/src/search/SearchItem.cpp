@@ -7,8 +7,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchModel.h"
-#include "SearchLocalPath.h"
+#include "search/SearchItem.h"
+#include "search/SearchLocalPath.h"
 
 #include <QSet>
 

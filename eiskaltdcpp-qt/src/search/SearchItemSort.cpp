@@ -7,7 +7,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchModel.h"
+#include "search/SearchItem.h"
 #include "NaturalCompareQt.h"
 
 #include <algorithm>

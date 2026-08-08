@@ -7,7 +7,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchLocalPath.h"
+#include "search/SearchLocalPath.h"
 #include "WulforUtil.h"
 
 #include "dcpp/File.h"

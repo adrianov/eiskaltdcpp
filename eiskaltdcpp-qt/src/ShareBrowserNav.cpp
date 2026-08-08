@@ -12,7 +12,7 @@
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
-#include "SearchLocalPath.h"
+#include "search/SearchLocalPath.h"
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/Exception.h"

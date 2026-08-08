@@ -10,7 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
-#include "SearchLocalPath.h"
+#include "search/SearchLocalPath.h"
 #include "WulforUtil.h"
 #include "DownloadToHistory.h"
 #include "ArenaWidgetFactory.h"

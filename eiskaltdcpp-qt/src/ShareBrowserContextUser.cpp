@@ -9,7 +9,7 @@
 
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
-#include "SearchLocalPath.h"
+#include "search/SearchLocalPath.h"
 
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/ClientManager.h"

@@ -10,7 +10,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
-#include "SearchLocalPath.h"
+#include "search/SearchLocalPath.h"
 #include "ShareIndex.h"
 #include "WulforUtil.h"
 
