@@ -7,13 +7,13 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "ShareBrowser.h"
-#include "WulforUtil.h"
-#include "WulforSettings.h"
+#include "sharebrowser/ShareFolderList.h"
 #include "FileBrowserModel.h"
+#include "SearchFileTypes.h"
+#include "WulforUtil.h"
 
 #include <QDateTime>
-#include <QHeaderView>
+#include <QObject>
 
 using namespace dcpp;
 
@@ -35,7 +35,8 @@ QList<QVariant> fileRowData(DirectoryListing::File *file)
 }
 
 void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
-                     DirectoryListing::Directory *dir, quint64 &totalSize)
+                     DirectoryListing::Directory *dir, quint64 &totalSize,
+                     SearchFileTypes::FileTypeCounter *types)
 {
     if (!dir)
         return;
@@ -43,6 +44,8 @@ void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
     const QString path = _q(listing.getPath(dir));
     for (const auto &file : dir->files) {
         totalSize += file->getSize();
+        if (types)
+            types->addFile(_q(file->getName()));
         QList<QVariant> data = fileRowData(file);
         data << path;
         FileBrowserItem *child = new FileBrowserItem(data, listRoot);
@@ -50,96 +53,78 @@ void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
         listRoot->appendChild(child);
     }
     for (const auto &sub : dir->directories)
-        appendFlatFiles(listRoot, listing, sub, totalSize);
+        appendFlatFiles(listRoot, listing, sub, totalSize, types);
+}
+
+void countFileTypes(DirectoryListing::Directory *dir, SearchFileTypes::FileTypeCounter &types)
+{
+    if (!dir)
+        return;
+    for (const auto &file : dir->files)
+        types.addFile(_q(file->getName()));
+    for (const auto &sub : dir->directories)
+        countFileTypes(sub, types);
 }
 
 } // namespace
 
-void ShareBrowser::changeRoot(DirectoryListing::Directory *root){
-    if (!root)
+ShareFolderList::ShareFolderList(FileBrowserModel *model, FileBrowserItem *root)
+    : model_(model)
+    , root_(root)
+{
+}
+
+void ShareFolderList::showFolder(DirectoryListing::Directory *dir)
+{
+    if (!dir || !model_ || !root_)
         return;
 
-    list_model->beginRebuild();
-    current_size = 0;
+    model_->beginRebuild();
+    totalSize_ = 0;
 
-    for (const auto &dir : root->directories) {
-        const quint64 size = dir->getTotalSize(true);
-        current_size += size;
+    for (const auto &sub : dir->directories) {
+        const quint64 size = sub->getTotalSize(true);
+        totalSize_ += size;
         QList<QVariant> data;
-        data << _q(dir->getName()) << WulforUtil::formatBytes(size) << size << "";
-        FileBrowserItem *child = new FileBrowserItem(data, list_root);
-        child->dir = dir;
-        list_root->appendChild(child);
+        data << _q(sub->getName()) << WulforUtil::formatBytes(size) << size << "";
+        FileBrowserItem *child = new FileBrowserItem(data, root_);
+        child->dir = sub;
+        root_->appendChild(child);
     }
 
-    for (const auto &file : root->files) {
-        current_size += file->getSize();
-        FileBrowserItem *child = new FileBrowserItem(fileRowData(file), list_root);
+    for (const auto &file : dir->files) {
+        totalSize_ += file->getSize();
+        FileBrowserItem *child = new FileBrowserItem(fileRowData(file), root_);
         child->file = file;
-        list_root->appendChild(child);
+        root_->appendChild(child);
     }
 
-    list_model->highlightDuplicates();
-    list_model->endRebuild();
-    label_RIGHT->setText(QString(tr("Total size: %1")).arg(WulforUtil::formatBytes(current_size)));
+    model_->highlightDuplicates();
+    model_->endRebuild();
+
+    SearchFileTypes::FileTypeCounter types;
+    countFileTypes(dir, types);
+    typeCounts_ = types.format();
 }
 
-void ShareBrowser::changeRootFlat(DirectoryListing::Directory *root){
-    if (!root)
+void ShareFolderList::showFlat(DirectoryListing &listing, DirectoryListing::Directory *dir)
+{
+    if (!dir || !model_ || !root_)
         return;
 
-    list_model->beginRebuild();
-    current_size = 0;
-    appendFlatFiles(list_root, listing, root, current_size);
-    list_model->highlightDuplicates();
-    list_model->endRebuild();
-    label_RIGHT->setText(QString(tr("Total size: %1")).arg(WulforUtil::formatBytes(current_size)));
+    SearchFileTypes::FileTypeCounter types;
+    model_->beginRebuild();
+    totalSize_ = 0;
+    appendFlatFiles(root_, listing, dir, totalSize_, &types);
+    model_->highlightDuplicates();
+    model_->endRebuild();
+    typeCounts_ = types.format();
 }
 
-void ShareBrowser::reloadRightPane(DirectoryListing::Directory *dir){
-    if (!dir)
-        return;
-    if (flatMode)
-        changeRootFlat(dir);
-    else
-        changeRoot(dir);
-}
-
-DirectoryListing::Directory *ShareBrowser::currentDir() {
-    if (treeView_LPANE && treeView_LPANE->selectionModel()) {
-        const QModelIndexList selected = treeView_LPANE->selectionModel()->selectedRows(0);
-        if (selected.size() == 1) {
-            const QModelIndex index = treeMapToSource(selected.at(0));
-            if (index.isValid()) {
-                FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
-                if (item && item->dir)
-                    return item->dir;
-            }
-        }
-    }
-
-    // Path bar matches the folder in view when the left selection is empty/multi.
-    if (!lineEdit_PATH->text().isEmpty()) {
-        FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
-        if (item && item->dir)
-            return item->dir;
-    }
-
-    return listing.getRoot();
-}
-
-void ShareBrowser::applyFlatMode(bool on){
-    flatMode = on;
-    frame_2->setVisible(!on);
-    toolButton_BACK->setEnabled(!on);
-    toolButton_FORWARD->setEnabled(!on);
-    toolButton_UP->setEnabled(!on);
-    treeView_RPANE->header()->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
-    reloadRightPane(currentDir());
-    applyViewFiltersNow();
-}
-
-void ShareBrowser::slotFlatToggled(bool on){
-    WBSET(WB_SHARE_FLAT, on);
-    applyFlatMode(on);
+QString ShareFolderList::statusText() const
+{
+    QString s = QObject::tr("Total size: %1").arg(WulforUtil::formatBytes(totalSize_));
+    if (!typeCounts_.isEmpty())
+        s += QLatin1String("; ") + typeCounts_;
+    return s;
 }

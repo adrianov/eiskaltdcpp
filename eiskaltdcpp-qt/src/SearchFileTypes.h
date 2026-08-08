@@ -11,6 +11,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 class QComboBox;
 
@@ -30,5 +31,25 @@ void fillCombo(QComboBox *combo, bool forSearch = true);
  * For custom types (index >= TYPE_LAST), pass the combo item text as typeName.
  */
 QStringList extensionsFor(int typeIndex, const QString &typeName = QString());
+
+/**
+ * Counts files by search category (Audio, Video, … + custom; not Any/Directory/TTH/Audio&Video).
+ * First matching type wins per file.
+ */
+class FileTypeCounter {
+public:
+    FileTypeCounter();
+    void addFile(const QString &fileName);
+    /** Nonzero categories as "Video: 3; Audio: 1". */
+    QString format() const;
+
+private:
+    struct Bucket {
+        QString name;
+        QStringList exts;
+        int count = 0;
+    };
+    QVector<Bucket> buckets;
+};
 
 } // namespace SearchFileTypes

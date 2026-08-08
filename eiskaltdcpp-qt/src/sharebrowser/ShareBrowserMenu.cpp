@@ -7,7 +7,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "ShareBrowser.h"
+#include "sharebrowser/ShareBrowserMenu.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "MainWindow.h"
@@ -18,39 +18,40 @@
 #include <QAction>
 #include <QCursor>
 #include <QDir>
+#include <QObject>
 
 using namespace dcpp;
 
-ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
+ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
 {
     WulforUtil *WU = WulforUtil::getInstance();
 
-    rest_menu = new QMenu(tr("Restrictions"));
-    QMenu *magnet_menu = new QMenu(tr("Magnet"), MainWindow::getInstance());
+    rest_menu = new QMenu(QObject::tr("Restrictions"));
+    QMenu *magnet_menu = new QMenu(QObject::tr("Magnet"), MainWindow::getInstance());
 
-    QAction *down    = new QAction(tr("Download"), menu);
+    QAction *down    = new QAction(QObject::tr("Download"), menu);
     down->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
-    down_to = new QMenu(tr("Download to..."));
+    down_to = new QMenu(QObject::tr("Download to..."));
     down_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
     QAction *sep     = new QAction(menu);
-    QAction *alter   = new QAction(tr("Search for alternates"), menu);
+    QAction *alter   = new QAction(QObject::tr("Search for alternates"), menu);
     alter->setIcon(WU->getPixmap(WulforUtil::eiFILEFIND));
-    QAction *copy_name = new QAction(tr("Copy file name"), menu);
+    QAction *copy_name = new QAction(QObject::tr("Copy file name"), menu);
     copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet  = new QAction(tr("Copy magnet"), menu);
+    QAction *magnet  = new QAction(QObject::tr("Copy magnet"), menu);
     magnet->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet_web  = new QAction(tr("Copy web-magnet"), menu);
+    QAction *magnet_web  = new QAction(QObject::tr("Copy web-magnet"), menu);
     magnet_web->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet_info  = new QAction(tr("Properties of magnet"), menu);
+    QAction *magnet_info  = new QAction(QObject::tr("Properties of magnet"), menu);
     magnet_info->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
     QAction *sep1    = new QAction(menu);
-    QAction *add_to_fav = new QAction(tr("Add to favorites"), menu);
+    QAction *add_to_fav = new QAction(QObject::tr("Add to favorites"), menu);
     add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-    QAction *set_rest = new QAction(tr("Add restriction"), rest_menu);
-    QAction *rem_rest = new QAction(tr("Remove restriction"), rest_menu);
-    open_file = new QAction(WU->getPixmap(WulforUtil::eiFILETYPE_UNKNOWN), tr("Open file"), menu);
-    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), menu);
-    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete File"), menu);
+    QAction *set_rest = new QAction(QObject::tr("Add restriction"), rest_menu);
+    QAction *rem_rest = new QAction(QObject::tr("Remove restriction"), rest_menu);
+    open_file = new QAction(WU->getPixmap(WulforUtil::eiFILETYPE_UNKNOWN), QObject::tr("Open file"), menu);
+    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), QObject::tr("Open directory"), menu);
+    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), QObject::tr("Delete File"), menu);
     QAction *sep2    = new QAction(menu);
     QAction *sep3    = new QAction(menu);
     QAction *sep4    = new QAction(menu);
@@ -86,7 +87,7 @@ ShareBrowser::Menu::Menu() : menu(new QMenu(nullptr))
     menu->addActions(QList<QAction*>() << open_file << open_url << sep4 << delete_file);
 }
 
-ShareBrowser::Menu::~Menu(){
+ShareBrowserMenu::~ShareBrowserMenu(){
     delete menu;
     delete rest_menu;
     delete down_to;
@@ -96,7 +97,7 @@ ShareBrowser::Menu::~Menu(){
     down_to = nullptr;
 }
 
-ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, bool treePane,
+ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool treePane,
                                                     bool hasDeletable){
     qDeleteAll(down_to->actions());
     down_to->clear();
@@ -136,7 +137,7 @@ ShareBrowser::Menu::Action ShareBrowser::Menu::exec(const dcpp::UserPtr &user, b
         down_to->addSeparator();
     }
 
-    QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), tr("Browse"), down_to);
+    QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), QObject::tr("Browse"), down_to);
     browse->setIcon(dir_px);
     browse->setData("");
 

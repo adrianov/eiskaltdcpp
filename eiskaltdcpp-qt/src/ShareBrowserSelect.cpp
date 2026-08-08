@@ -37,7 +37,7 @@ void ShareBrowser::slotRightPaneSelChanged(const QItemSelection &, const QItemSe
     if (total_selected > 0)
         status = tr("Selected %1 from %2 items; ").arg(total_selected).arg(shown);
 
-    status += tr("Total size: %1").arg(WulforUtil::formatBytes(current_size));
+    status += totalStatusText();
 
     if (selected_size > 0)
         status += tr("; Selected: %1").arg(WulforUtil::formatBytes(selected_size));

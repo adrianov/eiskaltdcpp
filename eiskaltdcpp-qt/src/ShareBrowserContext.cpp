@@ -39,8 +39,8 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
     else
         list = selected;
 
-    if (!Menu::getInstance())
-        Menu::newInstance();
+    if (!ShareBrowserMenu::getInstance())
+        ShareBrowserMenu::newInstance();
 
     bool hasDeletable = false;
     for (const auto &index : list) {
@@ -58,15 +58,15 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         }
     }
 
-    Menu::Action act = Menu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable);
+    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable);
     QString target = _q(SETTING(DOWNLOAD_DIRECTORY));
 
     switch (act){
-        case Menu::None:
+        case ShareBrowserMenu::None:
         {
             break;
         }
-        case Menu::Download:
+        case ShareBrowserMenu::Download:
         {
             for (const auto &index : list){
                 FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
@@ -79,10 +79,10 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
 
             break;
         }
-        case Menu::DownloadTo:
+        case ShareBrowserMenu::DownloadTo:
         {
             static QString old_target = QDir::homePath();
-            target = Menu::getInstance()->getTarget();
+            target = ShareBrowserMenu::getInstance()->getTarget();
 
             if (!QDir(target).exists() || target.isEmpty())
                 target = QFileDialog::getExistingDirectory(this, tr("Select directory"), old_target);
@@ -115,17 +115,17 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
 
             break;
         }
-        case Menu::Alternates:
-        case Menu::CopyFileName:
-        case Menu::Magnet:
-        case Menu::MagnetWeb:
-        case Menu::MagnetInfo:
-        case Menu::AddToFav:
-        case Menu::AddRestrinction:
-        case Menu::RemoveRestriction:
-        case Menu::OpenFile:
-        case Menu::OpenUrl:
-        case Menu::DeleteFile:
+        case ShareBrowserMenu::Alternates:
+        case ShareBrowserMenu::CopyFileName:
+        case ShareBrowserMenu::Magnet:
+        case ShareBrowserMenu::MagnetWeb:
+        case ShareBrowserMenu::MagnetInfo:
+        case ShareBrowserMenu::AddToFav:
+        case ShareBrowserMenu::AddRestrinction:
+        case ShareBrowserMenu::RemoveRestriction:
+        case ShareBrowserMenu::OpenFile:
+        case ShareBrowserMenu::OpenUrl:
+        case ShareBrowserMenu::DeleteFile:
             contextMoreActions(act, list);
             break;
         default: break;

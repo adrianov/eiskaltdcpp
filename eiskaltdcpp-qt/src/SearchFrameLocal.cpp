@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "SearchFrameLocal.h"
+#include "sharebrowser/AsyncRunner.h"
 #include "SearchFrame.h"
 #include "ShareIndex.h"
 #include "ShareBrowser.h"

@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "FinishedTransfers.h"
+#include "sharebrowser/AsyncRunner.h"
 
 #ifdef USE_QT_SQLITE
 #include <QtSql>

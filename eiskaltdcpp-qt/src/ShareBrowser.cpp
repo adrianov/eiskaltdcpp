@@ -35,45 +35,16 @@
 
 #include <QtConcurrent>
 
+#include "sharebrowser/AsyncRunner.h"
+
 using namespace dcpp;
-
-AsyncRunner::AsyncRunner(QObject *parent): QThread(parent){
-
-}
-
-AsyncRunner::~AsyncRunner()
-{
-    // QThread::~QThread() aborts if the thread is still running.
-    if (isRunning()) {
-        quit();
-        wait(5000);
-        if (isRunning())
-            terminate();
-        wait(1000);
-    }
-}
-
-void AsyncRunner::run(){
-    runFunc();
-}
-
-void AsyncRunner::setRunFunction(const std::function<void()> &f){
-    runFunc = f;
-}
 
 ShareBrowser::ShareBrowser(UserPtr _user, const QString &_file, const QString &_jump_to):
         QWidget(MainWindow::getInstance()),
-        proxy(nullptr),
         file(_file),
         jump_to(_jump_to),
         listing(HintedUser(_user, "")),
-        user(_user),
-        current_size(0),
-        tree_model(nullptr),
-        list_model(nullptr),
-        tree_root(nullptr),
-        list_root(nullptr)
-
+        user(_user)
 {
     nick = WulforUtil::getInstance()->getNicks(user->getCID());
 
@@ -104,13 +75,14 @@ ShareBrowser::ShareBrowser(UserPtr _user, const QString &_file, const QString &_
  }
 
 ShareBrowser::~ShareBrowser(){
+    delete folderList;
     delete tree_model;
     delete list_model;
     delete arena_menu;
 
     pathHistory.clear();
 
-    Menu::deleteInstance();
+    ShareBrowserMenu::deleteInstance();
 
 #if (HAVE_MALLOC_TRIM)
     malloc_trim(0);

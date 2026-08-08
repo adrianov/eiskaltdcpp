@@ -16,6 +16,7 @@
 #include "dcpp/SettingsManager.h"
 
 #include <QComboBox>
+#include <QFileInfo>
 
 using namespace dcpp;
 
@@ -89,6 +90,46 @@ QStringList extensionsFor(int typeIndex, const QString &typeName) {
     catch (const SearchTypeException&) {
     }
     return QStringList();
+}
+
+FileTypeCounter::FileTypeCounter() {
+    auto add = [this](int typeId, const QString &name) {
+        const QStringList exts = extensionsFor(typeId, name);
+        if (!exts.isEmpty())
+            buckets.push_back({name, exts, 0});
+    };
+
+    for (int i = SearchManager::TYPE_AUDIO; i < SearchManager::TYPE_DIRECTORY; ++i)
+        add(i, _q(SearchManager::getTypeStr(i)));
+    add(SearchManager::TYPE_CD_IMAGE, _q(SearchManager::getTypeStr(SearchManager::TYPE_CD_IMAGE)));
+
+    for (const auto &entry : SettingsManager::getInstance()->getSearchTypes()) {
+        const string &type = entry.first;
+        if (type.size() == 1 && type[0] >= '1' && type[0] <= '7')
+            continue;
+        add(SearchManager::TYPE_LAST, _q(type));
+    }
+}
+
+void FileTypeCounter::addFile(const QString &fileName) {
+    const QString ext = QFileInfo(fileName).suffix().toUpper();
+    if (ext.isEmpty())
+        return;
+    for (Bucket &b : buckets) {
+        if (b.exts.contains(ext, Qt::CaseInsensitive)) {
+            ++b.count;
+            return;
+        }
+    }
+}
+
+QString FileTypeCounter::format() const {
+    QStringList parts;
+    for (const Bucket &b : buckets) {
+        if (b.count > 0)
+            parts << QString("%1: %2").arg(b.name).arg(b.count);
+    }
+    return parts.join(QLatin1String("; "));
 }
 
 } // namespace SearchFileTypes

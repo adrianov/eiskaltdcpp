@@ -11,108 +11,46 @@
 
 #include <QWidget>
 #include <QMenu>
-#include <QAction>
-#include <QMap>
 #include <QItemSelectionModel>
-#include <QThread>
 #include <QCloseEvent>
+#include <QVector>
 
 #include "ArenaWidget.h"
 #include "WulforUtil.h"
 #include "ui_UIShareBrowser.h"
 #include "FileBrowserFilterProxy.h"
+#include "sharebrowser/ShareBrowserMenu.h"
+#include "sharebrowser/ShareFolderList.h"
 
 #include "dcpp/stdinc.h"
-#include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
 #include "dcpp/DirectoryListing.h"
-#include "dcpp/Singleton.h"
-
-class MainWindow;
 
 class FileBrowserModel;
 class FileBrowserItem;
-class ShareBrowser;
-
 class QModelIndex;
 
-class AsyncRunner: public QThread{
-Q_OBJECT
-public:
-    AsyncRunner(QObject * = nullptr);
-    virtual ~AsyncRunner();
-
-    virtual void run();
-
-    void setRunFunction(const std::function<void()> &f);
-
-private:
-    std::function<void()> runFunc;
-};
-
-class ShareBrowser : public  QWidget,
-                     public  ArenaWidget,
+class ShareBrowser : public QWidget,
+                     public ArenaWidget,
                      private Ui::UIShareBrowser
 {
     Q_OBJECT
     Q_INTERFACES(ArenaWidget)
 
-    class Menu : public dcpp::Singleton<Menu>{
-
-    friend class dcpp::Singleton<Menu>;
-
-    public:
-        enum Action {
-            Download=0,
-            DownloadTo,
-            Alternates,
-            CopyFileName,
-            Magnet,
-            MagnetWeb,
-            MagnetInfo,
-            AddToFav,
-            AddRestrinction,
-            RemoveRestriction,
-            OpenFile,
-            OpenUrl,
-            DeleteFile,
-            None
-        };
-
-        Action exec(const dcpp::UserPtr& = dcpp::UserPtr(nullptr), bool treePane = false,
-                    bool hasDeletable = false);
-
-        QString getTarget() { return target; }
-
-    private:
-        Menu();
-        virtual ~Menu();
-
-        QMap<QAction*, Action> actions;
-        QMenu *menu;
-        QMenu *down_to;
-        QMenu *rest_menu;
-        QString target;
-        QAction *open_file;
-        QAction *open_url;
-        QAction *delete_file;
-    };
-
 public:
     ShareBrowser(dcpp::UserPtr, const QString &, const QString &);
-    virtual ~ShareBrowser();
+    ~ShareBrowser() override;
 
-    QString  getArenaTitle();
-    QString  getArenaShortTitle();
-    QWidget *getWidget();
-    QMenu   *getMenu();
-    const QPixmap &getPixmap(){ return WICON(WulforUtil::eiOWN_FILELIST); }
-    void requestFilter() {}
-    ArenaWidget::Role role() const { return ArenaWidget::ShareBrowser; }
+    QString  getArenaTitle() override;
+    QString  getArenaShortTitle() override;
+    QWidget *getWidget() override;
+    QMenu   *getMenu() override;
+    const QPixmap &getPixmap() override { return WICON(WulforUtil::eiOWN_FILELIST); }
+    ArenaWidget::Role role() const override { return ArenaWidget::ShareBrowser; }
 
 protected:
-    virtual void closeEvent(QCloseEvent *);
-    virtual bool eventFilter(QObject *, QEvent *);
+    void closeEvent(QCloseEvent *) override;
+    bool eventFilter(QObject *, QEvent *) override;
 
 Q_SIGNALS:
     void die(const QString &msg);
@@ -149,8 +87,8 @@ private:
 
     void download(dcpp::DirectoryListing::Directory*, const QString &);
     void download(dcpp::DirectoryListing::File*, const QString &);
-    void contextMoreActions(Menu::Action act, const QModelIndexList &list);
-    void contextUserActions(Menu::Action act, const QModelIndexList &list);
+    void contextMoreActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
+    void contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void deleteOwnItems(const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
@@ -161,6 +99,7 @@ private:
 
     void readSizeFilter(quint64 &size, int &mode) const;
     void applyViewFiltersNow();
+    QString totalStatusText() const;
 
     QModelIndex treeMapToSource(const QModelIndex &index) const;
     QModelIndex treeMapFromSource(const QModelIndex &index) const;
@@ -175,15 +114,15 @@ private:
         QModelIndex index;
     };
 
-    QMenu *arena_menu;
+    QMenu *arena_menu = nullptr;
 
-    FileBrowserFilterProxy *proxy;
-    FileBrowserFilterProxy *tree_proxy;
+    FileBrowserFilterProxy *proxy = nullptr;
+    FileBrowserFilterProxy *tree_proxy = nullptr;
     bool viewFilterPending = false;
     bool flatMode = false;
 
-    QVector <SelPair>::iterator pathHistory_iter;
-    QVector <SelPair> pathHistory;
+    QVector<SelPair>::iterator pathHistory_iter;
+    QVector<SelPair> pathHistory;
 
     QString nick;
     QString file;
@@ -191,10 +130,10 @@ private:
     QString jump_to;
     dcpp::DirectoryListing listing;
     dcpp::UserPtr user;
-    quint64 current_size;
 
-    FileBrowserModel *tree_model;
-    FileBrowserModel *list_model;
-    FileBrowserItem  *tree_root;
-    FileBrowserItem  *list_root;
+    FileBrowserModel *tree_model = nullptr;
+    FileBrowserModel *list_model = nullptr;
+    FileBrowserItem  *tree_root = nullptr;
+    FileBrowserItem  *list_root = nullptr;
+    ShareFolderList  *folderList = nullptr;
 };

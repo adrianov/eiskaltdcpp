@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "ShareIndexQueueCore.h"
+#include "sharebrowser/AsyncRunner.h"
 #include "ShareBrowser.h"
 
 #ifdef USE_QT_SQLITE

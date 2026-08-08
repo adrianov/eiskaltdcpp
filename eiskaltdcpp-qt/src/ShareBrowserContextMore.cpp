@@ -21,10 +21,10 @@
 
 using namespace dcpp;
 
-void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &list)
+void ShareBrowser::contextMoreActions(ShareBrowserMenu::Action act, const QModelIndexList &list)
 {
     switch (act){
-        case Menu::Alternates:
+        case ShareBrowserMenu::Alternates:
         {
             for (const auto &index : list){
                 FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
@@ -41,7 +41,7 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::CopyFileName:
+        case ShareBrowserMenu::CopyFileName:
         {
             QString names;
 
@@ -60,7 +60,7 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::Magnet:
+        case ShareBrowserMenu::Magnet:
         {
             QString magnets = "";
             QString path, tth, magnet;
@@ -85,7 +85,7 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::MagnetWeb:
+        case ShareBrowserMenu::MagnetWeb:
         {
             QString magnets = "";
             QString path, tth, magnet;
@@ -110,7 +110,7 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::MagnetInfo:
+        case ShareBrowserMenu::MagnetInfo:
         {
             QString path, tth, magnet;
             qlonglong size;
@@ -133,12 +133,12 @@ void ShareBrowser::contextMoreActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::AddToFav:
-        case Menu::AddRestrinction:
-        case Menu::RemoveRestriction:
-        case Menu::OpenFile:
-        case Menu::OpenUrl:
-        case Menu::DeleteFile:
+        case ShareBrowserMenu::AddToFav:
+        case ShareBrowserMenu::AddRestrinction:
+        case ShareBrowserMenu::RemoveRestriction:
+        case ShareBrowserMenu::OpenFile:
+        case ShareBrowserMenu::OpenUrl:
+        case ShareBrowserMenu::DeleteFile:
             contextUserActions(act, list);
             break;
         default: break;

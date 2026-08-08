@@ -50,17 +50,17 @@ StringList localPaths(DirectoryListing &listing, FileBrowserItem *item)
 
 } // namespace
 
-void ShareBrowser::contextUserActions(Menu::Action act, const QModelIndexList &list)
+void ShareBrowser::contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list)
 {
     switch (act){
-        case Menu::AddToFav:
+        case ShareBrowserMenu::AddToFav:
         {
             if (user && user != ClientManager::getInstance()->getMe())
                 FavoriteManager::getInstance()->addFavoriteUser(user);
 
             break;
         }
-        case Menu::AddRestrinction:
+        case ShareBrowserMenu::AddRestrinction:
         {
             bool ok = false;
             unsigned share_sz = QInputDialog::getInt(this, tr("Enter restriction size (in GB)"), "Size", 0, 0, 1024, 1, &ok);
@@ -75,7 +75,7 @@ void ShareBrowser::contextUserActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::RemoveRestriction:
+        case ShareBrowserMenu::RemoveRestriction:
         {
             for (const QModelIndex &index : list) {
                 QModelIndex idx = index;
@@ -84,10 +84,10 @@ void ShareBrowser::contextUserActions(Menu::Action act, const QModelIndexList &l
 
             break;
         }
-        case Menu::OpenFile:
-        case Menu::OpenUrl:
+        case ShareBrowserMenu::OpenFile:
+        case ShareBrowserMenu::OpenUrl:
         {
-            const bool reveal = (act == Menu::OpenUrl);
+            const bool reveal = (act == ShareBrowserMenu::OpenUrl);
             for (const auto &index : list) {
                 FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
                 if (!item)
@@ -102,7 +102,7 @@ void ShareBrowser::contextUserActions(Menu::Action act, const QModelIndexList &l
             }
             break;
         }
-        case Menu::DeleteFile:
+        case ShareBrowserMenu::DeleteFile:
             deleteOwnItems(list);
             break;
         default: break;

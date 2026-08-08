@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "ShareBrowser.h"
+#include "sharebrowser/AsyncRunner.h"
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
