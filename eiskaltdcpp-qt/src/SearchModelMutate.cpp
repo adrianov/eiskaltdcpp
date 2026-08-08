@@ -21,6 +21,7 @@ void SearchModel::clearModel(){
     rootItem->clearChildren();
     tths.clear();
     dirs.clear();
+    hasBitrate_ = hasResolution_ = hasVideo_ = hasAudio_ = false;
     endResetModel();
 }
 

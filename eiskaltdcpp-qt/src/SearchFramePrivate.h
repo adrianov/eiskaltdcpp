@@ -20,6 +20,7 @@
 #include "SearchFrame.h"
 #include "SearchModel.h"
 #include "SearchProxyModel.h"
+#include "MediaEnrichQueue.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Client.h"
@@ -73,8 +74,5 @@ public:
     /** True while a queued view-filter apply is waiting to run. */
     bool viewFilterPending = false;
 
-    /** TTHs waiting for ShareIndex media lookup (coalesced off the add path). */
-    QStringList pendingMediaTths;
-    bool mediaEnrichPending = false;
-    bool mediaEnrichBusy = false;
+    MediaEnrichQueue *mediaEnrich = nullptr;
 };

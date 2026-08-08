@@ -124,6 +124,7 @@ void SearchFrame::load(){
     Q_D(SearchFrame);
 
     WulforUtil::restoreTreeHeader(treeView_RESULTS->header(), QByteArray::fromBase64(WSGET(WS_SEARCH_STATE).toUtf8()));
+    applyOptionalColumns();
     treeView_RESULTS->setSortingEnabled(true);
 
     d->filterShared = static_cast<SearchFrame::AlreadySharedAction>(WIGET(WI_SEARCH_SHARED_ACTION));

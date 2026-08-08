@@ -81,11 +81,12 @@ void SearchFrame::slotClear(){
     if (d->resultFlush)
         d->resultFlush->stop();
     d->pendingResults.clear();
-    d->pendingMediaTths.clear();
-    d->mediaEnrichPending = false;
+    if (d->mediaEnrich)
+        d->mediaEnrich->clearPending();
 
     treeView_RESULTS->clearSelection();
     d->model->clearModel();
+    applyOptionalColumns();
     lineEdit_SEARCHSTR->clear();
     lineEdit_SIZE->setText("");
 

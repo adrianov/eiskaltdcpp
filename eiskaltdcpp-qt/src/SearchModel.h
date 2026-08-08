@@ -70,6 +70,12 @@ public:
     /** True when the TTH root already has any media field. */
     bool hasMedia(const QString &tth) const;
 
+    /** True when any result row has that media field filled. */
+    bool hasBitrate() const { return hasBitrate_; }
+    bool hasResolution() const { return hasResolution_; }
+    bool hasVideo() const { return hasVideo_; }
+    bool hasAudio() const { return hasAudio_; }
+
 public Q_SLOTS:
     bool addResultPtr(const VarMap&);
 
@@ -84,6 +90,10 @@ private:
     QHash<QString, SearchItem*> tths;
     /** Directories grouped by path + name (same manner as TTH for files). */
     QHash<QString, SearchItem*> dirs;
+    bool hasBitrate_ = false;
+    bool hasResolution_ = false;
+    bool hasVideo_ = false;
+    bool hasAudio_ = false;
 
     static QString dirGroupKey(const QString &path, const QString &file);
 };

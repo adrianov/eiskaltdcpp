@@ -28,6 +28,18 @@ void setMedia(SearchItem *item, const QVariantMap &m)
     setText(COLUMN_SF_MAUDIO, "audio");
 }
 
+void noteMediaFlags(const QVariantMap &m, bool &br, bool &wh, bool &video, bool &audio)
+{
+    if (m.value(QStringLiteral("bitrate")).toInt() > 0)
+        br = true;
+    if (!m.value(QStringLiteral("resolution")).toString().isEmpty())
+        wh = true;
+    if (!m.value(QStringLiteral("video")).toString().isEmpty())
+        video = true;
+    if (!m.value(QStringLiteral("audio")).toString().isEmpty())
+        audio = true;
+}
+
 bool isMediaSort(int column)
 {
     return column >= static_cast<int>(COLUMN_SF_BR)
@@ -54,6 +66,7 @@ void SearchModel::applyMediaByTth(const QHash<QString, QVariantMap> &media)
         SearchItem *item = tths.value(it.key());
         if (!item)
             continue;
+        noteMediaFlags(it.value(), hasBitrate_, hasResolution_, hasVideo_, hasAudio_);
         setMedia(item, it.value());
         for (SearchItem *child : item->children())
             setMedia(child, it.value());

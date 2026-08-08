@@ -161,9 +161,7 @@ private Q_SLOTS:
     void setIndexStats(const QString &text);
     void slotDownloadFinished(const QString &tth);
     void slotLocalRefreshAll();
-    /** Drain pending TTHs into one background ShareIndex media lookup. */
-    void flushMediaEnrich();
-    /** Apply packed TTH→media map from a worker thread. */
+    /** Apply packed TTH→media map from MediaEnrichQueue. */
     void applyMediaEnrich(const QVariant &packed);
 
 private:
@@ -175,8 +173,8 @@ private:
     bool getWholeDirParams(VarMap&, SearchItem*);
     void rememberSearch(const QString &s);
     void download(const VarMap&);
-    /** Schedule background media enrich for TTHs (coalesced QueuedConnection). */
-    void queueMediaEnrich(const QStringList &tths);
+    /** Hide Bitrate/Resolution/Video/Audio when no result has that field. */
+    void applyOptionalColumns();
     bool contextDownloads(Menu::Action act, const QModelIndexList &list);
     bool contextMoreActions(Menu::Action act, const QModelIndexList &list);
     bool contextUserActions(Menu::Action act, const QModelIndexList &list);

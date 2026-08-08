@@ -176,7 +176,10 @@ void SearchFrame::addResults(const QList<VarMap> &maps){
         catch (const SearchListException&){}
     }
     d->model->flushDeferredSort();
-    if (!knownMedia.isEmpty())
+    if (!knownMedia.isEmpty()) {
         d->model->applyMediaByTth(knownMedia);
-    queueMediaEnrich(mediaTths);
+        applyOptionalColumns();
+    }
+    if (d->mediaEnrich)
+        d->mediaEnrich->queue(mediaTths);
 }

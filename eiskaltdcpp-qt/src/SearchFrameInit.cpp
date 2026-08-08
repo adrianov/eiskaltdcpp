@@ -36,6 +36,8 @@ void SearchFrame::init(){
     d->str_model = new SearchStringListModel(this);
     d->proxy = new SearchProxyModel(this);
     d->proxy->setSourceModel(d->model);
+    d->mediaEnrich = new MediaEnrichQueue(this);
+    connect(d->mediaEnrich, SIGNAL(ready(QVariant)), this, SLOT(applyMediaEnrich(QVariant)));
 
     frame_FILTER->setVisible(false);
 

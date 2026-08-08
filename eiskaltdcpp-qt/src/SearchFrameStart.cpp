@@ -97,10 +97,11 @@ void SearchFrame::slotStartSearch(){
     if (d->resultFlush)
         d->resultFlush->stop();
     d->pendingResults.clear();
-    d->pendingMediaTths.clear();
-    d->mediaEnrichPending = false;
+    if (d->mediaEnrich)
+        d->mediaEnrich->clearPending();
     treeView_RESULTS->clearSelection();
     d->model->clearModel();
+    applyOptionalColumns();
 
     d->dropped = d->filtered = d->results = 0;
 
