@@ -38,10 +38,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
 
         // Older process may have created share_stage without media columns.
         static const char *stageMedia[] = {
-            "bitrate INTEGER DEFAULT 0",
-            "resolution TEXT DEFAULT ''",
-            "video TEXT DEFAULT ''",
-            "audio TEXT DEFAULT ''"
+            "bitrate INTEGER", "resolution TEXT", "video TEXT", "audio TEXT"
         };
         for (const char *col : stageMedia)
             ShareIndexDb::execOk(con,
@@ -62,6 +59,12 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             const QByteArray u = s.toUtf8();
             app.Append(u.constData(), uint32_t(u.size()));
         };
+        auto appendMediaStr = [&app, &appendStr](const QString &s) {
+            if (s.isEmpty())
+                app.Append(nullptr);
+            else
+                appendStr(s);
+        };
 
         const QString stamp = nowStamp();
         qint64 seq = 0;
@@ -74,6 +77,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
                 continue;
             const QString ext = row.contains("ext") ? sqlText(row.value("ext"))
                                                     : fileExt(name, isDir);
+            const int bitrate = row.value("bitrate").toInt();
 
             app.BeginRow();
             appendStr(cid);
@@ -91,10 +95,13 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             appendStr(sqlText(row.value("ip")));
             app.Append(int32_t(SourceFileList));
             appendStr(stamp);
-            app.Append(int32_t(row.value("bitrate").toInt()));
-            appendStr(sqlText(row.value("resolution")));
-            appendStr(sqlText(row.value("video")));
-            appendStr(sqlText(row.value("audio")));
+            if (bitrate > 0)
+                app.Append(int32_t(bitrate));
+            else
+                app.Append(nullptr);
+            appendMediaStr(sqlText(row.value("resolution")));
+            appendMediaStr(sqlText(row.value("video")));
+            appendMediaStr(sqlText(row.value("audio")));
             app.Append(int64_t(seq++));
             app.EndRow();
         }
@@ -112,7 +119,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             "WHERE u.cid=s.cid AND u.hub_url=s.hub_url",
             "INSERT INTO share_files "
             "SELECT base + row_number() OVER (), tth, size, name, path, ext, name_cf, path_cf, "
-            "bitrate, resolution, video, audio "
+            "NULLIF(bitrate, 0), NULLIF(resolution, ''), NULLIF(video, ''), NULLIF(audio, '') "
             "FROM ("
             "SELECT s.tth, s.size, s.name, s.path, s.ext, s.name_cf, s.path_cf, "
             "s.bitrate, s.resolution, s.video, s.audio, "
@@ -121,19 +128,24 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             "WHERE s.is_dir=0 AND s.tth!='' AND f.file_id IS NULL"
             ") fresh CROSS JOIN (SELECT coalesce(max(file_id), 0) AS base FROM share_files) "
             "WHERE rn = 1",
-            // Fill media on existing files when the listing has it and the row is empty.
+            // Fill empty media only; never copy empty/NULL stage values.
             "UPDATE share_files f SET "
-            "bitrate = CASE WHEN coalesce(f.bitrate,0)=0 THEN s.bitrate ELSE f.bitrate END, "
-            "resolution = CASE WHEN coalesce(f.resolution,'')='' THEN s.resolution ELSE f.resolution END, "
-            "video = CASE WHEN coalesce(f.video,'')='' THEN s.video ELSE f.video END, "
-            "audio = CASE WHEN coalesce(f.audio,'')='' THEN s.audio ELSE f.audio END "
+            "bitrate = CASE WHEN f.bitrate IS NULL AND s.bitrate IS NOT NULL AND s.bitrate>0 "
+            "THEN s.bitrate ELSE f.bitrate END, "
+            "resolution = CASE WHEN coalesce(f.resolution,'')='' AND coalesce(s.resolution,'')!='' "
+            "THEN s.resolution ELSE f.resolution END, "
+            "video = CASE WHEN coalesce(f.video,'')='' AND coalesce(s.video,'')!='' "
+            "THEN s.video ELSE f.video END, "
+            "audio = CASE WHEN coalesce(f.audio,'')='' AND coalesce(s.audio,'')!='' "
+            "THEN s.audio ELSE f.audio END "
             "FROM ("
             "SELECT tth, bitrate, resolution, video, audio FROM ("
             "SELECT s.tth, s.bitrate, s.resolution, s.video, s.audio, "
             "row_number() OVER (PARTITION BY s.tth ORDER BY s.seq) AS rn "
             "FROM share_stage s "
             "WHERE s.is_dir=0 AND s.tth!='' AND "
-            "(s.bitrate>0 OR s.resolution!='' OR s.video!='' OR s.audio!='')"
+            "(coalesce(s.bitrate,0)>0 OR coalesce(s.resolution,'')!='' "
+            "OR coalesce(s.video,'')!='' OR coalesce(s.audio,'')!='')"
             ") WHERE rn=1"
             ") s WHERE f.tth=s.tth",
             "INSERT INTO share_locations "
