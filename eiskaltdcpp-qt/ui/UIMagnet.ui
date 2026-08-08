@@ -178,8 +178,8 @@
      <item>
       <widget class="QPushButton" name="pushButton_DOWNLOAD">
        <property name="toolTip">
-        <string>Adds magnet to download queue. If autosearch for alternatives is enabled
-in options, file will be downloaded without opening search dialog.</string>
+        <string>Adds magnet to download queue. If auto-search for more sources is enabled
+in options, the file downloads without opening the search dialog.</string>
        </property>
        <property name="text">
         <string>Add to queue</string>

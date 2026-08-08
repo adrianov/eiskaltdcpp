@@ -14,15 +14,17 @@
 #include "ConnectionManager.h"
 #include "HashManager.h"
 #include "LogManager.h"
-#include "QueueAutoSearch.h"
 #include "SearchManager.h"
 #include "SettingsManager.h"
+#include "Util.h"
 
 #ifdef WITH_DHT
 #include "dht/IndexManager.h"
 #endif
 
 namespace dcpp {
+
+namespace {
 
 struct PartsInfoReqParam{
     PartsInfo       parts;
@@ -33,13 +35,53 @@ struct PartsInfoReqParam{
     string          udpPort;
 };
 
+bool wasSearched(const StringList& recent, const string& target) {
+    return find(recent.begin(), recent.end(), target) != recent.end();
+}
+
+QueueItem* findSearchCandidate(QueueItem* cand, QueueItem::StringIter start, QueueItem::StringIter end,
+                               const StringList& recent) {
+    for(auto i = start; i != end; ++i) {
+        QueueItem* q = i->second;
+        if(cand && q->isRunning())
+            continue;
+        if(q->isFinished() || q->isSet(QueueItem::FLAG_USER_LIST))
+            continue;
+        if(q->getPriority() == QueueItem::PAUSED || wasSearched(recent, q->getTarget()))
+            continue;
+        cand = q;
+        if(cand->isWaiting())
+            break;
+    }
+    return cand;
+}
+
+/** Next queued file for background TTH source search; updates the recent-target ring. */
+QueueItem* nextAutoSearch(QueueItem::StringMap& queue, StringList& recent) {
+    while(recent.size() >= queue.size() || recent.size() > 30)
+        recent.erase(recent.begin());
+    if(queue.empty())
+        return nullptr;
+
+    auto i = queue.begin();
+    advance(i, (QueueItem::StringMap::size_type)Util::rand((uint32_t)queue.size()));
+
+    QueueItem* cand = findSearchCandidate(nullptr, i, queue.end(), recent);
+    if(!cand || cand->isRunning())
+        cand = findSearchCandidate(cand, queue.begin(), i, recent);
+    if(cand)
+        recent.push_back(cand->getTarget());
+    return cand;
+}
+
+} // namespace
+
 void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
     // Hub sockets are torn down while TimerManager is still alive.
     if(ConnectionManager::getInstance()->isShuttingDown())
         return;
 
     string searchString;
-    SearchManager::TypeModes searchType = SearchManager::TYPE_TTH;
     vector<const PartsInfoReqParam*> params;
     TTHValue* tthPub = NULL;
     {
@@ -78,23 +120,15 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
 #endif
 
         if(BOOLSETTING(AUTO_SEARCH) && (aTick >= nextSearch) && (fileQueue.getSize() > 0)) {
-            const AutoSearchPick pick = QueueAutoSearch::pickAlternating(fileQueue.getQueue(),
-                recent, recentNames, nextAutoSearchTTH);
-            if(pick.item && !pick.query.empty()) {
-                searchString = pick.query;
-                searchType = pick.type;
+            if(QueueItem* qi = nextAutoSearch(fileQueue.getQueue(), autoSearchRecent)) {
+                searchString = qi->getTTH().toBase32();
                 nextSearch = aTick + (SETTING(AUTO_SEARCH_TIME) * 60000);
-                nextAutoSearchTTH = (pick.type != SearchManager::TYPE_TTH);
                 if(BOOLSETTING(REPORT_ALTERNATES)) {
-                    string name = pick.item->getTargetFileName();
+                    string name = qi->getTargetFileName();
                     if(name.empty())
-                        name = pick.item->getTarget();
-                    if(!name.empty()) {
-                        if(pick.type == SearchManager::TYPE_TTH)
-                            LogManager::getInstance()->message(str(F_("Searching TTH alternates for: %1%") % name));
-                        else
-                            LogManager::getInstance()->message(str(F_("Searching filename alternates for: %1%") % name));
-                    }
+                        name = qi->getTarget();
+                    if(!name.empty())
+                        LogManager::getInstance()->message(str(F_("Auto-searching for more sources: %1%") % name));
                 }
             }
         }
@@ -124,9 +158,8 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
     }
 
     if(!searchString.empty())
-        SearchManager::getInstance()->search(searchString, 0, searchType, SearchManager::SIZE_DONTCARE, "auto");
+        SearchManager::getInstance()->search(searchString, 0, SearchManager::TYPE_TTH,
+                SearchManager::SIZE_DONTCARE, "auto");
 }
-
-// NOTE: freedcpp: begin
 
 } // namespace dcpp

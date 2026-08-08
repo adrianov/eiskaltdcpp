@@ -290,7 +290,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>
-                            <property name="tooltip_text" translatable="yes">To start downloading file you need turn on auto search alternatives (Settings/Downloads/Queue)</property>
+                            <property name="tooltip_text" translatable="yes">To download this file, enable auto-search for more sources (Settings → Downloads → Queue)</property>
                             <property name="draw_indicator">True</property>
                             <property name="group">searchRadioButton</property>
                           </object>

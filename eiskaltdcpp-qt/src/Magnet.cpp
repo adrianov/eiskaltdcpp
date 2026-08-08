@@ -55,7 +55,7 @@ Magnet::Magnet(QWidget *parent) :
         pushButton_DOWNLOAD->setToolTip(tr("Run search alternatives manually."));
     }
     else {
-        pushButton_DOWNLOAD->setToolTip(tr("Download file via auto search alternatives"));
+        pushButton_DOWNLOAD->setToolTip(tr("Download via auto-search for more sources"));
     }
     currentAction = (MagnetAction)WIGET(WI_DEF_MAGNET_ACTION);
 

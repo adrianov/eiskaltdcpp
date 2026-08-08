@@ -741,7 +741,7 @@ but not removed from the queue.</string>
             </item>
             <item>
              <property name="text">
-              <string>Automatically search for alternative download locations</string>
+              <string>Automatically search for more download sources</string>
              </property>
              <property name="toolTip">
               <string>Every few minutes, the client will search for files in your
@@ -927,7 +927,7 @@ from the queue either, you must do that manually.</string>
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Interval for auto search alternates (minutes)</string>
+             <string>Auto-search interval (minutes)</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>

@@ -20,13 +20,32 @@
 #include "stdinc.h"
 
 #include "SearchManager.h"
-#include "SearchQuery.h"
 #include "format.h"
 #include "IncomingPortCheck.h"
 #include "LogManager.h"
 #include "ClientManager.h"
 
 namespace dcpp {
+
+namespace {
+
+/** Many hubs reject keyword queries longer than 50 characters. */
+string limitHubSearch(const string& aString, size_t maxLen = 50) {
+    if(aString.size() <= maxLen)
+        return aString;
+
+    size_t cut = aString.rfind(' ', maxLen);
+    if(cut == string::npos)
+        return aString.substr(0, maxLen);
+
+    while(cut > 0 && aString[cut - 1] == ' ')
+        --cut;
+
+    return aString.substr(0, cut);
+}
+
+} // namespace
+
 
 const char* SearchManager::types[TYPE_LAST] = {
     N_("Any"),
@@ -88,14 +107,14 @@ string SearchManager::normalizeWhitespace(const string& aString){
 void SearchManager::search(const string& aName, int64_t aSize, TypeModes aTypeMode /* = TYPE_ANY */, SizeModes aSizeMode /* = SIZE_ATLEAST */, const string& aToken /* = Util::emptyString */, void* aOwner /* = NULL */) {
     string query = normalizeWhitespace(aName);
     if(aTypeMode != TYPE_TTH)
-        query = SearchQuery::limitHubSearch(query);
+        query = limitHubSearch(query);
     ClientManager::getInstance()->search(aSizeMode, aSize, aTypeMode, query, aToken, aOwner);
 }
 
 uint64_t SearchManager::search(StringList& who, const string& aName, int64_t aSize /* = 0 */, TypeModes aTypeMode /* = TYPE_ANY */, SizeModes aSizeMode /* = SIZE_ATLEAST */, const string& aToken /* = Util::emptyString */, const StringList& aExtList, void* aOwner /* = NULL */) {
     string query = normalizeWhitespace(aName);
     if(aTypeMode != TYPE_TTH)
-        query = SearchQuery::limitHubSearch(query);
+        query = limitHubSearch(query);
     return ClientManager::getInstance()->search(who, aSizeMode, aSize, aTypeMode, query, aToken, aExtList, aOwner);
 }
 

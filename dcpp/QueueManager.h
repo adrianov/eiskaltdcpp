@@ -146,11 +146,10 @@ private:
     FileQueue fileQueue;
     UserQueue userQueue;
     DirectoryItem::DirectoryMap directories;
-    StringList recent;
-    StringList recentNames;
+    /** Targets recently used by background TTH auto-search (avoid re-picking too soon). */
+    StringList autoSearchRecent;
     bool dirty;
     uint64_t nextSearch;
-    bool nextAutoSearchTTH;
     StringList protectedFileLists;
 
     static string checkTarget(const string& aTarget, bool checkExsistence);

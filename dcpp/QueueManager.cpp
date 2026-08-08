@@ -30,7 +30,6 @@
 #include "HashManager.h"
 #include "LogManager.h"
 #include "PeerConnectLog.h"
-#include "QueueAutoSearch.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchManager.h"
 #include "SearchResult.h"
@@ -102,8 +101,7 @@ QueueManager::QueueManager() :
     queueFile(Util::getPath(Util::PATH_USER_CONFIG) + "Queue.xml"),
     rechecker(this),
     dirty(true),
-    nextSearch(0),
-    nextAutoSearchTTH(true)
+    nextSearch(0)
 {
     TimerManager::getInstance()->addListener(this);
     SearchManager::getInstance()->addListener(this);

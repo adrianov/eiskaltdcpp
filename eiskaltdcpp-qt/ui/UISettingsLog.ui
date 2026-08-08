@@ -405,7 +405,7 @@ p, li { white-space: pre-wrap; }
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Auto search alternates</string>
+        <string>Auto-search for more sources</string>
        </property>
       </widget>
      </item>
