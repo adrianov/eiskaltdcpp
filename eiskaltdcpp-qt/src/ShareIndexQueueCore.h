@@ -12,13 +12,22 @@
 #include "ShareIndex.h"
 
 #include <QAtomicInt>
+#include <QHash>
 #include <QMutex>
 #include <QQueue>
 
 /** Serialized ShareIndex jobs, including online-user queue matching. */
 namespace ShareIndexWriteQueue {
 
-enum WriteKind { OpenDb, MatchQueue, IngestList, UpsertSearch, RemoveTth, RemoveUser };
+enum WriteKind {
+    OpenDb,
+    MatchQueue,
+    IngestList,
+    UpsertSearch,
+    UpsertMedia,
+    RemoveTth,
+    RemoveUser
+};
 
 struct WriteJob {
     WriteKind kind = IngestList;
@@ -29,6 +38,7 @@ struct WriteJob {
     QString cid;
     QString tth;
     QVariantMap map;
+    QHash<QString, ShareIndex::MediaInfo> media;
     dcpp::UserList users;
 };
 

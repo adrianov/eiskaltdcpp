@@ -105,6 +105,8 @@ public:
         }
     };
     QHash<QString, MediaInfo> mediaByTth(const QStringList &tths);
+    /** Fill empty media fields on existing share_files rows (from a loaded listing). */
+    void upsertMedia(const QHash<QString, MediaInfo> &media);
 
     /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
     struct IndexStats {
@@ -169,6 +171,7 @@ private:
     /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
+    void upsertMediaSync(const QHash<QString, MediaInfo> &media);
     void pruneExcess(duckdb::Connection &con);
     bool removeOrphans(duckdb::Connection &con);
     void refreshEntryCount(duckdb::Connection &con);

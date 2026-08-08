@@ -66,6 +66,9 @@ void ShareIndex::drainWriteQueue()
             case IngestList:
                 ingestListSync(job.user, job.listPath, job.hubUrl, job.nick);
                 break;
+            case UpsertMedia:
+                upsertMediaSync(job.media);
+                break;
             case UpsertSearch: {
                 QList<QVariantMap> maps;
                 maps.append(job.map);

@@ -168,6 +168,8 @@ ShareIndex::mediaByTth(const QStringList &)
     return {};
 }
 
+void ShareIndex::upsertMedia(const QHash<QString, MediaInfo> &) {}
+
 ShareIndex::IndexStats ShareIndex::indexStats() { return {}; }
 
 bool ShareIndex::needsListIngest(const QString &, const QString &) { return false; }

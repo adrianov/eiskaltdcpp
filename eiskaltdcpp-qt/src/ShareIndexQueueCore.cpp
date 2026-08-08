@@ -63,7 +63,9 @@ void dropOldestHubJob()
 
 bool takeNextJob(WriteJob &job)
 {
-    static const WriteKind kOrder[] = { OpenDb, MatchQueue, RemoveTth, IngestList, UpsertSearch };
+    static const WriteKind kOrder[] = {
+        OpenDb, MatchQueue, RemoveTth, IngestList, UpsertMedia, UpsertSearch
+    };
     for (WriteKind kind : kOrder) {
         for (int i = 0; i < writeQueue.size(); ++i) {
             if (writeQueue.at(i).kind == kind) {
