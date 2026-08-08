@@ -52,12 +52,20 @@ void SearchModel::sort(int column, Qt::SortOrder order) {
     emit layoutAboutToBeChanged();
     const QModelIndexList oldIndexes = persistentIndexList();
 
+    const auto sortTree = [this](int col) {
+        rootItem->sortChildren(col, sortOrder);
+        for (SearchItem *group : rootItem->children()) {
+            if (group->childCount() > 1)
+                group->sortChildren(col, sortOrder);
+        }
+    };
+
     try {
-        rootItem->sortChildren(column, order);
+        sortTree(column);
     }
     catch (SearchListException &) {
         sortColumn = COLUMN_SF_FILENAME;
-        rootItem->sortChildren(COLUMN_SF_FILENAME, order);
+        sortTree(COLUMN_SF_FILENAME);
     }
 
     QModelIndexList newIndexes;

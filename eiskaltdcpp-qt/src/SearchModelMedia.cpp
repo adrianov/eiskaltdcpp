@@ -28,6 +28,12 @@ void setMedia(SearchItem *item, const QVariantMap &m)
     setText(COLUMN_SF_MAUDIO, "audio");
 }
 
+bool isMediaSort(int column)
+{
+    return column >= static_cast<int>(COLUMN_SF_BR)
+            && column <= static_cast<int>(COLUMN_SF_MAUDIO);
+}
+
 } // namespace
 
 bool SearchModel::hasMedia(const QString &tth) const
@@ -43,26 +49,32 @@ bool SearchModel::hasMedia(const QString &tth) const
 
 void SearchModel::applyMediaByTth(const QHash<QString, QVariantMap> &media)
 {
+    QList<SearchItem*> updated;
     for (auto it = media.constBegin(); it != media.constEnd(); ++it) {
         SearchItem *item = tths.value(it.key());
         if (!item)
             continue;
-
         setMedia(item, it.value());
         for (SearchItem *child : item->children())
             setMedia(child, it.value());
+        updated.append(item);
+    }
+    if (updated.isEmpty())
+        return;
 
+    if (isMediaSort(sortColumn)) {
+        sort(sortColumn, sortOrder);
+        return;
+    }
+
+    for (SearchItem *item : updated) {
         const QModelIndex parentIdx = createIndexForItem(item);
         if (!parentIdx.isValid())
             continue;
-        const QModelIndex left = index(parentIdx.row(), COLUMN_SF_BR, parentIdx.parent());
-        const QModelIndex right = index(parentIdx.row(), COLUMN_SF_MAUDIO, parentIdx.parent());
-        emit dataChanged(left, right);
-
-        for (int r = 0; r < item->childCount(); ++r) {
-            const QModelIndex cLeft = index(r, COLUMN_SF_BR, parentIdx);
-            const QModelIndex cRight = index(r, COLUMN_SF_MAUDIO, parentIdx);
-            emit dataChanged(cLeft, cRight);
-        }
+        emit dataChanged(index(parentIdx.row(), COLUMN_SF_BR, parentIdx.parent()),
+                         index(parentIdx.row(), COLUMN_SF_MAUDIO, parentIdx.parent()));
+        for (int r = 0; r < item->childCount(); ++r)
+            emit dataChanged(index(r, COLUMN_SF_BR, parentIdx),
+                             index(r, COLUMN_SF_MAUDIO, parentIdx));
     }
 }
