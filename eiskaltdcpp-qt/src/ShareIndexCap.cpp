@@ -90,6 +90,17 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
         setLastError(err);
         return false;
     }
+    // One-shot: empty media was stored as 0/'' — store NULL instead.
+    if (metaValue(con, QStringLiteral("media_null"), 0) < 1) {
+        ShareIndexDb::execOk(con, "UPDATE share_files SET bitrate=NULL WHERE bitrate=0");
+        ShareIndexDb::execOk(con, "UPDATE share_files SET resolution=NULL WHERE resolution=''");
+        ShareIndexDb::execOk(con, "UPDATE share_files SET video=NULL WHERE video=''");
+        ShareIndexDb::execOk(con, "UPDATE share_files SET audio=NULL WHERE audio=''");
+        if (!upsertMeta(con, QStringLiteral("media_null"), 1, &err)) {
+            setLastError(err);
+            return false;
+        }
+    }
     return true;
 }
 

@@ -130,7 +130,7 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             "WHERE rn = 1",
             // Fill empty media only; never copy empty/NULL stage values.
             "UPDATE share_files f SET "
-            "bitrate = CASE WHEN f.bitrate IS NULL AND s.bitrate IS NOT NULL AND s.bitrate>0 "
+            "bitrate = CASE WHEN coalesce(f.bitrate,0)=0 AND s.bitrate IS NOT NULL AND s.bitrate>0 "
             "THEN s.bitrate ELSE f.bitrate END, "
             "resolution = CASE WHEN coalesce(f.resolution,'')='' AND coalesce(s.resolution,'')!='' "
             "THEN s.resolution ELSE f.resolution END, "

@@ -25,10 +25,10 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             "ext TEXT NOT NULL DEFAULT '',"
             "name_cf TEXT NOT NULL,"
             "path_cf TEXT NOT NULL,"
-            "bitrate INTEGER NOT NULL DEFAULT 0,"
-            "resolution TEXT NOT NULL DEFAULT '',"
-            "video TEXT NOT NULL DEFAULT '',"
-            "audio TEXT NOT NULL DEFAULT '',"
+            "bitrate INTEGER,"
+            "resolution TEXT,"
+            "video TEXT,"
+            "audio TEXT,"
             "UNIQUE(tth))", &err)
             || !ShareIndexDb::execOk(con,
             "CREATE TABLE IF NOT EXISTS " + prefix + "share_users ("
@@ -76,12 +76,12 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
         return false;
     }
 
-    // Existing DBs created before media columns.
+    // Existing DBs created before media columns (nullable; empty means NULL).
     static const char *mediaCols[] = {
-        "bitrate INTEGER DEFAULT 0",
-        "resolution TEXT DEFAULT ''",
-        "video TEXT DEFAULT ''",
-        "audio TEXT DEFAULT ''"
+        "bitrate INTEGER",
+        "resolution TEXT",
+        "video TEXT",
+        "audio TEXT"
     };
     const QString table = QString::fromStdString(prefix) + QStringLiteral("share_files");
     for (const char *col : mediaCols) {
@@ -93,6 +93,12 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             return false;
         }
     }
+    // Older creates used NOT NULL DEFAULT 0/''; allow NULL for empty media.
+    static const char *mediaNull[] = { "bitrate", "resolution", "video", "audio" };
+    for (const char *col : mediaNull)
+        ShareIndexDb::execOk(con,
+                QStringLiteral("ALTER TABLE %1 ALTER COLUMN %2 DROP NOT NULL")
+                    .arg(table, QString::fromLatin1(col)).toStdString());
     return true;
 }
 
