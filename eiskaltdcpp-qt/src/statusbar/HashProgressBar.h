@@ -10,9 +10,20 @@
 #pragma once
 
 class QAction;
+class QObject;
 class QProgressBar;
+class QStatusBar;
+class QWidget;
 class HashProgress;
 
-namespace MainWindowHashProgress {
-    void update(QProgressBar *bar, QAction *refreshAction, HashProgress *dialog);
-}
+/** Status-bar gauge for share hashing / file-list refresh. */
+class HashProgressBar {
+public:
+    void build(QWidget *host, QObject *filter);
+    void mount(QStatusBar *bar);
+    void update(QAction *refreshAction, HashProgress *dialog);
+    QProgressBar *widget() const { return bar; }
+
+private:
+    QProgressBar *bar = nullptr;
+};

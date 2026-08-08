@@ -13,16 +13,14 @@
 #include <QActionGroup>
 #include <QDockWidget>
 #include <QHash>
-#include <QLabel>
 #include <QList>
 #include <QMenu>
-#include <QProgressBar>
 
 #include "ArenaWidget.h"
 #include "ToolBar.h"
 #include "LineEdit.h"
-#include "StatusBarLogLabel.h"
 #include "HashProgress.h"
+#include "statusbar/StatusStrip.h"
 
 #ifdef USE_JS
 class ScriptConsole;
@@ -49,14 +47,7 @@ public:
     ToolBar *sBar = nullptr;
 
     LineEdit *searchLineEdit = nullptr;
-    QLabel *statusLabel = nullptr;
-    QLabel *statusSPLabel = nullptr;
-    QLabel *statusDLabel = nullptr;
-    QLabel *statusTRLabel = nullptr;
-    StatusBarLogLabel *msgLabel = nullptr;
-
-    QProgressBar *progressFreeSpace = nullptr;
-    QProgressBar *progressHashing = nullptr;
+    StatusStrip status;
     HashProgress *_progress_dialog = nullptr;
 
     QMenu   *menuFile = nullptr;

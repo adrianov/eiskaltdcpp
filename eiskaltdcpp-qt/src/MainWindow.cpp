@@ -10,8 +10,6 @@
 #include "MainWindow.h"
 #include "Notification.h"
 #include "ShareIndexListListener.h"
-#include "StatusBarLogLabel.h"
-#include "MainWindowHashProgress.h"
 
 #include <stdlib.h>
 #include <string>
@@ -27,13 +25,11 @@
 #include <QMessageBox>
 #include <QClipboard>
 #include <QKeyEvent>
-#include <QProgressBar>
 #include <QFileDialog>
 #include <QRegExp>
 #include <QDir>
 #include <QInputDialog>
 #include <QDockWidget>
-#include <QLabel>
 #include <QShortcut>
 #include <QKeySequence>
 #include <QToolButton>
@@ -78,9 +74,6 @@
 #include "SearchBlacklist.h"
 #include "PmSpamFilter.h"
 #include "QueuedUsers.h"
-#ifdef FREE_SPACE_BAR_C
-#include "extra/freespace.h"
-#endif
 #ifdef USE_JS
 #include "ScriptManagerDialog.h"
 #include "scriptengine/ScriptConsole.h"
@@ -117,7 +110,6 @@ MainWindow::MainWindow (QWidget *parent):
 {
     Q_D(MainWindow);
 
-    d->statusLabel = nullptr;
     d->fBar = nullptr;
     d->sBar = nullptr;
     d->_progress_dialog = nullptr;
@@ -404,14 +396,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e){
     if (e->type() == QEvent::WindowActivate) {
         redrawToolPanel();
     }
-    else if( obj == d->progressHashing && e->type() == QEvent::MouseButtonDblClick ) {
+    else if (obj == d->status.hashWidget() && e->type() == QEvent::MouseButtonDblClick) {
         slotFileHashProgress();
-
         return true;
     }
-    else if (obj == d->progressFreeSpace && e->type() == QEvent::MouseButtonDblClick ){
+    else if (obj == d->status.freeSpaceWidget() && e->type() == QEvent::MouseButtonDblClick) {
         slotFileOpenDownloadDirectory();
-
         return true;
     }
 
@@ -1206,10 +1196,7 @@ void MainWindow::retranslateUi(){
 
         d->toolsIPFilter->setText(tr("IPFilter module"));
 
-        d->toolsHideProgressSpace->setText(tr("Hide free space bar"));
-
-        if (!WBGET(WB_SHOW_FREE_SPACE))
-            d->toolsHideProgressSpace->setText(tr("Show free space bar"));
+        d->status.syncFreeSpaceAction(d->toolsHideProgressSpace);
 
         d->toolsHideLastStatus->setText(tr("Hide last status message"));
 
@@ -1407,65 +1394,16 @@ void MainWindow::newHubFrame(QString address, QString enc){
 void MainWindow::updateStatus(const QMap<QString, QString> &map){
     Q_D(MainWindow);
 
-    if (!d->statusLabel)
+    if (!d->status.ready())
         return;
 
-    QString statsText = map["STATS"];
-    QFontMetrics metrics(d->statusLabel->font());
+    d->status.updateStats(map);
 
-    d->statusLabel->setText(statsText);
-
-    QString speedText = tr("%1/s / %2/s").arg(map["DSPEED"]).arg(map["USPEED"]);
-    QString downText = tr("%1 / %2").arg(map["DOWN"]).arg(map["UP"]);
-
-    d->statusSPLabel->setText(speedText);
-    d->statusDLabel->setText(downText);
-
-    Notification *N = Notification::getInstance();
-    if (N)
+    if (Notification *N = Notification::getInstance())
         N->setToolTip(map["DSPEED"]+tr("/s"), map["USPEED"]+tr("/s"), map["DOWN"], map["UP"]);
-
-    const QMargins margins = d->statusSPLabel->contentsMargins();
-    int boundWidth = margins.left() + margins.right();
-
-    d->statusSPLabel->setFixedWidth(metrics.horizontalAdvance(speedText) > d->statusSPLabel->width()? metrics.horizontalAdvance(speedText) + boundWidth : d->statusSPLabel->width());
-    d->statusDLabel->setFixedWidth(metrics.horizontalAdvance(downText) > d->statusDLabel->width()? metrics.horizontalAdvance(downText) + boundWidth : d->statusDLabel->width());
-
-    if (WBGET(WB_SHOW_FREE_SPACE)) {
-#ifdef FREE_SPACE_BAR_C
-        std::string s = SETTING(DOWNLOAD_DIRECTORY);
-        unsigned long long available = 0;
-        unsigned long long total = 0;
-        if (!s.empty()) {
-            if (FreeSpace::FreeDiscSpace(s, &available, &total) == false) {
-                available = 0;
-                total = 0;
-            }
-        }
-        const QString text = tr("Free %1")
-                .arg(WulforUtil::formatBytes(available));
-
-        const QString tooltip = tr("Free %1 of %2")
-                .arg(WulforUtil::formatBytes(available))
-                .arg(WulforUtil::formatBytes(total));
-
-        const float percent = 100.0f*(total-available)/total;
-        d->progressFreeSpace->setFormat(text);
-        d->progressFreeSpace->setValue(static_cast<unsigned>(percent));
-        d->progressFreeSpace->setToolTip(tooltip);
-
-        if (metrics.horizontalAdvance(text) > d->progressFreeSpace->width()) {
-            d->progressFreeSpace->setFixedWidth(metrics.horizontalAdvance(d->progressFreeSpace->text()) + 40);
-        }
-        else {
-            d->progressFreeSpace->setFixedWidth(d->progressFreeSpace->width());
-        }
-#endif //FREE_SPACE_BAR_C
-    }
 
     if ((Util::getAway() && !d->toolsAwayOn->isChecked()) || (!Util::getAway() && d->toolsAwayOff->isChecked())){
         QAction *act = Util::getAway()? d->toolsAwayOn : d->toolsAwayOff;
-
         act->setChecked(true);
     }
 
@@ -1474,14 +1412,12 @@ void MainWindow::updateStatus(const QMap<QString, QString> &map){
 
 void MainWindow::updateHashProgressStatus() {
     Q_D(MainWindow);
-
-    MainWindowHashProgress::update(d->progressHashing, d->fileRefreshShareHashProgress, progress_dialog());
+    d->status.updateHashing(d->fileRefreshShareHashProgress, progress_dialog());
 }
 
 void MainWindow::setStatusMessage(QString msg){
     Q_D(MainWindow);
-
-    d->msgLabel->setLogMessage(msg, WIGET(WI_STATUSBAR_HISTORY_SZ));
+    d->status.setLogMessage(msg);
 }
 
 void MainWindow::autoconnect(){
@@ -1910,18 +1846,7 @@ void MainWindow::slotHideWindow(){
 
 void MainWindow::slotHideProgressSpace() {
     Q_D(MainWindow);
-
-    if (WBGET(WB_SHOW_FREE_SPACE)) {
-        d->progressFreeSpace->hide();
-        d->toolsHideProgressSpace->setText(tr("Show free space bar"));
-
-        WBSET(WB_SHOW_FREE_SPACE, false);
-    } else {
-        d->progressFreeSpace->show();
-        d->toolsHideProgressSpace->setText(tr("Hide free space bar"));
-
-        WBSET(WB_SHOW_FREE_SPACE, true);
-    }
+    d->status.toggleFreeSpace(d->toolsHideProgressSpace);
 }
 
 void MainWindow::slotHideLastStatus(){

@@ -7,20 +7,43 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "MainWindowHashProgress.h"
+#include "statusbar/HashProgressBar.h"
 #include "AppTheme.h"
 #include "HashProgress.h"
 #include "WulforUtil.h"
 
 #include <QAction>
 #include <QProgressBar>
+#include <QStatusBar>
 
+#include "dcpp/SettingsManager.h"
 #include "dcpp/Util.h"
 
 using namespace dcpp;
 
-void MainWindowHashProgress::update(QProgressBar *bar, QAction *refreshAction, HashProgress *dialog)
+void HashProgressBar::build(QWidget *host, QObject *filter)
 {
+    bar = new QProgressBar(host);
+    bar->setMaximum(100);
+    bar->setMinimum(0);
+    bar->setAlignment(Qt::AlignHCenter);
+    bar->setFixedHeight(18);
+    bar->setToolTip(QObject::tr("Hashing progress"));
+    bar->hide();
+    bar->installEventFilter(filter);
+}
+
+void HashProgressBar::mount(QStatusBar *barHost)
+{
+    if (bar)
+        barHost->addWidget(bar);
+}
+
+void HashProgressBar::update(QAction *refreshAction, HashProgress *dialog)
+{
+    if (!bar)
+        return;
+
     AppTheme::applyProgressBar(bar);
 
     switch (HashProgress::getHashStatus()) {

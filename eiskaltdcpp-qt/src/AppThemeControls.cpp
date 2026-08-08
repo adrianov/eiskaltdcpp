@@ -18,7 +18,12 @@
 #include <QPalette>
 #include <QProgressBar>
 #include <QStyleFactory>
+#include <QVariant>
 #include <QWidget>
+
+namespace {
+constexpr auto kChunkProp = "appThemeChunk";
+}
 
 bool AppTheme::isDark(const QPalette &palette){
     const QColor base = palette.color(QPalette::Base);
@@ -44,9 +49,24 @@ void AppTheme::applyPreferredStyle(){
     qApp->setStyle(QStringLiteral("Fusion"));
 }
 
+void AppTheme::applyProgressBar(QProgressBar *bar, const QColor &chunk){
+    if (!bar)
+        return;
+    bar->setProperty(kChunkProp, QVariant::fromValue(chunk));
+    applyProgressBar(bar);
+}
+
 void AppTheme::applyProgressBar(QProgressBar *bar){
     if (!bar)
         return;
+
+    QColor chunk = linkColor();
+    const QVariant custom = bar->property(kChunkProp);
+    if (custom.canConvert<QColor>()) {
+        const QColor c = custom.value<QColor>();
+        if (c.isValid())
+            chunk = c;
+    }
 
     const QPalette palette = qApp->palette();
     const QString css = QStringLiteral(
@@ -65,7 +85,7 @@ void AppTheme::applyProgressBar(QProgressBar *bar){
         .arg(palette.color(QPalette::Mid).name(),
              palette.color(QPalette::Base).name(),
              palette.color(QPalette::Text).name(),
-             linkColor().name());
+             chunk.name());
 
     if (bar->styleSheet() != css)
         bar->setStyleSheet(css);

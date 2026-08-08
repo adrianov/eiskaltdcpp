@@ -10,75 +10,15 @@
 #include "MainWindow.h"
 #include "MainWindowPrivate.h"
 #include "Notification.h"
-#include "StatusBarLogLabel.h"
 #include "PMWindow.h"
 #include "WulforUtil.h"
-#include "WulforSettings.h"
 #include "VersionGlobal.h"
 
-#include <QFrame>
-#include <QLabel>
-#include <QProgressBar>
 #include <QStatusBar>
 
 void MainWindow::initStatusBar(){
     Q_D(MainWindow);
-
-    d->statusLabel = new QLabel(statusBar());
-    d->statusLabel->setFrameShadow(QFrame::Sunken);
-    d->statusLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    d->statusLabel->setToolTip(tr("Counts"));
-    d->statusLabel->setContentsMargins(0, 0, 0, 0);
-
-    d->statusSPLabel = new QLabel(statusBar());
-    d->statusSPLabel->setFrameShadow(QFrame::Sunken);
-    d->statusSPLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    d->statusSPLabel->setToolTip(tr("Download/Upload speed"));
-    d->statusSPLabel->setContentsMargins(0, 0, 0, 0);
-
-    d->statusDLabel = new QLabel(statusBar());
-    d->statusDLabel->setFrameShadow(QFrame::Sunken);
-    d->statusDLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    d->statusDLabel->setToolTip(tr("Downloaded/Uploaded"));
-    d->statusDLabel->setContentsMargins(0, 0, 0, 0);
-
-    d->msgLabel = new StatusBarLogLabel(statusBar());
-    d->msgLabel->setHeightRef(d->statusLabel);
-
-#if (defined FREE_SPACE_BAR_C)
-    d->progressFreeSpace = new QProgressBar(this);
-    d->progressFreeSpace->setMaximum(100);
-    d->progressFreeSpace->setMinimum(0);
-    d->progressFreeSpace->setAlignment(Qt::AlignHCenter);
-    d->progressFreeSpace->setMinimumWidth(100);
-    d->progressFreeSpace->setMaximumWidth(250);
-    d->progressFreeSpace->setFixedHeight(18);
-    d->progressFreeSpace->setToolTip(tr("Space free"));
-    d->progressFreeSpace->installEventFilter(this);
-
-    if (!WBGET(WB_SHOW_FREE_SPACE))
-        d->progressFreeSpace->hide();
-#else
-    WBSET(WB_SHOW_FREE_SPACE, false);
-#endif
-
-    d->progressHashing = new QProgressBar(this);
-    d->progressHashing->setMaximum(100);
-    d->progressHashing->setMinimum(0);
-    d->progressHashing->setAlignment( Qt::AlignHCenter );
-    d->progressHashing->setFixedHeight(18);
-    d->progressHashing->setToolTip(tr("Hashing progress"));
-    d->progressHashing->hide();
-    d->progressHashing->installEventFilter( this );
-
-    statusBar()->addWidget(d->progressHashing);
-    statusBar()->addWidget(d->msgLabel, 1);
-    statusBar()->addPermanentWidget(d->statusDLabel);
-    statusBar()->addPermanentWidget(d->statusSPLabel);
-    statusBar()->addPermanentWidget(d->statusLabel);
-#if (defined FREE_SPACE_BAR_C)
-    statusBar()->addPermanentWidget(d->progressFreeSpace);
-#endif
+    d->status.build(statusBar(), this, this);
 }
 
 void MainWindow::redrawToolPanel(){

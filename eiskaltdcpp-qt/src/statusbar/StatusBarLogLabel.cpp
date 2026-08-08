@@ -7,7 +7,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "StatusBarLogLabel.h"
+#include "statusbar/StatusBarLogLabel.h"
 #include "WulforUtil.h"
 
 #include <QEvent>

@@ -43,12 +43,14 @@ public:
     static void applyInputPalette(QWidget *widget);
     static void applyControlButton(QAbstractButton *button);
     static void applyProgressBar(QProgressBar *bar);
+    static void applyProgressBar(QProgressBar *bar, const QColor &chunk);
     static void paintControlBorder(QPainter *painter, const QRectF &rect, bool focused);
 
     static QString chatColor(const QString &settingKey);
     /** Prefer preferred when it contrasts with the chat background; else black/white. */
     static QColor readableChatColor(const QColor &preferred);
     static QColor errorColor();
+    static QColor warningColor();
     static QColor successColor();
     static QColor linkColor();
     static QColor sharedFileColor();
