@@ -64,14 +64,17 @@ void HashProgressBar::update(QAction *refreshAction, HashProgress *dialog)
     case HashProgress::DELAYED:
         WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
-        if (SETTING(HASHING_START_DELAY) >= 0) {
-            const int left = SETTING(HASHING_START_DELAY) - Util::getUpTime();
-            bar->setValue(100 * left / SETTING(HASHING_START_DELAY));
-            bar->setFormat(QObject::tr("Delayed"));
-            bar->show();
+        {
+            const int delay = SETTING(HASHING_START_DELAY);
+            if (delay > 0) {
+                const int left = delay - Util::getUpTime();
+                bar->setValue(100 * left / delay);
+                bar->setFormat(QObject::tr("Delayed"));
+                bar->show();
+            } else {
+                bar->hide();
+            }
         }
-        else
-            bar->hide();
         break;
     case HashProgress::PAUSED:
         WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
