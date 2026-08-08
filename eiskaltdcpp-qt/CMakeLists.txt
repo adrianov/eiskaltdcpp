@@ -222,6 +222,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserSelect.cpp
     src/sharebrowser/ShareFolderList.cpp
     src/sharebrowser/ShareMediaState.cpp
+    src/sharebrowser/ListingMediaIndex.cpp
     src/sharebrowser/ShareBrowserList.cpp
     src/sharebrowser/ShareBrowserMedia.cpp
     src/sharebrowser/ShareBrowserMenu.cpp

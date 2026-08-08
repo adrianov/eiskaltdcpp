@@ -16,6 +16,7 @@
 #include "SearchFileTypes.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
+#include "sharebrowser/ListingMediaIndex.h"
 
 #include "dcpp/ADLSearch.h"
 #include "dcpp/ClientManager.h"
@@ -24,6 +25,25 @@
 #include <QAction>
 
 using namespace dcpp;
+
+namespace {
+
+void hideTreeExtraColumns(QHeaderView *h)
+{
+    if (!h)
+        return;
+    h->hideSection(COLUMN_FILEBROWSER_ESIZE);
+    h->hideSection(COLUMN_FILEBROWSER_TTH);
+    h->hideSection(COLUMN_FILEBROWSER_BR);
+    h->hideSection(COLUMN_FILEBROWSER_WH);
+    h->hideSection(COLUMN_FILEBROWSER_MVIDEO);
+    h->hideSection(COLUMN_FILEBROWSER_MAUDIO);
+    h->hideSection(COLUMN_FILEBROWSER_HIT);
+    h->hideSection(COLUMN_FILEBROWSER_TS);
+    h->hideSection(COLUMN_FILEBROWSER_PATH);
+}
+
+} // namespace
 
 void ShareBrowser::init(){
     setupUi(this);
@@ -49,16 +69,7 @@ void ShareBrowser::init(){
     lineEdit_FILTER->installEventFilter(this);
 
     treeView_LPANE->setModel(tree_proxy);
-
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_ESIZE);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TTH);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_BR);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_WH);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MVIDEO);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MAUDIO);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_HIT);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TS);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
+    hideTreeExtraColumns(treeView_LPANE->header());
 
     treeView_LPANE->setExpanded(treeMapFromSource(tree_model->index(0, 0)), true);
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -123,15 +134,7 @@ void ShareBrowser::load(){
     WulforUtil::restoreTreeHeader(treeView_LPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
     WulforUtil::restoreTreeHeader(treeView_RPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_RPANE_STATE).toUtf8()));
 
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_ESIZE);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TTH);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_BR);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_WH);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MVIDEO);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MAUDIO);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_HIT);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TS);
-    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
+    hideTreeExtraColumns(treeView_LPANE->header());
     if (!checkBox_FLAT->isChecked())
         treeView_RPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
 
@@ -162,7 +165,12 @@ void ShareBrowser::buildList(){
         ADLSearchManager::getInstance()->matchListing(listing);
     } catch (const Exception &e) {
         emit die(tr("Share browser error: %1").arg(_q(e.what())));
+        return;
     }
+
+    ListingMediaIndex mediaIndex;
+    mediaIndex.collectFrom(listing.getRoot());
+    mediaIndex.publish(user, file, nick);
 }
 
 void ShareBrowser::initModels(){

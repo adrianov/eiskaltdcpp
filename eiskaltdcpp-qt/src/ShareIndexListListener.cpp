@@ -98,6 +98,8 @@ void ShareIndexListListener::on(QueueManagerListener::Finished, QueueItem *item,
 void ShareIndexListListener::on(QueueManagerListener::ListFromCache, const HintedUser &user,
                                 const std::string &listPath, const std::string &initialDir) noexcept
 {
+    // Same as ListCached: viewing a cached list must index media for Search enrich.
+    enqueueListIngest(user.user, _q(listPath), _q(user.hint));
     emit openShare(user.user, _q(listPath), _q(initialDir));
 }
 
