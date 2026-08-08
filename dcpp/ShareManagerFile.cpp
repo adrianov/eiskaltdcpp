@@ -21,6 +21,7 @@
 
 #include "File.h"
 #include "HashManager.h"
+#include "MediaInfoScan.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
 #include "Text.h"
@@ -158,6 +159,10 @@ void ShareManager::on(QueueManagerListener::FileMoved, const string& realPath) n
 }
 
 void ShareManager::on(HashManagerListener::TTHDone, const string& realPath, const TTHValue& root) noexcept {
+    MediaInfo media;
+    const int64_t size = File::getSize(realPath);
+    mediaInfoFill(realPath, size, root, media);
+
     Lock l(cs);
     Directory::Ptr d = getDirectory(realPath);
     if(d) {
@@ -168,11 +173,13 @@ void ShareManager::on(HashManagerListener::TTHDone, const string& realPath, cons
             // Get rid of false constness...
             auto f = const_cast<Directory::File*>(&(*i));
             f->setTTH(root);
+            f->mediaInfo = media;
             tthIndex.emplace(f->getTTH(), i);
         } else {
             string name = Util::getFileName(realPath);
-            int64_t size = File::getSize(realPath);
-            auto it = d->files.insert(Directory::File(name, size, d, root)).first;
+            Directory::File file(name, size, d, root);
+            file.mediaInfo = media;
+            auto it = d->files.insert(file).first;
             updateIndices(*d, it);
         }
         setDirty();

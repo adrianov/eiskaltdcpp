@@ -31,6 +31,7 @@
 #include "SettingsManager.h"
 #include "HashManagerListener.h"
 #include "QueueManagerListener.h"
+#include "MediaInfo.h"
 
 #include "Exception.h"
 #include "CriticalSection.h"
@@ -143,14 +144,16 @@ private:
         typedef Map::iterator MapIter;
 
         struct File {
-            File() : size(0), parent(0) { }
+            File() : size(0), parent(0), ts(0) { }
             File(const string& aName, int64_t aSize, const Directory::Ptr& aParent, const TTHValue& aRoot) :
-                name(aName), tth(aRoot), size(aSize), parent(aParent.get()) { }
+                name(aName), tth(aRoot), size(aSize), parent(aParent.get()), ts(0) { }
             File(const File& rhs) :
-                name(rhs.getName()), tth(rhs.getTTH()), size(rhs.getSize()), parent(rhs.getParent()) { }
+                name(rhs.getName()), tth(rhs.getTTH()), size(rhs.getSize()), parent(rhs.getParent()),
+                mediaInfo(rhs.mediaInfo), ts(rhs.ts) { }
 
             File& operator=(const File& rhs) {
                 name = rhs.name; size = rhs.size; parent = rhs.parent; tth = rhs.tth;
+                mediaInfo = rhs.mediaInfo; ts = rhs.ts;
                 return *this;
             }
 
@@ -195,6 +198,8 @@ private:
             GETSET(TTHValue, tth, TTH);
             GETSET(int64_t, size, Size);
             GETSET(Directory*, parent, Parent);
+            GETSET(uint32_t, ts, TS);
+            MediaInfo mediaInfo;
         };
 
         int64_t size;

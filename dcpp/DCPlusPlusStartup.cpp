@@ -21,6 +21,7 @@
 #include "FavoriteManager.h"
 #include "FinishedManager.h"
 #include "HashManager.h"
+#include "MediaInfoCache.h"
 #include "ListCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
@@ -66,6 +67,7 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     LogManager::newInstance();
     TimerManager::newInstance();
     HashManager::newInstance();
+    MediaInfoCache::newInstance();
     CryptoManager::newInstance();
     SearchManager::newInstance();
     ClientManager::newInstance();

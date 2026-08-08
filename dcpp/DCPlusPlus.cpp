@@ -22,6 +22,7 @@
 #include "FinishedManager.h"
 #include "HashManager.h"
 #include "IncomingPortCheck.h"
+#include "MediaInfoCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
 #include "PeerConnectHub.h"
@@ -93,6 +94,7 @@ void shutdown() {
     FavoriteManager::deleteInstance();
     ClientManager::deleteInstance();
     HashManager::deleteInstance();
+    MediaInfoCache::deleteInstance();
     LogManager::deleteInstance();
     SettingsManager::deleteInstance();
     TimerManager::deleteInstance();

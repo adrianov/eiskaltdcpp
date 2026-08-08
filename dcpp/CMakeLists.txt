@@ -67,6 +67,8 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerAddUser.cpp
     QueueManagerListeners.cpp
     QueueManagerTarget.cpp
+    MediaInfoScan.cpp
+    MediaInfoCache.cpp
     NmdcHubLine.cpp
     NmdcHubLineProfile.cpp
     NmdcHubLineHub.cpp
@@ -260,6 +262,14 @@ if (XATTR_FOUND)
     set_property(SOURCE ${PROJECT_SOURCE_DIR}/HashManager.cpp
                  PROPERTY COMPILE_DEFINITIONS USE_XATTR APPEND)
 endif (XATTR_FOUND)
+
+if (USE_MEDIAINFO AND MediaInfo_FOUND)
+    include_directories (${MediaInfo_INCLUDE_DIRS})
+    # Homebrew libmediainfo is built with UNICODE (wchar_t String API).
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/MediaInfoScan.cpp
+                 PROPERTY COMPILE_DEFINITIONS USE_MEDIAINFO;UNICODE;_UNICODE APPEND)
+    list (APPEND DCPP_EXTRA_LINK ${MediaInfo_LIBRARIES})
+endif (USE_MEDIAINFO AND MediaInfo_FOUND)
 
 if (USE_MINIUPNP)
     set_property(SOURCE ${PROJECT_SOURCE_DIR}/DCPlusPlusStartup.cpp

@@ -466,6 +466,10 @@ if (USE_QT_SQLITE)
     list (APPEND LIBS ${DuckDB_LIBRARIES})
 endif ()
 
+if (USE_MEDIAINFO AND MediaInfo_FOUND)
+    list (APPEND LIBS ${MediaInfo_LIBRARIES})
+endif ()
+
 include_directories (${PROJECT_SOURCE_DIR}
                      ${PROJECT_SOURCE_DIR}/src
                      ${PROJECT_SOURCE_DIR}/scriptengine
@@ -792,6 +796,46 @@ if (APPLE)
             COMMENT "Bundle libduckdb into ${PROJECT_NAME_GLOBAL}.app"
             VERBATIM)
     endif (USE_QT_SQLITE AND DuckDB_LIBRARY)
+
+    # Embed libmediainfo + libzen (own-list media scan).
+    # Use compatibility install names (libmediainfo.0.dylib), not the versioned REALPATH basename.
+    if (USE_MEDIAINFO AND MediaInfo_LIBRARY AND Zen_LIBRARY)
+        get_filename_component (_MI_REAL "${MediaInfo_LIBRARY}" REALPATH)
+        get_filename_component (_ZEN_REAL "${Zen_LIBRARY}" REALPATH)
+        set (_MI_NAME "libmediainfo.0.dylib")
+        set (_ZEN_NAME "libzen.0.dylib")
+        add_custom_command (TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+                "-DBUNDLE_APP_NAME=${PROJECT_NAME_GLOBAL}"
+                "-DBUNDLE_DYLIB_SRC=${MediaInfo_LIBRARY}"
+                "-DBUNDLE_DYLIB_REAL=${_MI_REAL}"
+                "-DBUNDLE_DYLIB_NAME=${_MI_NAME}"
+                "-DBUNDLE_DYLIB_EXTRA_OLDS=/opt/homebrew/opt/libmediainfo/lib/${_MI_NAME};/usr/local/opt/libmediainfo/lib/${_MI_NAME}"
+                "-DCMAKE_INSTALL_PREFIX=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/.."
+                -P "${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake"
+            COMMAND ${CMAKE_COMMAND}
+                "-DBUNDLE_APP_NAME=${PROJECT_NAME_GLOBAL}"
+                "-DBUNDLE_DYLIB_SRC=${Zen_LIBRARY}"
+                "-DBUNDLE_DYLIB_REAL=${_ZEN_REAL}"
+                "-DBUNDLE_DYLIB_NAME=${_ZEN_NAME}"
+                "-DBUNDLE_DYLIB_EXTRA_OLDS=/opt/homebrew/opt/libzen/lib/${_ZEN_NAME};/usr/local/opt/libzen/lib/${_ZEN_NAME}"
+                "-DCMAKE_INSTALL_PREFIX=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/.."
+                -P "${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake"
+            COMMAND install_name_tool -change
+                "/opt/homebrew/opt/libzen/lib/libzen.0.dylib"
+                "@executable_path/../Frameworks/${_ZEN_NAME}"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
+            COMMAND install_name_tool -change
+                "/usr/local/opt/libzen/lib/libzen.0.dylib"
+                "@executable_path/../Frameworks/${_ZEN_NAME}"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
+            COMMAND codesign --remove-signature
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
+            COMMAND codesign -s - --force --deep
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
+            COMMENT "Bundle libmediainfo into ${PROJECT_NAME_GLOBAL}.app"
+            VERBATIM)
+    endif (USE_MEDIAINFO AND MediaInfo_LIBRARY AND Zen_LIBRARY)
 
     # data/ installs before this bundle copy; re-install emoticons so a stale
     # build-tree Resources/emoticons/*.xml cannot clobber the source map.

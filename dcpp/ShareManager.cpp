@@ -28,6 +28,8 @@
 #include "LogManager.h"
 #include "HashBloom.h"
 #include "HashManager.h"
+#include "MediaInfoCache.h"
+#include "MediaInfoScan.h"
 #include "QueueManager.h"
 #include "ScopedFunctor.h"
 #include "SearchResult.h"
@@ -698,8 +700,13 @@ ShareManager::Directory::Ptr ShareManager::buildTree(const string& aName, const 
                     continue;
                 }
                 try {
-                    if(HashManager::getInstance()->checkTTH(fileName, size, i->getLastWriteTime()))
-                        lastFileIter = dir->files.insert(lastFileIter, Directory::File(name, size, dir, HashManager::getInstance()->getTTH(fileName, size)));
+                    if(HashManager::getInstance()->checkTTH(fileName, size, i->getLastWriteTime())) {
+                        Directory::File f(name, size, dir,
+                                HashManager::getInstance()->getTTH(fileName, size));
+                        f.setTS(i->getLastWriteTime());
+                        mediaInfoFill(fileName, size, f.getTTH(), f.mediaInfo);
+                        lastFileIter = dir->files.insert(lastFileIter, f);
+                    }
                 } catch(const HashException&) {
                 }
             }
@@ -814,6 +821,7 @@ int ShareManager::run() {
             rebuildIndices();
         }
         refreshDirs = false;
+        MediaInfoCache::getInstance()->save();
 
         LogManager::getInstance()->message(_("File list refresh finished"));
     }
@@ -1005,6 +1013,28 @@ void ShareManager::Directory::filesToXml(OutputStream& xmlFile, string& indent, 
         xmlFile.write(LITERAL("\" TTH=\""));
         tmp2.clear();
         xmlFile.write(f.getTTH().toBase32(tmp2));
+        // Flylink-compatible: TS gates media attrs in DirectoryListingLoader.
+        xmlFile.write(LITERAL("\" TS=\""));
+        xmlFile.write(Util::toString(f.getTS()));
+        if (f.mediaInfo.bitrate) {
+            xmlFile.write(LITERAL("\" BR=\""));
+            xmlFile.write(Util::toString(f.mediaInfo.bitrate));
+        }
+        if (!f.mediaInfo.resolution.empty()) {
+            xmlFile.write(LITERAL("\" WH=\""));
+            tmp2 = f.mediaInfo.resolution;
+            xmlFile.write(SimpleXML::escape(tmp2, true));
+        }
+        if (!f.mediaInfo.audio_info.empty()) {
+            xmlFile.write(LITERAL("\" MA=\""));
+            tmp2 = f.mediaInfo.audio_info;
+            xmlFile.write(SimpleXML::escape(tmp2, true));
+        }
+        if (!f.mediaInfo.video_info.empty()) {
+            xmlFile.write(LITERAL("\" MV=\""));
+            tmp2 = f.mediaInfo.video_info;
+            xmlFile.write(SimpleXML::escape(tmp2, true));
+        }
         xmlFile.write(LITERAL("\"/>\r\n"));
     }
 }

@@ -154,6 +154,7 @@ void SettingsManager::setDefaults() {
     setDefault(HASH_BUFFER_POPULATE, true);
     setDefault(HASH_BUFFER_NORESERVE, true);
     setDefault(HASH_BUFFER_PRIVATE, true);
+    setDefault(MIN_MEDIAINFO_SIZE, 1); // MB — Flylink default
     setDefault(RECONNECT_DELAY, 15);
     setDefault(DHT_PORT, 6250);
     setDefault(USE_DHT, true);

@@ -28,6 +28,11 @@ struct MediaInfo {
     string audio_info;
     string resolution;
     uint16_t bitrate = 0;
+
+    bool empty() const {
+        return bitrate == 0 && resolution.empty()
+                && video_info.empty() && audio_info.empty();
+    }
 };
 
 } // namespace dcpp
