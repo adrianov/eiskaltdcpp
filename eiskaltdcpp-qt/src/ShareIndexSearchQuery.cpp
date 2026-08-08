@@ -17,7 +17,9 @@ static const char *kSelectCols =
     "SELECT coalesce(e.name,f.name), coalesce(f.size,e.local_size,0), "
     "coalesce(f.tth,''), coalesce(e.path,f.path), "
     "u.nick, u.free_slots, u.all_slots, u.ip, u.hub_name, u.hub_url, "
-    "u.cid, e.is_dir, coalesce(e.ext,f.ext) FROM share_locations e "
+    "u.cid, e.is_dir, coalesce(e.ext,f.ext), "
+    "coalesce(f.bitrate,0), coalesce(f.resolution,''), "
+    "coalesce(f.video,''), coalesce(f.audio,'') FROM share_locations e "
     "JOIN share_users u ON u.user_id=e.user_id "
     "LEFT JOIN share_files f ON f.file_id=e.file_id ";
 

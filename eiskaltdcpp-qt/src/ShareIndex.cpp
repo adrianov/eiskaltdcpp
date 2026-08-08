@@ -162,6 +162,12 @@ ShareIndex::usersByTth(const QStringList &, qint64, int)
     return {};
 }
 
+QHash<QString, ShareIndex::MediaInfo>
+ShareIndex::mediaByTth(const QStringList &)
+{
+    return {};
+}
+
 ShareIndex::IndexStats ShareIndex::indexStats() { return {}; }
 
 bool ShareIndex::needsListIngest(const QString &, const QString &) { return false; }

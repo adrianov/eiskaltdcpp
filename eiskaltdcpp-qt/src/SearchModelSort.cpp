@@ -19,14 +19,14 @@ struct Compare {
     typedef bool (*AttrComp)(const SearchItem * l, const SearchItem * r);
 
     void static sort(int column, QList<SearchItem*>& items) {
-        if (column < 0 || column > static_cast<int>(COLUMN_SF_HOST))
+        if (column < 0 || column > static_cast<int>(COLUMN_SF_LAST))
             return;
 
         std::stable_sort(items.begin(), items.end(), attrs[column]);
     }
 
     int static sortedRow(int column, const QList<SearchItem*>& items, SearchItem* item) {
-        if (column < 0 || column > static_cast<int>(COLUMN_SF_HOST))
+        if (column < 0 || column > static_cast<int>(COLUMN_SF_LAST))
             return items.size();
 
         return static_cast<int>(std::lower_bound(items.begin(),
@@ -56,11 +56,11 @@ struct Compare {
         template <typename T>
         bool static Cmp(const T& l, const T& r);
 
-        static AttrComp attrs[13];
+        static AttrComp attrs[17];
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[13] = { NumCmp<COLUMN_SF_COUNT>,
+typename Compare<order>::AttrComp Compare<order>::attrs[17] = { NumCmp<COLUMN_SF_COUNT>,
                                                                 NaturalAttrCmp<COLUMN_SF_FILENAME>,
                                                                 AttrCmp<COLUMN_SF_EXTENSION>,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
@@ -72,7 +72,11 @@ typename Compare<order>::AttrComp Compare<order>::attrs[13] = { NumCmp<COLUMN_SF
                                                                 NumCmp<COLUMN_SF_ALLSLOTS>,
                                                                 AttrCmp<COLUMN_SF_IP>,
                                                                 AttrCmp<COLUMN_SF_HUB>,
-                                                                AttrCmp<COLUMN_SF_HOST>
+                                                                AttrCmp<COLUMN_SF_HOST>,
+                                                                NumCmp<COLUMN_SF_BR>,
+                                                                AttrCmp<COLUMN_SF_WH>,
+                                                                AttrCmp<COLUMN_SF_MVIDEO>,
+                                                                AttrCmp<COLUMN_SF_MAUDIO>
                                                                 };
 
 template <> template <typename T>

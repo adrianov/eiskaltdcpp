@@ -79,7 +79,16 @@ bool SearchModel::addResult
 
     item_data << QVariant() << file << ext << WulforUtil::formatBytes(size)
               << size << tth << path << nick << free_slots
-              << all_slots << ip << hub << host;
+              << all_slots << ip << hub << host
+              << QVariant() << QVariant() << QVariant() << QVariant();
+
+    // TTH group children inherit media already filled on the root.
+    if (parent != rootItem) {
+        item_data[COLUMN_SF_BR] = parent->data(COLUMN_SF_BR);
+        item_data[COLUMN_SF_WH] = parent->data(COLUMN_SF_WH);
+        item_data[COLUMN_SF_MVIDEO] = parent->data(COLUMN_SF_MVIDEO);
+        item_data[COLUMN_SF_MAUDIO] = parent->data(COLUMN_SF_MAUDIO);
+    }
 
     item = new SearchItem(item_data, parent);
 

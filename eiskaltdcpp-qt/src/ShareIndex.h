@@ -94,6 +94,18 @@ public:
     QHash<QString, QList<IndexUser>> usersByTth(const QStringList &tths, qint64 size = 0,
                                                  int limitPerTth = 64);
 
+    /** Media from indexed file lists (empty fields omitted from hash). */
+    struct MediaInfo {
+        int bitrate = 0;
+        QString resolution;
+        QString video;
+        QString audio;
+        bool isEmpty() const {
+            return bitrate <= 0 && resolution.isEmpty() && video.isEmpty() && audio.isEmpty();
+        }
+    };
+    QHash<QString, MediaInfo> mediaByTth(const QStringList &tths);
+
     /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
     struct IndexStats {
         qint64 files = 0;   // share_index_meta.entry_count (files + dirs)

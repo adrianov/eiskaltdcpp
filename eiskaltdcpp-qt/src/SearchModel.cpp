@@ -29,7 +29,8 @@ SearchModel::SearchModel(QObject *parent):
     rootData << tr("Count") << tr("File") << tr("Ext") << tr("Size")
              << tr("Exact size") << QString("TTH")   << tr("Path") << tr("Nick")
              << tr("Free slots") << tr("Total slots")
-             << tr("IP") << tr("Hub") << tr("Host");
+             << tr("IP") << tr("Hub") << tr("Host")
+             << tr("Bitrate") << tr("Resolution") << tr("Video") << tr("Audio");
 
     rootItem = new SearchItem(rootData);
 

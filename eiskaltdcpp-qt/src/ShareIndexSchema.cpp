@@ -25,6 +25,10 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             "ext TEXT NOT NULL DEFAULT '',"
             "name_cf TEXT NOT NULL,"
             "path_cf TEXT NOT NULL,"
+            "bitrate INTEGER NOT NULL DEFAULT 0,"
+            "resolution TEXT NOT NULL DEFAULT '',"
+            "video TEXT NOT NULL DEFAULT '',"
+            "audio TEXT NOT NULL DEFAULT '',"
             "UNIQUE(tth))", &err)
             || !ShareIndexDb::execOk(con,
             "CREATE TABLE IF NOT EXISTS " + prefix + "share_users ("
@@ -70,6 +74,24 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
             "indexed_at TEXT NOT NULL)", &err)) {
         setLastError(err);
         return false;
+    }
+
+    // Existing DBs created before media columns.
+    static const char *mediaCols[] = {
+        "bitrate INTEGER DEFAULT 0",
+        "resolution TEXT DEFAULT ''",
+        "video TEXT DEFAULT ''",
+        "audio TEXT DEFAULT ''"
+    };
+    const QString table = QString::fromStdString(prefix) + QStringLiteral("share_files");
+    for (const char *col : mediaCols) {
+        if (!ShareIndexDb::execOk(con,
+                QStringLiteral("ALTER TABLE %1 ADD COLUMN IF NOT EXISTS %2")
+                    .arg(table, QString::fromLatin1(col)).toStdString(),
+                &err)) {
+            setLastError(err);
+            return false;
+        }
     }
     return true;
 }

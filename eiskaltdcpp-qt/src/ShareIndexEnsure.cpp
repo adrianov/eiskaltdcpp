@@ -95,6 +95,7 @@ qint64 ShareIndex::ensureFileId(duckdb::Connection &con, const QString &tth, qin
     addFile.push_back(ShareIndexDb::strVal(tth));
     if (!ShareIndexDb::queryMat(con,
             "INSERT INTO share_files "
+            "(file_id, tth, size, name, path, ext, name_cf, path_cf) "
             "SELECT (SELECT coalesce(max(file_id),0)+1 FROM share_files), "
             "?,?,?,?,?,?,? WHERE NOT EXISTS ("
             "SELECT 1 FROM share_files WHERE tth=?)",

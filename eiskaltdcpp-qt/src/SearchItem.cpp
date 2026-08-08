@@ -110,6 +110,12 @@ QVariant SearchItem::data(int column) const {
     return itemData.value(column);
 }
 
+void SearchItem::updateColumn(int column, const QVariant &value) {
+    if (column < 0 || column >= itemData.size())
+        return;
+    itemData[column] = value;
+}
+
 SearchItem *SearchItem::parent() const{
     return parentItem;
 }

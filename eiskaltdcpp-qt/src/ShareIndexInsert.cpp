@@ -31,15 +31,29 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
                 "cid TEXT, hub_url TEXT, tth TEXT, path TEXT, name TEXT, "
                 "name_cf TEXT, path_cf TEXT, ext TEXT, is_dir INTEGER, size BIGINT, "
                 "nick TEXT, hub_name TEXT, ip TEXT, source INTEGER, created_at TEXT,"
+                "bitrate INTEGER, resolution TEXT, video TEXT, audio TEXT,"
                 "seq BIGINT)")
                 || !ShareIndexDb::execOk(con, "DELETE FROM share_stage"))
             return false;
+
+        // Older process may have created share_stage without media columns.
+        static const char *stageMedia[] = {
+            "bitrate INTEGER DEFAULT 0",
+            "resolution TEXT DEFAULT ''",
+            "video TEXT DEFAULT ''",
+            "audio TEXT DEFAULT ''"
+        };
+        for (const char *col : stageMedia)
+            ShareIndexDb::execOk(con,
+                QStringLiteral("ALTER TABLE share_stage ADD COLUMN IF NOT EXISTS %1")
+                    .arg(QString::fromLatin1(col)).toStdString());
 
         duckdb::Appender app(con, "share_stage");
         app.ClearColumns();
         const char *cols[] = {
             "cid", "hub_url", "tth", "path", "name", "name_cf", "path_cf", "ext",
-            "is_dir", "size", "nick", "hub_name", "ip", "source", "created_at", "seq"
+            "is_dir", "size", "nick", "hub_name", "ip", "source", "created_at",
+            "bitrate", "resolution", "video", "audio", "seq"
         };
         for (const char *c : cols)
             app.AddColumn(c);
@@ -77,6 +91,10 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             appendStr(sqlText(row.value("ip")));
             app.Append(int32_t(SourceFileList));
             appendStr(stamp);
+            app.Append(int32_t(row.value("bitrate").toInt()));
+            appendStr(sqlText(row.value("resolution")));
+            appendStr(sqlText(row.value("video")));
+            appendStr(sqlText(row.value("audio")));
             app.Append(int64_t(seq++));
             app.EndRow();
         }
@@ -93,14 +111,31 @@ bool ShareIndex::appendListRows(duckdb::Connection &con, const QList<QVariantMap
             "FROM (SELECT * FROM share_stage LIMIT 1) s "
             "WHERE u.cid=s.cid AND u.hub_url=s.hub_url",
             "INSERT INTO share_files "
-            "SELECT base + row_number() OVER (), tth, size, name, path, ext, name_cf, path_cf "
+            "SELECT base + row_number() OVER (), tth, size, name, path, ext, name_cf, path_cf, "
+            "bitrate, resolution, video, audio "
             "FROM ("
             "SELECT s.tth, s.size, s.name, s.path, s.ext, s.name_cf, s.path_cf, "
+            "s.bitrate, s.resolution, s.video, s.audio, "
             "row_number() OVER (PARTITION BY s.tth ORDER BY s.seq) AS rn "
             "FROM share_stage s LEFT JOIN share_files f ON f.tth=s.tth "
             "WHERE s.is_dir=0 AND s.tth!='' AND f.file_id IS NULL"
             ") fresh CROSS JOIN (SELECT coalesce(max(file_id), 0) AS base FROM share_files) "
             "WHERE rn = 1",
+            // Fill media on existing files when the listing has it and the row is empty.
+            "UPDATE share_files f SET "
+            "bitrate = CASE WHEN coalesce(f.bitrate,0)=0 THEN s.bitrate ELSE f.bitrate END, "
+            "resolution = CASE WHEN coalesce(f.resolution,'')='' THEN s.resolution ELSE f.resolution END, "
+            "video = CASE WHEN coalesce(f.video,'')='' THEN s.video ELSE f.video END, "
+            "audio = CASE WHEN coalesce(f.audio,'')='' THEN s.audio ELSE f.audio END "
+            "FROM ("
+            "SELECT tth, bitrate, resolution, video, audio FROM ("
+            "SELECT s.tth, s.bitrate, s.resolution, s.video, s.audio, "
+            "row_number() OVER (PARTITION BY s.tth ORDER BY s.seq) AS rn "
+            "FROM share_stage s "
+            "WHERE s.is_dir=0 AND s.tth!='' AND "
+            "(s.bitrate>0 OR s.resolution!='' OR s.video!='' OR s.audio!='')"
+            ") WHERE rn=1"
+            ") s WHERE f.tth=s.tth",
             "INSERT INTO share_locations "
             "SELECT u.user_id, f.file_id, "
             "CASE WHEN f.file_id IS NULL OR s.path != f.path THEN s.path END, "

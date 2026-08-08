@@ -69,6 +69,10 @@ QList<QVariantMap> ShareIndex::rowsFromResult(duckdb::MaterializedQueryResult &r
         map["CID"] = ShareIndexDb::qstr(res.GetValue(10, r));
         map["ISDIR"] = ShareIndexDb::qi64(res.GetValue(11, r)) != 0;
         map["EXT"] = ShareIndexDb::qstr(res.GetValue(12, r));
+        map["BITRATE"] = int(ShareIndexDb::qi64(res.GetValue(13, r)));
+        map["RESOLUTION"] = ShareIndexDb::qstr(res.GetValue(14, r));
+        map["VIDEO"] = ShareIndexDb::qstr(res.GetValue(15, r));
+        map["AUDIO"] = ShareIndexDb::qstr(res.GetValue(16, r));
         out.append(map);
     }
     return out;

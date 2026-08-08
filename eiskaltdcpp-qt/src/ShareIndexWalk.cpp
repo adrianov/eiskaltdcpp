@@ -80,6 +80,10 @@ void ShareIndex::walkListing(DirectoryListing &listing, DirectoryListing::Direct
         row["nick"] = nick;
         row["hub_name"] = hubName;
         row["ip"] = ip;
+        row["bitrate"] = int(f->mediaInfo.bitrate);
+        row["resolution"] = _q(f->mediaInfo.resolution);
+        row["video"] = _q(f->mediaInfo.video_info);
+        row["audio"] = _q(f->mediaInfo.audio_info);
         appendUnique(std::move(row), seen, out);
     }
 

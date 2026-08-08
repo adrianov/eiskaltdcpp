@@ -34,6 +34,12 @@ static const unsigned COLUMN_SF_ALLSLOTS       = 9;
 static const unsigned COLUMN_SF_IP             = 10;
 static const unsigned COLUMN_SF_HUB            = 11;
 static const unsigned COLUMN_SF_HOST           = 12;
+/** Media from ShareIndex (appended so saved header state stays stable). */
+static const unsigned COLUMN_SF_BR             = 13;
+static const unsigned COLUMN_SF_WH             = 14;
+static const unsigned COLUMN_SF_MVIDEO         = 15;
+static const unsigned COLUMN_SF_MAUDIO         = 16;
+static const unsigned COLUMN_SF_LAST           = COLUMN_SF_MAUDIO;
 
 class SearchListException{
     public:
@@ -75,6 +81,7 @@ public:
     int childCount() const;
     int columnCount() const;
     QVariant data(int column) const;
+    void updateColumn(int column, const QVariant &value);
     int row() const;
     SearchItem *parent() const;
     bool exists(const QString &user_cid) const;
@@ -171,6 +178,11 @@ public:
 
     /** Run one Count-column root sort after a batch of grouped inserts. */
     void flushDeferredSort();
+
+    /** Fill empty media cells for grouped TTH roots (and children). */
+    void applyMediaByTth(const QHash<QString, QVariantMap> &media);
+    /** True when the TTH root already has any media field. */
+    bool hasMedia(const QString &tth) const;
 
 public Q_SLOTS:
     /** */

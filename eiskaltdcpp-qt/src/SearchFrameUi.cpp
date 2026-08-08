@@ -81,6 +81,8 @@ void SearchFrame::slotClear(){
     if (d->resultFlush)
         d->resultFlush->stop();
     d->pendingResults.clear();
+    d->pendingMediaTths.clear();
+    d->mediaEnrichPending = false;
 
     treeView_RESULTS->clearSelection();
     d->model->clearModel();

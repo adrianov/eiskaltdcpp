@@ -72,4 +72,9 @@ public:
     bool localRefreshPending = false;
     /** True while a queued view-filter apply is waiting to run. */
     bool viewFilterPending = false;
+
+    /** TTHs waiting for ShareIndex media lookup (coalesced off the add path). */
+    QStringList pendingMediaTths;
+    bool mediaEnrichPending = false;
+    bool mediaEnrichBusy = false;
 };

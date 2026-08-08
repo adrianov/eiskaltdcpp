@@ -35,8 +35,9 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         {
             const int i_column = index.column();
             bool align_center = (i_column == COLUMN_SF_ALLSLOTS) || (i_column == COLUMN_SF_EXTENSION) ||
-                                (i_column == COLUMN_SF_FREESLOTS);
-            bool align_right  = (i_column == COLUMN_SF_ESIZE) || (i_column == COLUMN_SF_SIZE ) || (i_column == COLUMN_SF_COUNT);
+                                (i_column == COLUMN_SF_FREESLOTS) || (i_column == COLUMN_SF_WH);
+            bool align_right  = (i_column == COLUMN_SF_ESIZE) || (i_column == COLUMN_SF_SIZE ) ||
+                                (i_column == COLUMN_SF_COUNT) || (i_column == COLUMN_SF_BR);
 
             if (align_center)
                 return Qt::AlignCenter;
