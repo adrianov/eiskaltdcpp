@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * DNS resolve, TCP connect, and select-based wait for Socket.
  */
 

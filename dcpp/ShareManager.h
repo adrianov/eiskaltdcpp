@@ -31,7 +31,7 @@
 #include "SettingsManager.h"
 #include "HashManagerListener.h"
 #include "QueueManagerListener.h"
-#include "MediaInfo.h"
+#include "sharemedia/MediaInfo.h"
 
 #include "Exception.h"
 #include "CriticalSection.h"

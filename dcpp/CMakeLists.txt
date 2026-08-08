@@ -67,8 +67,9 @@ set(DCPP_EXTRA_SOURCES
     QueueManagerAddUser.cpp
     QueueManagerListeners.cpp
     QueueManagerTarget.cpp
-    MediaInfoScan.cpp
-    MediaInfoCache.cpp
+    sharemedia/MediaInfoScan.cpp
+    sharemedia/MediaInfoCache.cpp
+    sharemedia/MediaInfoProbe.cpp
     NmdcHubLine.cpp
     NmdcHubLineProfile.cpp
     NmdcHubLineHub.cpp
@@ -173,7 +174,8 @@ if (NOT LUA_SCRIPT)
         ${PROJECT_SOURCE_DIR}/ScriptManagerEval.cpp)
 endif (NOT LUA_SCRIPT)
 
-include_directories (${PROJECT_BINARY_DIR}
+include_directories (${PROJECT_SOURCE_DIR}
+                     ${PROJECT_BINARY_DIR}
                      ${BZIP2_INCLUDE_DIR}
                      ${ZLIB_INCLUDE_DIR}
                      ${OPENSSL_INCLUDE_DIR}
@@ -266,7 +268,8 @@ endif (XATTR_FOUND)
 if (USE_MEDIAINFO AND MediaInfo_FOUND)
     include_directories (${MediaInfo_INCLUDE_DIRS})
     # Homebrew libmediainfo is built with UNICODE (wchar_t String API).
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/MediaInfoScan.cpp
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/sharemedia/MediaInfoScan.cpp
+                        ${PROJECT_SOURCE_DIR}/sharemedia/MediaInfoProbe.cpp
                  PROPERTY COMPILE_DEFINITIONS USE_MEDIAINFO;UNICODE;_UNICODE APPEND)
     list (APPEND DCPP_EXTRA_LINK ${MediaInfo_LIBRARIES})
 endif (USE_MEDIAINFO AND MediaInfo_FOUND)
@@ -364,6 +367,8 @@ if (WITH_DEV_FILES)
     endif (NOT EISKALTDCPP_INCLUDE_DIR)
     message (STATUS "Headers of libeiskaltdcpp will be installed to: ${EISKALTDCPP_INCLUDE_DIR}")
     install (FILES ${dcpp_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/)
+    file (GLOB sharemedia_hdrs ${PROJECT_SOURCE_DIR}/sharemedia/*.h)
+    install (FILES ${sharemedia_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/sharemedia/)
 
     set (prefix ${CMAKE_INSTALL_PREFIX})
     set (libdir ${LIBDIR})

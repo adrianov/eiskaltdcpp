@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * Records clean vs abrupt exits and provides async-signal-safe fatal notes.
  */
 

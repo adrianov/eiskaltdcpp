@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * SOCKS5 connect, auth, and UDP associate for Socket.
  */
 

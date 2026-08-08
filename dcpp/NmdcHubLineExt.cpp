@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
  * Copyright (C) 2009-2026 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * NMDC hub extensions shared with FlylinkDC++: HubURL, NickRule, SearchRule, BadNick.
  */

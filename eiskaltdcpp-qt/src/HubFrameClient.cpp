@@ -1,7 +1,9 @@
-/***************************************************************************
+/*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * ClientListener / FavoriteManagerListener handlers for HubFrame.
  * Filters hidden users and Peers.cn.ru Pikachu ghost swarm from the user list.
- ***************************************************************************/
+ */
 
 #include "HubFrame.h"
 #include "HubFramePrivate.h"

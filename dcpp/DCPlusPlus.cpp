@@ -22,7 +22,7 @@
 #include "FinishedManager.h"
 #include "HashManager.h"
 #include "IncomingPortCheck.h"
-#include "MediaInfoCache.h"
+#include "sharemedia/MediaInfoCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
 #include "PeerConnectHub.h"

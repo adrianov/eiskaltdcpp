@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2019 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * Internal helpers shared by PeerConnectLogFail.cpp and PeerConnectLogDetail.cpp.
  */

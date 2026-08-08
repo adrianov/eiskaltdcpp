@@ -1,5 +1,7 @@
 /***************************************************************************
 *                                                                         *
+*   Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>          *
+*                                                                         *
 *   This program is free software; you can redistribute it and/or modify  *
 *   it under the terms of the GNU General Public License as published by  *
 *   the Free Software Foundation; either version 3 of the License, or     *
@@ -10,53 +12,100 @@
 #include "sharebrowser/ShareBrowserMenu.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
-#include "MainWindow.h"
 #include "DownloadToHistory.h"
 
 #include "dcpp/ClientManager.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QDir>
-#include <QObject>
 
 using namespace dcpp;
+
+namespace {
+
+QString sbTr(const char *s)
+{
+    return QCoreApplication::translate("ShareBrowser", s);
+}
+
+/** Reuse SearchFrame catalog entries for the shared whole-dir labels. */
+QString wholeDirTr(const char *s)
+{
+    return QCoreApplication::translate("SearchFrame", s);
+}
+
+void fillDownloadTo(QMenu *menu, const QStringList &tempPaths, const QStringList &aliases,
+                    const QStringList &paths, const QPixmap &dirPx)
+{
+    if (!tempPaths.isEmpty()) {
+        for (const auto &t : tempPaths) {
+            QAction *act = new QAction(dirPx, QDir(t).dirName(), menu);
+            act->setToolTip(t);
+            act->setData(t);
+            menu->addAction(act);
+        }
+        menu->addSeparator();
+    }
+
+    if (aliases.size() == paths.size() && !aliases.isEmpty()) {
+        for (int i = 0; i < aliases.size(); i++) {
+            QAction *act = new QAction(aliases.at(i), menu);
+            act->setData(paths.at(i));
+            act->setIcon(dirPx);
+            menu->addAction(act);
+        }
+        menu->addSeparator();
+    }
+
+    QAction *browse = new QAction(dirPx, sbTr("Browse"), menu);
+    browse->setData("");
+    menu->addAction(browse);
+}
+
+} // namespace
 
 ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
 {
     WulforUtil *WU = WulforUtil::getInstance();
 
-    rest_menu = new QMenu(QObject::tr("Restrictions"));
-    QMenu *magnet_menu = new QMenu(QObject::tr("Magnet"), MainWindow::getInstance());
+    rest_menu = new QMenu(sbTr("Restrictions"));
+    QMenu *magnet_menu = new QMenu(sbTr("Magnet"), menu);
 
-    QAction *down    = new QAction(QObject::tr("Download"), menu);
+    QAction *down    = new QAction(sbTr("Download"), menu);
     down->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
-    down_to = new QMenu(QObject::tr("Download to..."));
+    down_to = new QMenu(sbTr("Download to..."));
     down_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
+    QAction *down_wh = new QAction(wholeDirTr("Download Whole Directory"), menu);
+    down_wh->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    down_wh_to = new QMenu(wholeDirTr("Download Whole Directory to..."));
+    down_wh_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
     QAction *sep     = new QAction(menu);
-    QAction *alter   = new QAction(QObject::tr("Search for alternates"), menu);
+    QAction *alter   = new QAction(sbTr("Search for alternates"), menu);
     alter->setIcon(WU->getPixmap(WulforUtil::eiFILEFIND));
-    QAction *copy_name = new QAction(QObject::tr("Copy file name"), menu);
+    QAction *copy_name = new QAction(sbTr("Copy file name"), menu);
     copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet  = new QAction(QObject::tr("Copy magnet"), menu);
+    QAction *magnet  = new QAction(sbTr("Copy magnet"), menu);
     magnet->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet_web  = new QAction(QObject::tr("Copy web-magnet"), menu);
+    QAction *magnet_web  = new QAction(sbTr("Copy web-magnet"), menu);
     magnet_web->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
-    QAction *magnet_info  = new QAction(QObject::tr("Properties of magnet"), menu);
+    QAction *magnet_info  = new QAction(sbTr("Properties of magnet"), menu);
     magnet_info->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
     QAction *sep1    = new QAction(menu);
-    QAction *add_to_fav = new QAction(QObject::tr("Add to favorites"), menu);
+    QAction *add_to_fav = new QAction(sbTr("Add to favorites"), menu);
     add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-    QAction *set_rest = new QAction(QObject::tr("Add restriction"), rest_menu);
-    QAction *rem_rest = new QAction(QObject::tr("Remove restriction"), rest_menu);
-    open_file = new QAction(WU->getPixmap(WulforUtil::eiFILETYPE_UNKNOWN), QObject::tr("Open file"), menu);
-    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), QObject::tr("Open directory"), menu);
-    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), QObject::tr("Delete File"), menu);
+    QAction *set_rest = new QAction(sbTr("Add restriction"), rest_menu);
+    QAction *rem_rest = new QAction(sbTr("Remove restriction"), rest_menu);
+    open_file = new QAction(WU->getPixmap(WulforUtil::eiFILETYPE_UNKNOWN), sbTr("Open file"), menu);
+    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), sbTr("Open directory"), menu);
+    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), sbTr("Delete File"), menu);
     QAction *sep2    = new QAction(menu);
     QAction *sep3    = new QAction(menu);
     QAction *sep4    = new QAction(menu);
 
     actions.insert(down, Download);
+    actions.insert(down_wh, DownloadWholeDir);
     actions.insert(alter, Alternates);
     actions.insert(copy_name, CopyFileName);
     actions.insert(magnet, Magnet);
@@ -78,70 +127,41 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     sep3->setSeparator(true);
     sep4->setSeparator(true);
 
-    menu->addActions(QList<QAction*>() << down << sep << alter << copy_name);
+    menu->addActions(QList<QAction*>() << down << down_wh << sep << alter << copy_name);
     menu->addMenu(magnet_menu);
     menu->addActions(QList<QAction*>() << sep1 << add_to_fav << sep2);
     rest_menu->addActions(QList<QAction*>() << set_rest << rem_rest);
-    menu->insertMenu(sep, down_to);
+    menu->insertMenu(down_wh, down_to);
+    menu->insertMenu(sep, down_wh_to);
     menu->addMenu(rest_menu);
     menu->addActions(QList<QAction*>() << open_file << open_url << sep4 << delete_file);
 }
 
 ShareBrowserMenu::~ShareBrowserMenu(){
+    // insertMenu/addMenu transfer ownership of submenus to menu.
     delete menu;
-    delete rest_menu;
-    delete down_to;
-
     menu = nullptr;
     rest_menu = nullptr;
     down_to = nullptr;
+    down_wh_to = nullptr;
 }
 
 ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool treePane,
                                                     bool hasDeletable){
     qDeleteAll(down_to->actions());
+    qDeleteAll(down_wh_to->actions());
     down_to->clear();
+    down_wh_to->clear();
 
     const QPixmap &dir_px = WICON(WulforUtil::eiFOLDER_BLUE);
-    QString aliases, paths;
+    const QString aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
+    const QString paths   = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
+    const QStringList a = aliases.split("\n", WULFOR_SKIP_EMPTY);
+    const QStringList p = paths.split("\n", WULFOR_SKIP_EMPTY);
+    const QStringList temp_pathes = DownloadToDirHistory::get();
 
-    aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
-    paths   = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
-
-    QStringList a = aliases.split("\n", WULFOR_SKIP_EMPTY);
-    QStringList p = paths.split("\n", WULFOR_SKIP_EMPTY);
-
-    QStringList temp_pathes = DownloadToDirHistory::get();
-
-    if (!temp_pathes.isEmpty()){
-        for (const auto &t : temp_pathes){
-            QAction *act = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
-            act->setToolTip(t);
-            act->setData(t);
-
-            down_to->addAction(act);
-        }
-
-        down_to->addSeparator();
-    }
-
-    if (a.size() == p.size() && !a.isEmpty()){
-        for (int i = 0; i < a.size(); i++){
-            QAction *act = new QAction(a.at(i), down_to);
-            act->setData(p.at(i));
-            act->setIcon(dir_px);
-
-            down_to->addAction(act);
-        }
-
-        down_to->addSeparator();
-    }
-
-    QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), QObject::tr("Browse"), down_to);
-    browse->setIcon(dir_px);
-    browse->setData("");
-
-    down_to->addAction(browse);
+    fillDownloadTo(down_to, temp_pathes, a, p, dir_px);
+    fillDownloadTo(down_wh_to, temp_pathes, a, p, dir_px);
 
     const bool own = (user == ClientManager::getInstance()->getMe());
     rest_menu->setEnabled(own && treePane);
@@ -153,10 +173,13 @@ ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool 
 
     if (actions.contains(ret))
         return actions.value(ret);
-    else if (down_to->actions().contains(ret)){
+    if (down_to->actions().contains(ret)) {
         target = ret->data().toString();
-
         return DownloadTo;
+    }
+    if (down_wh_to->actions().contains(ret)) {
+        target = ret->data().toString();
+        return DownloadWholeDirTo;
     }
 
     return None;

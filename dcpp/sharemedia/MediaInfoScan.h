@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2026 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  * MediaInfo scan logic adapted from FlylinkDC++ (getMediaInfo).
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,6 +21,6 @@ namespace dcpp {
 /** Scan local media (Flylink getMediaInfo) into MediaInfo; uses TTH cache. */
 bool mediaInfoFill(const std::string& path, int64_t size, const TTHValue& tth, MediaInfo& out);
 
-bool isMediaInfoExt(const std::string& extWithoutDot);
+bool isMediaInfoExt(const std::string& ext);
 
 } // namespace dcpp

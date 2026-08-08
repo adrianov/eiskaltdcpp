@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * Session exit tracking and Unix signal setup (SIGPIPE ignore, fatal handlers).
  */
 

@@ -27,7 +27,7 @@
 #include "HintedUser.h"
 #include "FastAlloc.h"
 #include "MerkleTree.h"
-#include "MediaInfo.h"
+#include "sharemedia/MediaInfo.h"
 #include "GetSet.h"
 #include "User.h"
 #include "Util.h"

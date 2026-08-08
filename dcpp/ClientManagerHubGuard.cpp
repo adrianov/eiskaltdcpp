@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2020 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

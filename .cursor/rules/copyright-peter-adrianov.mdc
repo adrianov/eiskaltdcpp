@@ -1,0 +1,60 @@
+---
+description: New functionality modules must include Copyright Peter Adrianov with contact email.
+alwaysApply: true
+---
+
+# Copyright for new functionality modules
+
+When adding a **new functionality module** (new `.cpp` / `.h` / `.hpp` / `.cc` that introduces feature code, not a one-line stub), put a copyright line in the file header using the same style as nearby authors in that tree.
+
+## Required line (current year)
+
+```text
+Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+```
+
+Use the **current calendar year** when creating the file (replace `2026` if the year has changed).
+
+## Format by tree
+
+**dcpp / dht** (`/*` + `* ` lines, often with Jacek Sieka / EiskaltDC++ / Boris Pek):
+
+```c
+/*
+ * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
+ * This program is free software; ...
+ */
+```
+
+Append Peter’s line after existing `Copyright` lines; do not remove prior authors.
+
+**eiskaltdcpp-qt** (`/*` block or `/***` banner):
+
+```c
+/*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+```
+
+Or inside a `/***` banner, pad to the same width as neighboring star lines (usually 73 chars between `*`):
+
+```c
+*   Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>          *
+```
+
+**eiskaltdcpp-gtk / eiskaltdcpp-daemon**: same as neighboring files in that directory (GPL banner or `/*` block); keep prior authors and add Peter’s line.
+
+## When to apply
+
+- **Do** add on new feature modules and substantial new helpers extracted as their own translation units.
+- **Do** add when splitting out new functionality the author owns; keep original copyrights on extracted legacy code and **append** Peter’s line if the new file is authored in this fork.
+- **Do** keep the line when **moving/renaming** a module (`git mv`); if a move drops it, restore it at the new path.
+- **Skip** generated files, pure include fragments (e.g. enum-only `.h` pulled into a class body), assets, and third-party trees (`json/`, vendored libs).
+- **Skip** pre-existing upstream files that were only lightly edited; copyright belongs on modules introduced or substantially owned in this fork.

@@ -1,6 +1,8 @@
-/***************************************************************************
+/*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
  * Chat log context menu for HubFrame (nick actions, chat controls, silence).
- ***************************************************************************/
+ */
 
 #include "HubFrame.h"
 #include "HubFramePrivate.h"

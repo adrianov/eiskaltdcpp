@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2020 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * Smoke checks for per-hub SearchQueue scheduling.
  */
