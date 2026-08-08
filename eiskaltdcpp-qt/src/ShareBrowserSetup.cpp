@@ -11,6 +11,7 @@
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "FileBrowserModel.h"
+#include "MediaEnrichQueue.h"
 #include "FileBrowserFilterProxy.h"
 #include "SearchFileTypes.h"
 #include "MainWindow.h"
@@ -173,4 +174,7 @@ void ShareBrowser::initModels(){
     list_model = new FileBrowserModel();
     list_root = list_model->getRootElem();
     folderList = new ShareFolderList(list_model, list_root);
+
+    mediaEnrich = new MediaEnrichQueue(this);
+    connect(mediaEnrich, SIGNAL(ready(QVariant)), this, SLOT(applyMediaEnrich(QVariant)));
 }

@@ -13,6 +13,8 @@
 #include <QSize>
 #include <QHash>
 #include <QMap>
+#include <QStringList>
+#include <QVariantMap>
 
 #include "PoolItem.h"
 
@@ -124,6 +126,9 @@ public:
 
     /** */
     void highlightDuplicates();
+
+    /** Fill empty media cells for files matching TTH; returns TTHs that were updated. */
+    QStringList applyMediaByTth(const QHash<QString, QVariantMap> &media);
 
     /** */
     void clear();

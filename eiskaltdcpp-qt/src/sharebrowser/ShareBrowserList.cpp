@@ -9,6 +9,7 @@
 
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
+#include "MediaEnrichQueue.h"
 #include "WulforSettings.h"
 #include "sharebrowser/ShareFolderList.h"
 
@@ -20,7 +21,12 @@ void ShareBrowser::changeRoot(DirectoryListing::Directory *root)
 {
     if (!folderList || !root)
         return;
+    if (mediaEnrich)
+        mediaEnrich->clearPending();
     folderList->showFolder(root);
+    applyOptionalColumns();
+    if (mediaEnrich)
+        mediaEnrich->queue(folderList->missingMediaTths());
     label_RIGHT->setText(totalStatusText());
 }
 
@@ -28,8 +34,26 @@ void ShareBrowser::changeRootFlat(DirectoryListing::Directory *root)
 {
     if (!folderList || !root)
         return;
+    if (mediaEnrich)
+        mediaEnrich->clearPending();
     folderList->showFlat(listing, root);
+    applyOptionalColumns();
+    if (mediaEnrich)
+        mediaEnrich->queue(folderList->missingMediaTths());
     label_RIGHT->setText(totalStatusText());
+}
+
+void ShareBrowser::applyOptionalColumns()
+{
+    if (!folderList || !treeView_RPANE)
+        return;
+    QHeaderView *h = treeView_RPANE->header();
+    h->setSectionHidden(COLUMN_FILEBROWSER_BR, !folderList->hasBitrate());
+    h->setSectionHidden(COLUMN_FILEBROWSER_WH, !folderList->hasResolution());
+    h->setSectionHidden(COLUMN_FILEBROWSER_MVIDEO, !folderList->hasVideo());
+    h->setSectionHidden(COLUMN_FILEBROWSER_MAUDIO, !folderList->hasAudio());
+    h->setSectionHidden(COLUMN_FILEBROWSER_HIT, !folderList->hasDownloaded());
+    h->setSectionHidden(COLUMN_FILEBROWSER_TS, !folderList->hasShared());
 }
 
 QString ShareBrowser::totalStatusText() const

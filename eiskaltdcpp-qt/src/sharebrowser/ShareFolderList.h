@@ -10,6 +10,10 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
+#include <QVariantMap>
+
+#include "sharebrowser/ShareMediaState.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/DirectoryListing.h"
@@ -32,9 +36,20 @@ public:
     /** "Total size: …; Video: 3; Audio: 1" (type counts only when nonzero). */
     QString statusText() const;
 
+    bool hasBitrate() const { return media_.hasBitrate(); }
+    bool hasResolution() const { return media_.hasResolution(); }
+    bool hasVideo() const { return media_.hasVideo(); }
+    bool hasAudio() const { return media_.hasAudio(); }
+    bool hasDownloaded() const { return media_.hasDownloaded(); }
+    bool hasShared() const { return media_.hasShared(); }
+
+    QStringList missingMediaTths() const { return media_.missingTths(); }
+    void noteMedia(const QVariantMap &m) { media_.noteEnrich(m); }
+
 private:
     FileBrowserModel *model_;
     FileBrowserItem *root_;
+    ShareMediaState media_;
     quint64 totalSize_ = 0;
     QString typeCounts_;
 };

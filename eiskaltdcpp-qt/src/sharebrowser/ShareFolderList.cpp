@@ -36,7 +36,7 @@ QList<QVariant> fileRowData(DirectoryListing::File *file)
 
 void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
                      DirectoryListing::Directory *dir, quint64 &totalSize,
-                     SearchFileTypes::FileTypeCounter *types)
+                     SearchFileTypes::FileTypeCounter *types, ShareMediaState &media)
 {
     if (!dir)
         return;
@@ -46,6 +46,7 @@ void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
         totalSize += file->getSize();
         if (types)
             types->addFile(_q(file->getName()));
+        media.noteFile(file);
         QList<QVariant> data = fileRowData(file);
         data << path;
         FileBrowserItem *child = new FileBrowserItem(data, listRoot);
@@ -53,7 +54,7 @@ void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,
         listRoot->appendChild(child);
     }
     for (const auto &sub : dir->directories)
-        appendFlatFiles(listRoot, listing, sub, totalSize, types);
+        appendFlatFiles(listRoot, listing, sub, totalSize, types, media);
 }
 
 void countFileTypes(DirectoryListing::Directory *dir, SearchFileTypes::FileTypeCounter &types)
@@ -81,6 +82,7 @@ void ShareFolderList::showFolder(DirectoryListing::Directory *dir)
 
     model_->beginRebuild();
     totalSize_ = 0;
+    media_.reset();
 
     for (const auto &sub : dir->directories) {
         const quint64 size = sub->getTotalSize(true);
@@ -94,6 +96,7 @@ void ShareFolderList::showFolder(DirectoryListing::Directory *dir)
 
     for (const auto &file : dir->files) {
         totalSize_ += file->getSize();
+        media_.noteFile(file);
         FileBrowserItem *child = new FileBrowserItem(fileRowData(file), root_);
         child->file = file;
         root_->appendChild(child);
@@ -115,7 +118,8 @@ void ShareFolderList::showFlat(DirectoryListing &listing, DirectoryListing::Dire
     SearchFileTypes::FileTypeCounter types;
     model_->beginRebuild();
     totalSize_ = 0;
-    appendFlatFiles(root_, listing, dir, totalSize_, &types);
+    media_.reset();
+    appendFlatFiles(root_, listing, dir, totalSize_, &types, media_);
     model_->highlightDuplicates();
     model_->endRebuild();
     typeCounts_ = types.format();

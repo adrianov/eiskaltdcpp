@@ -28,6 +28,7 @@
 
 class FileBrowserModel;
 class FileBrowserItem;
+class MediaEnrichQueue;
 class QModelIndex;
 
 class ShareBrowser : public QWidget,
@@ -74,6 +75,8 @@ private Q_SLOTS:
     void slotClose();
     void slotAddToFavorites();
     void slotDie(const QString &msg);
+    /** Apply packed TTH→media map from MediaEnrichQueue. */
+    void applyMediaEnrich(const QVariant &packed);
 
 private:
     void continueInit();
@@ -94,6 +97,7 @@ private:
     void changeRoot(dcpp::DirectoryListing::Directory*);
     void changeRootFlat(dcpp::DirectoryListing::Directory*);
     void applyFlatMode(bool on);
+    void applyOptionalColumns();
     void reloadRightPane(dcpp::DirectoryListing::Directory *dir);
     dcpp::DirectoryListing::Directory *currentDir();
 
@@ -136,4 +140,5 @@ private:
     FileBrowserItem  *tree_root = nullptr;
     FileBrowserItem  *list_root = nullptr;
     ShareFolderList  *folderList = nullptr;
+    MediaEnrichQueue *mediaEnrich = nullptr;
 };

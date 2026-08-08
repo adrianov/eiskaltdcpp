@@ -65,7 +65,9 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserItem.cpp
     src/FileBrowserModelData.cpp
     src/FileBrowserModelFetch.cpp
+    src/FileBrowserModelMedia.cpp
     src/FileBrowserModelPath.cpp
+    src/MediaEnrichQueue.cpp
     src/FileBrowserFilterProxy.cpp
     src/FileBrowserFilterProxyTree.cpp
     src/FileBrowserModelSort.cpp
@@ -219,7 +221,9 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserNav.cpp
     src/ShareBrowserSelect.cpp
     src/sharebrowser/ShareFolderList.cpp
+    src/sharebrowser/ShareMediaState.cpp
     src/sharebrowser/ShareBrowserList.cpp
+    src/sharebrowser/ShareBrowserMedia.cpp
     src/sharebrowser/ShareBrowserMenu.cpp
     src/sharebrowser/AsyncRunner.cpp
     src/ShareBrowserActions.cpp
