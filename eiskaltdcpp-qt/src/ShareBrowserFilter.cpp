@@ -96,7 +96,8 @@ void ShareBrowser::applyViewFiltersNow() {
     }
 
     if (proxy)
-        proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts, lineEdit_PATH->text());
+        proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts,
+                            flatMode ? QString() : lineEdit_PATH->text());
     if (tree_proxy)
         tree_proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts, QString());
 }

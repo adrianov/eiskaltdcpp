@@ -21,6 +21,8 @@
 using namespace dcpp;
 
 void ShareBrowser::slotButtonUp(){
+    if (flatMode)
+        return;
 
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
     QModelIndexList selected  = selection_model->selectedRows(0);
@@ -62,6 +64,9 @@ void ShareBrowser::slotButtonUp(){
 }
 
 void ShareBrowser::slotButtonBack(){
+    if (flatMode)
+        return;
+
     if (pathHistory_iter && !pathHistory.isEmpty()){
 
         disconnect(treeView_LPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
@@ -83,6 +88,9 @@ void ShareBrowser::slotButtonBack(){
 }
 
 void ShareBrowser::slotButtonForward(){
+    if (flatMode)
+        return;
+
     if (pathHistory_iter && !pathHistory.isEmpty()){
 
         disconnect(treeView_LPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
@@ -106,6 +114,9 @@ void ShareBrowser::slotButtonForward(){
 }
 
 void ShareBrowser::slotLayoutUpdated(){
+    if (flatMode)
+        return;
+
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
     QModelIndexList selected  = selection_model->selectedRows(0);
 

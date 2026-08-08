@@ -122,6 +122,7 @@ private Q_SLOTS:
     void slotApplyFilters();
     void slotClearFilters();
     void flushViewFilters();
+    void slotFlatToggled(bool);
     void slotRightPaneClicked(const QModelIndex&);
     void slotRightPaneSelChanged(const QItemSelection&, const QItemSelection&);
     void slotLeftPaneSelChanged(const QItemSelection&, const QItemSelection&);
@@ -153,6 +154,10 @@ private:
     void deleteOwnItems(const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
+    void changeRootFlat(dcpp::DirectoryListing::Directory*);
+    void applyFlatMode(bool on);
+    void reloadRightPane(dcpp::DirectoryListing::Directory *dir);
+    dcpp::DirectoryListing::Directory *currentDir();
 
     void readSizeFilter(quint64 &size, int &mode) const;
     void applyViewFiltersNow();
@@ -175,6 +180,7 @@ private:
     FileBrowserFilterProxy *proxy;
     FileBrowserFilterProxy *tree_proxy;
     bool viewFilterPending = false;
+    bool flatMode = false;
 
     QVector <SelPair>::iterator pathHistory_iter;
     QVector <SelPair> pathHistory;

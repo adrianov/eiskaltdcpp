@@ -10,6 +10,7 @@
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
 #include "ArenaWidgetManager.h"
+#include "WulforSettings.h"
 
 #include "dcpp/ClientManager.h"
 
@@ -70,4 +71,10 @@ void ShareBrowser::continueInit(){
     ArenaWidgetManager::getInstance()->activate(this);
 
     selectLeftFolder(openItem);
+
+    if (WBGET(WB_SHARE_FLAT)) {
+        QSignalBlocker block(checkBox_FLAT);
+        checkBox_FLAT->setChecked(true);
+        applyFlatMode(true);
+    }
 }

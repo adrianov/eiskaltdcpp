@@ -105,27 +105,32 @@ bool FileBrowserFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &
     }
 
     const bool isDir = (item->dir != nullptr);
+    const QString name = model->data(nameIndex).toString();
+    // Flat file rows store Path (COLUMN_FILEBROWSER_PATH); folder-view rows omit it.
+    const bool flatRow = item->columnCount() > COLUMN_FILEBROWSER_PATH;
+    QString pathCol = flatRow ? item->data(COLUMN_FILEBROWSER_PATH).toString() : QString();
+    if (pathCol.endsWith(QLatin1Char('\\')))
+        pathCol.chop(1);
+
+    const QString rowFullPath = flatRow
+            ? (pathCol.isEmpty() ? name : pathCol + QLatin1Char('\\') + name)
+            : (pathPrefix_.isEmpty() ? name : pathPrefix_ + QLatin1Char('\\') + name);
 
     if (isDir) {
-        const QString dirPath = pathPrefix_.isEmpty()
-                ? model->data(nameIndex).toString()
-                : pathPrefix_ + QLatin1Char('\\') + model->data(nameIndex).toString();
         const qulonglong rowSize = model->data(
                 model->index(sourceRow, COLUMN_FILEBROWSER_ESIZE, sourceParent)).toULongLong();
-        if (dirsOnly_)
-            return dirPasses(dirPath, rowSize) || subtreeHasVisibleDir(item->dir, dirPath);
         if (filesOnly_)
             return false;
-        return subtreeHasMatch(item->dir, dirPath);
+        if (dirsOnly_)
+            return dirPasses(rowFullPath, rowSize) || subtreeHasVisibleDir(item->dir, rowFullPath);
+        return subtreeHasMatch(item->dir, rowFullPath);
     }
 
     if (dirsOnly_)
         return false;
 
     if (!textTerms_.empty()) {
-        QString hay = model->data(nameIndex).toString();
-        if (!pathPrefix_.isEmpty())
-            hay = pathPrefix_ + QLatin1Char('\\') + hay;
+        QString hay = rowFullPath;
         hay += QLatin1Char(' ') + model->data(model->index(sourceRow, COLUMN_FILEBROWSER_TTH, sourceParent)).toString();
 
         if (!matchesText(_tq(hay)))

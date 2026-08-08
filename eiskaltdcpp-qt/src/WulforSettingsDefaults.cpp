@@ -92,6 +92,7 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WB_MAINWINDOW_USE_SIDEBAR, static_cast<int>(true));
     settings.setValue(WB_SEARCHFILTER_NOFREE,   static_cast<int>(false));
     settings.setValue(WB_SEARCH_DONTHIDEPANEL,  static_cast<int>(false));
+    settings.setValue(WB_SHARE_FLAT,            static_cast<int>(false));
     settings.setValue(WB_ANTISPAM_ENABLED,      static_cast<int>(false));
     settings.setValue(WB_ANTISPAM_AS_FILTER,    static_cast<int>(false));
     settings.setValue(WB_ANTISPAM_FILTER_OPS,   static_cast<int>(false));

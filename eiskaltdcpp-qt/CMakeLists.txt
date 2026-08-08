@@ -212,6 +212,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserMenu.cpp
     src/ShareBrowserNav.cpp
     src/ShareBrowserSelect.cpp
+    src/ShareBrowserFlat.cpp
     src/ShareBrowserActions.cpp
     src/ShareBrowserFilter.cpp
     src/ShareBrowserInit.cpp

@@ -151,9 +151,10 @@ QVariant FileBrowserModel::headerData(int section, Qt::Orientation orientation,
     QList<QVariant> rootData;
     rootData << tr("Name") << tr("Size") << tr("Exact size") << QString("TTH")
              << tr("Bitrate") << tr("Resolution") << tr("Video") << tr("Audio")
-             << tr("Downloaded") << tr("Shared");
+             << tr("Downloaded") << tr("Shared") << tr("Path");
 
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole
+            && section >= 0 && section < rootData.size())
         return rootData.at(section);
 
     return QVariant();

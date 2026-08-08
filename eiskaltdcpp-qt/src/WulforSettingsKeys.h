@@ -80,6 +80,7 @@ static const QString & WB_MAINWINDOW_USE_M_TABBAR = "mainwindow-use-multi-line-t
 static const QString & WB_MAINWINDOW_USE_SIDEBAR  = "mainwindow-use-sidebar";
 static const QString & WB_SEARCHFILTER_NOFREE     = "search-filter-nofree";
 static const QString & WB_SEARCH_DONTHIDEPANEL    = "search-panel-dont-hide";
+static const QString & WB_SHARE_FLAT              = "sharebrowser-flat";
 static const QString & WB_ANTISPAM_ENABLED        = "antispam-enabled";
 static const QString & WB_ANTISPAM_AS_FILTER      = "antispam-as-filter";
 static const QString & WB_ANTISPAM_FILTER_OPS     = "antispam-filter-ops";

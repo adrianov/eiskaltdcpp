@@ -162,5 +162,5 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
         }
     }
 
-    changeRoot(viewParent);
+    reloadRightPane(flatMode ? currentDir() : viewParent);
 }

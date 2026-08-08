@@ -57,6 +57,7 @@ void ShareBrowser::init(){
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MAUDIO);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_HIT);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TS);
+    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
 
     treeView_LPANE->setExpanded(treeMapFromSource(tree_model->index(0, 0)), true);
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -88,6 +89,7 @@ void ShareBrowser::init(){
     connect(comboBox_SIZETYPE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyFilters()));
     connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyFilters()));
     connect(pushButton_CLEAR, SIGNAL(clicked()), this, SLOT(slotClearFilters()));
+    connect(checkBox_FLAT, SIGNAL(toggled(bool)), this, SLOT(slotFlatToggled(bool)));
 
     connect(treeView_RPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(slotRightPaneSelChanged(QItemSelection,QItemSelection)));
@@ -128,6 +130,9 @@ void ShareBrowser::load(){
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_MAUDIO);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_HIT);
     treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_TS);
+    treeView_LPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
+    if (!checkBox_FLAT->isChecked())
+        treeView_RPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
 
     treeView_LPANE->setSortingEnabled(true);
     treeView_RPANE->setSortingEnabled(true);
@@ -136,9 +141,12 @@ void ShareBrowser::load(){
 void ShareBrowser::save(){
     WSSET(WS_SHARE_LPANE_STATE, treeView_LPANE->header()->saveState().toBase64());
     WSSET(WS_SHARE_RPANE_STATE, treeView_RPANE->header()->saveState().toBase64());
+    WBSET(WB_SHARE_FLAT, checkBox_FLAT->isChecked());
 
-    WISET(WI_SHARE_RPANE_WIDTH, treeView_RPANE->width());
-    WISET(WI_SHARE_WIDTH, treeView_RPANE->width() + treeView_LPANE->width());
+    if (!flatMode) {
+        WISET(WI_SHARE_RPANE_WIDTH, treeView_RPANE->width());
+        WISET(WI_SHARE_WIDTH, treeView_RPANE->width() + treeView_LPANE->width());
+    }
 }
 
 void ShareBrowser::buildList(){

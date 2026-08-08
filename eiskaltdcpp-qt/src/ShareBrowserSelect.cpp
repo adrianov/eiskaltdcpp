@@ -10,76 +10,12 @@
 #include "ShareBrowser.h"
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
-#include "MainWindow.h"
 
-#include "dcpp/SettingsManager.h"
-
-#include <QDateTime>
-#include <QAbstractItemView>
 #include <QFuture>
 
 #include <QtConcurrent>
 
 using namespace dcpp;
-
-void ShareBrowser::changeRoot(dcpp::DirectoryListing::Directory *root){
-    if (!root)
-        return;
-
-    // Full reset so the filter proxy never sees silent appends/reorders.
-    list_model->beginRebuild();
-
-    current_size = 0;
-
-    for (const auto &dir : root->directories){
-        FileBrowserItem *child;
-        quint64 size = 0;
-        QList<QVariant> data;
-
-        size = dir->getTotalSize(true);
-        current_size += size;
-
-        data << _q(dir->getName())
-             << WulforUtil::formatBytes(size)
-             << size
-             << "";
-
-        child = new FileBrowserItem(data, list_root);
-        child->dir = dir;
-
-        list_root->appendChild(child);
-    }
-
-    for (const auto& file : root->files){
-        FileBrowserItem *child;
-        quint64 size = 0;
-        QList<QVariant> data;
-
-        size = file->getSize();
-        current_size += size;
-
-        data << _q(file->getName())
-             << WulforUtil::formatBytes(size)
-             << size
-             << _q(file->getTTH().toBase32())
-             << file->mediaInfo.bitrate
-             << _q(file->mediaInfo.resolution)
-             << _q(file->mediaInfo.video_info)
-             << _q(file->mediaInfo.audio_info)
-             << (quint64)file->getHit()
-             << QDateTime::fromTime_t(file->getTS()).toString("yyyy-MM-dd hh:mm");
-
-        child = new FileBrowserItem(data, list_root);
-        child->file = file;
-
-        list_root->appendChild(child);
-    }
-
-    list_model->highlightDuplicates();
-    list_model->endRebuild();
-
-    label_RIGHT->setText(QString(tr("Total size: %1")).arg(WulforUtil::formatBytes(current_size)));
-}
 
 void ShareBrowser::slotRightPaneSelChanged(const QItemSelection &, const QItemSelection &){
     QModelIndexList list        = treeView_RPANE->selectionModel()->selectedRows(COLUMN_FILEBROWSER_NAME);
@@ -116,6 +52,9 @@ static bool onlyFirstColumn(const QModelIndex &index){
 void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItemSelection &des){
     Q_UNUSED(sel)
 
+    if (flatMode)
+        return;
+
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
     QModelIndexList selected  = selection_model->selectedRows(0);
 
@@ -123,52 +62,46 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
     if (selected.size() != 1)
         return;
 
-    QModelIndex index = selected.at(0);
-    index = treeMapToSource(index);
+    QModelIndex index = treeMapToSource(selected.at(0));
+    if (!index.isValid())
+        return;
 
-    if (index.isValid()){
+    SelPair p;
+    FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
 
-        SelPair p;
+    changeRoot(item->dir);
+    p.dir = item->dir;
+    p.index = index;
+    p.path_tesxt = tree_model->createRemotePath(item);
+    lineEdit_PATH->setText(p.path_tesxt);
+    applyViewFiltersNow();
 
-        FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
+    pathHistory.append(p);
+    pathHistory_iter = pathHistory.end();
 
-        changeRoot(item->dir);
-        p.dir = item->dir;
-        p.index = index;
+    QModelIndexList deselected_idx = des.indexes();
+    QFuture<QModelIndex> dsel_filter = QtConcurrent::filtered(deselected_idx, onlyFirstColumn);
+    deselected_idx = dsel_filter.results();
+    if (deselected_idx.size() != 1)
+        return;
 
-        lineEdit_PATH->setText(tree_model->createRemotePath(item));
-        p.path_tesxt = tree_model->createRemotePath(item);
-        applyViewFiltersNow();
+    QModelIndex old_index = treeMapToSource(deselected_idx.at(0));
+    const bool switchedToParent = (old_index.parent() == index);
 
-        pathHistory.append(p);
-        pathHistory_iter = pathHistory.end();
+    QModelIndex src;
+    if (switchedToParent) {
+        FileBrowserItem *old_item = static_cast<FileBrowserItem*>(old_index.internalPointer());
+        FileBrowserItem *list_item = list_model->createRootForPath(
+                old_item->data(COLUMN_FILEBROWSER_NAME).toString());
+        if (list_item)
+            src = list_model->index(list_item->row(), 0, QModelIndex());
+    } else {
+        src = list_model->index(0, 0, QModelIndex());
+    }
 
-        QModelIndexList deselected_idx = des.indexes();
-        QFuture<QModelIndex> dsel_filter    = QtConcurrent::filtered(deselected_idx, onlyFirstColumn);
-
-        deselected_idx  = dsel_filter.results();
-
-        if (deselected_idx.size() != 1)
-            return;
-
-        QModelIndex old_index = treeMapToSource(deselected_idx.at(0));
-        bool switchedToParent = (old_index.parent() == index);
-
-        QModelIndex src;
-        if (switchedToParent){
-            FileBrowserItem *old_item = static_cast<FileBrowserItem*>(old_index.internalPointer());
-            FileBrowserItem *list_item = list_model->createRootForPath(
-                    old_item->data(COLUMN_FILEBROWSER_NAME).toString());
-            if (list_item)
-                src = list_model->index(list_item->row(), 0, QModelIndex());
-        } else {
-            src = list_model->index(0, 0, QModelIndex());
-        }
-
-        QModelIndex i = proxy ? proxy->mapFromSource(src) : src;
-        if (i.isValid()){
-            treeView_RPANE->selectionModel()->select(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-            treeView_RPANE->selectionModel()->setCurrentIndex(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
-        }
+    QModelIndex i = proxy ? proxy->mapFromSource(src) : src;
+    if (i.isValid()) {
+        treeView_RPANE->selectionModel()->select(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
+        treeView_RPANE->selectionModel()->setCurrentIndex(i, QItemSelectionModel::SelectCurrent|QItemSelectionModel::Rows);
     }
 }

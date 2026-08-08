@@ -245,6 +245,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBox_FLAT">
+            <property name="toolTip">
+             <string>List all files under the current folder in one table with a Path column (no folder tree)</string>
+            </property>
+            <property name="text">
+             <string>Flat</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="pushButton_CLEAR">
             <property name="text">
              <string>Clear</string>

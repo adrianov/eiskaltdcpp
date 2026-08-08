@@ -86,6 +86,7 @@ void WulforSettings::fillOldConfigMaps() {
     intmap.insert(WB_MAINWINDOW_USE_SIDEBAR, static_cast<int>(true));
     intmap.insert(WB_SEARCHFILTER_NOFREE,   static_cast<int>(false));
     intmap.insert(WB_SEARCH_DONTHIDEPANEL,  static_cast<int>(false));
+    intmap.insert(WB_SHARE_FLAT,            static_cast<int>(false));
     intmap.insert(WB_ANTISPAM_ENABLED,      static_cast<int>(false));
     intmap.insert(WB_ANTISPAM_AS_FILTER,    static_cast<int>(false));
     intmap.insert(WB_ANTISPAM_FILTER_OPS,   static_cast<int>(false));

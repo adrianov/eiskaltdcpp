@@ -82,17 +82,25 @@ void ShareBrowser::goDown(QTreeView *view){
     const QModelIndex index = selected.at(0);
     const QModelIndex src = proxy ? proxy->mapToSource(index) : index;
     FileBrowserItem *item = static_cast<FileBrowserItem*>(src.internalPointer());
+    if (!item)
+        return;
 
-    if (!item || item->file)
+    // Flat list is files only: Enter opens/downloads. Folder view Enter enters directories.
+    if (flatMode) {
+        if (item->file)
+            slotRightPaneClicked(index);
+        return;
+    }
+
+    if (item->file)
         return;
 
     slotRightPaneClicked(index);
-
     treeView_RPANE->setFocus();
 }
 
 void ShareBrowser::goUp(QTreeView *view){
-    if (view != treeView_RPANE)
+    if (view != treeView_RPANE || flatMode)
         return;
 
     QStringList paths = lineEdit_PATH->text().split("\\", WULFOR_SKIP_EMPTY);
@@ -152,6 +160,9 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
 
         return;
     }
+
+    if (!item->dir || flatMode)
+        return;
 
     QString parent_path = lineEdit_PATH->text() + "\\" + item->data(COLUMN_FILEBROWSER_NAME).toString();
     QModelIndex parent_index = tree_model->createIndexForItem(tree_model->createRootForPath(parent_path));
