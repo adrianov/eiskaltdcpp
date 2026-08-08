@@ -8,7 +8,6 @@
  ***************************************************************************/
 
 #include "SearchModel.h"
-#include "SearchModelSort.h"
 #include "WulforUtil.h"
 
 #include <QFileInfo>
@@ -96,10 +95,9 @@ bool SearchModel::addResult
         else
             dirs.insert(dirKey, item);
 
-        auto it = insertSortedSearchItem(sortColumn, sortOrder, parent->childItems, item);
-        const int row = static_cast<int>(it - parent->childItems.begin());
+        const int row = parent->sortedInsertRow(sortColumn, sortOrder, item);
         beginInsertRows(QModelIndex(), row, row);
-        parent->childItems.insert(it, item);
+        parent->insertChild(row, item);
         endInsertRows();
 
         return true;

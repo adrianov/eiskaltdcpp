@@ -43,7 +43,7 @@ int uniqueSourceCount(const SearchItem *item) {
     };
 
     add(item);
-    for (const SearchItem *child : item->childItems)
+    for (const SearchItem *child : item->children())
         add(child);
 
     int n = ips.size() + cidsOnly.size();
@@ -65,18 +65,27 @@ SearchItem::SearchItem(const QList<QVariant> &data, SearchItem *parent) :
 
 SearchItem::~SearchItem()
 {
-    qDeleteAll(childItems);
-    childItems.clear();
+    clearChildren();
 }
 
 void SearchItem::appendChild(SearchItem *item) {
-    childItems.append(item);
-    countChecked = false;
+    insertChild(childItems.size(), item);
+}
+
+void SearchItem::insertChild(int row, SearchItem *item) {
+    childItems.insert(row, item);
+    countCached = -1;
 }
 
 void SearchItem::removeChild(int row) {
     childItems.removeAt(row);
-    countChecked = false;
+    countCached = -1;
+}
+
+void SearchItem::clearChildren() {
+    qDeleteAll(childItems);
+    childItems.clear();
+    countCached = -1;
 }
 
 SearchItem *SearchItem::child(int row) {
@@ -93,10 +102,8 @@ int SearchItem::columnCount() const {
 
 QVariant SearchItem::data(int column) const {
     if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem) {
-        if (!countChecked) {
+        if (countCached < 0)
             countCached = uniqueSourceCount(this);
-            countChecked = true;
-        }
         return countCached;
     }
 

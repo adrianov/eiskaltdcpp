@@ -117,7 +117,7 @@ void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
         if (item->childCount() > 0 && !SETTING(DONT_DL_ALREADY_QUEUED)){//download all child items
             QString fname = params["FNAME"].toString();
 
-            for (const auto &child : item->childItems){
+            for (const auto &child : item->children()){
                 if (getDownloadParams(params, child)){
                     params["FNAME"] = fname;
 

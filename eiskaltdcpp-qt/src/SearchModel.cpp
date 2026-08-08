@@ -12,7 +12,6 @@
 #include <QStringList>
 
 #include "SearchModel.h"
-#include "SearchModelSort.h"
 #include "SearchFrame.h"
 #include "WulforUtil.h"
 
@@ -53,11 +52,11 @@ void SearchModel::sort(int column, Qt::SortOrder order) {
     const QModelIndexList oldIndexes = persistentIndexList();
 
     try {
-        sortSearchItems(column, order, rootItem->childItems);
+        rootItem->sortChildren(column, order);
     }
     catch (SearchListException &) {
         sortColumn = COLUMN_SF_FILENAME;
-        sortSearchItems(COLUMN_SF_FILENAME, order, rootItem->childItems);
+        rootItem->sortChildren(COLUMN_SF_FILENAME, order);
     }
 
     QModelIndexList newIndexes;

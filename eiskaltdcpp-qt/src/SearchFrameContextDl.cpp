@@ -43,7 +43,7 @@ bool SearchFrame::contextDownloads(Menu::Action act, const QModelIndexList &list
                     if (item->childCount() > 0 && !SETTING(DONT_DL_ALREADY_QUEUED)){//download all child items
                         QString fname = params["FNAME"].toString();
 
-                        for (const auto &i : item->childItems){
+                        for (const auto &i : item->children()){
                             if (getDownloadParams(params, i)){
                                 params["FNAME"] = fname;
 
@@ -88,7 +88,7 @@ bool SearchFrame::contextDownloads(Menu::Action act, const QModelIndexList &list
                     if (item->childCount() > 0 && !SETTING(DONT_DL_ALREADY_QUEUED)){//download all child items
                         QString fname = params["FNAME"].toString();
 
-                        for (const auto  &i : item->childItems){
+                        for (const auto  &i : item->children()){
                             if (getDownloadParams(params, i)){
                                 params["FNAME"]  = fname;
                                 params["TARGET"] = target;

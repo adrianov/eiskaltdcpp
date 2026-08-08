@@ -7,7 +7,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchModelSort.h"
+#include "SearchModel.h"
 #include "NaturalCompareQt.h"
 
 #include <algorithm>
@@ -25,15 +25,15 @@ struct Compare {
         std::stable_sort(items.begin(), items.end(), attrs[column]);
     }
 
-    QList<SearchItem*>::iterator static insertSorted(int column, QList<SearchItem*>& items, SearchItem* item) {
+    int static sortedRow(int column, const QList<SearchItem*>& items, SearchItem* item) {
         if (column < 0 || column > static_cast<int>(COLUMN_SF_HOST))
-            return items.end();
+            return items.size();
 
-        return std::lower_bound(items.begin(),
+        return static_cast<int>(std::lower_bound(items.begin(),
                            items.end(),
                            item,
                            attrs[column]
-                          );
+                          ) - items.begin());
     }
 
     private:
@@ -87,23 +87,22 @@ bool inline Compare<Qt::DescendingOrder>::Cmp(const T& l, const T& r) {
 
 } //namespace
 
-void sortSearchItems(int column, Qt::SortOrder order, QList<SearchItem*> &items) {
+void SearchItem::sortChildren(int column, Qt::SortOrder order) {
     static Compare<Qt::AscendingOrder>  acomp = Compare<Qt::AscendingOrder>();
     static Compare<Qt::DescendingOrder> dcomp = Compare<Qt::DescendingOrder>();
 
     if (order == Qt::AscendingOrder)
-        acomp.sort(column, items);
+        acomp.sort(column, childItems);
     else if (order == Qt::DescendingOrder)
-        dcomp.sort(column, items);
+        dcomp.sort(column, childItems);
 }
 
-QList<SearchItem*>::iterator insertSortedSearchItem(int column, Qt::SortOrder order,
-                                                    QList<SearchItem*> &items, SearchItem *item) {
+int SearchItem::sortedInsertRow(int column, Qt::SortOrder order, SearchItem *item) const {
     static Compare<Qt::AscendingOrder>  acomp = Compare<Qt::AscendingOrder>();
     static Compare<Qt::DescendingOrder> dcomp = Compare<Qt::DescendingOrder>();
 
     if (order == Qt::AscendingOrder)
-        return acomp.insertSorted(column, items, item);
+        return acomp.sortedRow(column, childItems, item);
 
-    return dcomp.insertSorted(column, items, item);
+    return dcomp.sortedRow(column, childItems, item);
 }

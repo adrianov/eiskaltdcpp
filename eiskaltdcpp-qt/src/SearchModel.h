@@ -63,7 +63,13 @@ public:
     virtual ~SearchItem();
 
     void appendChild(SearchItem *child);
+    void insertChild(int row, SearchItem *child);
     void removeChild(int row);
+    void clearChildren();
+    /** Reorder only; unique-source count unchanged. */
+    void sortChildren(int column, Qt::SortOrder order);
+    /** Insertion index in an already-sorted child list (does not insert). */
+    int sortedInsertRow(int column, Qt::SortOrder order, SearchItem *item) const;
 
     SearchItem *child(int row);
     int childCount() const;
@@ -72,6 +78,7 @@ public:
     int row() const;
     SearchItem *parent() const;
     bool exists(const QString &user_cid) const;
+    const QList<SearchItem*> &children() const { return childItems; }
     /** Cached share/finished path for this TTH; empty if not local. */
     QString localPath() const;
     /** Drop cached path so the next localPath() lookup runs again. */
@@ -85,17 +92,16 @@ public:
 
     bool isDir;
 
-    QList<SearchItem*> childItems;
 private:
-
+    QList<SearchItem*> childItems;
     QList<QVariant> itemData;
     SearchItem *parentItem;
     mutable bool localChecked = false;
     mutable QString localCached;
     mutable bool queuedChecked = false;
     mutable bool queuedCached = false;
-    mutable bool countChecked = false;
-    mutable int countCached = 0;
+    /** Unique source count; -1 means dirty. */
+    mutable int countCached = -1;
 };
 
 class SearchModel : public QAbstractItemModel

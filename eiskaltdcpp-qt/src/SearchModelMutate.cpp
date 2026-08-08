@@ -18,8 +18,7 @@ void SearchModel::clearModel(){
     // QItemSelection with dangling indexes and crashes in QTreeView paint.
     beginResetModel();
     countSortPending = false;
-    qDeleteAll(rootItem->childItems);
-    rootItem->childItems.clear();
+    rootItem->clearChildren();
     tths.clear();
     dirs.clear();
     endResetModel();
@@ -74,7 +73,7 @@ void SearchModel::refreshLocal(const QString &tth){
 
     item->clearLocalPath();
     item->clearQueued();
-    for (SearchItem *child : item->childItems) {
+    for (SearchItem *child : item->children()) {
         child->clearLocalPath();
         child->clearQueued();
     }
@@ -83,7 +82,7 @@ void SearchModel::refreshLocal(const QString &tth){
     if (idx.isValid())
         emit dataChanged(idx, idx.sibling(idx.row(), columnCount() - 1));
 
-    for (SearchItem *child : item->childItems) {
+    for (SearchItem *child : item->children()) {
         const QModelIndex c = createIndexForItem(child);
         if (c.isValid())
             emit dataChanged(c, c.sibling(c.row(), columnCount() - 1));
@@ -94,11 +93,11 @@ bool SearchModel::okToFind(const SearchItem *item){
     if (!item)
         return false;
 
-    if (rootItem->childItems.contains(const_cast<SearchItem*>(item)))
+    if (rootItem->children().contains(const_cast<SearchItem*>(item)))
         return true;
 
     if (SearchItem *tthRoot = tths.value(item->data(COLUMN_SF_TTH).toString())) {
-        for (const auto &i : tthRoot->childItems) {
+        for (const auto &i : tthRoot->children()) {
             if (item == i)
                 return true;
         }
@@ -108,7 +107,7 @@ bool SearchModel::okToFind(const SearchItem *item){
         const QString key = dirGroupKey(item->data(COLUMN_SF_PATH).toString(),
                                         item->data(COLUMN_SF_FILENAME).toString());
         if (SearchItem *dirRoot = dirs.value(key)) {
-            for (const auto &i : dirRoot->childItems) {
+            for (const auto &i : dirRoot->children()) {
                 if (item == i)
                     return true;
             }
