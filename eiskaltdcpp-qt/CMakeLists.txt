@@ -115,6 +115,10 @@ set(QT_EXTRA_SOURCES
     src/MainWindowAbout.cpp
     src/MainWindowStatus.cpp
     src/MainWindowTools.cpp
+    src/statusbar/StatusStrip.cpp
+    src/statusbar/FreeSpaceBar.cpp
+    src/statusbar/HashProgressBar.cpp
+    src/statusbar/StatusBarLogLabel.cpp
     src/SearchFrameContext.cpp
     src/SearchFrameContextDl.cpp
     src/SearchFrameContextMore.cpp
@@ -132,10 +136,12 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameTimer.cpp
     src/SearchFrameMenuExec.cpp
     src/SearchFrameParams.cpp
+    src/SearchFrameMedia.cpp
     src/SearchLocalPath.cpp
     src/SearchFileTypes.cpp
     src/SearchModelSort.cpp
     src/SearchModelAdd.cpp
+    src/SearchModelMedia.cpp
     src/SearchModelData.cpp
     src/SearchModelMutate.cpp
     src/SearchModelNav.cpp
@@ -197,6 +203,7 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexSearchQuery.cpp
     src/ShareIndexSearchRows.cpp
     src/ShareIndexUsers.cpp
+    src/ShareIndexMedia.cpp
     src/ShareIndexCap.cpp
     src/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
@@ -209,10 +216,12 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexWalk.cpp
     src/ShareBrowserContext.cpp
     src/ShareBrowserContextMore.cpp
-    src/ShareBrowserMenu.cpp
     src/ShareBrowserNav.cpp
     src/ShareBrowserSelect.cpp
-    src/ShareBrowserFlat.cpp
+    src/sharebrowser/ShareFolderList.cpp
+    src/sharebrowser/ShareBrowserList.cpp
+    src/sharebrowser/ShareBrowserMenu.cpp
+    src/sharebrowser/AsyncRunner.cpp
     src/ShareBrowserActions.cpp
     src/ShareBrowserFilter.cpp
     src/ShareBrowserInit.cpp
@@ -276,6 +285,7 @@ if (NOT HAIKU)
 endif (NOT HAIKU)
 
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
+list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
 list (REMOVE_ITEM MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/MainWindowPrivate.h
             ${PROJECT_SOURCE_DIR}/src/SearchFramePrivate.h
