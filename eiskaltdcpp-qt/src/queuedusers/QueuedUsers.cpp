@@ -7,7 +7,7 @@
  * (at your option) any later version.
  */
 
-#include "QueuedUsers.h"
+#include "queuedusers/QueuedUsers.h"
 #include "WulforSettings.h"
 
 #include "dcpp/UploadManager.h"

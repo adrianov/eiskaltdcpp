@@ -9,9 +9,8 @@
 
 #pragma once
 
-#include <QObject>
 #include <QCloseEvent>
-#include <QHash>
+#include <QObject>
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
@@ -20,70 +19,9 @@
 #include "dcpp/User.h"
 #include "ArenaWidget.h"
 #include "WulforUtil.h"
+#include "queuedusers/QueuedUsersModel.h"
 
 #include "ui_UIQueuedUsers.h"
-
-class QueuedUserItem
-{
-
-public:
-    QueuedUserItem(const QList<QVariant> &data, QueuedUserItem *parent = nullptr);
-    virtual ~QueuedUserItem();
-
-    void appendChild(QueuedUserItem *child);
-
-    QueuedUserItem *child(int row);
-    int childCount() const;
-    int columnCount() const;
-    QVariant data(int column) const;
-    int row() const;
-    QueuedUserItem *parent() const;
-
-    QString cid;
-    QString file;
-    QString hub;
-
-    QList<QueuedUserItem*> childItems;
-private:
-
-    QList<QVariant> itemData;
-    QueuedUserItem *parentItem;
-};
-
-class QueuedUsersModel : public QAbstractItemModel
-{
-    Q_OBJECT
-    typedef QVariantMap VarMap;
-public:
-
-    QueuedUsersModel(QObject *parent = nullptr);
-    ~QueuedUsersModel();
-
-    /** */
-    QVariant data(const QModelIndex &, int) const;
-    /** */
-    Qt::ItemFlags flags(const QModelIndex &) const;
-    /** */
-    QVariant headerData(int section, Qt::Orientation, int role = Qt::DisplayRole) const;
-    /** */
-    QModelIndex index(int, int, const QModelIndex &parent = QModelIndex()) const;
-    /** */
-    QModelIndex parent(const QModelIndex &index) const;
-    /** */
-    int rowCount(const QModelIndex &parent = QModelIndex()) const;
-    /** */
-    int columnCount(const QModelIndex &parent = QModelIndex()) const;
-    /** sort list */
-    virtual void sort(int column = -1, Qt::SortOrder order = Qt::AscendingOrder);
-
-    void addResult(const VarMap& map);
-    void remResult(const VarMap& map);
-
-private:
-    QueuedUserItem *rootItem;
-    /** */
-    QHash<QString, QueuedUserItem*> cids;
-};
 
 class QueuedUsers:
         public QWidget,

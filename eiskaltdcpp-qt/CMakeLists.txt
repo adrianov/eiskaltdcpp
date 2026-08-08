@@ -76,9 +76,10 @@ set(QT_EXTRA_SOURCES
     src/PublicHubModelSort.cpp
     src/PublicHubsActions.cpp
     src/PublicHubsFilter.cpp
-    src/QueuedUserItem.cpp
-    src/QueuedUsersModel.cpp
-    src/QueuedUsersSort.cpp
+    src/queuedusers/QueuedUserItem.cpp
+    src/queuedusers/QueuedUserTree.cpp
+    src/queuedusers/QueuedUsers.cpp
+    src/queuedusers/QueuedUsersModel.cpp
     src/FavoriteUsersActions.cpp
     src/FavoriteHubItem.cpp
     src/FavoriteHubModelMut.cpp
@@ -291,6 +292,9 @@ endif (NOT HAIKU)
 
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
+list (APPEND MOC_HDRS
+            ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsers.h
+            ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsersModel.h)
 list (REMOVE_ITEM MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/MainWindowPrivate.h
             ${PROJECT_SOURCE_DIR}/src/SearchFramePrivate.h
@@ -368,7 +372,8 @@ if (NOT USE_JS)
 endif (NOT USE_JS)
 
 #Create moc files
-QT5_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn)
+# -I src so subdirectory headers (e.g. queuedusers/) resolve ArenaWidget and peers for moc.
+QT5_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn -I${PROJECT_SOURCE_DIR}/src)
 #Create .h files from ui files
 QT5_WRAP_UI (U_SRCS ${UI_FORMS})
 

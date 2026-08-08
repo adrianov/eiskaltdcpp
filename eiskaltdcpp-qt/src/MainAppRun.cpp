@@ -28,7 +28,7 @@
 #include "VersionGlobal.h"
 #include "EmoticonFactory.h"
 #include "FinishedTransfers.h"
-#include "QueuedUsers.h"
+#include "queuedusers/QueuedUsers.h"
 #include "ArenaWidgetManager.h"
 #include "ArenaWidgetFactory.h"
 #include "MainWindow.h"

@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-#include "QueuedUsers.h"
+#include "queuedusers/QueuedUserItem.h"
 
 QueuedUserItem::QueuedUserItem(const QList<QVariant> &data, QueuedUserItem *parent) :
     itemData(data),
@@ -16,8 +16,7 @@ QueuedUserItem::QueuedUserItem(const QList<QVariant> &data, QueuedUserItem *pare
 {
 }
 
-QueuedUserItem::~QueuedUserItem()
-{
+QueuedUserItem::~QueuedUserItem() {
     qDeleteAll(childItems);
     childItems.clear();
 }
@@ -42,13 +41,12 @@ QVariant QueuedUserItem::data(int column) const {
     return itemData.value(column);
 }
 
-QueuedUserItem *QueuedUserItem::parent() const{
+QueuedUserItem *QueuedUserItem::parent() const {
     return parentItem;
 }
 
 int QueuedUserItem::row() const {
     if (parentItem)
         return parentItem->childItems.indexOf(const_cast<QueuedUserItem*>(this));
-
     return 0;
 }

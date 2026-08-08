@@ -21,7 +21,7 @@
 #include "ADLS.h"
 #include "CmdDebug.h"
 #include "Secretary.h"
-#include "QueuedUsers.h"
+#include "queuedusers/QueuedUsers.h"
 
 #include <QToolButton>
 #include <QToolBar>

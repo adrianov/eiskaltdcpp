@@ -73,7 +73,7 @@
 #include "MultiLineToolBar.h"
 #include "SearchBlacklist.h"
 #include "PmSpamFilter.h"
-#include "QueuedUsers.h"
+#include "queuedusers/QueuedUsers.h"
 #ifdef USE_JS
 #include "ScriptManagerDialog.h"
 #include "scriptengine/ScriptConsole.h"
