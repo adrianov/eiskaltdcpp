@@ -60,7 +60,7 @@ public:
     qlonglong fpos;
     /** Upload leaf: bytes sent on the current part (Upload::getPos). */
     qlonglong segBytes;
-    /** Session begin tick (GET_TICK); see transfersession/TransferSessionRate.md. */
+    /** Session begin tick (GET_TICK); see transfersession/. */
     quint64 speedStart;
     /** File bytes already done at session begin (download FPOS / upload startPos). */
     qlonglong speedBase;

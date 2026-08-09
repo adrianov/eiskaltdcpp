@@ -298,6 +298,7 @@ set(QT_EXTRA_SOURCES
     src/TransferViewPath.cpp
     src/TransferViewMetrics.cpp
     src/TransferViewUploadListeners.cpp
+    src/transfersession/TransferGroup.cpp
     src/transfersession/TransferSession.cpp
     src/UserListItem.cpp
     src/UserListModelData.cpp

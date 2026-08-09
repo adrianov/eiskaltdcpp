@@ -60,4 +60,5 @@ Publish rate/ETA only when the session has begun, `moved > 0`, and `elapsed ≥ 
 |------|------|
 | `TransferSessionRate.h` | Pure rate math |
 | `TransferSession` | Scope counters + UI fields |
+| `TransferGroup` | Parent row aggregate (progress, speed, identity) |
 | Transfer View model | Tree / settle / listeners |
