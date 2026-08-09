@@ -38,8 +38,9 @@ public:
     void cancel();
     /**
      * Cancel scans and wait until workers parented to owner exit.
-     * Safe to block: workers observe gen_ at least every 64 items/files
-     * (scanAsync + FilterMatch subtree walks), so cancel returns promptly.
+     * No timeout: workers hold FileBrowserItem* and must finish before model reset.
+     * cancel() is observed at least every 64 list rows / files in scanAsync and
+     * FilterMatch subtree walks (dirs-only size filter may briefly walk totals).
      */
     void join(QObject *owner);
 

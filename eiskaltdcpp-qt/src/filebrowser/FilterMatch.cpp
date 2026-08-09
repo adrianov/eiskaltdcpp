@@ -138,12 +138,14 @@ bool FilterMatch::subtreeHasMatch(DirectoryListing::Directory *dir, const QStrin
     // Dir path can match on its own (empty dirs / tree parents); skip when ext-only.
     if (!terms.empty() && extFilter.isEmpty() && matchesText(path))
         return true;
+    const bool tth = needTth();
     int n = 0;
     for (const auto &file : dir->files) {
         if ((n++ & 63) == 0 && stale(gen, expect))
             return false;
         const QString filePath = joinPath(path, _q(file->getName()));
-        if (filePasses(filePath, file->getSize(), _q(file->getTTH().toBase32())))
+        const QString hash = tth ? _q(file->getTTH().toBase32()) : QString();
+        if (filePasses(filePath, file->getSize(), hash))
             return true;
     }
     for (const auto &sub : dir->directories) {
@@ -158,7 +160,14 @@ bool FilterMatch::subtreeHasVisibleDir(DirectoryListing::Directory *dir, const Q
 {
     if (!dir || stale(gen, expect))
         return false;
-    if (dirPasses(path, dir->getTotalSize(true)))
+    // Avoid getTotalSize tree walk unless the size filter needs it.
+    qulonglong sz = 0;
+    if (sizeLimit && sizeMode != SearchManager::SIZE_DONTCARE) {
+        sz = static_cast<qulonglong>(dir->getTotalSize(true));
+        if (stale(gen, expect))
+            return false;
+    }
+    if (dirPasses(path, sz))
         return true;
     for (const auto &sub : dir->directories) {
         if (subtreeHasVisibleDir(sub, joinPath(path, _q(sub->getName())), gen, expect))
@@ -184,8 +193,16 @@ bool FilterMatch::acceptItem(FileBrowserItem *item, const QString &pathPrefix,
         if (filesOnly)
             return false;
         const QString full = joinPath(path, name);
-        if (dirsOnly)
-            return dirPasses(full, size) || subtreeHasVisibleDir(item->dir, full, gen, expect);
+        if (dirsOnly) {
+            if (dirPasses(full, size))
+                return true;
+            // Children only — this dir already tested with the row's ESIZE.
+            for (const auto &sub : item->dir->directories) {
+                if (subtreeHasVisibleDir(sub, joinPath(full, _q(sub->getName())), gen, expect))
+                    return true;
+            }
+            return false;
+        }
         return subtreeHasMatch(item->dir, full, gen, expect);
     }
 
