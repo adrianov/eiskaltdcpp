@@ -14,6 +14,7 @@
 
 #include "ClientManager.h"
 #include "DownloadManager.h"
+#include "DownloadRetryPolicy.h"
 #include "MappingManager.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
@@ -50,7 +51,8 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                         continue;
                     }
                     // Only skipped hubs still online (others left) — drop as unreachable.
-                    if(dropUnreachableDownload(cqi)) {
+                    // Hub identity rotation already happened on connect timeout.
+                    if(DownloadRetryPolicy::dropUnreachable(cqi)) {
                         unreachableUsers.push_back(cqi->getUser());
                         removed.push_back(cqi);
                         continue;
@@ -109,12 +111,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 }
 
                 if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                    if(dropUnreachableDownload(cqi)) {
+                    if(DownloadRetryPolicy::dropUnreachable(cqi)) {
                         unreachableUsers.push_back(cqi->getUser());
                         removed.push_back(cqi);
                         continue;
                     }
-                    markQueueGiveUp(cqi, cqi->getErrors(), false);
+                    DownloadRetryPolicy::markGiveUp(cqi, cqi->getErrors(), false);
                     continue;
                 }
 
@@ -141,6 +143,8 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                             cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
 
                             {
+                                // Rotate NMDC hub identities / ADC hub hints before CTM.
+                                switchDownloadIdentity(cqi);
                                 const string hub = ClientManager::getInstance()->resolveHubHint(
                                         cqi->getUser().user, cqi->getUser().hint);
                                 if(!hub.empty())

@@ -56,6 +56,19 @@ ConnectionQueueItem* ConnectionManager::findDownloadCqi(const HintedUser& user) 
     return match;
 }
 
+bool ConnectionManager::switchDownloadIdentity(ConnectionQueueItem* cqi) {
+    HintedUser next = cqi->getUser();
+    if(!QueueManager::getInstance()->selectDownloadIdentity(next))
+        return false;
+    // Two download CQIs must never hold the same identity (putCQI/find key on it).
+    for(auto& item : downloads) {
+        if(item != cqi && item->getUser().user == next.user)
+            return false;
+    }
+    cqi->setUser(next);
+    return true;
+}
+
 bool ConnectionManager::peerConnectInFlight(const HintedUser& user) const {
     for(auto& cqi : downloads) {
         if(cqi->getState() != ConnectionQueueItem::CONNECTING)

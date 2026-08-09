@@ -13,12 +13,29 @@
 
 #include "ClientManager.h"
 #include "ConnectionManager.h"
+#include "ConnectionManagerPeerMatch.h"
 #include "Download.h"
+#include "PeerConnectFilter.h"
+#include "PeerConnectHub.h"
 #include "UserConnection.h"
 
 namespace dcpp {
 
 namespace {
+
+using ConnectionManagerPeerMatch::samePeer;
+
+int identityScore(const HintedUser& hu) {
+    int score = 1;
+    switch(PeerConnectHub::get(hu.user, hu.hint)) {
+        case PeerConnectHub::SUCCESS: score = 0; break;
+        case PeerConnectHub::FAILURE: score = 2; break;
+        default: break;
+    }
+    if(PeerConnectHub::isConnectTimeoutHub(hu.user, hu.hint))
+        score += 10;
+    return score;
+}
 
 string peerIp(const HintedUser& hu, const QueueItem* qi) {
     for(auto& d: qi->getDownloads()) {
@@ -96,6 +113,43 @@ bool QueueManager::allowDownloadConnect(const HintedUser& aUser) noexcept {
         return true;
     QueueItem* qi = userQueue.getNext(aUser.user, QueueItem::LOWEST);
     return qi && !hasBusyAlias(qi, aUser, queued);
+}
+
+bool QueueManager::selectDownloadIdentity(HintedUser& user) noexcept {
+    Lock l(cs);
+    if(!user.user)
+        return false;
+    QueueItem* qi = userQueue.getNext(user.user, QueueItem::LOWEST);
+    if(!qi)
+        return false;
+
+    auto* cm = ClientManager::getInstance();
+    HintedUser best = user;
+    int bestScore = 0;
+    bool found = false;
+
+    for(auto& s: qi->getSources()) {
+        const HintedUser& src = s.getUser();
+        if(!src.user || !src.user->isOnline() || !samePeer(user, src))
+            continue;
+        OnlineUser* ou = cm->findOnlineUser(src, false);
+        if(ou && !PeerConnectFilter::isViablePeer(*ou))
+            continue;
+
+        HintedUser hu = src;
+        hu.hint = cm->resolveHubHint(hu.user, hu.hint);
+        const int score = identityScore(hu);
+        if(!found || score < bestScore) {
+            best = hu;
+            bestScore = score;
+            found = true;
+        }
+    }
+
+    if(!found || (best.user == user.user && best.hint == user.hint))
+        return false;
+    user = best;
+    return true;
 }
 
 } // namespace dcpp

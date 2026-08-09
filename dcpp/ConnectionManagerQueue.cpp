@@ -66,8 +66,11 @@ bool ConnectionManager::isQueuedForDownload(const UserPtr& user) const {
 QueuedDownloadUsers ConnectionManager::queuedDownloadUsers() const {
     Lock l(cs);
     QueuedDownloadUsers out;
+    // Only in-flight attempts block nick/IP aliases. WAITING must not — otherwise
+    // NMDC same-nick sources on other hubs never get a chance to take the CQI.
     for(auto& cqi: downloads) {
-        if(cqi->getState() == ConnectionQueueItem::ACTIVE || cqi->getErrors() != -1)
+        if(cqi->getState() == ConnectionQueueItem::ACTIVE ||
+                cqi->getState() == ConnectionQueueItem::CONNECTING)
             out.insert(cqi->getUser().user->getCID());
     }
     return out;

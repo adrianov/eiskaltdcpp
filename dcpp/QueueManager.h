@@ -82,6 +82,8 @@ public:
             const QueuedDownloadUsers& queued) noexcept;
     /** False if next file for user has a busy nick/IP alias. */
     bool allowDownloadConnect(const HintedUser& aUser) noexcept;
+    /** Pick best online same-peer queue identity (multi-hub NMDC). Updates user if better. */
+    bool selectDownloadIdentity(HintedUser& user) noexcept;
 
     bool getTTH(const string& name, TTHValue& tth) noexcept;
 

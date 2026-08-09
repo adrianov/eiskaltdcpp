@@ -20,6 +20,7 @@
 #include "QueueItem.h"
 
 #include "ClientManager.h"
+#include "ConnectionManagerPeerMatch.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectHub.h"
 #include "QueueManager.h"
@@ -45,10 +46,23 @@ void QueueItem::getOnlineUsers(HintedUserList& l, const unordered_set<CID>& queu
     if(candidates.empty())
         return;
     PeerConnectHub::sortSources(candidates);
+    // One identity per peer — NMDC hub aliases share a CQI and rotate later.
+    HintedUserList unique;
+    for(const auto& hu: candidates) {
+        bool dup = false;
+        for(const auto& kept: unique) {
+            if(ConnectionManagerPeerMatch::samePeer(hu, kept)) {
+                dup = true;
+                break;
+            }
+        }
+        if(!dup)
+            unique.push_back(hu);
+    }
     if(isSet(FLAG_USER_LIST))
-        l.push_back(candidates.front());
+        l.push_back(unique.front());
     else
-        l.insert(l.end(), candidates.begin(), candidates.end());
+        l.insert(l.end(), unique.begin(), unique.end());
 }
 
 void QueueItem::addSource(const HintedUser& aUser) {
