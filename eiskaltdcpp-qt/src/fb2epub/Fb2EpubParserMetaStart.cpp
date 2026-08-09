@@ -59,7 +59,7 @@ bool Fb2Parser::OnMetaStartElement(const QString& name, const QString& path, con
 
 	if (inTitleInfo)
 	{
-		if (coverId.isEmpty() && (path == COVERPAGE_IMAGE || name.compare("image", Qt::CaseInsensitive) == 0))
+		if (coverId.isEmpty() && path.compare(QLatin1String(COVERPAGE_IMAGE), Qt::CaseInsensitive) == 0)
 		{
 			if (const auto id = RefIdFromAttr(attributes); !id.isEmpty())
 				coverId = id;
