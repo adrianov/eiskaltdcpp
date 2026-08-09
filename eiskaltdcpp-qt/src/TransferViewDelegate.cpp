@@ -47,12 +47,13 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
         return;
     }
 
-    // Single-peer groups paint the leaf; finished parents keep their own 100% bar.
+    // Single-peer groups paint the leaf; finished parents keep their own status/bar.
     if (item->childCount() == 1 && item->cid.isEmpty() && !item->finished)
         item = item->child(0);
 
     const QString status = stripBracketedStatusPrefix(item->data(COLUMN_TRANSFER_STATS).toString());
-    const double percent = item->finished ? 100.0 : item->percent;
+    // Upload `finished` is idle-between-segments; only held downloads force a full bar.
+    const double percent = item->holdFinished() ? 100.0 : item->percent;
 
     QPalette pal = option.palette;
     pal.setColor(QPalette::Highlight,
