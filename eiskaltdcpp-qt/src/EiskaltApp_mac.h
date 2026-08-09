@@ -16,10 +16,30 @@
 #include "WulforSettings.h"
 #include "MainWindow.h"
 #include "qtsingleapp/qtsinglecoreapplication.h"
+#include "dcpp/ProcessExit.h"
 #include <objc/objc.h>
 #include <objc/message.h>
 
 bool dockClickHandler(id self,SEL _cmd,...);
+
+/** Drop dock/UI so macOS does not beachball other apps during teardown. */
+inline void resignMacAppForExit()
+{
+    typedef objc_object* (*object_type)(struct objc_object *self, SEL _cmd);
+    object_type objc_msgSendObject = (object_type)objc_msgSend;
+
+    objc_object* cls = (objc_object*)objc_getClass("NSApplication");
+    objc_object* appInst = objc_msgSendObject(cls, sel_registerName("sharedApplication"));
+    if (!appInst)
+        return;
+
+    typedef void (*hide_t)(objc_object*, SEL, objc_object*);
+    ((hide_t)objc_msgSend)(appInst, sel_registerName("hide:"), nullptr);
+
+    // NSApplicationActivationPolicyProhibited == 2
+    typedef long (*policy_t)(objc_object*, SEL, long);
+    ((policy_t)objc_msgSend)(appInst, sel_registerName("setActivationPolicy:"), 2L);
+}
 
 class EiskaltEventFilter: public QObject{
     Q_OBJECT
@@ -117,11 +137,14 @@ public:
     }
 
     void commitData(QSessionManager& manager){
+        // Save UI state, then release immediately. Heavy socket/DuckDB joins run
+        // after app.exec() — not under the session manager (that freezes logout).
+        dcpp::noteAppExiting();
         if (MainWindow::getInstance()){
             MainWindow::getInstance()->beginExit();
             MainWindow::getInstance()->close();
         }
-
+        resignMacAppForExit();
         manager.release();
     }
 

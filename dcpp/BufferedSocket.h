@@ -25,6 +25,7 @@
 
 #include "typedefs.h"
 #include "BufferedSocketListener.h"
+#include "ProcessExit.h"
 #include "Semaphore.h"
 #include "Thread.h"
 #include "Speaker.h"
@@ -76,7 +77,9 @@ public:
     }
 
     static bool waitShutdown() {
-        for(int i = 0; sockets > 0 && i < 600; ++i)
+        // Normal: up to 30s. On app exit: ~1s so quit does not beachball.
+        const int rounds = isAppExiting() ? 20 : 600;
+        for(int i = 0; sockets > 0 && i < rounds; ++i)
             Thread::sleep(50);
         return sockets == 0;
     }
@@ -198,6 +201,8 @@ public:
     static std::atomic<bool> s_shuttingDown;
 
     bool checkEvents();
+    /** Handle one queued task for the current state. False → leave the task loop. */
+    bool dispatchStateTask(Tasks task, TaskData* data);
     void checkSocket();
 
     void setSocket(unique_ptr<Socket> s);

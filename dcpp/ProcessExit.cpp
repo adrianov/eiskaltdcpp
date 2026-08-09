@@ -10,6 +10,8 @@
 #include "Util.h"
 #include "File.h"
 
+#include <atomic>
+
 #ifndef _WIN32
 #include <fcntl.h>
 #include <pthread.h>
@@ -20,6 +22,8 @@
 namespace dcpp {
 
 namespace {
+
+std::atomic_bool appExiting{false};
 
 string statePath() {
     return Util::getPath(Util::PATH_USER_LOCAL) + "Logs/run.state";
@@ -119,6 +123,14 @@ void markSessionRunning() {
 
 void markSessionNormal() noexcept {
     writeState("normal");
+}
+
+void noteAppExiting() noexcept {
+    appExiting.store(true, std::memory_order_release);
+}
+
+bool isAppExiting() noexcept {
+    return appExiting.load(std::memory_order_acquire);
 }
 
 string checkPreviousSession() {

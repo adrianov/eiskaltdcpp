@@ -21,4 +21,8 @@ void markSessionRunning();
 void markSessionNormal() noexcept;
 string checkPreviousSession();
 
+/** Mark process quit so socket joins / waits can bail out quickly. */
+void noteAppExiting() noexcept;
+bool isAppExiting() noexcept;
+
 } // namespace dcpp

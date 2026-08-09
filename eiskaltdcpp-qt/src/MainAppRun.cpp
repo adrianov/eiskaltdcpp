@@ -18,6 +18,7 @@
 #include "dcpp/HashManager.h"
 #include "dcpp/LogManager.h"
 #include "dcpp/ProcessExit.h"
+#include "dcpp/SearchManager.h"
 #include "dcpp/Thread.h"
 #include "dcpp/Singleton.h"
 
@@ -51,12 +52,29 @@
 #include "ScriptEngine.h"
 #endif
 
+#include <QCoreApplication>
+#include <QEventLoop>
 #include <QObject>
+#include <QThread>
 
+#include <atomic>
 #include <iostream>
 #include <string>
+#include <thread>
 
 extern void callBack(void *, const std::string &);
+
+namespace {
+
+void pumpUntil(std::atomic_bool &done)
+{
+    while (!done.load(std::memory_order_acquire)) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        QThread::msleep(20);
+    }
+}
+
+} // namespace
 
 int runApplication(EiskaltApp &app)
 {
@@ -151,6 +169,11 @@ int runApplication(EiskaltApp &app)
 
     ret = app.exec();
 
+    dcpp::noteAppExiting();
+#if defined(Q_OS_MAC)
+    resignMacAppForExit();
+#endif
+
     std::cout << QObject::tr("Shutting down libeiskaltdcpp...").toStdString() << std::endl;
     dcpp::LogManager::getInstance()->message(_("Application shutting down normally"));
     dcpp::markSessionNormal();
@@ -180,13 +203,21 @@ int runApplication(EiskaltApp &app)
 
     MainWindow::deleteInstance();
 
-    stopShareIndex();
+    // DuckDB close + dcpp joins/saves can take seconds; keep AppKit responsive so
+    // macOS does not put a rainbow spinner over the whole desktop.
+    std::atomic_bool coreDone{false};
+    std::thread coreExit([&coreDone] {
+        if (dcpp::SearchManager::getInstance())
+            dcpp::SearchManager::getInstance()->disconnect();
+        stopShareIndex();
+        dcpp::shutdown();
+        coreDone.store(true, std::memory_order_release);
+    });
+    pumpUntil(coreDone);
+    coreExit.join();
 
     WulforUtil::deleteInstance();
-
     WulforSettings::deleteInstance();
-
-    dcpp::shutdown();
 
     std::cout << QObject::tr("Quit...").toStdString() << std::endl;
 

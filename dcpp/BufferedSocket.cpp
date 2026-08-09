@@ -21,6 +21,7 @@
 
 #include "BufferedSocket.h"
 
+#include "ProcessExit.h"
 #include "ZUtils.h"
 #include "format.h"
 
@@ -64,6 +65,46 @@ void BufferedSocket::setMode (Modes aMode, size_t aRollback) {
     mode = aMode;
 }
 
+bool BufferedSocket::dispatchStateTask(Tasks task, TaskData* data) {
+    if(state == STARTING) {
+        switch(task) {
+        case CONNECT: {
+            ConnectInfo* ci = static_cast<ConnectInfo*>(data);
+            threadConnect(ci->addr, ci->port, ci->localPort, ci->natRole, ci->proxy);
+            break;
+        }
+        case ACCEPTED:
+            threadAccept();
+            break;
+        case DISCONNECT:
+            fail(_("Disconnected"));
+            break;
+        default:
+            dcdebug("%d unexpected in STARTING state\n", task);
+            break;
+        }
+        return true;
+    }
+
+    if(state != RUNNING)
+        return true;
+
+    switch(task) {
+    case SEND_DATA:
+        threadSendData();
+        return true;
+    case SEND_FILE:
+        threadSendFile(static_cast<SendFileInfo*>(data)->stream);
+        return false;
+    case DISCONNECT:
+        fail(_("Disconnected"));
+        return true;
+    default:
+        dcdebug("%d unexpected in RUNNING state\n", task);
+        return true;
+    }
+}
+
 bool BufferedSocket::checkEvents() {
     // Only wait here, where every consumed signal also pops its task.
     while(true) {
@@ -81,36 +122,15 @@ bool BufferedSocket::checkEvents() {
             tasks.erase(tasks.begin());
         }
 
-        if(p.first == SHUTDOWN) {
+        if(p.first == SHUTDOWN)
             return false;
-        } else if(p.first == UPDATED) {
+        if(p.first == UPDATED) {
             if(!disconnecting)
                 fire(BufferedSocketListener::Updated());
             continue;
         }
-
-        if(state == STARTING) {
-            if(p.first == CONNECT) {
-                ConnectInfo* ci = static_cast<ConnectInfo*>(p.second.get());
-                threadConnect(ci->addr, ci->port, ci->localPort, ci->natRole, ci->proxy);
-            } else if(p.first == ACCEPTED) {
-                threadAccept();
-            } else if(p.first == DISCONNECT) {
-                fail(_("Disconnected"));
-            } else {
-                dcdebug("%d unexpected in STARTING state\n", p.first);
-            }
-        } else if(state == RUNNING) {
-            if(p.first == SEND_DATA) {
-                threadSendData();
-            } else if(p.first == SEND_FILE) {
-                threadSendFile(static_cast<SendFileInfo*>(p.second.get())->stream); break;
-            } else if(p.first == DISCONNECT) {
-                fail(_("Disconnected"));
-            } else {
-                dcdebug("%d unexpected in RUNNING state\n", p.first);
-            }
-        }
+        if(!dispatchStateTask(p.first, p.second.get()))
+            break;
     }
     return true;
 }
@@ -207,7 +227,7 @@ void BufferedSocket::joinShutdown() {
     }
 
     if(waitForStop)
-        done->wait(30000);
+        done->wait(isAppExiting() ? 200 : 30000);
 }
 
 void BufferedSocket::addTask(Tasks task, TaskData* data) {
