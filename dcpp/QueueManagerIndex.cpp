@@ -53,7 +53,8 @@ QueueItem* FileQueue::add(const string& aTarget, int64_t aSize,
     QueueItem* qi = new QueueItem(aTarget, aSize, p, aFlags, aAdded, root);
 
     if(qi->isSet(QueueItem::FLAG_USER_LIST)) {
-        qi->setPriority(QueueItem::HIGHEST);
+        // Background lists (share indexing) must not take every peer and download slot.
+        qi->setPriority(qi->isAnySet(QueueItem::MASK_LIST_ASKED) ? QueueItem::HIGHEST : QueueItem::LOW);
     }
 
     qi->setTempTarget(aTempTarget);

@@ -163,6 +163,9 @@ private:
     bool isBusyOnFile(const QueueItem* qi, const HintedUser& src, const QueuedDownloadUsers& queued);
     bool hasBusyAlias(const QueueItem* qi, const HintedUser& candidate, const QueuedDownloadUsers& queued);
 
+    /** Merge flags into an already queued list. True when the request is now covered. */
+    bool mergeQueuedList(const string& target, int aFlags, const string& aInitialDir);
+
     void processList(const string& name, const HintedUser& user, int flags);
     bool tryUseCachedList(const HintedUser& user, int flags, const string& initialDir);
     bool tryUseCachedListAt(const HintedUser& user, int flags, const string& initialDir,

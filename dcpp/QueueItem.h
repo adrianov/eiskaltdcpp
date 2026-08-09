@@ -56,7 +56,9 @@ public:
         FLAG_TEXT = 0x20,
         FLAG_MATCH_QUEUE = 0x80,
         FLAG_XML_BZLIST = 0x100,
-        FLAG_PARTIAL_LIST = 0x200
+        FLAG_PARTIAL_LIST = 0x200,
+        /** List the user waits for: may outrank queued files. */
+        MASK_LIST_ASKED = FLAG_DIRECTORY_DOWNLOAD | FLAG_CLIENT_VIEW | FLAG_MATCH_QUEUE | FLAG_PARTIAL_LIST
     };
 
     typedef QueuePartialSource PartialSource;

@@ -21,6 +21,23 @@
 
 namespace dcpp {
 
+bool QueueManager::mergeQueuedList(const string& target, int aFlags, const string& aInitialDir) {
+    {
+        Lock l(cs);
+        QueueItem* qi = fileQueue.find(target);
+        if(!qi || !qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished())
+            return false;
+        qi->setFlag(aFlags);
+        if(!aInitialDir.empty())
+            qi->setTempTarget(aInitialDir);
+    }
+
+    // A background list becomes urgent once the user asks for it.
+    if(aFlags & QueueItem::MASK_LIST_ASKED)
+        setPriority(target, QueueItem::HIGHEST);
+    return true;
+}
+
 void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aInitialDir /* = Util::emptyString */) {
     const bool autoList = aFlags == 0
             || ((aFlags & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
@@ -44,17 +61,8 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
 
     if(!(aFlags & QueueItem::FLAG_PARTIAL_LIST)) {
         // getListPath/samePeer use ClientManager — never call them under QueueManager::cs.
-        const string listPath = getListPath(aUser);
-        {
-            Lock l(cs);
-            QueueItem* qi = fileQueue.find(listPath);
-            if(qi && qi->isSet(QueueItem::FLAG_USER_LIST) && !qi->isFinished()) {
-                qi->setFlag(aFlags);
-                if(!aInitialDir.empty())
-                    qi->setTempTarget(aInitialDir);
-                return;
-            }
-        }
+        if(mergeQueuedList(getListPath(aUser), aFlags, aInitialDir))
+            return;
 
         vector<pair<string, HintedUser>> lists;
         {
@@ -67,16 +75,9 @@ void QueueManager::addList(const HintedUser& aUser, int aFlags, const string& aI
             }
         }
         for(const auto& e: lists) {
-            if(!ConnectionManagerPeerMatch::samePeer(aUser, e.second))
-                continue;
-            Lock l(cs);
-            QueueItem* qi = fileQueue.find(e.first);
-            if(!qi || !qi->isSet(QueueItem::FLAG_USER_LIST) || qi->isFinished())
-                continue;
-            qi->setFlag(aFlags);
-            if(!aInitialDir.empty())
-                qi->setTempTarget(aInitialDir);
-            return;
+            if(ConnectionManagerPeerMatch::samePeer(aUser, e.second)
+                    && mergeQueuedList(e.first, aFlags, aInitialDir))
+                return;
         }
     }
 
