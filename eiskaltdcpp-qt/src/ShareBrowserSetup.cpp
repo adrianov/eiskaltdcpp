@@ -14,7 +14,8 @@
 #include "WulforSettings.h"
 #include "FileBrowserModel.h"
 #include "MediaEnrichQueue.h"
-#include "FileBrowserFilterProxy.h"
+#include "filebrowser/FileBrowserFilterProxy.h"
+#include "filebrowser/ListFilterProxy.h"
 #include "SearchFileTypes.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
@@ -63,10 +64,10 @@ void ShareBrowser::init(){
     lineEdit_FILTER->setPlaceholderText(tr("Filter path (space-separated, -exclude)"));
     lineEdit_FILTER->setToolTip(tr("Filter by path/name. Space-separated terms; prefix - to exclude."));
 
-    proxy = new FileBrowserFilterProxy(false, this);
+    proxy = new ListFilterProxy(this);
     proxy->setSourceModel(list_model);
 
-    tree_proxy = new FileBrowserFilterProxy(true, this);
+    tree_proxy = new FileBrowserFilterProxy(this);
     tree_proxy->setSourceModel(tree_model);
 
     lineEdit_FILTER->installEventFilter(this);
@@ -78,6 +79,7 @@ void ShareBrowser::init(){
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
 
     treeView_RPANE->setModel(proxy);
+    treeView_RPANE->setUniformRowHeights(true);
     treeView_RPANE->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->installEventFilter(this);
@@ -127,16 +129,7 @@ void ShareBrowser::init(){
 }
 
 void ShareBrowser::load(){
-    int w = WIGET(WI_SHARE_WIDTH);
-    int wr= WIGET(WI_SHARE_RPANE_WIDTH);
-
-    if (w >= 0 && wr >= 0){
-        QList<int> frames;
-
-        frames << (w - wr) << wr;
-
-        splitter->setSizes(frames);
-    }
+    restoreSplitterSizes();
 
     WulforUtil::restoreTreeHeader(treeView_LPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
     WulforUtil::restoreTreeHeader(treeView_RPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_RPANE_STATE).toUtf8()));

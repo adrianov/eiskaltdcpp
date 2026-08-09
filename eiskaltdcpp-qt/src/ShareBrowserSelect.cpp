@@ -76,6 +76,7 @@ void ShareBrowser::slotLeftPaneSelChanged(const QItemSelection &sel, const QItem
     p.index = index;
     p.path_tesxt = tree_model->createRemotePath(item);
     lineEdit_PATH->setText(p.path_tesxt);
+    updateUpButton();
     applyViewFiltersNow();
 
     pathHistory.append(p);

@@ -18,7 +18,8 @@
 #include "ArenaWidget.h"
 #include "WulforUtil.h"
 #include "ui_UIShareBrowser.h"
-#include "FileBrowserFilterProxy.h"
+#include "filebrowser/FileBrowserFilterProxy.h"
+#include "filebrowser/ListFilterProxy.h"
 #include "sharebrowser/ShareBrowserMenu.h"
 #include "sharebrowser/ShareFolderList.h"
 
@@ -97,6 +98,8 @@ private:
     void changeRoot(dcpp::DirectoryListing::Directory*);
     void changeRootFlat(dcpp::DirectoryListing::Directory*);
     void applyFlatMode(bool on);
+    void restoreSplitterSizes();
+    void updateUpButton();
     void applyOptionalColumns();
     void reloadRightPane(dcpp::DirectoryListing::Directory *dir);
     dcpp::DirectoryListing::Directory *currentDir();
@@ -120,7 +123,7 @@ private:
 
     QMenu *arena_menu = nullptr;
 
-    FileBrowserFilterProxy *proxy = nullptr;
+    ListFilterProxy *proxy = nullptr;
     FileBrowserFilterProxy *tree_proxy = nullptr;
     bool viewFilterPending = false;
     bool flatMode = false;

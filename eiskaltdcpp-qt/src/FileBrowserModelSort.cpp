@@ -38,6 +38,18 @@ struct Compare {
                 return (l->dir != nullptr);
             return Cmp(compareNaturalQ(l->data(i).toString(), r->data(i).toString()), 0);
         }
+        /** Path primary, natural name secondary (flat list groups by folder). */
+        bool static PathCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
+            if ((l->dir && !r->dir) || (!l->dir && r->dir))
+                return (l->dir != nullptr);
+            const int byPath = QString::localeAwareCompare(
+                    l->data(COLUMN_FILEBROWSER_PATH).toString(),
+                    r->data(COLUMN_FILEBROWSER_PATH).toString());
+            if (byPath != 0)
+                return Cmp(byPath, 0);
+            return Cmp(compareNaturalQ(l->data(COLUMN_FILEBROWSER_NAME).toString(),
+                                       r->data(COLUMN_FILEBROWSER_NAME).toString()), 0);
+        }
         template <int column>
         bool static NumCmp(const FileBrowserItem * l, const FileBrowserItem * r) {
             if ((l->dir && !r->dir) || (!l->dir && r->dir))
@@ -61,7 +73,7 @@ typename Compare<order>::AttrComp Compare<order>::attrs[NUM_OF_COLUMNS] = {  Nat
                                                                 AttrCmp<COLUMN_FILEBROWSER_MAUDIO>,
                                                                 NumCmp<COLUMN_FILEBROWSER_HIT>,
                                                                 AttrCmp<COLUMN_FILEBROWSER_TS>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_PATH>
+                                                                PathCmp
                                                              };
 
 template <> template <typename T>

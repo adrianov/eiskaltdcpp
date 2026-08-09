@@ -19,50 +19,60 @@
 #include "dcpp/ClientManager.h"
 
 #include <QMessageBox>
+#include <QSignalBlocker>
 
 using namespace dcpp;
 
 void ShareBrowser::slotButtonUp(){
-    if (flatMode)
+    // Path bar is the source of truth — ignore tree multi-select / empty selection.
+    if (lineEdit_PATH->text().isEmpty())
         return;
 
+    FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+    if (!item || !item->parent() || !item->parent()->dir)
+        return;
+
+    FileBrowserItem *parentItem = item->parent();
+    const QString parentPath = tree_model->createRemotePath(parentItem);
+    const QModelIndex parentSrc = tree_model->createIndexForItem(parentItem);
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
-    QModelIndexList selected  = selection_model->selectedRows(0);
 
-    if (selected.size() > 1 || selected.empty())
-        return;
-
-    QModelIndex index = selected.at(0);
-    index = treeMapToSource(index);
-
-    if (index.isValid()){
-
-        FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
-
-        if (nullptr != item->parent()){
-
-            disconnect(treeView_LPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-                    this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
-
-            SelPair sparent;
-            sparent.index = index.parent();
-
-            changeRoot(item->parent()->dir);
-            sparent.dir = item->parent()->dir;
-
-            sparent.path_tesxt = tree_model->createRemotePath(item->parent());
-            lineEdit_PATH->setText(sparent.path_tesxt);
-            applyViewFiltersNow();
-
-            slotRightPaneClicked(index.parent());
-
-            pathHistory.append(sparent);
-            pathHistory_iter = pathHistory.end();
-
-            connect(treeView_LPANE->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-                    this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
+    if (flatMode) {
+        {
+            const QSignalBlocker block(selection_model);
+            if (parentSrc.isValid()) {
+                selection_model->setCurrentIndex(treeMapFromSource(parentSrc),
+                        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            }
         }
+        lineEdit_PATH->setText(parentPath);
+        changeRootFlat(parentItem->dir);
+        applyViewFiltersNow();
+        updateUpButton();
+        return;
     }
+
+    disconnect(selection_model, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+            this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
+
+    SelPair sparent;
+    sparent.index = parentSrc;
+    sparent.dir = parentItem->dir;
+    sparent.path_tesxt = parentPath;
+    changeRoot(parentItem->dir);
+    lineEdit_PATH->setText(parentPath);
+    updateUpButton();
+    applyViewFiltersNow();
+    if (parentSrc.isValid()) {
+        selection_model->setCurrentIndex(treeMapFromSource(parentSrc),
+                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    }
+
+    pathHistory.append(sparent);
+    pathHistory_iter = pathHistory.end();
+
+    connect(selection_model, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+            this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
 }
 
 void ShareBrowser::slotButtonBack(){
@@ -80,6 +90,7 @@ void ShareBrowser::slotButtonBack(){
         SelPair sp= *pathHistory_iter;
         changeRoot(sp.dir);
         lineEdit_PATH->setText(sp.path_tesxt);
+        updateUpButton();
         applyViewFiltersNow();
 
         slotRightPaneClicked(sp.index);
@@ -106,6 +117,7 @@ void ShareBrowser::slotButtonForward(){
         SelPair sp= *pathHistory_iter;
         changeRoot(sp.dir);
         lineEdit_PATH->setText(sp.path_tesxt);
+        updateUpButton();
         applyViewFiltersNow();
 
         slotRightPaneClicked(sp.index);

@@ -76,9 +76,24 @@ ShareBrowser::ShareBrowser(UserPtr _user, const QString &_file, const QString &_
 
 ShareBrowser::~ShareBrowser(){
     delete folderList;
+    folderList = nullptr;
+
+    // Join async list filters before list_model frees FileBrowserItem rows.
+    if (treeView_RPANE)
+        treeView_RPANE->setModel(nullptr);
+    if (treeView_LPANE)
+        treeView_LPANE->setModel(nullptr);
+    delete proxy;
+    proxy = nullptr;
+    delete tree_proxy;
+    tree_proxy = nullptr;
+
     delete tree_model;
+    tree_model = nullptr;
     delete list_model;
+    list_model = nullptr;
     delete arena_menu;
+    arena_menu = nullptr;
 
     pathHistory.clear();
 

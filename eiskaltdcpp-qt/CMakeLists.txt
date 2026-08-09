@@ -68,8 +68,10 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserModelMedia.cpp
     src/FileBrowserModelPath.cpp
     src/MediaEnrichQueue.cpp
-    src/FileBrowserFilterProxy.cpp
-    src/FileBrowserFilterProxyTree.cpp
+    src/filebrowser/FilterMatch.cpp
+    src/filebrowser/ListFilter.cpp
+    src/filebrowser/ListFilterProxy.cpp
+    src/filebrowser/FileBrowserFilterProxy.cpp
     src/FileBrowserModelSort.cpp
     src/PublicHubItem.cpp
     src/PublicHubModelData.cpp
@@ -296,6 +298,8 @@ endif (NOT HAIKU)
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
 list (APPEND MOC_HDRS
+            ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h
+            ${PROJECT_SOURCE_DIR}/src/filebrowser/ListFilterProxy.h
             ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsers.h
             ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsersModel.h)
 list (REMOVE_ITEM MOC_HDRS

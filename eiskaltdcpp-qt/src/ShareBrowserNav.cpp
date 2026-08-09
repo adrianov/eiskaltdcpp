@@ -103,22 +103,9 @@ void ShareBrowser::goDown(QTreeView *view){
 }
 
 void ShareBrowser::goUp(QTreeView *view){
-    if (view != treeView_RPANE || flatMode)
+    if (view != treeView_RPANE)
         return;
-
-    QStringList paths = lineEdit_PATH->text().split("\\", WULFOR_SKIP_EMPTY);
-
-    if (paths.empty())//is it possible?
-        return;
-    else
-        paths.removeLast();
-
-    FileBrowserItem *tree_item = tree_model->createRootForPath(paths.join("\\"));
-    QModelIndex tree_index = tree_model->createIndexForItem(tree_item);
-
-    treeView_LPANE->selectionModel()->setCurrentIndex(treeMapFromSource(tree_index),
-            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-
+    slotButtonUp();
     treeView_RPANE->setFocus();
 }
 

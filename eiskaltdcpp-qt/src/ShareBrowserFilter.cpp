@@ -11,7 +11,8 @@
 
 #include "ShareBrowser.h"
 #include "SearchFileTypes.h"
-#include "FileBrowserFilterProxy.h"
+#include "filebrowser/FileBrowserFilterProxy.h"
+#include "filebrowser/ListFilterProxy.h"
 
 #include "dcpp/SearchManager.h"
 #include "dcpp/Util.h"
@@ -100,8 +101,15 @@ void ShareBrowser::applyViewFiltersNow() {
     if (proxy)
         proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts,
                             flatMode ? QString() : lineEdit_PATH->text());
-    if (tree_proxy)
-        tree_proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts, QString());
+    // Flat mode hides the left tree; subtree scans over a huge listing freeze typing.
+    if (tree_proxy) {
+        if (flatMode) {
+            tree_proxy->applyFilters(QStringList(), 0, SearchManager::SIZE_DONTCARE,
+                                     false, false, QStringList(), QString());
+        } else {
+            tree_proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts, QString());
+        }
+    }
 }
 
 QModelIndex ShareBrowser::treeMapToSource(const QModelIndex &index) const {

@@ -23,18 +23,24 @@ using namespace dcpp;
 
 namespace {
 
-void placePathAfterName(QHeaderView *h)
+void placeAfter(QHeaderView *h, int afterCol, int moveCol)
 {
-    if (!h)
+    if (!h || h->isSectionHidden(moveCol) || h->isSectionHidden(afterCol))
         return;
-    const int nameVis = h->visualIndex(COLUMN_FILEBROWSER_NAME);
-    const int pathVis = h->visualIndex(COLUMN_FILEBROWSER_PATH);
-    if (nameVis < 0 || pathVis < 0)
+    const int afterVis = h->visualIndex(afterCol);
+    const int moveVis = h->visualIndex(moveCol);
+    if (afterVis < 0 || moveVis < 0)
         return;
-    // When Path is before Name, target is nameVis (removal shifts Name left).
-    const int to = nameVis + (pathVis > nameVis ? 1 : 0);
-    if (pathVis != to)
-        h->moveSection(pathVis, to);
+    // When moveCol is before afterCol, target is afterVis (removal shifts left).
+    const int to = afterVis + (moveVis > afterVis ? 1 : 0);
+    if (moveVis != to)
+        h->moveSection(moveVis, to);
+}
+
+void applyColumnOrder(QHeaderView *h)
+{
+    placeAfter(h, COLUMN_FILEBROWSER_NAME, COLUMN_FILEBROWSER_PATH);
+    placeAfter(h, COLUMN_FILEBROWSER_SIZE, COLUMN_FILEBROWSER_WH);
 }
 
 } // namespace
@@ -76,6 +82,9 @@ void ShareBrowser::applyOptionalColumns()
     h->setSectionHidden(COLUMN_FILEBROWSER_MAUDIO, !folderList->hasAudio());
     h->setSectionHidden(COLUMN_FILEBROWSER_HIT, !folderList->hasDownloaded());
     h->setSectionHidden(COLUMN_FILEBROWSER_TS, !folderList->hasShared());
+    applyColumnOrder(h);
+    // modelReset autosizes before optional columns are shown; re-fit after.
+    WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
 }
 
 QString ShareBrowser::totalStatusText() const
@@ -95,6 +104,13 @@ void ShareBrowser::reloadRightPane(DirectoryListing::Directory *dir)
 
 DirectoryListing::Directory *ShareBrowser::currentDir()
 {
+    // Path bar matches the shown listing; tree selection may be multi/empty/stale.
+    if (!lineEdit_PATH->text().isEmpty()) {
+        FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+        if (item && item->dir)
+            return item->dir;
+    }
+
     if (treeView_LPANE && treeView_LPANE->selectionModel()) {
         const QModelIndexList selected = treeView_LPANE->selectionModel()->selectedRows(0);
         if (selected.size() == 1) {
@@ -107,31 +123,67 @@ DirectoryListing::Directory *ShareBrowser::currentDir()
         }
     }
 
-    if (!lineEdit_PATH->text().isEmpty()) {
-        FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
-        if (item && item->dir)
-            return item->dir;
-    }
-
     return listing.getRoot();
+}
+
+void ShareBrowser::updateUpButton()
+{
+    if (lineEdit_PATH->text().isEmpty()) {
+        toolButton_UP->setEnabled(false);
+        return;
+    }
+    FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+    toolButton_UP->setEnabled(item && item->parent() && item->parent()->dir);
+}
+
+void ShareBrowser::restoreSplitterSizes()
+{
+    constexpr int kDefaultTreeWidth = 240; // UIShareBrowser frame_2 baseSize
+    const int total = qMax(splitter->width(), kDefaultTreeWidth + 100);
+    const int w = WIGET(WI_SHARE_WIDTH);
+    const int wr = WIGET(WI_SHARE_RPANE_WIDTH);
+    int left = (w > 0 && wr > 0 && wr < w) ? (w - wr) : 0;
+    // 0 (or tiny) left happens after starting in Flat — fall back to default.
+    if (left < 80)
+        left = kDefaultTreeWidth;
+    if (left > total - 100)
+        left = qMin(kDefaultTreeWidth, total - 100);
+    splitter->setSizes(QList<int>() << left << qMax(total - left, 1));
 }
 
 void ShareBrowser::applyFlatMode(bool on)
 {
+    // QSplitter keeps a hidden pane at width 0; save/restore so un-flat shows the tree again.
+    if (on && !flatMode) {
+        const QList<int> sizes = splitter->sizes();
+        if (sizes.size() >= 2 && sizes.at(0) >= 80) {
+            WISET(WI_SHARE_RPANE_WIDTH, sizes.at(1));
+            WISET(WI_SHARE_WIDTH, sizes.at(0) + sizes.at(1));
+        }
+    }
+
     flatMode = on;
     frame_2->setVisible(!on);
+    if (!on)
+        restoreSplitterSizes();
+
     toolButton_BACK->setEnabled(!on);
     toolButton_FORWARD->setEnabled(!on);
-    toolButton_UP->setEnabled(!on);
+    updateUpButton();
 
-    QHeaderView *h = treeView_RPANE->header();
-    h->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
-    if (on)
-        placePathAfterName(h);
+    treeView_RPANE->header()->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
     TreeHeaderAutosize::setStretchColumn(treeView_RPANE, on ? COLUMN_FILEBROWSER_PATH : -1);
 
+    // Flat default is Path; folder default is Name. Keep Size/etc. if the user chose it.
+    const int cur = list_model->getSortColumn();
+    const int defCol = on ? COLUMN_FILEBROWSER_PATH : COLUMN_FILEBROWSER_NAME;
+    if (cur == COLUMN_FILEBROWSER_NAME || cur == COLUMN_FILEBROWSER_PATH) {
+        list_model->setSortColumn(defCol);
+        list_model->setSortOrder(Qt::AscendingOrder);
+        treeView_RPANE->header()->setSortIndicator(defCol, Qt::AscendingOrder);
+    }
+
     reloadRightPane(currentDir());
-    WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
     applyViewFiltersNow();
 }
 
