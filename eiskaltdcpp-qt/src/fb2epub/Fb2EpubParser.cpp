@@ -22,6 +22,9 @@ ParsedFb2 Fb2Parser::TakeResult()
 	FixFootnoteReferences();
 	FixFootnoteLinkMarkers();
 	AppendFootnotesHtml();
+	EnsureCoverFromBody();
+	if (!coverData.isEmpty() && coverMime.isEmpty())
+		coverMime = CoverMimeFromData(coverData);
 
 	std::vector<Fb2EmbeddedImage> images;
 	ResolveBodyImagePlaceholders(bodyBuffer, images, bodyImageIds, imageAlts, binaries, coverId);

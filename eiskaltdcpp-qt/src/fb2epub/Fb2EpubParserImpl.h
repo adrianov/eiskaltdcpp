@@ -53,6 +53,7 @@ private:
 
 	bool     InContent() const;
 	bool     InTextContent() const;
+	bool     InInlineMarkup() const;
 	QString& ActiveBuffer();
 	void                   AppendBlockHtml(const QString& html);
 	void                   OpenInlineTag(const QString& openTag, bool& flag, bool tight = false);
@@ -60,6 +61,7 @@ private:
 	bool                   TryBodyExtraStart(const QString& name, const XmlAttributes& attributes);
 	bool                   TryBodyExtraEnd(const QString& name);
 	void                   CommitBodyImage();
+	void                   EnsureCoverFromBody();
 	void                   MarkInlineOpenBoundary();
 	void                   MarkInlineCloseBoundary();
 	void                   AppendSpaceBeforeInlineIfNeeded();

@@ -28,12 +28,36 @@ bool ScriptsDiffer(QChar a, QChar b)
 	return aScript != bScript && aScript != QChar::Script_Common && bScript != QChar::Script_Common;
 }
 
-bool NeedsWordBoundarySpace(QChar prev, QChar next, bool /*afterInline*/)
+bool NeedsWordBoundarySpace(QChar prev, QChar next)
 {
-	if (!IsWordChar(prev) || !IsWordChar(next))
-		return false;
+	return IsWordChar(prev) && IsWordChar(next) && ScriptsDiffer(prev, next);
+}
 
-	return ScriptsDiffer(prev, next);
+bool ShouldInsertWordSpace(QChar prev, QChar first, bool needSpace, bool afterTight)
+{
+	if (!IsWordChar(prev))
+		return false;
+	if (first == u'[')
+		return true;
+	if (!IsWordChar(first))
+		return false;
+	return needSpace || (!afterTight && NeedsWordBoundarySpace(prev, first));
+}
+
+void AppendSpaceUnlessPresent(QString& buffer)
+{
+	if (!buffer.isEmpty() && !buffer.back().isSpace())
+		buffer.append(u' ');
+}
+
+QChar LastWordCharIn(const QString& text)
+{
+	for (int i = text.size() - 1; i >= 0; --i)
+	{
+		if (IsWordChar(text.at(i)))
+			return text.at(i);
+	}
+	return {};
 }
 
 } // namespace
@@ -78,19 +102,20 @@ void Fb2Parser::ResetBodyChar()
 	needSpaceBeforeText = false;
 }
 
+bool Fb2Parser::InInlineMarkup() const
+{
+	return inEmphasis || inStrong || inCode || inStyle;
+}
+
 void Fb2Parser::AppendBodyText(const QString& value)
 {
-	if (!InContent() || !InTextContent())
+	if (!InContent() || !InTextContent() || value.isEmpty())
 		return;
 
 	auto& buffer = ActiveBuffer();
-	if (value.isEmpty())
-		return;
-
 	if (value.trimmed().isEmpty())
 	{
-		if (!buffer.isEmpty() && !buffer.back().isSpace())
-			buffer.append(u' ');
+		AppendSpaceUnlessPresent(buffer);
 		return;
 	}
 
@@ -98,43 +123,23 @@ void Fb2Parser::AppendBodyText(const QString& value)
 	if (collapsed.isEmpty())
 		return;
 
-	const auto appendSpaceIfNeeded = [&]() {
-		if (buffer.isEmpty() || buffer.back().isSpace())
-			return;
-		buffer.append(' ');
-	};
-
-	const auto first = collapsed.front();
-	if (IsWordChar(lastBodyChar) && first == u'[')
-		appendSpaceIfNeeded();
-	else if (needSpaceBeforeText && IsWordChar(lastBodyChar) && IsWordChar(first))
-		appendSpaceIfNeeded();
-	else if (!afterTightInline && IsWordChar(lastBodyChar) && IsWordChar(first) && NeedsWordBoundarySpace(lastBodyChar, first, false))
-		appendSpaceIfNeeded();
+	if (ShouldInsertWordSpace(lastBodyChar, collapsed.front(), needSpaceBeforeText, afterTightInline))
+		AppendSpaceUnlessPresent(buffer);
 
 	needSpaceBeforeText = false;
 	afterTightInline    = false;
 
-	if (!value.isEmpty() && value.front().isSpace() && !buffer.isEmpty() && !buffer.back().isSpace())
-		buffer.append(u' ');
-
+	if (value.front().isSpace())
+		AppendSpaceUnlessPresent(buffer);
 	buffer.append(EscapeHtmlText(collapsed));
+	if (value.back().isSpace())
+		AppendSpaceUnlessPresent(buffer);
 
-	if (!value.isEmpty() && value.back().isSpace() && !buffer.isEmpty() && !buffer.back().isSpace())
-		buffer.append(u' ');
-	if (inEmphasis || inStrong || inCode || inStyle)
+	if (InInlineMarkup())
 		inlineWordChars += collapsed.size();
 	lastBodyChar = collapsed.back();
-
-	for (int i = collapsed.size() - 1; i >= 0; --i)
-	{
-		const auto c = collapsed.at(i);
-		if (IsWordChar(c))
-		{
-			lastWordChar = c;
-			break;
-		}
-	}
+	if (const auto word = LastWordCharIn(collapsed); !word.isNull())
+		lastWordChar = word;
 
 	if (inTitle || inSubtitle)
 		AppendCollapsedText(headingBuffer, value);

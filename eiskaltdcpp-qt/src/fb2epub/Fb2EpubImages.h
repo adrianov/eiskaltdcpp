@@ -44,6 +44,7 @@ inline QString RefIdFromAttr(const XmlAttributes& attributes)
 }
 
 QString InlineImageFileName(const QString& id, const QString& mime);
+bool    LooksLikeCoverImage(const QByteArray& data);
 void    ResolveBodyImagePlaceholders(
 	QString&                              bodyHtml,
 	std::vector<Fb2EmbeddedImage>&        images,
