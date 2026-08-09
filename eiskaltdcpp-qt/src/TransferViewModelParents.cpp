@@ -104,10 +104,16 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
     VarMap speedParams;
     TransferSession(p).writeUi(speedParams, totalSize);
-    const double speed = vdbl(speedParams["SPEED"]);
+    double speed = vdbl(speedParams["SPEED"]);
     qint64 timeLeft = vlng(speedParams["TLEFT"]);
     if (timeLeft < 0)
         timeLeft = 0;
+    // Settled partial uploads still have session bytes; do not show a decaying ghost rate.
+    if (!p->download && active == 0) {
+        speed = 0.0;
+        timeLeft = 0;
+        p->speedStart = 0;
+    }
 
     // Keep progress wording while sources briefly idle between segments (speed→0).
     if (!p->finished && (active || p->dpos > 0 || p->percent > 0))

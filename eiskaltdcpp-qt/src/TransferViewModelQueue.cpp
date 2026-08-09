@@ -76,9 +76,20 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
             scope->fpos = size;
     }
 
+    // File/fail dismiss quickly; partial Complete waits briefly for the next Starting
+    // on the same connection (peers often pause while fetching other sources).
     static const int donePruneMs = 2000;
+    static const int partGapPruneMs = 10000;
 
     if (!session.uploadDone()) {
+        // Freeze the settled segment — do not keep the last Tick speed for hours.
+        item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+        item->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
+        const QModelIndex idx = createIndexForItem(item);
+        if (idx.isValid()) {
+            emit dataChanged(index(idx.row(), 0, idx.parent()),
+                             index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+        }
         if (scope->cid.isEmpty()) {
             updateParent(scope);
             const QModelIndex pidx = createIndexForItem(scope);
@@ -89,6 +100,8 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
         }
         if (item->fail || fileDone)
             armUploadPrune(params, donePruneMs);
+        else if (segmentDone)
+            armUploadPrune(params, partGapPruneMs);
         return;
     }
 
