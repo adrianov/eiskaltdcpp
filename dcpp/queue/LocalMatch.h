@@ -28,8 +28,12 @@ public:
 
     /** True when path exists with matching size and a cached TTH root. */
     static bool matches(const string& target, int64_t size, const TTHValue& tth) noexcept;
-    /** Sweep the queue; hash size-matched files when TTH is not cached yet. */
-    void sweep() noexcept;
+    /**
+     * Drop queue items whose target already matches on disk.
+     * When hashMissing is true, size-matched files without a cached TTH are
+     * queued for hashing (costly on large queues — omit during cold start).
+     */
+    void sweep(bool hashMissing = true) noexcept;
 
 private:
     QueueManager& queue;

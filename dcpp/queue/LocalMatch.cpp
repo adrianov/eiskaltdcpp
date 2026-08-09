@@ -60,7 +60,7 @@ bool LocalMatch::matches(const string& target, int64_t size, const TTHValue& tth
     return !target.empty() && sameSize(target, size) && sameTth(target, tth);
 }
 
-void LocalMatch::sweep() noexcept {
+void LocalMatch::sweep(bool hashMissing) noexcept {
     vector<MatchCand> cands;
     {
         Lock l(queue.cs);
@@ -81,7 +81,7 @@ void LocalMatch::sweep() noexcept {
             remove.push_back(c.target);
             continue;
         }
-        if(!HashManager::getInstance()->getFileTTHif(c.target))
+        if(hashMissing && !HashManager::getInstance()->getFileTTHif(c.target))
             HashManager::getInstance()->checkTTH(c.target, c.size, 0);
     }
 

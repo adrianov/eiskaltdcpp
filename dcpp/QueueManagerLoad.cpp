@@ -50,7 +50,9 @@ void QueueManager::loadQueue() noexcept {
     } catch(const Exception&) {
         // ...
     }
-    localMatch->sweep();
+    // Drop confirmed local copies only; hashing unknown TTHs waits for the
+    // Minute sweep so cold start skips a full-queue hash pass.
+    localMatch->sweep(false);
 }
 
 static const string sDownloads = "Downloads";
