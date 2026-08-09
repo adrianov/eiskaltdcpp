@@ -87,7 +87,6 @@ void TreeHeaderAutosize::ensure(QAbstractItemView *view)
 void TreeHeaderAutosize::requestFit()
 {
     done_ = false;
-    shrinkOnly_ = false;
     hookModel();
     scheduleCheck();
 }
@@ -120,13 +119,9 @@ bool TreeHeaderAutosize::eventFilter(QObject *obj, QEvent *ev)
         if (!done_)
             scheduleCheck();
     } else if (ev->type() == QEvent::Resize) {
-        if (!done_) {
-            scheduleCheck();
-        } else {
-            // Narrower view may create scroll while columns still have slack.
-            shrinkOnly_ = true;
-            scheduleCheck();
-        }
+        // Full re-apply: grow back after a prior scale when the view widens,
+        // or scale/slack-shrink when it narrows.
+        scheduleCheck();
     }
     return false;
 }
@@ -138,13 +133,8 @@ void TreeHeaderAutosize::checkLayout()
         // Not mapped yet — Show/Resize while !done_ will schedule again.
         return;
     }
-    const bool onlyShrink = shrinkOnly_ && done_;
-    shrinkOnly_ = false;
     fitting_ = true;
-    if (onlyShrink)
-        fit.shrinkSlack();
-    else
-        fit.apply();
+    fit.apply();
     fitting_ = false;
     done_ = true;
 }

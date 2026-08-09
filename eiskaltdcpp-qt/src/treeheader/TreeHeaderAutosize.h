@@ -46,7 +46,6 @@ private:
     QPointer<QAbstractItemView> view_;
     QTimer *debounce_ = nullptr;
     bool done_ = false;
-    bool shrinkOnly_ = false;
     bool modelHooked_ = false;
     bool fitting_ = false;
     QSet<int> manual_;

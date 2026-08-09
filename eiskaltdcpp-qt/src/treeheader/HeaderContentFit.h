@@ -17,9 +17,10 @@ class QAbstractItemView;
 class QHeaderView;
 
 /**
- * Applies content-based header widths: grow columns that are too narrow, and
- * shrink slack only when horizontal scroll is present, content fits the
- * viewport, and every non-manual column has spare width.
+ * Applies content-based header widths: grow columns that are too narrow;
+ * shrink a column that is wider than its own content when there is scroll;
+ * if total width is at most 30% over the viewport, scale every column
+ * proportionally to fit.
  */
 class HeaderContentFit
 {
@@ -30,10 +31,9 @@ public:
 
     bool ready() const;
     void apply();
-    void shrinkSlack();
 
 private:
-    void fit(bool grow);
+    void scaleToViewport(QHeaderView *header, int viewW) const;
 
     QAbstractItemView *view_ = nullptr;
     QSet<int> manual_;

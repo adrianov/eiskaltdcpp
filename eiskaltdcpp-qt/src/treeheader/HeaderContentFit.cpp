@@ -21,6 +21,8 @@
 
 namespace {
 
+constexpr int kMaxOverflowPct = 30;
+
 struct ColNeed {
     int col = 0;
     int need = 0;
@@ -51,7 +53,39 @@ bool HeaderContentFit::ready() const
         && view_->viewport()->width() >= 40 && headerOf(view_);
 }
 
-void HeaderContentFit::fit(bool grow)
+void HeaderContentFit::scaleToViewport(QHeaderView *header, int viewW) const
+{
+    QVector<int> cols;
+    QVector<int> sizes;
+    int total = 0;
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (header->isSectionHidden(col))
+            continue;
+        cols.append(col);
+        const int sz = header->sectionSize(col);
+        sizes.append(sz);
+        total += sz;
+    }
+    if (cols.isEmpty() || total <= viewW)
+        return;
+    // Only when overflow is modest: total <= viewport + 30%.
+    if (total * 100LL > viewW * (100LL + kMaxOverflowPct))
+        return;
+
+    const int minSec = header->minimumSectionSize();
+    int allocated = 0;
+    for (int i = 0; i < cols.size(); ++i) {
+        int neu = (i + 1 == cols.size())
+                ? viewW - allocated
+                : int((qint64(sizes.at(i)) * viewW) / total);
+        neu = qMax(neu, minSec);
+        header->resizeSection(cols.at(i), neu);
+        allocated += neu;
+    }
+}
+
+void HeaderContentFit::apply()
 {
     QHeaderView *header = headerOf(view_);
     if (!header || !view_->viewport() || header->count() < 1)
@@ -59,46 +93,25 @@ void HeaderContentFit::fit(bool grow)
     header->setStretchLastSection(false);
 
     ColumnContentSpan span(view_);
-    QVector<ColNeed> freeCols;
-    int totalNeed = 0;
-    bool anySlack = false;
-    bool needsGrow = false;
+    QVector<ColNeed> slackCols;
     for (int v = 0; v < header->count(); ++v) {
         const int col = header->logicalIndex(v);
-        if (header->isSectionHidden(col))
+        if (header->isSectionHidden(col) || manual_.contains(col))
             continue;
-        if (manual_.contains(col)) {
-            totalNeed += header->sectionSize(col);
-            continue;
-        }
         const int need = span.cells(col);
         int have = header->sectionSize(col);
-        if (grow && have < need) {
+        if (have < need) {
             header->resizeSection(col, need);
             have = need;
         }
-        if (have < need)
-            needsGrow = true;
         if (have > need)
-            anySlack = true;
-        totalNeed += need;
-        freeCols.append(ColNeed{col, need});
+            slackCols.append(ColNeed{col, need});
     }
 
-    // Shrink only with horizontal scroll, no pending grow, and content fits.
     const int viewW = view_->viewport()->width();
-    if (needsGrow || !anySlack || header->length() <= viewW || totalNeed > viewW)
-        return;
-    for (const ColNeed &item : freeCols)
-        header->resizeSection(item.col, item.need);
-}
-
-void HeaderContentFit::apply()
-{
-    fit(true);
-}
-
-void HeaderContentFit::shrinkSlack()
-{
-    fit(false);
+    if (!slackCols.isEmpty() && header->length() > viewW) {
+        for (const ColNeed &item : slackCols)
+            header->resizeSection(item.col, item.need);
+    }
+    scaleToViewport(header, viewW);
 }
