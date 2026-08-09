@@ -1,0 +1,37 @@
+---
+description: After code changes, rebuild cleanly (no errors or warnings) to verify; linters alone are not enough.
+alwaysApply: true
+---
+
+# Rebuild to verify
+
+After editing compilable code (C++/CMake/headers, Qt UI wiring, etc.), **rebuild the project before finishing the turn**. IDE/linter diagnostics help but **do not** replace a real compile for this codebase (typedefs vs forward declares, template instantiation, link errors, `-Werror`-class issues).
+
+## Hard gate (do not skip)
+
+- A turn that changed compilable files is **not done** until a build of the affected target(s) has been **run in this turn** and exited **0**.
+- Saying “should compile”, relying on an earlier session’s build, or citing only ReadLints / IDE diagnostics **does not** satisfy this rule.
+- If the build fails: fix and rebuild in the **same turn** until clean. Do not hand broken trees back to the user.
+- In the final reply, briefly state what was built and that it succeeded (or that the user asked to skip).
+
+## Required bar
+
+- Incremental or full build of the affected targets succeeds.
+- **No new compiler errors.**
+- **No new compiler warnings** introduced by the change (fix or avoid them in the same turn).
+- If new sources were added under a CMake-listed or reconfigure-sensitive tree, **reconfigure** when needed, then build.
+
+## How
+
+- Prefer the existing tree: `cmake --build build --target <target> -j$(sysctl -n hw.ncpu)` (or `make` in `build/`). Use `macos/build.sh` / `macos/build-using-homebrew.sh` when a full/configure cycle is needed.
+- Scope to what changed when reliable (`dcpp`, `eiskaltdcpp-qt`, …); widen if public headers or cross-lib APIs moved.
+- After adding/moving `dcpp/` sources, reconfigure when CMake lists change.
+- Headers under `dcpp/<subdir>/` must include dcpp roots as `"../Foo.h"` (same pattern as `hub/`, `queue/`) so Qt translation units that pull them via `dcpp/HashManager.h` still resolve.
+- On failure: fix and rebuild in the same turn until clean.
+
+## Skip only when
+
+- The edit is docs/rules/assets/non-compiled text with no build impact, **or**
+- The user explicitly says not to build.
+
+Do **not** skip because a linter reported no issues.

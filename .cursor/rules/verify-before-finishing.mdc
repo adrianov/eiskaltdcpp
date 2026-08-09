@@ -22,4 +22,4 @@ After implementing a **feature** or resolving an **issue**, do not stop at the f
 
 ## Done means
 
-The change matches the request, survives a short adversarial pass against nearby edge cases, and stays as small as a correct fix allows.
+The change matches the request, survives a short adversarial pass against nearby edge cases, stays as small as a correct fix allows, and — for compilable edits — a **build run in this turn** exits 0 with **no errors or warnings** (see `rebuild-to-verify`). Do not finish on “should compile” or linter-only checks.

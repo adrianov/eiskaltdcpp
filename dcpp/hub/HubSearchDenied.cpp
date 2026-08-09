@@ -9,10 +9,10 @@
  */
 
 #include "stdinc.h"
-#include "HubSearchDenied.h"
+#include "hub/HubSearchDenied.h"
 
 #include "Client.h"
-#include "SearchQueue.h"
+#include "hub/SearchQueue.h"
 #include "TimerManager.h"
 #include "Util.h"
 

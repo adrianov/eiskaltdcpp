@@ -15,7 +15,7 @@ alwaysApply: true
 
 - **`dcpp/`** uses `aux_source_directory` — new `*.cpp` files in that directory are picked up on **cmake reconfigure**, not on incremental `make` alone.
 - When adding a new `*.cpp` in a globbed directory, still **append it to the explicit `DCPP_EXTRA_SOURCES` list** in `dcpp/CMakeLists.txt` (documents intent; adds missing files if glob is ever removed).
-- Do **not** reconfigure or build just because sources were added; verify with linters/diagnostics unless the user asks to build (see `no-build-unless-asked`).
+- After adding sources, **reconfigure if needed and rebuild** (see `rebuild-to-verify`); do not stop at linter/IDE diagnostics alone.
 
 ## Behavior-preserving security fixes
 

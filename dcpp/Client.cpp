@@ -1,19 +1,12 @@
 /*
  * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
  * Copyright (C) 2009-2020 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "stdinc.h"
@@ -23,13 +16,14 @@
 #include "ClientManager.h"
 #include "DebugManager.h"
 #include "FavoriteManager.h"
+#include "hub/HubSearchDenied.h"
 #include "TimerManager.h"
 #include "Util.h"
 #include "Text.h"
 
 namespace dcpp {
 
-Client::Counts Client::counts;
+HubUserCounts Client::counts;
 
 uint32_t idCounter = 0;
 
@@ -70,6 +64,21 @@ void Client::shutdown() {
 
 bool Client::isActive() const {
     return ClientManager::getInstance()->isActive(hubUrl);
+}
+
+StringMap& Client::escapeParams(StringMap& sm) {
+    for(auto& i : sm)
+        i.second = escape(i.second);
+    return sm;
+}
+
+void Client::setSearchInterval(uint32_t aInterval) {
+    searchQueue.interval = (aInterval + min(aInterval, (uint32_t)1)) * (uint32_t)1000;
+}
+
+void Client::noteHubLimits(const string& message) {
+    noteSearchRateLimit(searchQueue, message);
+    connectPace.note(message);
 }
 
 void Client::updateCounts(bool aRemove) {

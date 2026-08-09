@@ -1,69 +1,38 @@
 /*
  * Copyright (C) 2001-2012 Jacek Sieka, arnetheduck on gmail point com
  * Copyright (C) 2009-2020 EiskaltDC++ developers
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
 #include "compiler.h"
 
-#include "Atomic.h"
 #include "BufferedSocketListener.h"
+#include "ClientBase.h"
 #include "ClientListener.h"
 #include "forward.h"
-#include "OnlineUser.h"
-#include "SearchQueue.h"
+#include "hub/HubConnectPace.h"
+#include "hub/HubUserCounts.h"
+#include "hub/SearchQueue.h"
 #include "Socket.h"
 #include "Speaker.h"
 #include "TimerManager.h"
-
-#ifdef LUA_SCRIPT
-#include "ScriptManager.h"
-#endif
-
 #include "NonCopyable.h"
 
 namespace dcpp {
-#ifdef LUA_SCRIPT
-struct ClientScriptInstance : public ScriptInstance {
-    bool onHubFrameEnter(Client* aClient, const string& aLine);
-    string formatChatMessage(const string& aLine);
-};
-#endif
-class ClientBase
-{
-public:
 
-    ClientBase() : type(DIRECT_CONNECT) { }
-
-    enum P2PType { DIRECT_CONNECT, DHT };
-    P2PType type;
-    P2PType getType() const { return type; }
-    virtual const string& getHubUrl() const = 0;
-    virtual string getHubName() const = 0;
-    virtual bool isOp() const = 0;
-    virtual void connect(const OnlineUser& user, const string& token, bool reverseConnect = false, int secureMode = -1) = 0;
-    virtual void privateMessage(const OnlineUser& user, const string& aMessage, bool thirdPerson = false) = 0;
-
-};
 /** Yes, this should probably be called a Hub */
-class Client : public ClientBase, public Speaker<ClientListener>, public BufferedSocketListener, protected TimerManagerListener
-        #ifdef LUA_SCRIPT
+class Client : public ClientBase, public Speaker<ClientListener>, public BufferedSocketListener,
+        protected TimerManagerListener
+#ifdef LUA_SCRIPT
         , public ClientScriptInstance
-        #endif
+#endif
         , private NonCopyable
 {
 public:
@@ -88,8 +57,9 @@ public:
 
     virtual size_t getUserCount() const = 0;
     virtual int64_t getAvailable() const = 0;
-    static int getTotalCounts() { return counts.normal + counts.registered + counts.op; }
+    static int getTotalCounts() { return counts.total(); }
     static string escape(string const& str) { return str; }
+    static string getCounts() { return counts.format(); }
 
     virtual void emulateCommand(const string& cmd) = 0;
     virtual void send(const AdcCommand& command) = 0;
@@ -105,32 +75,18 @@ public:
 
     const string& getPort() const { return port; }
     const string& getAddress() const { return address; }
-
     const string& getIp() const { return ip; }
     string getIpPort() const { return getIp() + ':' + port; }
     string getLocalIp() const;
 
-    static string getCounts() {
-        char buf[128];
-        return string(buf, snprintf(buf, sizeof(buf), "%ld/%ld/%ld",
-                                    static_cast<long>(counts.normal),
-                                    static_cast<long>(counts.registered),
-                                    static_cast<long>(counts.op)));
-    }
+    StringMap& escapeParams(StringMap& sm);
+    void setSearchInterval(uint32_t aInterval);
+    uint32_t getSearchInterval() const { return searchQueue.interval; }
 
-    StringMap& escapeParams(StringMap& sm) {
-        for(auto& i : sm) {
-            i.second = escape(i.second);
-        }
-        return sm;
-    }
-    void setSearchInterval(uint32_t aInterval) {
-        searchQueue.interval = (aInterval + min(aInterval, (uint32_t)1)) * (uint32_t)1000;
-    }
-
-    uint32_t getSearchInterval() const {
-        return searchQueue.interval;
-    }
+    /** False while this hub pauses further peer connects (CTM/RCM). */
+    bool allowHubConnect() const { return connectPace.allow(); }
+    /** Honor hub search/connect rate-limit text from chat or status. */
+    void noteHubLimits(const string& message);
 
     void reconnect();
     void shutdown();
@@ -142,7 +98,6 @@ public:
     string getMyNick() const { return getMyIdentity().getNick(); }
     string getHubName() const { return getHubIdentity().getNick().empty() ? getHubUrl() : getHubIdentity().getNick(); }
     string getHubDescription() const { return getHubIdentity().getDescription(); }
-
     const string& getHubUrl() const { return hubUrl; }
 
     GETSET(Identity, myIdentity, MyIdentity);
@@ -163,74 +118,56 @@ public:
     GETSET(string, currentDescription, CurrentDescription);
 
     string getFavIp() const { return externalIP; }
-
-    /** Reload details from favmanager or settings */
     void reloadSettings(bool updateNick);
+
 protected:
     friend class ClientManager;
     Client(const string& hubURL, char separator, bool secure_, Socket::Protocol proto_);
     virtual ~Client();
-    struct Counts {
-    private:
-        typedef Atomic<std::int32_t> atomic_counter_t;
-    public:
-        typedef std::int32_t value_type;
-        Counts(value_type n = 0, value_type r = 0, value_type o = 0) : normal(n), registered(r), op(o) { }
-        atomic_counter_t normal;
-        atomic_counter_t registered;
-        atomic_counter_t op;
-    };
 
     enum States {
-        STATE_CONNECTING,   ///< Waiting for socket to connect
-        STATE_PROTOCOL,     ///< Protocol setup
-        STATE_IDENTIFY,     ///< Nick setup
-        STATE_VERIFY,       ///< Checking password
-        STATE_NORMAL,       ///< Running
-        STATE_DISCONNECTED  ///< Nothing in particular
+        STATE_CONNECTING,
+        STATE_PROTOCOL,
+        STATE_IDENTIFY,
+        STATE_VERIFY,
+        STATE_NORMAL,
+        STATE_DISCONNECTED
     } state;
+
     SearchQueue searchQueue;
+    HubConnectPace connectPace;
     BufferedSocket* sock;
 
-    static Counts counts;
-    Counts lastCounts;
+    static HubUserCounts counts;
 
     void updateCounts(bool aRemove);
     void updateActivity() { lastActivity = GET_TICK(); }
-
     void updated(OnlineUser& user);
     void updated(OnlineUserList& users);
 
     virtual void search(int aSizeMode, int64_t aSize, int aFileType, const string& aString, const string& aToken, const StringList& aExtList) = 0;
     virtual string checkNick(const string& nick) = 0;
 
-    /** Try next nick with numeric suffix after a nick conflict. */
     bool tryAlternateNick();
     void scheduleReconnectBackoff();
     void onConnectFailed(const string& aLine);
     void storeHubNick();
-    /** Toolbar/menu Reconnect: skip planned backoff once; see reconnect(). */
+    /** Toolbar/menu Reconnect: skip planned backoff once. */
     bool urgentReconnect;
 
-    // TimerManagerListener
     virtual void on(Second, uint64_t aTick) noexcept;
-    // BufferedSocketListener
     virtual void on(Connecting) noexcept { fire(ClientListener::Connecting(), this); }
     virtual void on(Connected) noexcept;
     virtual void on(Line, const string& aLine) noexcept;
     virtual void on(Failed, const string&) noexcept;
 
 private:
-
     enum CountType {
         COUNT_UNCOUNTED,
         COUNT_NORMAL,
         COUNT_REGISTERED,
         COUNT_OP
     };
-
-    Client(const Client&);
-    Client& operator=(const Client&);
 
     string hubUrl;
     string address;

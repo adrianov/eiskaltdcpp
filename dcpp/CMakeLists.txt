@@ -34,7 +34,10 @@ set(DCPP_EXTRA_SOURCES
     ClientLocalIp.cpp
     ClientManagerUserLookup.cpp
     ClientSearch.cpp
-    HubSearchDenied.cpp
+    hub/HubSearchDenied.cpp
+    hub/HubConnectPace.cpp
+    hub/HubUserCounts.cpp
+    hub/SearchQueue.cpp
     ListCache.cpp
     ListCacheStore.cpp
     ExpectedMap.cpp
@@ -100,6 +103,7 @@ set(DCPP_EXTRA_SOURCES
     PeerConnectTls.cpp
     PeerConnectHub.cpp
     PeerConnectHubSkip.cpp
+    PeerConnectAttempt.cpp
     DownloadManagerSlots.cpp
     DownloadManagerSlotFail.cpp
     DownloadManagerTimer.cpp
@@ -166,7 +170,7 @@ endforeach()
 
 list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/FileReader.cpp)
 list (REMOVE_ITEM dcpp_hdrs ${PROJECT_SOURCE_DIR}/FileReader.h)
-list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/SearchQueueSmoke.cpp)
+list (REMOVE_ITEM dcpp_srcs ${PROJECT_SOURCE_DIR}/hub/SearchQueueSmoke.cpp)
 
 set (DCPP_SRCS ${dcpp_srcs} PARENT_SCOPE)
 set (DCPP_HDRS ${dcpp_hdrs} PARENT_SCOPE)
@@ -330,7 +334,7 @@ set_target_properties(dcpp PROPERTIES
                       SOVERSION ${SO_VERSION}
                       OUTPUT_NAME "eiskaltdcpp")
 
-add_executable(search-queue-smoke ${PROJECT_SOURCE_DIR}/SearchQueueSmoke.cpp)
+add_executable(search-queue-smoke ${PROJECT_SOURCE_DIR}/hub/SearchQueueSmoke.cpp)
 target_link_libraries(search-queue-smoke dcpp
                       ${PTHREADS}
                       ${BZIP2_LIBRARIES}
@@ -380,6 +384,8 @@ if (WITH_DEV_FILES)
     install (FILES ${adc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/adc/)
     file (GLOB nmdc_hdrs ${PROJECT_SOURCE_DIR}/nmdc/*.h)
     install (FILES ${nmdc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/nmdc/)
+    file (GLOB hub_hdrs ${PROJECT_SOURCE_DIR}/hub/*.h)
+    install (FILES ${hub_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/hub/)
 
     set (prefix ${CMAKE_INSTALL_PREFIX})
     set (libdir ${LIBDIR})

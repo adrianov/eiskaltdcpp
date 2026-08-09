@@ -9,7 +9,7 @@
  */
 
 #include "stdinc.h"
-#include "SearchQueue.h"
+#include "hub/SearchQueue.h"
 
 namespace dcpp {
 
