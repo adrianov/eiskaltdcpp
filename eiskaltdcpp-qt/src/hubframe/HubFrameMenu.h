@@ -79,7 +79,7 @@ public:
     Action execChatMenu(dcpp::Client*, const QString&, bool pmw);
 
 private:
-    QMenu *buildAntispamMenu(bool showIcon);
+    QMenu *buildAntispamMenu();
     Action resolveSelection(QAction *res, QMenu *antispam_menu, dcpp::Client *client, const QString &cid);
 
     QMenu *menu;

@@ -9,7 +9,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "HubFrameMenu.h"
+#include "hubframe/HubFrameMenu.h"
 
 #include "WulforUtil.h"
 

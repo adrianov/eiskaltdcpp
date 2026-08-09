@@ -9,7 +9,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "HubFrameMenu.h"
+#include "hubframe/HubFrameMenu.h"
 
 #include "Antispam.h"
 #include "WulforUtil.h"
@@ -39,20 +39,18 @@ bool userSilenced(Client *client, const QString &cid){
 
 } // namespace
 
-QMenu *HubFrameMenu::buildAntispamMenu(bool showIcon){
+QMenu *HubFrameMenu::buildAntispamMenu(){
     if (!AntiSpam::getInstance())
         return nullptr;
 
     QMenu *antispam_menu = new QMenu(nullptr);
     antispam_menu->setTitle(QObject::tr("AntiSpam"));
+    antispam_menu->menuAction()->setIcon(WICON(AppIcons::eiSPAM));
 
-    if (showIcon) {
-        antispam_menu->menuAction()->setIcon(WICON(AppIcons::eiSPAM));
-        antispam_menu->setProperty("iconVisibleInMenu", true);
-    }
-
-    antispam_menu->addAction(QObject::tr("Add to Black"))->setData(static_cast<int>(AntiSpamBlack));
-    antispam_menu->addAction(QObject::tr("Add to White"))->setData(static_cast<int>(AntiSpamWhite));
+    antispam_menu->addAction(WICON(AppIcons::eiFILTER), QObject::tr("Add to Black"))
+            ->setData(static_cast<int>(AntiSpamBlack));
+    antispam_menu->addAction(WICON(AppIcons::eiFILTER), QObject::tr("Add to White"))
+            ->setData(static_cast<int>(AntiSpamWhite));
 
     return antispam_menu;
 }
@@ -111,7 +109,7 @@ HubFrameMenu::Action HubFrameMenu::execUserMenu(Client *client, const QString &c
             menu->addMenu(user_menu);
     }
 
-    QMenu *antispam_menu = buildAntispamMenu(true);
+    QMenu *antispam_menu = buildAntispamMenu();
     if (antispam_menu)
         menu->addMenu(antispam_menu);
 
@@ -164,7 +162,7 @@ HubFrameMenu::Action HubFrameMenu::execChatMenu(Client *client, const QString &c
             menu->addMenu(user_menu);
     }
 
-    QMenu *antispam_menu = buildAntispamMenu(false);
+    QMenu *antispam_menu = buildAntispamMenu();
     if (antispam_menu)
         menu->addMenu(antispam_menu);
 

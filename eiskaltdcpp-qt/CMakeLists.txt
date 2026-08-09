@@ -101,14 +101,15 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp
     src/HubFrameClient.cpp
-    src/HubFrameChatMenu.cpp
     src/HubFrameLinkMagnet.cpp
     src/HubFrameLinkParser.cpp
-    src/HubFrameMenu.cpp
-    src/HubFrameMenuExec.cpp
     src/HubFrameMsg.cpp
     src/HubFrameUserList.cpp
     src/HubFrameUsers.cpp
+    src/hubframe/HubChatCmd.cpp
+    src/hubframe/HubFrameChatMenu.cpp
+    src/hubframe/HubFrameMenu.cpp
+    src/hubframe/HubFrameMenuExec.cpp
     src/PmSpamFilter.cpp
     src/PMWindowEvents.cpp
     src/MainAppCli.cpp

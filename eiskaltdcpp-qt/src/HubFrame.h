@@ -35,12 +35,13 @@
 #include "dcpp/FavoriteManagerListener.h"
 
 #include "ArenaWidget.h"
-#include "HubFrameMenu.h"
+#include "hubframe/HubFrameMenu.h"
 #include "WulforUtil.h"
 
 class ShellCommandRunner;
 class PMWindow;
 class HubFramePrivate;
+class HubChatCmd;
 
 using namespace dcpp;
 
@@ -62,6 +63,7 @@ class HubFrame :
     Q_INTERFACES(ArenaWidget)
 
     using Menu = HubFrameMenu;
+    friend class HubChatCmd;
 
 public:
     class LinkParser{
