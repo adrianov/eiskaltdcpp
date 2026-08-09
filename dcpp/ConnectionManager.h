@@ -46,6 +46,8 @@ public:
     void adcExpect(const string& token, const UserPtr& user);
 
     void getDownloadConnection(const HintedUser& aUser);
+    /** Peer info arrived: replay a download connect deferred while share size was unknown. */
+    void peerInfoReady(const UserPtr& user);
     void force(const UserPtr& aUser);
     void onUpnpReady();
 
@@ -118,6 +120,10 @@ private:
     mutable CriticalSection cooldownCs;
     unordered_map<string, uint64_t> ctmLatch;
 
+    /** Peers whose resume waits for the hub to report share size ($MyINFO after $NickList). */
+    mutable FastCriticalSection infoCs;
+    unordered_set<CID> infoWait;
+
     uint32_t floodCounter;
     /** CTM2HUB targets (`host:port`) that must not receive C-C connects. */
     unordered_set<string> blockedHubCtms;
@@ -139,6 +145,9 @@ private:
 
     void addDownloadConnection(UserConnection* uc);
     void addUploadConnection(UserConnection* uc);
+
+    /** Hold the resume intent until the peer's share size is known. */
+    void waitPeerInfo(const UserPtr& user);
 
     ConnectionQueueItem* getCQI(const HintedUser& user, bool download);
     void putCQI(ConnectionQueueItem* cqi);

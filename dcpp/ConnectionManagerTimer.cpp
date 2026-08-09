@@ -39,6 +39,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
                 if(cqi->getUser().user->isSet(User::NMDC) && Util::toInt64(
                         ClientManager::getInstance()->getField(cqi->getUser().user->getCID(),
                         cqi->getUser().hint, "SS")) <= 0) {
+                    waitPeerInfo(cqi->getUser().user);
                     removed.push_back(cqi);
                     continue;
                 }

@@ -117,13 +117,36 @@ bool ConnectionManager::queueBackoffActive(const ConnectionQueueItem* cqi) const
     return GET_TICK() < cqi->getLastAttempt() + static_cast<uint64_t>(ms);
 }
 
+void ConnectionManager::waitPeerInfo(const UserPtr& user) {
+    // Offline peers are retried by UserConnected instead.
+    if(!user || !user->isOnline())
+        return;
+    FastLock l(infoCs);
+    infoWait.insert(user->getCID());
+}
+
+void ConnectionManager::peerInfoReady(const UserPtr& user) {
+    if(!user)
+        return;
+    {
+        FastLock l(infoCs);
+        if(infoWait.erase(user->getCID()) == 0)
+            return;
+    }
+    // A peer that is still silent gets deferred again by getDownloadConnection.
+    getDownloadConnection(HintedUser(user, Util::emptyString));
+}
+
 void ConnectionManager::getDownloadConnection(const HintedUser& aUser) {
     dcassert((bool)aUser.user);
     HintedUser user = aUser;
     user.hint = ClientManager::getInstance()->resolveHubHint(user.user, user.hint);
     if(user.user->isSet(User::NMDC) && Util::toInt64(ClientManager::getInstance()->getField(
-            user.user->getCID(), user.hint, "SS")) <= 0)
+            user.user->getCID(), user.hint, "SS")) <= 0) {
+        // $NickList puts the peer online before $MyINFO — resume once info lands.
+        waitPeerInfo(user.user);
         return;
+    }
 
     if(!QueueManager::getInstance()->allowDownloadConnect(user))
         return;

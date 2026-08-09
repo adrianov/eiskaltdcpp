@@ -14,6 +14,7 @@
 
 #include "ClientManager.h"
 #include "ConnectionManager.h"
+#include "OnlineUser.h"
 #include "SearchResult.h"
 #include "SettingsManager.h"
 #include "User.h"
@@ -92,6 +93,11 @@ void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& aUser
         const string hint = ClientManager::getInstance()->resolveHubHint(aUser);
         ConnectionManager::getInstance()->getDownloadConnection(HintedUser(aUser, hint));
     }
+}
+
+// Hubs list a peer before describing it; resume as soon as the description arrives.
+void QueueManager::on(ClientManagerListener::UserUpdated, const OnlineUser& aUser) noexcept {
+    ConnectionManager::getInstance()->peerInfoReady(aUser.getUser());
 }
 
 void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept {
