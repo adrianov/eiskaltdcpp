@@ -29,23 +29,31 @@ QString tableSql(QSqlDatabase &db, const QString &name)
 void migrateFilesTable(QSqlDatabase &db)
 {
     const QString sql = tableSql(db, QStringLiteral("files"));
-    if (sql.isEmpty() || sql.contains(QStringLiteral("TARGET TEXT PRIMARY KEY"), Qt::CaseInsensitive))
+    if (sql.isEmpty())
         return;
 
-    QSqlQuery q(db);
-    q.exec(QStringLiteral("BEGIN"));
-    q.exec(QStringLiteral(
-        "CREATE TABLE files_new ("
-        "TARGET TEXT PRIMARY KEY, FNAME TEXT, TIME TEXT, PATH TEXT, USERS TEXT, "
-        "TR TEXT, SPEED TEXT, CRC32 INTEGER, ELAP TEXT, FULL INTEGER);"));
-    q.exec(QStringLiteral(
-        "INSERT OR REPLACE INTO files_new "
-        "(TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL) "
-        "SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
-        "FROM files WHERE TARGET IS NOT NULL AND TARGET != '';"));
-    q.exec(QStringLiteral("DROP TABLE files;"));
-    q.exec(QStringLiteral("ALTER TABLE files_new RENAME TO files;"));
-    q.exec(QStringLiteral("COMMIT"));
+    if (!sql.contains(QStringLiteral("TARGET TEXT PRIMARY KEY"), Qt::CaseInsensitive)) {
+        QSqlQuery q(db);
+        q.exec(QStringLiteral("BEGIN"));
+        q.exec(QStringLiteral(
+            "CREATE TABLE files_new ("
+            "TARGET TEXT PRIMARY KEY, FNAME TEXT, TIME TEXT, PATH TEXT, USERS TEXT, "
+            "TR TEXT, SPEED TEXT, CRC32 INTEGER, ELAP TEXT, FULL INTEGER, TTH TEXT);"));
+        q.exec(QStringLiteral(
+            "INSERT OR REPLACE INTO files_new "
+            "(TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL) "
+            "SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
+            "FROM files WHERE TARGET IS NOT NULL AND TARGET != '';"));
+        q.exec(QStringLiteral("DROP TABLE files;"));
+        q.exec(QStringLiteral("ALTER TABLE files_new RENAME TO files;"));
+        q.exec(QStringLiteral("COMMIT"));
+        return;
+    }
+
+    if (!sql.contains(QStringLiteral("TTH"), Qt::CaseInsensitive)) {
+        QSqlQuery q(db);
+        q.exec(QStringLiteral("ALTER TABLE files ADD COLUMN TTH TEXT;"));
+    }
 }
 
 void migrateUsersTable(QSqlDatabase &db)
@@ -91,7 +99,7 @@ void FinishedTransfers<isUpload>::openDatabase()
     q.exec("CREATE TABLE IF NOT EXISTS files ("
            "TARGET TEXT PRIMARY KEY, "
            "FNAME TEXT, TIME TEXT, PATH TEXT, USERS TEXT, TR TEXT, SPEED TEXT, "
-           "CRC32 INTEGER, ELAP TEXT, FULL INTEGER);");
+           "CRC32 INTEGER, ELAP TEXT, FULL INTEGER, TTH TEXT);");
 
     q.exec("CREATE TABLE IF NOT EXISTS users ("
            "CID TEXT PRIMARY KEY, "
@@ -99,6 +107,22 @@ void FinishedTransfers<isUpload>::openDatabase()
 
     migrateFilesTable(db);
     migrateUsersTable(db);
+
+    // Rebuild search "already have" index here (sync), not in the async UI loader.
+    if (!isUpload) {
+        QSqlQuery idx(db);
+        if (idx.exec(QStringLiteral(
+                "SELECT TARGET, TTH FROM files "
+                "WHERE FULL != 0 AND TTH IS NOT NULL AND length(TTH) = 39;"))) {
+            while (idx.next()) {
+                const string target = _tq(idx.value(0).toString());
+                if (isFileListPath(target))
+                    continue;
+                FinishedManager::getInstance()->setDownloadTarget(
+                            _tq(idx.value(1).toString()), target);
+            }
+        }
+    }
 #endif
 }
 

@@ -76,6 +76,8 @@ public:
     GETSET(int64_t, fileSize, FileSize);
     GETSET(int64_t, actual, Actual);
     GETSET(bool, crc32Checked, Crc32Checked);
+    /** Base32 TTH when known (empty for file lists / legacy rows). */
+    GETSET(string, tth, TTH);
 };
 
 class FinishedUserItem : public FinishedItemBase, public intrusive_ptr_base<FinishedUserItem> {

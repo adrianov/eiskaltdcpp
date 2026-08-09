@@ -102,8 +102,9 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
     {
         Lock l(cs);
 
-        if(!upload)
-            dlByTth[t->getTTH().toBase32()] = file;
+        const string tth = t->getTTH().toBase32();
+        if(!upload && !tth.empty())
+            dlByTth[tth] = file;
 
         {
             MapByFile& map = upload ? ULByFile : DLByFile;
@@ -131,6 +132,8 @@ void FinishedManager::onComplete(Transfer* t, bool upload, bool crc32Checked) {
                             );
                 fileItem = it->second;
             }
+            if(!tth.empty())
+                fileItem->setTTH(tth);
         }
 
         {

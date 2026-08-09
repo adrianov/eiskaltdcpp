@@ -97,7 +97,7 @@ void FinishedTransfers<isUpload>::loadListFromDB()
             emit coreBeginBulkLoad();
 
             q.exec(QStringLiteral(
-                "SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL "
+                "SELECT TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL, TTH "
                 "FROM files ORDER BY TIME DESC LIMIT %1;").arg(keepStr));
             while (q.next()) {
                 int i = 0;
@@ -111,6 +111,7 @@ void FinishedTransfers<isUpload>::loadListFromDB()
                 params["CRC32"] = q.value(i++);
                 params["ELAP"]  = q.value(i++);
                 params["FULL"]  = q.value(i++);
+                params["TTH"]   = q.value(i++);
 
                 if (!showDownloadParams(params))
                     continue;

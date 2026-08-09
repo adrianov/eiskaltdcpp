@@ -16,14 +16,9 @@
 #include "dcpp/FinishedManager.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/ShareManager.h"
-#include "dcpp/Util.h"
 
 #include <QDesktopServices>
 #include <QUrl>
-
-#ifdef USE_QT_SQLITE
-#include <QtSql>
-#endif
 
 using namespace dcpp;
 
@@ -44,68 +39,24 @@ static QString fromShare(const QString &tth)
     return QString();
 }
 
-#ifdef USE_QT_SQLITE
-/** FinishedDownloads.sqlite has no TTH column; match unique FNAME + on-disk size. */
-static QString fromFinishedDb(const QString &fileName, qint64 size)
-{
-    if (fileName.isEmpty() || size <= 0)
-        return QString();
-
-    static const QString conn = QStringLiteral("SearchFinishedRo");
-    if (!QSqlDatabase::contains(conn)) {
-        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), conn);
-        db.setDatabaseName(_q(Util::getPath(Util::PATH_USER_CONFIG))
-                           + QStringLiteral("FinishedDownloads.sqlite"));
-        db.setConnectOptions(QStringLiteral("QSQLITE_BUSY_TIMEOUT=1000"));
-        if (!db.open())
-            return QString();
-    }
-
-    QSqlQuery q(QSqlDatabase::database(conn));
-    q.prepare(QStringLiteral("SELECT TARGET FROM files WHERE FNAME = ? AND FULL = 1;"));
-    q.addBindValue(fileName);
-    if (!q.exec())
-        return QString();
-
-    QString found;
-    while (q.next()) {
-        const QString target = q.value(0).toString();
-        if (File::getSize(_tq(target)) != size)
-            continue;
-        if (!found.isEmpty())
-            return QString();
-        found = target;
-    }
-    return found;
-}
-#endif
-
-static QString fromFinished(const QString &tth, qint64 size, const QString &fileName)
+static QString fromFinished(const QString &tth, qint64 size)
 {
     // size <= 0 is not authoritative (missing ESIZE / dirs); avoid matching a 0-byte file.
     if (tth.isEmpty() || size <= 0)
         return QString();
 
-    const string path = FinishedManager::getInstance()->getTarget(_tq(tth), size, _tq(fileName));
-    if (!path.empty() && File::getSize(path) == size)
-        return _q(path);
-
-#ifdef USE_QT_SQLITE
-    const QString dbPath = fromFinishedDb(fileName, size);
-    if (!dbPath.isEmpty()) {
-        FinishedManager::getInstance()->setDownloadTarget(_tq(tth), _tq(dbPath));
-        return dbPath;
-    }
-#endif
-    return QString();
+    const string path = FinishedManager::getInstance()->getTarget(_tq(tth));
+    if (path.empty() || File::getSize(path) != size)
+        return QString();
+    return _q(path);
 }
 
-QString resolve(const QString &tth, qint64 size, const QString &fileName)
+QString resolve(const QString &tth, qint64 size)
 {
     const QString shared = fromShare(tth);
     if (!shared.isEmpty())
         return shared;
-    return fromFinished(tth, size, fileName);
+    return fromFinished(tth, size);
 }
 
 bool isQueued(const QString &tth)

@@ -37,6 +37,7 @@ void FinishedTransfers<isUpload>::getParams(const FinishedFileItemPtr& item, con
     params["TARGET"]= _q(file);
     params["ELAP"]  = (qlonglong)item->getMilliSeconds();
     params["FULL"]  = item->isFull();
+    params["TTH"]   = _q(item->getTTH());
 }
 
 template <bool isUpload>
@@ -112,8 +113,8 @@ void FinishedTransfers<isUpload>::persistFile(const VarMap &params)
     withDb(db, db_file, QThread::currentThread() == thread(), [&](QSqlDatabase &d) {
         QSqlQuery q(d);
         q.prepare("REPLACE INTO files "
-                  "(TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+                  "(TARGET, FNAME, TIME, PATH, USERS, TR, SPEED, CRC32, ELAP, FULL, TTH) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
         q.bindValue(0, params["TARGET"]);
         q.bindValue(1, params["FNAME"]);
         q.bindValue(2, params["TIME"]);
@@ -124,6 +125,7 @@ void FinishedTransfers<isUpload>::persistFile(const VarMap &params)
         q.bindValue(7, params["CRC32"]);
         q.bindValue(8, params["ELAP"]);
         q.bindValue(9, params["FULL"]);
+        q.bindValue(10, params["TTH"]);
         execFinished(q, "persistFile");
     });
 #else

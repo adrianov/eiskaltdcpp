@@ -159,31 +159,6 @@ string FinishedManager::getTarget(const string& aTTH){
     return it->second;
 }
 
-string FinishedManager::getTarget(const string& aTTH, int64_t size, const string& fileName){
-    string path = getTarget(aTTH);
-    if(!path.empty())
-        return path;
-    if(aTTH.empty() || size <= 0 || fileName.empty())
-        return Util::emptyString;
-
-    Lock l(cs);
-    string found;
-    for(const auto& i : DLByFile) {
-        if(!i.second || i.second->getFileSize() != size)
-            continue;
-        if(Util::stricmp(Util::getFileName(i.first).c_str(), fileName.c_str()) != 0)
-            continue;
-        if(File::getSize(i.first) != size)
-            continue;
-        if(!found.empty())
-            return Util::emptyString; // ambiguous
-        found = i.first;
-    }
-    if(!found.empty())
-        dlByTth[aTTH] = found;
-    return found;
-}
-
 void FinishedManager::setDownloadTarget(const string& aTTH, const string& path){
     if(aTTH.empty() || path.empty())
         return;
