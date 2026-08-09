@@ -111,6 +111,8 @@ bool SearchModel::addResult
         else
             dirs.insert(dirKey, item);
 
+        refreshOfflineTint(item);
+
         const int row = parent->sortedInsertRow(sortColumn, sortOrder, item);
         beginInsertRows(QModelIndex(), row, row);
         parent->insertChild(row, item);
@@ -122,10 +124,12 @@ bool SearchModel::addResult
     const QModelIndex parentIdx = createIndexForItem(parent);
     beginInsertRows(parentIdx, parent->childCount(), parent->childCount());
     parent->appendChild(item);
+    // Before endInsertRows: view may paint the new row (and parent) immediately.
+    refreshOfflineTint(parent);
     endInsertRows();
 
-    // Count + offline wash (all-offline → mixed) for parent and siblings.
-    emitGroupChanged(parent);
+    // Parent / sibling wash may have flipped (all-offline → mixed).
+    emitGroupDataChanged(parent);
 
     // Defer Count-column root resort to end of batch (avoids layoutChanged per child).
     if (sortColumn == COLUMN_SF_COUNT)

@@ -11,6 +11,24 @@
 
 #include "SearchModel.h"
 
+#include "dcpp/stdinc.h"
+#include "dcpp/ClientManager.h"
+#include "dcpp/User.h"
+
+using namespace dcpp;
+
+namespace {
+
+bool cidOffline(const QString &cid)
+{
+    if (cid.size() != 39)
+        return true;
+    const UserPtr user = ClientManager::getInstance()->findUser(CID(cid.toStdString()));
+    return !user || !user->isOnline();
+}
+
+} // namespace
+
 QString SearchModel::dirGroupKey(const QString &path, const QString &file) {
     return path + QLatin1Char('\0') + file;
 }
@@ -49,20 +67,48 @@ void SearchModel::removeItem(const SearchItem *item){
             dirs.remove(key);
     }
 
+    // Flags before endRemoveRows so the parent is not painted with a stale wash.
+    if (p != rootItem)
+        refreshOfflineTint(p);
+
     endRemoveRows();
 
     delete item;
 
-    // Count + offline wash may change for the remaining group.
     if (p != rootItem)
-        emitGroupChanged(p);
+        emitGroupDataChanged(p);
 }
 
 void SearchModel::setFilterRole(int role){
     filterRole = role;
 }
 
-void SearchModel::emitGroupChanged(SearchItem *group)
+void SearchModel::refreshOfflineTint(SearchItem *item)
+{
+    if (!item)
+        return;
+
+    // Child under a TTH/dir group: update the whole group together.
+    SearchItem *group = item;
+    if (item->parent() && item->parent()->parent())
+        group = item->parent();
+
+    bool allOff = cidOffline(group->cid);
+    if (allOff) {
+        for (SearchItem *child : group->children()) {
+            if (!cidOffline(child->cid)) {
+                allOff = false;
+                break;
+            }
+        }
+    }
+
+    group->setOfflineTint(allOff);
+    for (SearchItem *child : group->children())
+        child->setOfflineTint(allOff);
+}
+
+void SearchModel::emitGroupDataChanged(SearchItem *group)
 {
     const QModelIndex idx = createIndexForItem(group);
     if (!idx.isValid())
@@ -73,6 +119,12 @@ void SearchModel::emitGroupChanged(SearchItem *group)
         if (c.isValid())
             emit dataChanged(c, c.sibling(c.row(), columnCount() - 1));
     }
+}
+
+void SearchModel::emitGroupChanged(SearchItem *group)
+{
+    refreshOfflineTint(group);
+    emitGroupDataChanged(group);
 }
 
 void SearchModel::refreshLocal(const QString &tth){
@@ -94,7 +146,8 @@ void SearchModel::refreshLocal(const QString &tth){
         child->clearQueued();
     }
 
-    emitGroupChanged(item);
+    // Local/queue only; presence cache is updated on membership / duplicate SR.
+    emitGroupDataChanged(item);
 }
 
 bool SearchModel::okToFind(const SearchItem *item){

@@ -86,6 +86,9 @@ public:
     bool isQueued() const;
     /** Drop cached queue flag so the next isQueued() lookup runs again. */
     void clearQueued();
+    /** Cached offline wash; SearchModel refreshes on membership / SR updates. */
+    bool offlineTint() const { return offlineTint_; }
+    void setOfflineTint(bool on) { offlineTint_ = on; }
 
     QString cid;
     bool isDir;
@@ -100,4 +103,5 @@ private:
     mutable bool queuedCached = false;
     /** Unique source count; -1 means dirty. */
     mutable int countCached = -1;
+    bool offlineTint_ = false;
 };

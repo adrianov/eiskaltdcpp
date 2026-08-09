@@ -13,50 +13,6 @@
 #include "WulforUtil.h"
 #include "AppTheme.h"
 
-#include "dcpp/ClientManager.h"
-#include "dcpp/User.h"
-
-using namespace dcpp;
-
-namespace {
-
-bool cidOffline(const QString &cid)
-{
-    // Base32 CID is 39 chars; anything else is not a live peer.
-    if (cid.size() != 39)
-        return true;
-    const UserPtr user = ClientManager::getInstance()->findUser(CID(cid.toStdString()));
-    return !user || !user->isOnline();
-}
-
-/** Parent source + every child source; used for TTH/dir groups. */
-bool groupAllOffline(const SearchItem *group)
-{
-    if (!cidOffline(group->cid))
-        return false;
-    for (SearchItem *child : group->children()) {
-        if (!cidOffline(child->cid))
-            return false;
-    }
-    return true;
-}
-
-/**
- * Ungrouped row: tint when that user is offline.
- * Grouped parent/child: tint only when every source in the group is offline.
- */
-bool showOfflineTint(const SearchItem *item)
-{
-    if (item->childCount() > 0)
-        return groupAllOffline(item);
-    // Child under a TTH/dir group (parent itself is not the model root).
-    if (item->parent() && item->parent()->parent())
-        return groupAllOffline(item->parent());
-    return cidOffline(item->cid);
-}
-
-} // namespace
-
 QVariant SearchModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
@@ -101,7 +57,7 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
                 if (item->isQueued())
                     return AppTheme::queuedFileHighlight();
             }
-            if (showOfflineTint(item))
+            if (item->offlineTint())
                 return AppTheme::offlineSourceHighlight();
             break;
         }

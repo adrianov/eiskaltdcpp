@@ -84,7 +84,11 @@ public Q_SLOTS:
 
 private:
     bool okToFind(const SearchItem*);
-    /** Full-row dataChanged for a TTH/dir group root and its source children. */
+    /** Recompute offlineTint for a leaf or TTH/dir group (parent + children). */
+    void refreshOfflineTint(SearchItem *item);
+    /** Full-row dataChanged for group root and children (no presence recompute). */
+    void emitGroupDataChanged(SearchItem *group);
+    /** refreshOfflineTint + emitGroupDataChanged. */
     void emitGroupChanged(SearchItem *group);
     int filterRole;
     int sortColumn;
