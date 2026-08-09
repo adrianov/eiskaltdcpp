@@ -97,6 +97,13 @@ void TransferGroup::finishProgress(Scan &s) const
     parent_->dpos = s.progressPos;
     if (s.totalSize > 0)
         parent_->updateColumn(COLUMN_TRANSFER_SIZE, s.totalSize);
+    // Finished downloads stay at 100% even if peer counters lag the final size.
+    if (parent_->finished) {
+        if (s.totalSize > 0)
+            parent_->dpos = s.totalSize;
+        parent_->percent = 100.0;
+        return;
+    }
     parent_->percent = s.totalSize > 0
             ? qBound(0.0, parent_->dpos * 100.0 / s.totalSize, 100.0) : 0.0;
 }

@@ -16,6 +16,9 @@ void TransferViewModel::pruneEmptyParents(){
         TransferViewItem *p = rootItem->child(row);
         if (!p || !p->cid.isEmpty() || p->childCount() > 0)
             continue;
+        // Finished downloads stay until grace prune or explicit drop.
+        if (p->holdFinished())
+            continue;
         beginRemoveRows(QModelIndex(), row, row);
         rootItem->childItems.removeAt(row);
         delete p;

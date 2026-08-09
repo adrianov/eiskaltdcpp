@@ -54,6 +54,7 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
 
     group->target = newTarget;
     group->finished = false;
+    group->finishRank = 0;
     group->fail = false;
     group->percent = 0.0;
     group->smoothTleft = -1;

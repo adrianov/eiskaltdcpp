@@ -11,7 +11,7 @@
 
 #include "TransferViewModel.h"
 #include "TransferViewModelTree.h"
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 #include "transfersession/TransferSession.h"
 #include "transfersession/TransferSessionRow.h"
 
@@ -21,7 +21,7 @@ void TransferViewModel::initTransfer(const VarMap &params){
 
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
     if (!vbol(params["DOWN"]))
-        cancelUploadPrune(vstr(params["CID"]), hub);
+        grace.cancelUpload(vstr(params["CID"]), hub);
     TransferViewItem *item = nullptr;
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
         addConnection(params);
@@ -115,5 +115,5 @@ void TransferViewModel::addConnection(const VarMap &params){
 
     // Added alone never reaches updateTransfer — still drop if Starting never comes.
     if (!bDownload && fname.isEmpty())
-        armUploadPrune(params, 10000);
+        grace.armUpload(params, 10000);
 }

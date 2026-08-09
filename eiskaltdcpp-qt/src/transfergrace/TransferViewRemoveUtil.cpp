@@ -9,7 +9,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 #include "transferdisplay/TransferDisplay.h"
 #include "TransferViewModel.h"
 #include "WulforUtil.h"

@@ -12,55 +12,52 @@
 #include "TransferViewModel.h"
 #include "transferdisplay/TransferDisplay.h"
 #include "TransferViewModelTree.h"
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 #include "transfersession/TransferSessionRow.h"
 
-void TransferViewModel::updateTransfer(const VarMap &params){
-    if (params.empty())
-        return;
+namespace {
 
-    if (TransferViewRemove::offlineOrphan(vstr(params["CID"]), vstr(params["HOST"]))) {
-        removeTransfer(params);
-        return;
-    }
+bool softProgress(const QVariantMap &p, const TransferViewItem *item, const QString &dl,
+                  const QString &ul) {
+    if (!p.value(QStringLiteral("SOFT_STAT")).toBool() || p.value(QStringLiteral("FAIL")).toBool())
+        return false;
+    if (p.contains(QStringLiteral("TARGET"))
+            && p.value(QStringLiteral("TARGET")).toString() != item->target)
+        return false;
+    return p.contains(QStringLiteral("STAT"))
+        && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(), dl, ul);
+}
 
+bool idleUploadSoft(const QVariantMap &p, const TransferViewItem *item) {
+    return !p.value(QStringLiteral("DOWN")).toBool()
+        && p.value(QStringLiteral("SOFT_STAT")).toBool()
+        && p.value(QStringLiteral("FNAME")).toString().isEmpty()
+        && !p.value(QStringLiteral("FAIL")).toBool()
+        && !item->finished && !item->fail;
+}
+
+} // namespace
+
+TransferViewItem *TransferViewModel::transferForUpdate(const VarMap &params) {
     const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
     TransferViewItem *item = nullptr;
     if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
             && !vbol(params["DOWN"]) && !hub.isEmpty())
         findTransfer(vstr(params["CID"]), false, &item, QString());
-    if (!item) {
-        if (!vbol(params["DOWN"]) || vbol(params["FAIL"]))
-            return;
-        addConnection(params);
-        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
-                && !vbol(params["DOWN"]) && !hub.isEmpty())
-            findTransfer(vstr(params["CID"]), false, &item, QString());
-    }
-    if (!item)
-        return;
+    if (item)
+        return item;
+    if (!vbol(params["DOWN"]) || vbol(params["FAIL"]))
+        return nullptr;
+    addConnection(params);
+    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
+            && !hub.isEmpty())
+        findTransfer(vstr(params["CID"]), false, &item, QString());
+    return item;
+}
 
-    if (vbol(params["FAIL"]) && shouldRemoveStaleRow(item)) {
-        removeTransfer(params);
-        return;
-    }
-
-    // Soft Connected/Connecting only. Do not re-arm over finished/failed rows —
-    // that would reset the grace timer forever while the peer stays parked.
-    if (!vbol(params["DOWN"]) && vbol(params.value("SOFT_STAT"))
-            && vstr(params.value("FNAME")).isEmpty() && !vbol(params["FAIL"])
-            && !item->finished && !item->fail)
-        armUploadPrune(params, 10000);
-
-    VarMap p = params;
-    // Between segments keep Downloaded/Uploaded; not across a TARGET (next file).
-    const bool sameTarget = !p.contains("TARGET") || vstr(p["TARGET"]) == item->target;
-    if (vbol(p.value("SOFT_STAT")) && !vbol(p["FAIL"]) && sameTarget) {
-        if (p.contains("STAT")
-            && TransferDisplay::isProgressStat(item->data(COLUMN_TRANSFER_STATS).toString(),
-                                               tr("Downloaded "), tr("Uploaded ")))
-            p.remove("STAT");
-    }
+void TransferViewModel::applyTransferUpdate(TransferViewItem *item, VarMap &p) {
+    if (softProgress(p, item, tr("Downloaded "), tr("Uploaded ")))
+        p.remove("STAT");
 
     if (!vbol(p["DOWN"]) && p.contains("SEGP") && !vbol(p["FAIL"]))
         item->segBytes = vlng(p["SEGP"]);
@@ -77,75 +74,105 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     item->fail = vbol(p["FAIL"]);
     if (item->fail)
         item->smoothTleft = -1;
-    // Uploads: segment-complete (finished) is set in completeUpload and cleared in initTransfer.
-    if (!item->fail && item->download)
+    if (!item->fail && item->download) {
         item->finished = false;
+        item->finishRank = 0;
+    }
     if (p.contains("TTH"))
         item->tth = vstr(p["TTH"]);
+}
 
-    const QString fname = vstr(p["FNAME"]);
+TransferViewItem *TransferViewModel::parentForUpdate(TransferViewItem *item, const VarMap &p,
+                                                    TransferViewItem *from) {
     const QString newTarget = vstr(p["TARGET"]);
+    TransferViewItem *existing = nullptr;
+    if (from && from != rootItem
+            && !findParent(newTarget, &existing, vbol(p["DOWN"]), vstr(p["IP"]))
+            && TransferViewTree::retargetGroup(item, from, newTarget, p)) {
+        pendingTargetRemoves.remove(from->target);
+        grace.cancelDownload(from->target);
+        return from;
+    }
+    return getParent(newTarget, p);
+}
 
+void TransferViewModel::placeTransferRow(TransferViewItem *item, const VarMap &p) {
+    const QString fname = vstr(p["FNAME"]);
     TransferViewItem *from = item->parent();
-    TransferViewItem *to = rootItem;
-    if (TransferViewTree::wantsParent(p, fname)) {
-        TransferViewItem *existing = nullptr;
-        const QString oldTarget = from ? from->target : QString();
-        const bool isDown = vbol(p["DOWN"]);
-        if (from && from != rootItem
-                && !findParent(newTarget, &existing, isDown, vstr(p["IP"]))
-                && TransferViewTree::retargetGroup(item, from, newTarget, p)) {
-            pendingTargetRemoves.remove(oldTarget);
-            to = from;
-        } else {
-            to = getParent(newTarget, p);
-        }
+    TransferViewItem *to = TransferViewTree::wantsParent(p, fname)
+            ? parentForUpdate(item, p, from) : rootItem;
+
+    if (TransferViewTree::isAttached(item) && from == to)
+        return;
+
+    if (TransferViewTree::isAttached(item) && from && from != to)
+        moveTransfer(item, from, to);
+    else if (!(showTranferedFilesOnly && TransferViewTree::isHiddenName(fname)))
+        TransferViewTree::attach(item, to);
+
+    if (from && from != to)
+        releaseEmptyGroup(from);
+    sort(sortColumn, sortOrder);
+}
+
+void TransferViewModel::notifyTransferChange(TransferViewItem *item) {
+    if (!item)
+        return;
+    const QModelIndex idx = createIndexForItem(item);
+    if (!idx.isValid())
+        return;
+    emit dataChanged(index(idx.row(), 0, idx.parent()),
+                     index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
+}
+
+void TransferViewModel::updateTransfer(const VarMap &params){
+    if (params.empty())
+        return;
+
+    if (TransferViewRemove::offlineOrphan(vstr(params["CID"]), vstr(params["HOST"]))) {
+        removeTransfer(params);
+        return;
     }
 
-    if (!TransferViewTree::isAttached(item) || from != to) {
-        if (TransferViewTree::isAttached(item) && from && from != to)
-            moveTransfer(item, from, to);
-        else if (!(showTranferedFilesOnly && TransferViewTree::isHiddenName(fname)))
-            TransferViewTree::attach(item, to);
+    TransferViewItem *item = transferForUpdate(params);
+    if (!item)
+        return;
 
-        if (from && from != rootItem && from != to
-                && rootItem->childItems.contains(from)) {
-            if (!from->childCount()) {
-                beginRemoveRows(QModelIndex(), from->row(), from->row());
-                rootItem->childItems.removeAt(from->row());
-                delete from;
-                endRemoveRows();
-            } else {
-                // Keep leftover upload hubs for a possible next file (no remove flash).
-                updateParent(from);
-                const QModelIndex pidx = createIndexForItem(from);
-                if (pidx.isValid()) {
-                    emit dataChanged(index(pidx.row(), 0, pidx.parent()),
-                                     index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
-                }
-            }
-        }
-        sort(sortColumn, sortOrder);
+    if (vbol(params["FAIL"]) && shouldRemoveStaleRow(item)) {
+        removeTransfer(params);
+        return;
     }
 
-    if (showTranferedFilesOnly && TransferViewTree::isHiddenName(fname))
+    if (idleUploadSoft(params, item))
+        grace.armUpload(params, 10000);
+
+    VarMap p = params;
+    applyTransferUpdate(item, p);
+    placeTransferRow(item, p);
+
+    if (showTranferedFilesOnly && TransferViewTree::isHiddenName(vstr(p["FNAME"])))
         return;
 
     TransferSessionRow::setQueuePos(item, rootItem, p);
     TransferSessionRow::publish(item, rootItem, p, tr("Downloaded "), tr("Uploaded "));
+    notifyTransferChange(item);
 
-    const QModelIndex idx = createIndexForItem(item);
-    if (idx.isValid()) {
-        emit dataChanged(index(idx.row(), 0, idx.parent()),
-                         index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
-    }
     TransferViewItem *group = item->parent();
     if (group && group != rootItem && rootItem->childItems.contains(group)) {
         updateParent(group);
-        const QModelIndex pidx = createIndexForItem(group);
-        if (pidx.isValid()) {
-            emit dataChanged(index(pidx.row(), 0, pidx.parent()),
-                             index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
-        }
+        notifyTransferChange(group);
     }
+}
+
+void TransferViewModel::moveTransfer(TransferViewItem *item, TransferViewItem *from, TransferViewItem *to){
+    if (!(item && from && to) || !from->childItems.contains(item))
+        return;
+
+    beginRemoveRows(createIndexForItem(from), item->row(), item->row());
+    from->childItems.removeAt(item->row());
+    endRemoveRows();
+
+    beginInsertRows(createIndexForItem(to), to->childCount(), to->childCount());
+    to->appendChild(item);
+    endInsertRows();
 }

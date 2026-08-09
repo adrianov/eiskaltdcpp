@@ -97,6 +97,9 @@ void TransferView::removeTransfer(const QString &target){
         QueueManager::getInstance()->remove(_tq(target));
     }
     catch (const Exception&){}
+
+    // Queue may already be gone after finish; still drop the Transfers grace row.
+    model->dropQueueTarget(target);
 }
 
 void TransferView::forceAttempt(const QString &cid){

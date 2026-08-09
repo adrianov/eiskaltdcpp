@@ -10,12 +10,26 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 #include "transfersession/TransferSession.h"
 
-#include <QTimer>
-
 using namespace TransferViewRemove;
+
+void TransferViewModel::releaseEmptyGroup(TransferViewItem *group) {
+    if (!group || group == rootItem || !rootItem->childItems.contains(group))
+        return;
+    if (group->childCount() > 0) {
+        updateParent(group);
+        notifyTransferChange(group);
+        return;
+    }
+    if (group->holdFinished())
+        return;
+    beginRemoveRows(QModelIndex(), group->row(), group->row());
+    rootItem->childItems.removeAt(group->row());
+    delete group;
+    endRemoveRows();
+}
 
 void TransferViewModel::dropTransferRow(TransferViewItem *item) {
     if (!item)
@@ -37,28 +51,58 @@ void TransferViewModel::dropTransferRow(TransferViewItem *item) {
         ++i;
     }
     delete item;
-
-    if (p && p != rootItem && rootItem->childItems.contains(p)) {
-        if (!p->childCount()) {
-            beginRemoveRows(QModelIndex(), p->row(), p->row());
-            rootItem->childItems.removeAt(p->row());
-            delete p;
-            endRemoveRows();
-        } else {
-            updateParent(p);
-            const QModelIndex pidx = createIndexForItem(p);
-            if (pidx.isValid()) {
-                emit dataChanged(index(pidx.row(), 0, pidx.parent()),
-                                 index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
-            }
-        }
-    }
-
+    releaseEmptyGroup(p);
     pruneEmptyParents();
 }
 
 bool TransferViewModel::shouldRemoveStaleRow(const TransferViewItem *item) const {
     return !keepAcrossReconnect(item, tr("Downloaded "), tr("Uploaded "));
+}
+
+bool TransferViewModel::parkDownloadReconnect(const QString &cid) {
+    TransferViewItem *item = nullptr;
+    if (!findTransfer(cid, true, &item)
+            || !keepAcrossReconnect(item, tr("Downloaded "), tr("Uploaded ")))
+        return false;
+
+    item->fail = false;
+    item->finished = false;
+    item->updateColumn(COLUMN_TRANSFER_SPEED, 0);
+    notifyTransferChange(item);
+    return true;
+}
+
+bool TransferViewModel::dropTransferByCid(const QString &cid, bool download, const QString &hub) {
+    auto i = transfer_hash.find(cid);
+    while (i != transfer_hash.end() && i.key() == cid) {
+        TransferViewItem *item = i.value();
+        if (!matchesRemove(item, download, hub)) {
+            ++i;
+            continue;
+        }
+        if (!download)
+            grace.cancelUpload(cid, hub);
+        dropTransferRow(item);
+        return true;
+    }
+    return false;
+}
+
+void TransferViewModel::dropLoneUpload(const QString &cid, const QString &hub) {
+    TransferViewItem *only = nullptr;
+    int uploads = 0;
+    auto i = transfer_hash.find(cid);
+    while (i != transfer_hash.end() && i.key() == cid) {
+        if (!i.value()->download) {
+            only = i.value();
+            ++uploads;
+        }
+        ++i;
+    }
+    if (uploads == 1) {
+        grace.cancelUpload(cid, hub);
+        dropTransferRow(only);
+    }
 }
 
 void TransferViewModel::removeTransfer(const VarMap &params){
@@ -68,87 +112,17 @@ void TransferViewModel::removeTransfer(const VarMap &params){
     const QString cid = vstr(params["CID"]);
     const bool download = vbol(params["DOWN"]);
     const QString hub = download ? QString() : vstr(params["HOST"]);
-    const QString dlPrefix = tr("Downloaded ");
-    const QString ulPrefix = tr("Uploaded ");
 
-    if (download) {
-        TransferViewItem *item = nullptr;
-        if (findTransfer(cid, true, &item)
-                && keepAcrossReconnect(item, dlPrefix, ulPrefix)) {
-            item->fail = false;
-            item->finished = false;
-            item->updateColumn(COLUMN_TRANSFER_SPEED, 0);
-            const QModelIndex idx = createIndexForItem(item);
-            if (idx.isValid()) {
-                emit dataChanged(index(idx.row(), 0, idx.parent()),
-                                 index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
-            }
-            return;
-        }
-    }
-
-    auto i = transfer_hash.find(cid);
-    while (i != transfer_hash.end() && i.key() == cid) {
-        TransferViewItem *item = i.value();
-        if (!matchesRemove(item, download, hub)) {
-            ++i;
-            continue;
-        }
-        // Cancel prune only when the row actually goes away.
-        if (!download)
-            cancelUploadPrune(cid, hub);
-        dropTransferRow(item);
+    if (download && parkDownloadReconnect(cid))
         return;
-    }
-
-    // Host mismatch: drop only when this CID has one upload. Reached only when
-    // the loop above matched nothing (matched rows return after dropTransferRow).
-    if (!download && !hub.isEmpty()) {
-        TransferViewItem *only = nullptr;
-        int uploads = 0;
-        i = transfer_hash.find(cid);
-        while (i != transfer_hash.end() && i.key() == cid) {
-            if (!i.value()->download) {
-                only = i.value();
-                ++uploads;
-            }
-            ++i;
-        }
-        if (uploads == 1) {
-            cancelUploadPrune(cid, hub);
-            dropTransferRow(only);
-        }
-    }
+    if (dropTransferByCid(cid, download, hub))
+        return;
+    // Host mismatch: drop only when this CID has one upload.
+    if (!download && !hub.isEmpty())
+        dropLoneUpload(cid, hub);
 }
 
-QString TransferViewModel::idleUploadKey(const QString &cid, const QString &hub) {
-    return cid + QLatin1Char('|') + hub;
-}
-
-void TransferViewModel::cancelUploadPrune(const QString &cid, const QString &hub) {
-    if (cid.isEmpty())
-        return;
-    ++idleUploadGen[idleUploadKey(cid, hub)];
-}
-
-void TransferViewModel::armUploadPrune(const VarMap &params, int delayMs) {
-    if (vbol(params["DOWN"]) || vstr(params["CID"]).isEmpty() || delayMs < 0)
-        return;
-
-    const QString key = idleUploadKey(vstr(params["CID"]), vstr(params["HOST"]));
-    const int gen = ++idleUploadGen[key];
-    // Idle Connected uses a longer grace; Upload complete/fail dismiss sooner.
-    QTimer::singleShot(delayMs, this, [this, key, gen, params]() {
-        pruneUpload(key, gen, params);
-    });
-}
-
-void TransferViewModel::pruneUpload(QString key, int gen, VarMap params) {
-    if (idleUploadGen.value(key) != gen)
-        return;
-
-    // Timer fired and Starting/Removed never cancelled it — drop this row.
-    // Only collapse a whole upload group when every child is already settled.
+void TransferViewModel::pruneUpload(VarMap params) {
     TransferViewItem *item = findUploadRow(params);
     if (!item || item->download)
         return;
@@ -161,7 +135,5 @@ void TransferViewModel::pruneUpload(QString key, int gen, VarMap params) {
             dropTransferRow(child);
         return;
     }
-
-    // Drop the row we found — removeTransfer(CID/HOST) can hit a sibling instead.
     dropTransferRow(item);
 }

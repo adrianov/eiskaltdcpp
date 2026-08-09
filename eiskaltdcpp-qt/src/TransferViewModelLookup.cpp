@@ -52,8 +52,14 @@ TransferViewItem *TransferViewModel::getParent(const QString &target, const VarM
     const bool download = vbol(params["DOWN"]);
     const QString ip = vstr(params["IP"]);
     TransferViewItem *p = nullptr;
-    if (findParent(target, &p, download, ip))
+    if (findParent(target, &p, download, ip)) {
+        if (download) {
+            grace.cancelDownload(target);
+            p->finished = false;
+            p->finishRank = 0;
+        }
         return p;
+    }
 
     QList<QVariant> data;
     data << params["USER"] << 0 << "" << "" << params["ESIZE"]

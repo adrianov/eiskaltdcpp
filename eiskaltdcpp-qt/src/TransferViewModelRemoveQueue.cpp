@@ -10,9 +10,14 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 
 using namespace TransferViewRemove;
+
+namespace {
+/** Keep Finished downloads in Transfers so Open file works right after a quick grab. */
+constexpr int finishedDownloadPruneMs = 60000;
+}
 
 void TransferViewModel::removeQueueTarget(const VarMap &params){
     if (params.empty() || !params.contains("TARGET"))
@@ -29,17 +34,37 @@ void TransferViewModel::removeQueueTarget(const VarMap &params){
     QMetaObject::invokeMethod(this, "flushPendingTargetRemoves", Qt::QueuedConnection);
 }
 
+void TransferViewModel::dropQueueTarget(const QString &target){
+    if (target.isEmpty())
+        return;
+    pendingTargetRemoves.remove(target);
+    removeQueueTargetNow(target);
+}
+
 void TransferViewModel::flushPendingTargetRemoves(){
     flushTargetsQueued = false;
     const QSet<QString> targets = pendingTargetRemoves;
     pendingTargetRemoves.clear();
-    for (const QString &target : targets)
+    for (const QString &target : targets) {
+        TransferViewItem *p = nullptr;
+        // Finished + queue Removed: hold the group so the user can open the file.
+        if (findParent(target, &p) && p->finished) {
+            grace.armDownload(target, finishedDownloadPruneMs);
+            continue;
+        }
         removeQueueTargetNow(target);
+    }
+}
+
+void TransferViewModel::pruneDownload(QString target) {
+    removeQueueTargetNow(target);
 }
 
 void TransferViewModel::removeQueueTargetNow(const QString &target){
     if (target.isEmpty())
         return;
+
+    grace.cancelDownload(target);
 
     const QString dlPrefix = tr("Downloaded ");
     const QString ulPrefix = tr("Uploaded ");

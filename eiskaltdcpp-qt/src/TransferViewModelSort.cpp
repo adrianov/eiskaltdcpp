@@ -89,10 +89,26 @@ void TransferViewModel::sort(int column, Qt::SortOrder order) {
 
     emit layoutAboutToBeChanged();
 
+    // Download-complete grace rows stay at the top (newest finishRank first).
+    QList<TransferViewItem*> done;
+    QList<TransferViewItem*> active;
+    done.reserve(rootItem->childItems.size());
+    active.reserve(rootItem->childItems.size());
+    for (TransferViewItem *item : rootItem->childItems) {
+        if (item->holdFinished())
+            done.append(item);
+        else
+            active.append(item);
+    }
+    std::stable_sort(done.begin(), done.end(),
+                     [](const TransferViewItem *a, const TransferViewItem *b) {
+                         return a->finishRank > b->finishRank;
+                     });
     if (order == Qt::AscendingOrder)
-        Compare<Qt::AscendingOrder>().sort(column, rootItem->childItems);
+        Compare<Qt::AscendingOrder>().sort(column, active);
     else if (order == Qt::DescendingOrder)
-        Compare<Qt::DescendingOrder>().sort(column, rootItem->childItems);
+        Compare<Qt::DescendingOrder>().sort(column, active);
+    rootItem->childItems = done + active;
 
     QModelIndexList to;
     to.reserve(from.size());

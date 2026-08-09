@@ -297,7 +297,7 @@ set(QT_EXTRA_SOURCES
     src/TransferViewConnectionListeners.cpp
     src/TransferViewDelegate.cpp
     src/TransferViewDownloadListeners.cpp
-    src/TransferViewItem.cpp
+    src/transferrow/TransferViewItem.cpp
     src/TransferViewMenu.cpp
     src/TransferViewMenuCopy.cpp
     src/TransferViewMenuExec.cpp
@@ -308,7 +308,8 @@ set(QT_EXTRA_SOURCES
     src/TransferViewModelQueue.cpp
     src/TransferViewModelRemove.cpp
     src/TransferViewModelRemoveQueue.cpp
-    src/TransferViewModelRemoveUtil.cpp
+    src/transfergrace/TransferGrace.cpp
+    src/transfergrace/TransferViewRemoveUtil.cpp
     src/TransferViewModelPrune.cpp
     src/TransferViewModelSort.cpp
     src/TransferViewParams.cpp
@@ -340,6 +341,7 @@ endif (NOT HAIKU)
 
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
+list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/transfergrace/TransferGrace.h)
 list (APPEND MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindow.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h

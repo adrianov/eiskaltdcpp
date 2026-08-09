@@ -10,7 +10,7 @@
 #include "TransferViewModel.h"
 
 TransferViewModel::TransferViewModel(QObject *parent)
-    : QAbstractItemModel(parent), showTranferedFilesOnly(false)
+    : QAbstractItemModel(parent), grace(this), showTranferedFilesOnly(false)
 {
     QList<QVariant> rootData;
     rootData << tr("Users") << tr("Speed") << tr("Status") << tr("Flags") << tr("Size")
@@ -33,6 +33,9 @@ TransferViewModel::TransferViewModel(QObject *parent)
 
     sortColumn = COLUMN_TRANSFER_SIZE;
     sortOrder = Qt::DescendingOrder;
+
+    connect(&grace, &TransferGrace::uploadDue, this, &TransferViewModel::pruneUpload);
+    connect(&grace, &TransferGrace::downloadDue, this, &TransferViewModel::pruneDownload);
 }
 
 TransferViewModel::~TransferViewModel()

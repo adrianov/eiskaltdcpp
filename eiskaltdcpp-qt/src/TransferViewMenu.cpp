@@ -10,11 +10,13 @@
 ***************************************************************************/
 
 #include "TransferView.h"
+#include "fb2epub/Fb2EpubExport.h"
 #include "WulforUtil.h"
 
 #include <QCursor>
 
-TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool removeEnabled):
+TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool removeEnabled,
+                         bool convertEnabled):
         menu(new QMenu(nullptr)), selectedColumn(0)
 {
     WulforUtil *WU = WulforUtil::getInstance();
@@ -24,8 +26,12 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
 
     QAction *open_file  = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), TransferView::tr("Open file"), menu);
     QAction *open_dir   = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), TransferView::tr("Open directory"), menu);
+    QAction *convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB),
+                                        TransferView::tr("Convert to EPUB"), menu);
     open_file->setEnabled(openEnabled);
     open_dir->setEnabled(openEnabled);
+    convert_epub->setEnabled(convertEnabled);
+    convert_epub->setVisible(convertEnabled);
 
     QAction *search     = new QAction(TransferView::tr("Search Alternates"), menu);
     search->setIcon(WU->getPixmap(AppIcons::eiFIND));
@@ -88,6 +94,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     actions.insert(browse, Browse);
     actions.insert(open_file, OpenFile);
     actions.insert(open_dir, OpenDirectory);
+    actions.insert(convert_epub, ConvertEpub);
     actions.insert(match, MatchQueue);
     actions.insert(send_pm, SendPM);
     actions.insert(add_to_fav, AddToFav);
@@ -103,6 +110,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     menu->addActions(QList<QAction*>() << browse
                                        << open_file
                                        << open_dir
+                                       << convert_epub
                                        << search
                                        << match
                                        << send_pm
@@ -118,6 +126,11 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
                                        << close
                                        << show_only_transferred_files
                                        );
+
+    if (convertEnabled && Fb2EpubExport::convertIsDefaultOpen())
+        menu->setDefaultAction(convert_epub);
+    else if (openEnabled)
+        menu->setDefaultAction(open_file);
 }
 
 TransferView::Menu::~Menu(){

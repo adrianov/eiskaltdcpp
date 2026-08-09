@@ -9,7 +9,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "TransferViewModel.h"
+#include "transferrow/TransferViewItem.h"
 
 TransferViewItem::TransferViewItem(const QList<QVariant> &data, TransferViewItem *parent) :
     download(false),
@@ -22,6 +22,7 @@ TransferViewItem::TransferViewItem(const QList<QVariant> &data, TransferViewItem
     speedBase(0L),
     percent(0.0),
     smoothTleft(-1),
+    finishRank(0),
     itemData(data),
     parentItem(parent)
 {

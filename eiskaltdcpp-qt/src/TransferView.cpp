@@ -98,6 +98,7 @@ void TransferView::init(){
     treeView_TRANSFERS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(treeView_TRANSFERS, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu(QPoint)));
+    connect(treeView_TRANSFERS, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotDoubleClicked(QModelIndex)));
     connect(treeView_TRANSFERS->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu(QPoint)));
 
     // Filename absorbs leftover/overflow; default stretch is column 0 (Users) and collapses nicks.

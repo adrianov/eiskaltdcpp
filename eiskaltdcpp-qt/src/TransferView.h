@@ -52,6 +52,7 @@ public:
         Browse=0,
         OpenFile,
         OpenDirectory,
+        ConvertEpub,
         SearchAlternates,
         MatchQueue,
         SendPM,
@@ -67,7 +68,7 @@ public:
         None
     };
 
-    Menu(bool, bool openEnabled = true, bool removeEnabled = false);
+    Menu(bool, bool openEnabled = true, bool removeEnabled = false, bool convertEnabled = false);
     virtual ~Menu();
 
     Menu(const Menu&) = delete;
@@ -164,6 +165,7 @@ protected:
 
 private Q_SLOTS:
     void slotContextMenu(const QPoint&);
+    void slotDoubleClicked(const QModelIndex&);
     void slotHeaderMenu(const QPoint&);
     void downloadComplete(QString);
 

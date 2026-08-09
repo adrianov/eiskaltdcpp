@@ -11,7 +11,7 @@
 
 #include "TransferView.h"
 #include "TransferViewMetrics.h"
-#include "TransferViewRemoveUtil.h"
+#include "transfergrace/TransferViewRemoveUtil.h"
 #include "WulforUtil.h"
 
 #include "dcpp/Util.h"

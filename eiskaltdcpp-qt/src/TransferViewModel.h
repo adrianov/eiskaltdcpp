@@ -9,70 +9,13 @@
 
 #pragma once
 
+#include "transfergrace/TransferGrace.h"
+#include "transferrow/TransferViewItem.h"
+
 #include <QAbstractItemModel>
-#include <QHash>
+#include <QMap>
 #include <QMultiHash>
 #include <QSet>
-#include <QSize>
-
-static const int COLUMN_TRANSFER_USERS       = 0;
-static const int COLUMN_TRANSFER_SPEED       = 1;
-static const int COLUMN_TRANSFER_STATS       = 2;
-static const int COLUMN_TRANSFER_FLAGS       = 3;
-static const int COLUMN_TRANSFER_SIZE        = 4;
-static const int COLUMN_TRANSFER_TLEFT       = 5;
-static const int COLUMN_TRANSFER_FNAME       = 6;
-static const int COLUMN_TRANSFER_HOST        = 7;
-static const int COLUMN_TRANSFER_TAG         = 8;
-static const int COLUMN_TRANSFER_IP          = 9;
-static const int COLUMN_TRANSFER_ENCRYPTION  = 10;
-
-class TransferViewItem
-{
-
-public:
-    TransferViewItem(const QList<QVariant> &data, TransferViewItem *parent = nullptr);
-    TransferViewItem(const TransferViewItem&);
-    void operator=(const TransferViewItem&);
-    virtual ~TransferViewItem();
-
-    void appendChild(TransferViewItem *child);
-
-    TransferViewItem *child(int row);
-    int childCount() const;
-    int columnCount() const;
-    QVariant data(int column) const;
-    int row() const;
-    TransferViewItem *parent();
-    void updateColumn(int, QVariant);
-
-    QList<TransferViewItem*> childItems;
-
-    bool download;
-    bool fail;
-    bool finished;
-    QString cid;
-    QString tth;
-    QString target;
-    /** Shown bytes: download peer = lifetime total; download parent = file aggregate. */
-    qlonglong dpos;
-    /** Download parent: queue committed. Download peer / upload: finished segment bytes. */
-    qlonglong fpos;
-    /** Current segment in flight (Download/Upload::getPos). */
-    qlonglong segBytes;
-    /** Session begin tick (GET_TICK); see transfersession/. */
-    quint64 speedStart;
-    /** File/upload session: baseline at begin. Download peer: file left at join. */
-    qlonglong speedBase;
-    double percent;
-    /** Shown Time left (seconds), smoothed — see TransferDisplay::smoothTimeLeft. */
-    qlonglong smoothTleft;
-    QList<QVariant> itemData;
-
-private:
-
-    TransferViewItem *parentItem;
-};
 
 class TransferViewModel: public QAbstractItemModel
 {
@@ -84,115 +27,94 @@ public:
     TransferViewModel(QObject* = nullptr);
     virtual ~TransferViewModel();
 
-    /** */
     QVariant data(const QModelIndex &, int) const;
-    /** */
     QVariant headerData(int section, Qt::Orientation, int role = Qt::DisplayRole) const;
-    /** */
     QModelIndex index(int, int, const QModelIndex &parent = QModelIndex()) const;
-    /** */
     QModelIndex parent(const QModelIndex &index) const;
-    /** */
     bool hasChildren(const QModelIndex &parent) const;
-    /** */
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
-    /** */
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
-    /** sort list */
     virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder);
 
     /** Uploads with a hub match that connection; downloads ignore hub. */
     bool findTransfer(const QString &, bool, TransferViewItem**, const QString &hub = QString());
     /** Download parents key on target; upload parents on target + IP. */
     bool findParent(const QString&, TransferViewItem**, bool = true, const QString &ip = QString());
-    /** */
     TransferViewItem *getParent(const QString &target, const VarMap &params);
 
-    /** */
     QModelIndex createIndexForItem(TransferViewItem*);
 
-    /** */
     int getSortColumn() const;
-    /** */
     void setSortColumn(int);
-    /** */
     Qt::SortOrder getSortOrder() const;
-    /** */
     void setSortOrder(Qt::SortOrder);
 
-    /** */
     void clear();
 
 public Q_SLOTS:
     void repaint();
 
-    /** */
     void addConnection(const VarMap&);
-    /** */
     void initTransfer(const VarMap&);
-    /** */
     void updateTransfer(const VarMap&);
-    /** */
     void removeTransfer(const VarMap&);
-    /** */
     void removeQueueTarget(const VarMap&);
-    /** */
+    /** Drop a download target row now (cancels finished-download grace). */
+    void dropQueueTarget(const QString &target);
     void updateTransferPos(const VarMap&, qint64);
-    /** */
     void finishParent(const VarMap&);
     /** Final upload metrics; drop after a short grace if no next Starting. */
     void completeUpload(const VarMap&);
     /** Upload failure: keep error briefly, then drop if Starting never arrives. */
     void failUpload(const VarMap&);
-    /** */
     void updateParents();
-    /** Just resort*/
     virtual void sort() { sort(sortColumn, sortOrder); }
 
-    // method to hide/show ulesess transfer info
     void setShowTranferedFilesOnlyState (bool state);
     bool getShowTranferedFilesOnlyState ();
 
 private Q_SLOTS:
     void flushPendingTargetRemoves();
+    void pruneUpload(VarMap params);
+    void pruneDownload(QString target);
 
 private:
-    /** Drop the upload row/group after grace — any UI state — if Starting never arrived. */
-    void pruneUpload(QString key, int gen, VarMap params);
     inline QString      vstr(const QVariant &var) const { return var.toString(); }
-    inline int          vint(const QVariant &var) const { return var.toInt(); }
-    inline double       vdbl(const QVariant &var) const { return var.toDouble(); }
     inline qlonglong    vlng(const QVariant &var) const { return var.toLongLong(); }
     inline bool         vbol(const QVariant &var) const { return var.toBool(); }
 
-    /** */
     void updateParent(TransferViewItem*);
     void pruneEmptyParents();
     bool shouldRemoveStaleRow(const TransferViewItem *item) const;
     void dropTransferRow(TransferViewItem *item);
+    void releaseEmptyGroup(TransferViewItem *group);
     TransferViewItem *findUploadRow(const VarMap &params);
+    TransferViewItem *transferForUpdate(const VarMap &params);
+    TransferViewItem *parentForUpdate(TransferViewItem *item, const VarMap &p,
+                                      TransferViewItem *from);
+    void applyTransferUpdate(TransferViewItem *item, VarMap &p);
+    void placeTransferRow(TransferViewItem *item, const VarMap &p);
+    void notifyTransferChange(TransferViewItem *item);
+    bool parkDownloadReconnect(const QString &cid);
+    bool dropTransferByCid(const QString &cid, bool download, const QString &hub);
+    void dropLoneUpload(const QString &cid, const QString &hub);
     void settleUpload(const VarMap &params, bool segmentDone);
-    /** Arm auto-drop; delayMs keeps Connected grace longer than Upload complete. */
-    void armUploadPrune(const VarMap &params, int delayMs);
-    void cancelUploadPrune(const QString &cid, const QString &hub);
-    static QString idleUploadKey(const QString &cid, const QString &hub);
-    /** */
+    void commitUploadSegment(TransferViewItem *item, TransferViewItem *scope, bool segmentDone);
+    void showUploadPartial(TransferViewItem *item, TransferViewItem *scope, const VarMap &params);
+    void markUploadFinished(TransferViewItem *item, TransferViewItem *scope);
+    void markDownloadComplete(TransferViewItem *item);
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);
-    /** */
+
+    TransferGrace grace;
     QMultiHash<QString, TransferViewItem*> transfer_hash;
-    /** Generation per upload row so Starting/Removed cancel pending auto-prunes. */
-    QHash<QString, int> idleUploadGen;
     QSet<QString> pendingTargetRemoves;
     bool flushTargetsQueued = false;
-    /** */
     QMap<QString, int> column_map;
-    /** */
     int sortColumn;
-    /** */
     Qt::SortOrder sortOrder;
-    /** */
     TransferViewItem *rootItem;
-
     bool showTranferedFilesOnly;
+    /** Monotonic rank for Download-complete rows (newest first in the list). */
+    quint64 finishSeq = 0;
 };

@@ -47,17 +47,19 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
         return;
     }
 
-    if (item->childCount() == 1 && item->cid.isEmpty())
+    // Single-peer groups paint the leaf; finished parents keep their own 100% bar.
+    if (item->childCount() == 1 && item->cid.isEmpty() && !item->finished)
         item = item->child(0);
 
     const QString status = stripBracketedStatusPrefix(item->data(COLUMN_TRANSFER_STATS).toString());
+    const double percent = item->finished ? 100.0 : item->percent;
 
     QPalette pal = option.palette;
     pal.setColor(QPalette::Highlight,
                  transferBarColor(item->download,
                                   item->download ? download_bar_color : upload_bar_color));
 
-    paintProgressCell(painter, option, item->percent, status, &pal);
+    paintProgressCell(painter, option, percent, status, &pal);
 }
 
 void TransferViewDelegate::wsVarValueChanged(const QString &key, const QVariant &val){
