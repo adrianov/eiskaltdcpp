@@ -147,7 +147,8 @@ QString SearchItem::localPath() const {
     localChecked = true;
     if (!isDir)
         localCached = SearchLocalPath::resolve(data(COLUMN_SF_TTH).toString(),
-                                               data(COLUMN_SF_ESIZE).toLongLong());
+                                               data(COLUMN_SF_ESIZE).toLongLong(),
+                                               data(COLUMN_SF_FILENAME).toString());
     return localCached;
 }
 

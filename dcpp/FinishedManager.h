@@ -52,6 +52,13 @@ public:
     void removeAll(bool upload);
     /** Full path of a finished download by TTH (base32), if still on disk. */
     string getTarget(const string& aTTH);
+    /**
+     * Like getTarget; if the TTH index misses, recover a unique finished file by
+     * size + basename and re-index (heals async FileMover races).
+     */
+    string getTarget(const string& aTTH, int64_t size, const string& fileName);
+    /** Re-bind a finished download path to a TTH (e.g. after recovering from DB). */
+    void setDownloadTarget(const string& aTTH, const string& path);
 
     bool handlePartialRequest(const TTHValue& tth, vector<uint16_t>& outPartialInfo);
 private:

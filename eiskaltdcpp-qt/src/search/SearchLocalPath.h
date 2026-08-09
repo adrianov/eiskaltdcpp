@@ -17,7 +17,7 @@
 namespace SearchLocalPath {
 
 /** Real path if the TTH is shared or a complete finished download still exists. */
-QString resolve(const QString &tth, qint64 size);
+QString resolve(const QString &tth, qint64 size, const QString &fileName = QString());
 
 /** True when an unfinished non-filelist queue item has this TTH. */
 bool isQueued(const QString &tth);
