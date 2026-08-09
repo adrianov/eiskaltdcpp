@@ -75,10 +75,6 @@ QTextCodec *WulforUtil::codecForEncoding(const QString &name){
 }
 
 QString WulforUtil::formatBytes(int64_t aBytes){
-    return _q(Util::formatBytes(aBytes));
-}
-
-QString WulforUtil::formatDisplayBytes(int64_t aBytes){
     return TransferDisplay::formatBytes(aBytes);
 }
 

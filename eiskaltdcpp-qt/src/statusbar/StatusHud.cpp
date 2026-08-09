@@ -61,9 +61,9 @@ QMap<QString, QString> StatusHud::sample(uint64_t ticks)
 
     QMap<QString, QString> map;
     map[QStringLiteral("STATS")] = _q(Client::getCounts());
-    map[QStringLiteral("DSPEED")] = WulforUtil::formatDisplayBytes(static_cast<int64_t>(downRate));
+    map[QStringLiteral("DSPEED")] = WulforUtil::formatBytes(static_cast<int64_t>(downRate));
     map[QStringLiteral("DOWN")] = WulforUtil::formatBytes(static_cast<int64_t>(Socket::getTotalDown()));
-    map[QStringLiteral("USPEED")] = WulforUtil::formatDisplayBytes(static_cast<int64_t>(upRate));
+    map[QStringLiteral("USPEED")] = WulforUtil::formatBytes(static_cast<int64_t>(upRate));
     map[QStringLiteral("UP")] = WulforUtil::formatBytes(static_cast<int64_t>(Socket::getTotalUp()));
 
     lastTick = ticks;

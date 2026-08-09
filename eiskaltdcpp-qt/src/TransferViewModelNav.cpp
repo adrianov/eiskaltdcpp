@@ -14,6 +14,51 @@
 
 #include <QTime>
 
+namespace {
+
+QVariant transferIcon(const TransferViewItem *item, int column)
+{
+    if (column == COLUMN_TRANSFER_FNAME) {
+        const QString name = item->data(COLUMN_TRANSFER_FNAME).toString();
+        return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(name), 16);
+    }
+    if (column != COLUMN_TRANSFER_USERS)
+        return QVariant();
+    return WICON_SIZE(item->download ? AppIcons::eiDOWN : AppIcons::eiUP, 18);
+}
+
+QVariant displayText(const TransferViewItem *item, int column)
+{
+    if (column == COLUMN_TRANSFER_SPEED) {
+        const double speed = item->data(COLUMN_TRANSFER_SPEED).toDouble();
+        if (speed <= 0.0)
+            return QString();
+        return WulforUtil::formatBytes(static_cast<int64_t>(speed))
+                + TransferViewModel::tr("/s");
+    }
+    if (column == COLUMN_TRANSFER_SIZE)
+        return WulforUtil::formatBytes(item->data(COLUMN_TRANSFER_SIZE).toLongLong());
+    if (column == COLUMN_TRANSFER_TLEFT) {
+        const int time = item->data(COLUMN_TRANSFER_TLEFT).toInt();
+        if (time < 0)
+            return QTime(0, 0, 0).toString("hh:mm:ss");
+        return QTime(0, 0, 0).addSecs(time).toString("hh:mm:ss");
+    }
+    return item->data(column);
+}
+
+QVariant transferTip(const TransferViewItem *item, int column)
+{
+    if (column == COLUMN_TRANSFER_FNAME)
+        return item->target;
+    if (column != COLUMN_TRANSFER_TAG)
+        return QVariant();
+    const QString tag = item->data(COLUMN_TRANSFER_TAG).toString();
+    return tag.isEmpty() ? QVariant() : QVariant(tag);
+}
+
+} // namespace
+
 int TransferViewModel::columnCount(const QModelIndex &parent) const
 {
     if (!parent.isValid())
@@ -33,56 +78,24 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
     if (!item)
         return QVariant();
 
-    switch(role) {
-        case Qt::DecorationRole:
-        {
-            if (index.column() != COLUMN_TRANSFER_USERS && index.column() != COLUMN_TRANSFER_FNAME)
-                break;
-
-            if (item->download && index.column() == COLUMN_TRANSFER_USERS)
-                return WICON_SIZE(AppIcons::eiDOWN, 18);
-            else if (index.column() != COLUMN_TRANSFER_FNAME)
-                return WICON_SIZE(AppIcons::eiUP, 18);
-            else
-                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_TRANSFER_FNAME).toString()), 16);
-        }
-        case Qt::DisplayRole:
-        {
-            // Single-child groups show the child row (download segments or same-IP uploads).
-            if (item->childCount() == 1 && index.column() != COLUMN_TRANSFER_SIZE)
-                return data(createIndex(0, index.column(), reinterpret_cast<void*>(item->childItems.first())), role);
-
-            if (index.column() == COLUMN_TRANSFER_SPEED)
-                return WulforUtil::formatDisplayBytes(static_cast<int64_t>(item->data(COLUMN_TRANSFER_SPEED).toDouble())) + tr("/s");
-            else if (index.column() == COLUMN_TRANSFER_SIZE)
-                return WulforUtil::formatDisplayBytes(item->data(COLUMN_TRANSFER_SIZE).toLongLong());
-            else if (index.column() == COLUMN_TRANSFER_TLEFT){
-                const int time = item->data(COLUMN_TRANSFER_TLEFT).toInt();
-                if (time < 0)
-                    return QTime(0, 0, 0).toString("hh:mm:ss");
-                return QTime(0, 0, 0).addSecs(time).toString("hh:mm:ss");
-            }
-
-            return item->data(index.column());
-        }
-        case Qt::TextAlignmentRole:
-            if (index.column() == COLUMN_TRANSFER_SPEED || index.column() == COLUMN_TRANSFER_SIZE)
-                return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
-            return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
-        case Qt::ToolTipRole:
-            if (index.column() == COLUMN_TRANSFER_FNAME)
-                return item->target;
-            if (index.column() == COLUMN_TRANSFER_TAG) {
-                const QString tag = item->data(COLUMN_TRANSFER_TAG).toString();
-                if (!tag.isEmpty())
-                    return tag;
-            }
-            break;
-        default:
-            break;
+    switch (role) {
+    case Qt::DecorationRole:
+        return transferIcon(item, index.column());
+    case Qt::DisplayRole:
+        // Single-child groups show the child row (download segments or same-IP uploads).
+        if (item->childCount() == 1 && index.column() != COLUMN_TRANSFER_SIZE)
+            return data(createIndex(0, index.column(),
+                                    reinterpret_cast<void*>(item->childItems.first())), role);
+        return displayText(item, index.column());
+    case Qt::TextAlignmentRole:
+        if (index.column() == COLUMN_TRANSFER_SPEED || index.column() == COLUMN_TRANSFER_SIZE)
+            return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+        return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+    case Qt::ToolTipRole:
+        return transferTip(item, index.column());
+    default:
+        return QVariant();
     }
-
-    return QVariant();
 }
 
 QVariant TransferViewModel::headerData(int section, Qt::Orientation orientation, int role) const

@@ -181,13 +181,13 @@ DownloadUiState downloadState(const Download *dl)
 QString uploadProgressStat(int64_t sent, int64_t fileSize)
 {
     const double percent = fileSize > 0 ? qBound(0.0, sent * 100.0 / fileSize, 100.0) : 0.0;
-    return QObject::tr("Uploaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(sent)).arg(percent, 0, 'f', 1);
+    return QObject::tr("Uploaded %1 (%2%) ").arg(WulforUtil::formatBytes(sent)).arg(percent, 0, 'f', 1);
 }
 
 QString downloadProgressStat(int64_t bytes, int64_t size)
 {
     const double percent = size > 0 ? bytes * 100.0 / size : 0.0;
-    return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(bytes)).arg(percent, 0, 'f', 1);
+    return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatBytes(bytes)).arg(percent, 0, 'f', 1);
 }
 
 QString slotWaitStat(qint64 queuePos)

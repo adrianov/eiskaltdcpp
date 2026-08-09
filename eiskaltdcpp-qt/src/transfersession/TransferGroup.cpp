@@ -132,7 +132,7 @@ QString TransferGroup::progressStat(const Scan &s) const
         return s.childStat;
     return (parent_->download ? TransferViewModel::tr("Downloaded ")
                               : TransferViewModel::tr("Uploaded "))
-            + WulforUtil::formatDisplayBytes(parent_->dpos)
+            + WulforUtil::formatBytes(parent_->dpos)
             + QString(" (%1%)").arg(parent_->percent, 0, 'f', 1);
 }
 

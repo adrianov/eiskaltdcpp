@@ -17,8 +17,8 @@
 namespace TransferDisplay {
 
 /**
- * Compact transfer size/speed text for the UI.
- * Same unit ladder as Util::formatBytes. Print whole numbers only.
+ * Compact size/speed text for the Qt UI (via WulforUtil::formatBytes).
+ * Same unit ladder as dcpp::Util::formatBytes. Print whole numbers only.
  * From KB up, round so the ones digit is 0 when the value is ≥ 10
  * (23 → 20, 720 → 720). Bytes below one KB stay exact.
  */

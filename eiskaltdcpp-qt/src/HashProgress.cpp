@@ -11,6 +11,7 @@
 #include "WulforUtil.h"
 
 #include <QDir>
+#include <QFontMetrics>
 
 #include "dcpp/stdinc.h"
 #include "dcpp/HashManager.h"
@@ -19,208 +20,201 @@
 
 using namespace dcpp;
 
-unsigned HashProgress::getHashStatus() {
-    ShareManager *SM = ShareManager::getInstance();
-    HashManager  *HM = HashManager::getInstance();
-    if( SM->isRefreshing() )
-        return LISTUPDATE;
+namespace {
 
-    if( HM->isHashingPaused() ) {
-        return (Util::getUpTime() < SETTING(HASHING_START_DELAY)) ? DELAYED : PAUSED;
+QString elidePath(const QFontMetrics &metrics, int maxWidth, const QString &path)
+{
+    if (metrics.horizontalAdvance(path) <= maxWidth)
+        return path;
+
+    const QStringList parts = path.split(QDir::separator(), WULFOR_SKIP_EMPTY);
+    if (parts.size() <= 1)
+        return path;
+
+    QString out;
+    for (int i = parts.size() - 1; i >= 0; --i) {
+        const QString next = parts.at(i) + (out.isEmpty() ? out : (QDir::separator() + out));
+        if (metrics.horizontalAdvance(next) >= maxWidth) {
+            out = QStringLiteral("..") + QDir::separator() + out;
+            break;
+        }
+        out = next;
     }
+    return out.isEmpty() ? parts.last() : out;
+}
+
+void setIdleRates(QLabel *status, QLabel *speed, QString &eta, size_t files, uint64_t bytes)
+{
+    status->setText(HashProgress::tr("-.-- files/h, %1 files left").arg(static_cast<uint32_t>(files)));
+    speed->setText(HashProgress::tr("-.-- B/s, %1 left").arg(WulforUtil::formatBytes(bytes)));
+    eta = HashProgress::tr("-:--:--");
+}
+
+void setActiveRates(QLabel *status, QLabel *speed, QProgressBar *progress, QString &eta,
+                    uint64_t startBytes, size_t startFiles, uint64_t bytes, size_t files,
+                    double diff)
+{
+    const double fileRate = ((double)(startFiles - files) * 60 * 60 * 1000) / diff;
+    const double byteRate = ((double)(startBytes - bytes) * 1000) / diff;
+
+    status->setText(HashProgress::tr("%1 files/h, %2 files left")
+                        .arg(fileRate)
+                        .arg(static_cast<uint32_t>(files)));
+    speed->setText(HashProgress::tr("%1/s, %2 left, %3 shared")
+                       .arg(WulforUtil::formatBytes(static_cast<int64_t>(byteRate)))
+                       .arg(WulforUtil::formatBytes(bytes))
+                       .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
+
+    if (byteRate == 0.0) {
+        eta = HashProgress::tr("-:--:--");
+    } else {
+        eta = _q(Text::toT(Util::formatSeconds(static_cast<int64_t>(bytes / byteRate))));
+    }
+    progress->setFormat(HashProgress::tr("%p% %1 left").arg(eta));
+}
+
+} // namespace
+
+unsigned HashProgress::getHashStatus()
+{
+    ShareManager *SM = ShareManager::getInstance();
+    HashManager *HM = HashManager::getInstance();
+    if (SM->isRefreshing())
+        return LISTUPDATE;
+    if (HM->isHashingPaused())
+        return (Util::getUpTime() < SETTING(HASHING_START_DELAY)) ? DELAYED : PAUSED;
 
     string path;
     uint64_t bytes = 0;
     size_t files = 0;
     HM->getStats(path, bytes, files);
-
-    if( bytes || files )
-        return RUNNING;
-
-    return IDLE;
+    return (bytes || files) ? RUNNING : IDLE;
 }
 
-HashProgress::HashProgress(QWidget *parent):
-        QDialog(parent),
-        autoClose(false),
-        startBytes(0),
-        startFiles(0),
-        startTime(0)
+HashProgress::HashProgress(QWidget *parent)
+    : QDialog(parent)
+    , autoClose(false)
+    , startBytes(0)
+    , startFiles(0)
+    , startTime(0)
 {
     setupUi(this);
-
     setWindowModality(Qt::ApplicationModal);
-    setAttribute( Qt::WA_QuitOnClose, false ); // Very important, wo this line app exits then hide
+    // Keep the process alive when this dialog is only hidden.
+    setAttribute(Qt::WA_QuitOnClose, false);
 
     progressIndicator->hide();
-    this->adjustSize();
+    adjustSize();
 
     HashManager::getInstance()->setPriority(Thread::NORMAL);
 
     timer = new QTimer();
     timer->setInterval(250);
-
     connect(timer, SIGNAL(timeout()), this, SLOT(timerTick()));
     connect(pushButton_START, SIGNAL(clicked()), this, SLOT(slotStart()));
     connect(checkBox, SIGNAL(toggled(bool)), this, SLOT(slotAutoClose(bool)));
-
     timer->start();
 }
 
-void HashProgress::resetProgress() {
-        startBytes = 0;
-        startFiles = 0;
-        startTime  = 0;
+void HashProgress::resetProgress()
+{
+    startBytes = 0;
+    startFiles = 0;
+    startTime = 0;
 }
 
-HashProgress::~HashProgress(){
-    timer->stop();//really need?
-
+HashProgress::~HashProgress()
+{
+    timer->stop();
     delete timer;
-
     HashManager::getInstance()->setPriority(Thread::LOW);
 }
 
-float HashProgress::getProgress() {
-    return static_cast<float>(progress->value())/progress->maximum();
+float HashProgress::getProgress()
+{
+    return static_cast<float>(progress->value()) / progress->maximum();
 }
 
-void HashProgress::timerTick(){
+void HashProgress::timerTick()
+{
     string path;
     uint64_t bytes = 0;
     size_t files = 0;
-    uint64_t tick = GET_TICK();
+    const uint64_t tick = GET_TICK();
 
     stateButton();
-
     HashManager::getInstance()->getStats(path, bytes, files);
-    if(ShareManager::getInstance()->isRefreshing()) {
+
+    if (ShareManager::getInstance()->isRefreshing()) {
         file->setText(tr("Refreshing file list"));
         return;
     }
 
-    if( startTime == 0 )
+    if (startTime == 0)
         startTime = tick;
-
-    if(bytes > startBytes)
+    if (bytes > startBytes)
         startBytes = bytes;
-
-    if(files > startFiles)
+    if (files > startFiles)
         startFiles = files;
-
-    if(autoClose && !files) {
+    if (autoClose && !files) {
         accept();
-
-        return;;
+        return;
     }
 
-    const double diff = tick - startTime;
+    const double diff = static_cast<double>(tick - startTime);
     const bool paused = HashManager::getInstance()->isHashingPaused();
+    progress->setValue(startFiles == 0 || startBytes == 0
+                           ? 0
+                           : static_cast<int>((10000 * (startBytes - bytes)) / startBytes));
 
     QString eta;
+    if (static_cast<uint64_t>(diff) == 0 || files == 0 || bytes == 0 || paused)
+        setIdleRates(status, speed, eta, files, bytes);
+    else
+        setActiveRates(status, speed, progress, eta, startBytes, startFiles, bytes, files, diff);
 
-    if(startFiles == 0 || startBytes == 0) {
-        progress->setValue(0);
-    }
-    else {
-        progress->setValue((10000*(startBytes - bytes))/startBytes);
-    }
-
-    if(static_cast<uint64_t>(diff) == 0 || files == 0 || bytes == 0 || paused) {
-        status->setText(QString(tr("-.-- files/h, %1 files left")).arg((uint32_t)files));
-        speed->setText(tr("-.-- B/s, %1 left").arg(WulforUtil::formatBytes(bytes)));
-        eta = tr("-:--:--");
-    }
-    else {
-        double filestat = (((double)(startFiles - files)) * 60 * 60 * 1000) / diff;
-        double speedStat = (((double)(startBytes - bytes)) * 1000) / diff;
-
-        status->setText(tr("%1 files/h, %2 files left").arg(filestat).arg((uint32_t)files));
-        speed->setText(tr("%1/s, %2 left, %3 shared").arg(WulforUtil::formatDisplayBytes((int64_t)speedStat))
-                                                     .arg(WulforUtil::formatBytes(bytes))
-                                                     .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
-
-        if(/*filestat == 0 ||*/ speedStat == 0) {
-            eta = tr("-:--:--");
-        }
-        else {
-            double ss = bytes / speedStat;
-
-            eta = _q(Text::toT(Util::formatSeconds((int64_t)(ss))));
-        }
-
-        progress->setFormat(tr("%p% %1 left").arg(eta));
-    }
-
-    if(!files) {
-        //progress->setValue(10000); // generates anoying blinking 0 -> 100%
+    if (!files) {
         file->setText(tr("Done"));
-    } else {
-        QString fname = QString::fromStdString(path);
-        QFontMetrics metrics(font());
-
-        file->setToolTip(fname);
-
-        if (metrics.horizontalAdvance(fname) > file->width()*3/4){
-            QStringList parts = fname.split(QDir::separator(), WULFOR_SKIP_EMPTY);
-
-            if (parts.size() > 1){
-                QString out = "";
-
-                for (int i = (parts.size()-1); i >= 0; i--){
-                    if (metrics.horizontalAdvance(out+parts.at(i)+QDir::separator()) < file->width()*3/4){
-                        out = parts.at(i) + (out.isEmpty()? out : (QDir::separator() + out));
-                    }
-                    else{
-                        out = QString("..") + QDir::separator() + out;
-
-                        break;
-                    }
-                }
-
-                if (out.isEmpty())
-                    out = parts.last();
-
-                fname = out;
-            }
-        }
-
-        file->setText(fname);
+        return;
     }
+
+    const QString full = QString::fromStdString(path);
+    file->setToolTip(full);
+    file->setText(elidePath(QFontMetrics(font()), file->width() * 3 / 4, full));
 }
 
-void HashProgress::slotStart(){
+void HashProgress::slotStart()
+{
     ShareManager *SM = ShareManager::getInstance();
-    HashManager  *HM = HashManager::getInstance();
-    switch( getHashStatus() ) {
+    HashManager *HM = HashManager::getInstance();
+    switch (getHashStatus()) {
     case IDLE:
-            SM->setDirty();
-            SM->refresh(true);
-            break;
+        SM->setDirty();
+        SM->refresh(true);
+        break;
     case LISTUPDATE:
     case RUNNING:
-            HM->pauseHashing();
-            //HM->setPriority(Thread::IDLE);
-            break;
+        HM->pauseHashing();
+        break;
     case DELAYED:
     case PAUSED:
-            HM->resumeHashing();
-            //HM->setPriority(Thread::NORMAL);
-            break;
+        HM->resumeHashing();
+        break;
     }
     stateButton();
 }
 
-void HashProgress::slotAutoClose(bool b){
+void HashProgress::slotAutoClose(bool b)
+{
     autoClose = b;
-
     blockSignals(true);
     checkBox->setChecked(b);
     blockSignals(false);
 }
 
-void HashProgress::stateButton(){
-    switch( getHashStatus() ) {
+void HashProgress::stateButton()
+{
+    switch (getHashStatus()) {
     case IDLE:
         pushButton_START->setText(tr("Start"));
         break;

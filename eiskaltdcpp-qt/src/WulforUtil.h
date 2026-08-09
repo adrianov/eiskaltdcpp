@@ -93,8 +93,8 @@ public Q_SLOTS:
     int sortOrderToInt(Qt::SortOrder);
     Qt::SortOrder intToSortOrder(int);
 
+    /** Whole-number UI sizes/speeds (TransferDisplay unit ladder). */
     static QString formatBytes(int64_t bytes);
-    static QString formatDisplayBytes(int64_t bytes);
 
     static void bindActionIcon(QAction *act, Icons icon);
 
@@ -107,7 +107,8 @@ public Q_SLOTS:
 
     static void headerMenu(QTreeView*);
 
-    /** Restore saved layout; autosize when columns are too narrow once the view is visible. */
+    /** Restore saved layout; fit columns that are still too narrow once visible.
+     *  Dragged columns keep their width; autosize will not rewrite them. */
     static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
 
     /** Re-check column widths after the view becomes visible or its model changes. */
