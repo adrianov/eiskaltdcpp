@@ -23,8 +23,9 @@
 
 #include <memory>
 
+#include "shareindex/ShareIndexModels.h"
 #ifdef USE_QT_SQLITE
-#include "ShareIndexDb.h"
+#include "shareindex/ShareIndexStore.h"
 #endif
 
 #include "dcpp/stdinc.h"
@@ -40,20 +41,13 @@ class ShareIndex : public QObject, public dcpp::Singleton<ShareIndex>
 
 public:
     enum Source {
-        SourceFileList = 1,
-        SourceHubSearch = 2
+        SourceFileList = ShareIndexModels::SourceFileList,
+        SourceHubSearch = ShareIndexModels::SourceHubSearch
     };
-
-    struct SearchFilter {
-        QStringList terms;
-        QStringList extensions; // uppercase, no dot; empty = any
-        bool isHash = false;
-        bool dirsOnly = false;
-        bool filesOnly = false;
-        qint64 size = 0;
-        int sizeMode = 0;
-        int limit = 500;
-    };
+    using SearchFilter = ShareIndexModels::SearchFilter;
+    using IndexUser = ShareIndexModels::IndexUser;
+    using MediaInfo = ShareIndexModels::MediaInfo;
+    using IndexStats = ShareIndexModels::IndexStats;
 
     /** Uppercase file suffix without dot; empty for directories / no suffix. */
     static QString fileExt(const QString &name, bool isDir);
@@ -61,7 +55,14 @@ public:
     void open();
     /** Open schema on the write worker (never block the UI). */
     void openAsync();
-    bool isOpen() const { return opened.loadAcquire() != 0; }
+    bool isOpen() const
+    {
+#ifdef USE_QT_SQLITE
+        return store.isOpen();
+#else
+        return opened.loadAcquire() != 0;
+#endif
+    }
 
     void ingestList(const dcpp::UserPtr &user, const QString &listPath,
                     const QString &hubUrl, const QString &nick);
@@ -87,34 +88,12 @@ public:
     /** Interrupt an in-flight local search (new Search / Stop). */
     void cancelSearch();
 
-    /** Unique index holders per TTH (nick + cid + size). size filter 0 = any. */
-    struct IndexUser {
-        QString nick;
-        QString cid;
-        qint64 size = 0;
-    };
     QHash<QString, QList<IndexUser>> usersByTth(const QStringList &tths, qint64 size = 0,
                                                  int limitPerTth = 64);
-
-    /** Media from indexed file lists (empty fields omitted from hash). */
-    struct MediaInfo {
-        int bitrate = 0;
-        QString resolution;
-        QString video;
-        QString audio;
-        bool isEmpty() const {
-            return bitrate <= 0 && resolution.isEmpty() && video.isEmpty() && audio.isEmpty();
-        }
-    };
     QHash<QString, MediaInfo> mediaByTth(const QStringList &tths);
     /** Fill empty media fields on existing share_files rows (from a loaded listing). */
     void upsertMedia(const QHash<QString, MediaInfo> &media);
 
-    /** Fast index HUD: entry_count meta + on-disk DB size (no table scan). */
-    struct IndexStats {
-        qint64 files = 0;   // share_index_meta.entry_count (files + dirs)
-        qint64 dbBytes = 0;
-    };
     IndexStats indexStats();
     /** True when cid has no rows, or listPath mtime/size differs from last ingest. */
     bool needsListIngest(const QString &cid, const QString &listPath = QString());
@@ -140,7 +119,6 @@ private:
 #ifdef USE_QT_SQLITE
     bool ensureSchema(duckdb::Connection &con, const std::string &prefix = std::string());
     bool ensureCap(duckdb::Connection &con);
-    /** Replace outdated share-index schemas with an empty current schema. */
     bool compactLegacyDb();
     duckdb::Connection *threadConn();
     void disconnectThreadDb();
@@ -170,32 +148,28 @@ private:
     void matchQueueSync(const dcpp::UserList &users);
     void removeTthSync(const QString &cid, const QString &tth);
     void removeUserSync(const QString &cid);
-    /** Chunked DELETE+Appender for one file list; returns false on abort/error. */
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
     void upsertMediaSync(const QHash<QString, MediaInfo> &media);
-    void pruneExcess(duckdb::Connection &con);
+    /** Open-time hub-hit cap; orphan sweeps stay on write paths. */
+    bool pruneExcess(duckdb::Connection &con);
     bool removeOrphans(duckdb::Connection &con);
     void refreshEntryCount(duckdb::Connection &con);
     void reclaimFreePages(duckdb::Connection &con);
     void drainWriteQueue();
-    /** Drop poisoned DuckDB handle and reopen (after FatalException). */
+    void closeDb();
+    void wipeDbFiles();
     void recoverDb();
+    bool finishOpen();
     void rememberListMeta(const QString &cid, const QString &listPath, int rowCount);
 
-    QString dbFile;
-    std::unique_ptr<duckdb::DuckDB> duck;
-    QHash<quintptr, std::shared_ptr<duckdb::Connection>> threadConns;
-    /** Connection running searchFts; interrupted by cancelSearch(). */
+    ShareIndexStore store;
     duckdb::Connection *activeSearchCon = nullptr;
     QAtomicInt searchEpoch;
     mutable QMutex searchMu;
-#endif
+#else
     QAtomicInt opened;
-    /** One-time schema open. */
-    mutable QMutex openMutex;
-    /** Serializes per-thread connection map. */
-    mutable QMutex connMutex;
+#endif
     mutable QMutex errorMutex;
     QString lastSqlError;
 };

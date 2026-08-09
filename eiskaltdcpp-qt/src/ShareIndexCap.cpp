@@ -15,7 +15,10 @@
 
 namespace {
 
+/** Hub hits accumulate; file-list rows are rewritten per user. */
 const qint64 kMaxHubEntries = 5000000;
+/** Oldest-first delete page under the open-time 1 GB memory_limit. */
+const qint64 kPruneBatch = 10000;
 
 bool upsertMeta(duckdb::Connection &con, const QString &key, qint64 value, QString *err)
 {
@@ -37,13 +40,36 @@ qint64 metaValue(duckdb::Connection &con, const QString &key, qint64 fallback = 
     return ShareIndexDb::qi64(res->GetValue(0, 0));
 }
 
-bool metaTableExists(duckdb::Connection &con)
+bool pruneFail(duckdb::unique_ptr<duckdb::MaterializedQueryResult> &res, QString *err)
 {
-    qint64 one = 0;
-    return ShareIndexDb::scalarI64(con,
-            "SELECT 1 FROM information_schema.tables "
-            "WHERE table_name = 'share_index_meta' LIMIT 1",
-            &one);
+    if (res && !res->HasError())
+        return false;
+    if (err && err->isEmpty())
+        *err = res ? QString::fromStdString(res->GetError()) : QStringLiteral("prune");
+    return true;
+}
+
+/** Evict oldest hub-search locations in batches (memory_limit-safe). */
+bool pruneHubLocations(duckdb::Connection &con, QString *err)
+{
+    for (;;) {
+        qint64 n = 0;
+        if (!ShareIndexDb::scalarI64(
+                con, "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2", &n, err))
+            return false;
+        const qint64 excess = n - kMaxHubEntries;
+        if (excess <= 0)
+            return true;
+        const qint64 batch = excess < kPruneBatch ? excess : kPruneBatch;
+        auto res = ShareIndexDb::query1(
+            con,
+            "DELETE FROM share_locations WHERE rowid IN ("
+            "SELECT rowid FROM share_locations WHERE source = 2 "
+            "ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+            ShareIndexDb::i64Val(batch), err);
+        if (pruneFail(res, err))
+            return false;
+    }
 }
 
 } // namespace
@@ -62,32 +88,25 @@ void ShareIndex::refreshEntryCount(duckdb::Connection &con)
 
 bool ShareIndex::ensureCap(duckdb::Connection &con)
 {
-    if (!metaTableExists(con)) {
-        QString err;
-        if (!ShareIndexDb::execOk(con,
-                "CREATE TABLE share_index_meta ("
-                "key TEXT PRIMARY KEY,"
-                "value BIGINT NOT NULL DEFAULT 0)", &err)) {
-            setLastError(err);
-            return false;
-        }
+    QString err;
+    if (!ShareIndexDb::execOk(con,
+            "CREATE TABLE IF NOT EXISTS share_index_meta ("
+            "key TEXT PRIMARY KEY,"
+            "value BIGINT NOT NULL DEFAULT 0)", &err)) {
+        setLastError(err);
+        return false;
     }
 
     // Recount when missing or stuck at 0 (stale meta after a partial migrate).
     if (metaValue(con, QStringLiteral("entry_count")) <= 0) {
-        QString err;
         qint64 n = 0;
         if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_locations",
-                                     &n, &err)) {
-            setLastError(err);
-            return false;
-        }
-        if (!upsertMeta(con, QStringLiteral("entry_count"), n, &err)) {
+                                     &n, &err)
+                || !upsertMeta(con, QStringLiteral("entry_count"), n, &err)) {
             setLastError(err);
             return false;
         }
     }
-    QString err;
     if (!upsertMeta(con, QStringLiteral("schema_files_tth"), 1, &err)) {
         setLastError(err);
         return false;
@@ -106,31 +125,25 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
     return true;
 }
 
-void ShareIndex::pruneExcess(duckdb::Connection &con)
+bool ShareIndex::pruneExcess(duckdb::Connection &con)
 {
-    // File-list rows mirror lists cached on disk and are replaced per user;
-    // only hub-search rows grow without bound, so the cap applies to them.
+    QString err;
     qint64 hubCount = 0;
-    if (!ShareIndexDb::scalarI64(con,
-            "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2", &hubCount))
-        return;
-    const qint64 excess = hubCount - kMaxHubEntries;
-    if (excess <= 0)
-        return;
-
-    auto res = ShareIndexDb::query1(
-        con,
-        "DELETE FROM share_locations WHERE rowid IN ("
-        "SELECT rowid FROM share_locations WHERE source = 2 "
-        "ORDER BY created_at ASC LIMIT ?)",
-        ShareIndexDb::i64Val(excess));
-    if (!res || res->HasError()) {
-        setLastError(res ? QString::fromStdString(res->GetError()) : QStringLiteral("prune"));
-        return;
+    if (!ShareIndexDb::scalarI64(
+            con, "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2",
+            &hubCount, &err)) {
+        setLastError(err);
+        return false;
     }
-    if (!removeOrphans(con))
-        return;
+    // Under the cap: keep existing entry_count meta (no full-table recount on open).
+    if (hubCount <= kMaxHubEntries)
+        return true;
+    if (!pruneHubLocations(con, &err)) {
+        setLastError(err.isEmpty() ? QStringLiteral("prune locations") : err);
+        return false;
+    }
     refreshEntryCount(con);
+    return true;
 }
 
 #endif

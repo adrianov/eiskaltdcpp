@@ -13,14 +13,13 @@
 #include "ShareIndexQueueCore.h"
 
 #include <QDateTime>
-#include <QFile>
-
-#include "dcpp/Util.h"
-#include "WulforUtil.h"
 
 using namespace dcpp;
 
-ShareIndex::ShareIndex() : opened(0)
+ShareIndex::ShareIndex()
+#ifndef USE_QT_SQLITE
+    : opened(0)
+#endif
 {
 #ifdef USE_QT_SQLITE
     searchEpoch.storeRelease(0);
@@ -32,13 +31,10 @@ ShareIndex::~ShareIndex()
 {
 #ifdef USE_QT_SQLITE
     stopWrites();
-    {
-        QMutexLocker lock(&connMutex);
-        threadConns.clear();
-    }
-    duck.reset();
-#endif
+    closeDb();
+#else
     opened.storeRelease(0);
+#endif
 }
 
 QString ShareIndex::nowStamp()
@@ -64,69 +60,6 @@ QString ShareIndex::lastError() const
     return lastSqlError;
 }
 
-void ShareIndex::open()
-{
-#ifdef USE_QT_SQLITE
-    if (opened.loadAcquire())
-        return;
-
-    QMutexLocker lock(&openMutex);
-    if (opened.loadAcquire())
-        return;
-
-    if (dbFile.isEmpty())
-        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.duckdb";
-
-    const QString oldFile = dbFile + QStringLiteral(".migrate-old");
-    if (!QFile::exists(dbFile) && QFile::exists(oldFile))
-        QFile::rename(oldFile, dbFile);
-    else if (QFile::exists(dbFile))
-        QFile::remove(oldFile);
-
-    try {
-        duck = std::make_unique<duckdb::DuckDB>(dbFile.toStdString());
-    } catch (const std::exception &e) {
-        setLastError(QString::fromUtf8(e.what()));
-        duck.reset();
-        return;
-    }
-
-    duckdb::Connection *con = threadConn();
-    if (!con)
-        return;
-
-    // Bound RAM so the index does not dominate the process.
-    ShareIndexDb::execOk(*con, "SET memory_limit='1GB'");
-    ShareIndexDb::execOk(*con, "SET threads=2");
-
-    if (!compactLegacyDb())
-        return;
-
-    con = threadConn();
-    if (!con || !ensureSchema(*con) || !ensureCap(*con))
-        return;
-
-    opened.storeRelease(1);
-#endif
-}
-
-void ShareIndex::openAsync()
-{
-#ifdef USE_QT_SQLITE
-    if (opened.loadAcquire())
-        return;
-    if (dbFile.isEmpty())
-        dbFile = _q(Util::getPath(Util::PATH_USER_CONFIG)) + "ShareIndex.duckdb";
-
-    using namespace ShareIndexWriteQueue;
-    WriteJob job;
-    job.kind = OpenDb;
-    enqueueWrite(job);
-#else
-    open();
-#endif
-}
-
 #ifdef USE_QT_SQLITE
 
 void ShareIndex::setLastError(const QString &err)
@@ -136,6 +69,10 @@ void ShareIndex::setLastError(const QString &err)
 }
 
 #else
+
+void ShareIndex::open() {}
+
+void ShareIndex::openAsync() { open(); }
 
 void ShareIndex::upsertFromSearch(const QVariantMap &) {}
 

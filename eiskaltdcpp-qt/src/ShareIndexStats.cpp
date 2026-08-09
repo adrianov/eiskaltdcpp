@@ -17,9 +17,29 @@
 #include <QDateTime>
 #include <QFileInfo>
 
+namespace {
+
+qint64 dbFileBytes(const QString &path)
+{
+    if (path.isEmpty())
+        return 0;
+    qint64 n = 0;
+    const QFileInfo dbInfo(path);
+    if (dbInfo.exists())
+        n += dbInfo.size();
+    const QFileInfo wal(path + QStringLiteral(".wal"));
+    if (wal.exists())
+        n += wal.size();
+    return n;
+}
+
+} // namespace
+
 ShareIndex::IndexStats ShareIndex::indexStats()
 {
     IndexStats stats;
+    stats.dbBytes = dbFileBytes(store.dbFile);
+
     if (!isOpen())
         return stats;
 
@@ -44,14 +64,6 @@ ShareIndex::IndexStats ShareIndex::indexStats()
     } catch (const std::exception &) {
         return stats;
     }
-
-    const QFileInfo dbInfo(dbFile);
-    if (dbInfo.exists())
-        stats.dbBytes = dbInfo.size();
-
-    const QFileInfo wal(dbFile + QStringLiteral(".wal"));
-    if (wal.exists())
-        stats.dbBytes += wal.size();
 
     return stats;
 }

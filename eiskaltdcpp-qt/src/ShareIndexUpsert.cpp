@@ -77,10 +77,8 @@ void ShareIndex::upsertFromSearchBatchSync(const QList<QVariantMap> &maps)
         setLastError(QStringLiteral("commit failed"));
         return;
     }
-    if (!removeOrphans(*con))
-        return;
+    // Hub upserts only insert; orphan sweep belongs to deletes / list replace.
     refreshEntryCount(*con);
-    // No CHECKPOINT here: hub SRs are frequent; vacuum after list ingest only.
 }
 
 #endif

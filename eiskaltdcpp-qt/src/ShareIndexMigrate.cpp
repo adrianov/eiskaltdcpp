@@ -104,7 +104,7 @@ bool ShareIndex::compactLegacyDb()
     if (!hasCore && !hasMeta)
         return true;
 
-    const QString newFile = dbFile + QStringLiteral(".compact");
+    const QString newFile = store.dbFile + QStringLiteral(".compact");
     QFile::remove(newFile);
     QFile::remove(newFile + QStringLiteral(".wal"));
 
@@ -116,34 +116,27 @@ bool ShareIndex::compactLegacyDb()
             && ensureSchema(*con, "compact.")
             && ShareIndexDb::execOk(*con, "DETACH compact", &err);
 
-    {
-        QMutexLocker lock(&connMutex);
-        threadConns.clear();
-    }
-    duck.reset();
+    store.releaseAll();
 
-    const QString oldFile = dbFile + QStringLiteral(".migrate-old");
+    const QString oldFile = store.dbFile + QStringLiteral(".migrate-old");
     QFile::remove(oldFile);
     bool swapped = false;
-    if (copied && QFile::rename(dbFile, oldFile)) {
-        swapped = QFile::rename(newFile, dbFile);
+    if (copied && QFile::rename(store.dbFile, oldFile)) {
+        swapped = QFile::rename(newFile, store.dbFile);
         if (!swapped)
-            QFile::rename(oldFile, dbFile);
+            QFile::rename(oldFile, store.dbFile);
     }
     if (swapped) {
         QFile::remove(oldFile);
-        QFile::remove(dbFile + QStringLiteral(".wal"));
+        QFile::remove(store.dbFile + QStringLiteral(".wal"));
     } else {
         setLastError(err.isEmpty() ? QStringLiteral("compact failed") : err);
         QFile::remove(newFile);
         QFile::remove(newFile + QStringLiteral(".wal"));
     }
 
-    try {
-        duck = std::make_unique<duckdb::DuckDB>(dbFile.toStdString());
-    } catch (const std::exception &e) {
-        setLastError(QString::fromUtf8(e.what()));
-        duck.reset();
+    if (!store.openDuck(&err)) {
+        setLastError(err);
         return false;
     }
 

@@ -40,9 +40,17 @@ inline bool takeFatal()
     return f;
 }
 
-inline void noteType(duckdb::ExceptionType t)
+/** Torn ART index or already-invalidated handle — reopen cannot heal on-disk pages. */
+inline bool isPoisoned(const QString &msg)
 {
-    if (duckdb::Exception::InvalidatesDatabase(t))
+    return msg.contains(QLatin1String("Failed to delete all rows from index"))
+            || msg.contains(QLatin1String("Failed to insert into index"))
+            || msg.contains(QLatin1String("database has been invalidated"));
+}
+
+inline void noteFailure(duckdb::ExceptionType t, const QString &msg)
+{
+    if (duckdb::Exception::InvalidatesDatabase(t) || isPoisoned(msg))
         fatalPending() = true;
 }
 
@@ -52,16 +60,19 @@ bool guard(QString *err, Fn &&fn)
     try {
         return fn();
     } catch (const duckdb::FatalException &e) {
-        noteType(duckdb::ExceptionType::FATAL);
-        setErr(err, QString::fromUtf8(e.what()));
+        const QString msg = QString::fromUtf8(e.what());
+        noteFailure(duckdb::ExceptionType::FATAL, msg);
+        setErr(err, msg);
         return false;
     } catch (const duckdb::InternalException &e) {
-        noteType(duckdb::ExceptionType::INTERNAL);
-        setErr(err, QString::fromUtf8(e.what()));
+        const QString msg = QString::fromUtf8(e.what());
+        noteFailure(duckdb::ExceptionType::INTERNAL, msg);
+        setErr(err, msg);
         return false;
     } catch (const std::exception &e) {
-        noteType(duckdb::ErrorData(e).Type());
-        setErr(err, QString::fromUtf8(e.what()));
+        const QString msg = QString::fromUtf8(e.what());
+        noteFailure(duckdb::ErrorData(e).Type(), msg);
+        setErr(err, msg);
         return false;
     } catch (...) {
         setErr(err, QStringLiteral("duckdb error"));
@@ -74,10 +85,11 @@ inline bool execOk(duckdb::Connection &con, const std::string &sql, QString *err
     return guard(err, [&]() {
         auto res = con.Query(sql);
         if (!res || res->HasError()) {
+            const QString msg = res ? QString::fromStdString(res->GetError())
+                                    : QStringLiteral("null result");
             if (res && res->HasError())
-                noteType(res->GetErrorType());
-            setErr(err, res ? QString::fromStdString(res->GetError())
-                            : QStringLiteral("null result"));
+                noteFailure(res->GetErrorType(), msg);
+            setErr(err, msg);
             return false;
         }
         return true;
@@ -90,10 +102,12 @@ inline bool scalarI64(duckdb::Connection &con, const std::string &sql, qint64 *o
     return guard(err, [&]() {
         auto res = con.Query(sql);
         if (!res || res->HasError() || res->RowCount() == 0) {
+            const QString msg = res && res->HasError()
+                    ? QString::fromStdString(res->GetError())
+                    : QStringLiteral("empty");
             if (res && res->HasError())
-                noteType(res->GetErrorType());
-            setErr(err, res && res->HasError() ? QString::fromStdString(res->GetError())
-                                               : QStringLiteral("empty"));
+                noteFailure(res->GetErrorType(), msg);
+            setErr(err, msg);
             return false;
         }
         if (out)
@@ -111,18 +125,20 @@ queryMat(duckdb::Connection &con, const std::string &sql, duckdb::vector<duckdb:
     guard(err, [&]() {
         auto pending = con.PendingQuery(sql, binds, duckdb::QueryResultOutputType::FORCE_MATERIALIZED);
         if (!pending || pending->HasError()) {
+            const QString msg = pending ? QString::fromStdString(pending->GetError())
+                                        : QStringLiteral("pending");
             if (pending && pending->HasError())
-                noteType(pending->GetErrorType());
-            setErr(err, pending ? QString::fromStdString(pending->GetError())
-                                : QStringLiteral("pending"));
+                noteFailure(pending->GetErrorType(), msg);
+            setErr(err, msg);
             return false;
         }
         auto qres = pending->Execute();
         if (!qres || qres->HasError()) {
+            const QString msg = qres ? QString::fromStdString(qres->GetError())
+                                     : QStringLiteral("execute");
             if (qres && qres->HasError())
-                noteType(qres->GetErrorType());
-            setErr(err, qres ? QString::fromStdString(qres->GetError())
-                             : QStringLiteral("execute"));
+                noteFailure(qres->GetErrorType(), msg);
+            setErr(err, msg);
             return false;
         }
         auto *mat = dynamic_cast<duckdb::MaterializedQueryResult *>(qres.get());

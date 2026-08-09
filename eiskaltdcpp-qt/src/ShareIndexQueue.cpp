@@ -83,19 +83,23 @@ void ShareIndex::drainWriteQueue()
             }
             }
         } catch (const duckdb::FatalException &e) {
-            ShareIndexDb::noteType(duckdb::ExceptionType::FATAL);
-            setLastError(QString::fromUtf8(e.what()));
+            const QString msg = QString::fromUtf8(e.what());
+            ShareIndexDb::noteFailure(duckdb::ExceptionType::FATAL, msg);
+            setLastError(msg);
         } catch (const duckdb::InternalException &e) {
-            ShareIndexDb::noteType(duckdb::ExceptionType::INTERNAL);
-            setLastError(QString::fromUtf8(e.what()));
+            const QString msg = QString::fromUtf8(e.what());
+            ShareIndexDb::noteFailure(duckdb::ExceptionType::INTERNAL, msg);
+            setLastError(msg);
         } catch (const std::exception &e) {
-            ShareIndexDb::noteType(duckdb::ErrorData(e).Type());
-            setLastError(QString::fromUtf8(e.what()));
+            const QString msg = QString::fromUtf8(e.what());
+            ShareIndexDb::noteFailure(duckdb::ErrorData(e).Type(), msg);
+            setLastError(msg);
         } catch (...) {
             setLastError(QStringLiteral("share index write failed"));
         }
 
-        if (ShareIndexDb::takeFatal())
+        // Open already erases+retries once on a poisoned DB; avoid a second rebuild loop.
+        if (ShareIndexDb::takeFatal() && !(job.kind == OpenDb && isOpen()))
             recoverDb();
     }
 }

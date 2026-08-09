@@ -77,7 +77,7 @@ bool shareIndexSmokeMigrate(const QString &path, QString *error)
     }
     {
         ShareIndex idx;
-        idx.dbFile = path;
+        idx.store.dbFile = path;
         idx.open();
         if (!checkEmptyRebuild(idx, *idx.threadConn(), error))
             return false;
@@ -108,7 +108,7 @@ bool shareIndexSmokeMigrate(const QString &path, QString *error)
     }
     {
         ShareIndex idx;
-        idx.dbFile = oldNorm;
+        idx.store.dbFile = oldNorm;
         idx.open();
         if (!checkEmptyRebuild(idx, *idx.threadConn(), error))
             return false;
@@ -127,14 +127,14 @@ bool shareIndexSmokeMigrate(const QString &path, QString *error)
     }
     {
         ShareIndex idx;
-        idx.dbFile = metaOnly;
+        idx.store.dbFile = metaOnly;
         idx.open();
         if (!checkEmptyRebuild(idx, *idx.threadConn(), error))
             return false;
     }
 
     ShareIndex idx;
-    idx.dbFile = path;
+    idx.store.dbFile = path;
     idx.open();
     if (!idx.isOpen())
         return fail(error, QStringLiteral("reopen: %1").arg(idx.lastError()));

@@ -13,7 +13,7 @@
 
 #ifdef USE_QT_SQLITE
 
-#include "ShareIndexDbQuery.h"
+#include "shareindex/ShareIndexDbQuery.h"
 
 #include <QVariant>
 

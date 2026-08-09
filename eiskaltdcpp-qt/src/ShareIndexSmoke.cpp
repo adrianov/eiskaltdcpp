@@ -30,12 +30,11 @@ bool ShareIndex::smokeCheck(QString *error)
     }
 
     ShareIndex idx;
-    idx.dbFile = dir.path() + "/smoke.duckdb";
-    try {
-        idx.duck = std::make_unique<duckdb::DuckDB>(idx.dbFile.toStdString());
-    } catch (const std::exception &e) {
+    idx.store.dbFile = dir.path() + "/smoke.duckdb";
+    QString openErr;
+    if (!idx.store.openDuck(&openErr)) {
         if (error)
-            *error = QString::fromUtf8(e.what());
+            *error = openErr;
         return false;
     }
 
@@ -51,7 +50,7 @@ bool ShareIndex::smokeCheck(QString *error)
             *error = idx.lastError().isEmpty() ? QStringLiteral("schema") : idx.lastError();
         return false;
     }
-    idx.opened.storeRelease(1);
+    idx.store.setOpen(true);
 
     if (!shareIndexSmokeWrites(idx, *con, error))
         return false;
