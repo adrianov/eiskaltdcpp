@@ -81,6 +81,7 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     close->setIcon(WU->getPixmap(AppIcons::eiCONNECT_NO));
 
     QAction *show_only_transferred_files = new QAction(TransferView::tr("Show only transferred files"), menu);
+    show_only_transferred_files->setIcon(WU->getPixmap(AppIcons::eiFILTER));
     show_only_transferred_files->setCheckable(true);
     show_only_transferred_files->setChecked(showTransferredFilesOnly);
 

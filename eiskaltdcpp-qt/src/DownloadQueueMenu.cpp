@@ -10,6 +10,7 @@
 ***************************************************************************/
 
 #include "DownloadQueue.h"
+#include "WulforUtil.h"
 
 #include "dcpp/QueueManager.h"
 
@@ -21,19 +22,29 @@ using namespace dcpp;
 
 DownloadQueue::Menu::Menu() : menu(new QMenu(nullptr))
 {
+    WulforUtil *WU = WulforUtil::getInstance();
+
     QMenu *menu_magnet = new QMenu(tr("Magnet"), DownloadQueue::getInstance());
+    menu_magnet->setIcon(WU->getPixmap(AppIcons::eiMAGNET));
 
     QAction *search_alt  = new QAction(tr("Search for alternates"), menu);
+    search_alt->setIcon(WU->getPixmap(AppIcons::eiFILEFIND));
     QAction *copy_name   = new QAction(tr("Copy file name"), menu);
+    copy_name->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *copy_magnet = new QAction(tr("Copy magnet"), menu_magnet);
+    copy_magnet->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *copy_magnet_web = new QAction(tr("Copy web-magnet"), menu_magnet);
+    copy_magnet_web->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *magnet_info = new QAction(tr("Properties of magnet"), menu_magnet);
+    magnet_info->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
     QAction *ren_move    = new QAction(tr("Rename/Move"), menu);
+    ren_move->setIcon(WU->getPixmap(AppIcons::eiEDIT));
 
     QAction *sep1 = new QAction(menu);
     sep1->setSeparator(true);
 
     set_prio = new QMenu(tr("Set priority"), menu);
+    set_prio->setIcon(WU->getPixmap(AppIcons::eiUP));
     {
         QAction *paused = new QAction(tr("Paused"), set_prio);
         paused->setData(static_cast<int>(QueueItem::PAUSED));
@@ -57,15 +68,20 @@ DownloadQueue::Menu::Menu() : menu(new QMenu(nullptr))
     }
 
     browse = new QMenu(tr("Browse files"), menu);
+    browse->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
     send_pm = new QMenu(tr("Send private message"), menu);
+    send_pm->setIcon(WU->getPixmap(AppIcons::eiMESSAGE));
 
     QAction *sep2 = new QAction(menu);
     sep2->setSeparator(true);
 
     rem_src  = new QMenu(tr("Remove source"), menu);
+    rem_src->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
     rem_usr  = new QMenu(tr("Remove user"), menu);
+    rem_usr->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
     QAction *remove   = new QAction(tr("Remove"), menu);
+    remove->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
     QAction *sep3 = new QAction(menu);
     sep3->setSeparator(true);

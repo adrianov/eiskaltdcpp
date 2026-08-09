@@ -71,7 +71,9 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     WulforUtil *WU = WulforUtil::getInstance();
 
     rest_menu = new QMenu(sbTr("Restrictions"));
+    rest_menu->setIcon(WU->getPixmap(AppIcons::eiFILTER));
     QMenu *magnet_menu = new QMenu(sbTr("Magnet"), menu);
+    magnet_menu->setIcon(WU->getPixmap(AppIcons::eiMAGNET));
 
     QAction *down    = new QAction(sbTr("Download"), menu);
     down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
@@ -96,7 +98,9 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     QAction *add_to_fav = new QAction(sbTr("Add to favorites"), menu);
     add_to_fav->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
     QAction *set_rest = new QAction(sbTr("Add restriction"), rest_menu);
+    set_rest->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
     QAction *rem_rest = new QAction(sbTr("Remove restriction"), rest_menu);
+    rem_rest->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
     open_file = new QAction(WU->getPixmap(AppIcons::eiFILETYPE_UNKNOWN), sbTr("Open file"), menu);
     open_url = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), sbTr("Open directory"), menu);
     convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), sbTr("Convert to EPUB"), menu);

@@ -95,7 +95,7 @@ void SpyFrame::contextMenu(){
     SpyItem *item = reinterpret_cast<SpyItem*>(list.at(0).internalPointer());
 
     QMenu *m = new QMenu(this);
-    m->addAction(tr("Search"));
+    m->addAction(WICON(AppIcons::eiFIND), tr("Search"));
 
     QAction *ret = m->exec(QCursor::pos());
 

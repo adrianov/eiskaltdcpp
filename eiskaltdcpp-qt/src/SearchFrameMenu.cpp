@@ -19,6 +19,7 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     WulforUtil *WU = WulforUtil::getInstance();
 
     magnet_menu = new QMenu(tr("Magnet"));
+    magnet_menu->setIcon(WU->getPixmap(AppIcons::eiMAGNET));
 
     QAction *down       = new QAction(tr("Download"), nullptr);
     down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));

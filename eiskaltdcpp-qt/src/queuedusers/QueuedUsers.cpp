@@ -64,7 +64,7 @@ void QueuedUsers::slotContextMenu(){
         return;
 
     QMenu *m = new QMenu(this);
-    m->addAction(tr("Grant slot"));
+    m->addAction(WICON(AppIcons::eiEDITADD), tr("Grant slot"));
 
     if (m->exec(QCursor::pos())){
         for (const auto &i : indexes){

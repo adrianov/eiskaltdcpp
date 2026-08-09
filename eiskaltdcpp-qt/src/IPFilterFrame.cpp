@@ -15,7 +15,6 @@
 #include <QHashIterator>
 #include <QMenu>
 #include <QAction>
-#include <QIcon>
 #include <QInputDialog>
 #include <QDir>
 
@@ -176,14 +175,15 @@ void IPFilterFrame::slotTreeViewContextMenu(QPoint){
 
     QMenu *ch_d = new QMenu(this);
     ch_d->setTitle(tr("Change rule direction"));
+    ch_d->setIcon(WU->getPixmap(AppIcons::eiEDIT));
 
     QList<QAction*> directions;
-    directions << (ch_d->addAction(QIcon(), "BOTH"));
-    directions << (ch_d->addAction(QIcon(), "IN"));
-    directions << (ch_d->addAction(QIcon(), "OUT"));
+    directions << (ch_d->addAction("BOTH"));
+    directions << (ch_d->addAction("IN"));
+    directions << (ch_d->addAction("OUT"));
 
     m->addMenu(ch_d);
-    QAction *ch  = m->addAction(QIcon(), tr("Change IP/Mask"));
+    QAction *ch  = m->addAction(WU->getPixmap(AppIcons::eiEDIT), tr("Change IP/Mask"));
     QAction *del = m->addAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Delete rule"));
 
     QAction *result = m->exec(QCursor::pos());
