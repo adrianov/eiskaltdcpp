@@ -24,10 +24,10 @@ using std::string;
 /** Per-user file-list cache (ListCache.xml + FileLists/ on disk). */
 class ListCache {
 public:
-    /** Load metadata, migrate legacy sidecars, expire lists older than 1 day. */
+    /** Load ListCache.xml; FileLists retention runs on an idle background thread. */
     static void load();
-    /** Expire FileLists/ older than 1 day (also runs from load()). */
-    static void purgeOldLists();
+    /** Join retention thread (required before QueueManager may wipe FileLists/). */
+    static void joinCleanup();
 
     static string findListFile(const string& listBase);
     /** True when the online user's reported share size matches cached metadata. */

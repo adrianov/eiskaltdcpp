@@ -15,18 +15,39 @@
 #include "ConnectionManagerPeerMatch.h"
 #include "DirectoryListing.h"
 #include "File.h"
+#include "Thread.h"
 #include "Util.h"
 #include "listcache/ListCacheStore.h"
 #include "listcache/ListRetention.h"
 
 namespace dcpp {
 
-void ListCache::load() {
-    ListRetention().onStartup();
+namespace {
+
+/** Idle FileLists retention; ListCacheStore serializes map/XML against hub threads. */
+class RetentionWorker : public Thread {
+public:
+    int run() override {
+        setThreadPriority(Thread::IDLE);
+        ListRetention().cleanup();
+        return 0;
+    }
+};
+
+RetentionWorker& retentionWorker() {
+    static RetentionWorker worker;
+    return worker;
 }
 
-void ListCache::purgeOldLists() {
-    ListRetention().expire();
+} // namespace
+
+void ListCache::load() {
+    ListCacheStore::load();
+    retentionWorker().start();
+}
+
+void ListCache::joinCleanup() {
+    retentionWorker().join();
 }
 
 string ListCache::findListFile(const string& listBase) {

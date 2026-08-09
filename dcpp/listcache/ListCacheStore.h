@@ -20,9 +20,13 @@ namespace dcpp {
 
 using std::string;
 
-/** In-memory + ListCache.xml persistence for per-CID file-list metadata. */
+/**
+ * In-memory + ListCache.xml persistence for per-CID file-list metadata.
+ * Thread-safe: map access under dataCs, XML I/O under fileCs; load() is once.
+ */
 namespace ListCacheStore {
 
+/** Idempotent one-time XML load; safe from any thread. */
 void load();
 int64_t shareSize(const CID& cid);
 int64_t fileSize(const CID& cid);
@@ -33,6 +37,8 @@ bool isCid(const string& cid);
 /** FetchTime for base32 CID, or -1; caller must load() first. */
 time_t cachedFetch(const string& cid);
 bool eraseCid(const string& cid);
+/** Erase cid only when FetchTime is in [0, cutoff); false if missing/fresh. */
+bool eraseIfFetchedBefore(const string& cid, time_t cutoff);
 /** Keep newer fetchTime when importing a legacy sidecar. */
 void mergeMigrated(const string& cid, int64_t shareSize, time_t fetchTime);
 /** Write ListCache.xml; false when I/O fails. */

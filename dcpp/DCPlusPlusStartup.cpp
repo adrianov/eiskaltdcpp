@@ -131,7 +131,7 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     if(f != NULL)
         (*f)(p, _("Users"));
     ClientManager::getInstance()->loadUsers();
-    // Loads ListCache.xml, migrates sidecars, expires FileLists/ older than 1 day.
+    // ListCache.xml now; FileLists retention continues on a background thread.
     ListCache::load();
 }
 

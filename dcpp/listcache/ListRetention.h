@@ -17,7 +17,7 @@ namespace dcpp {
 
 /**
  * File-list retention: import legacy sidecars and expire FileLists/ past maxAge
- * (default 1 day, same window as fetch cooldown).
+ * (default 1 day, same window as fetch cooldown). Sync disk work only.
  */
 class ListRetention {
 public:
@@ -26,20 +26,18 @@ public:
     explicit ListRetention(time_t maxAge = DEFAULT_MAX_AGE) : maxAge(maxAge) {}
 
     /** Migrate .sharesize/.listfetch sidecars, then expire stale lists. */
-    void onStartup();
-    /** Remove FileLists older than maxAge and matching ListCache.xml rows. */
-    void expire();
+    void cleanup();
 
 private:
     time_t maxAge;
     time_t cutoff = 0;
 
+    void expire();
     StringList migrateSidecars();
     bool expirePath(const string& path);
     bool pruneMeta();
     static string cidFromPath(const string& path);
     static time_t fileMtime(const string& path);
-    time_t ageOf(const string& path, const string& cid) const;
 };
 
 } // namespace dcpp

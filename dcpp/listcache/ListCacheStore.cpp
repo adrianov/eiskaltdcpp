@@ -71,6 +71,7 @@ void writeXml() {
 }
 
 void readXml() {
+    Lock fileLock(fileCs);
     if(File::getSize(cacheFile()) == -1)
         return;
 
@@ -125,6 +126,15 @@ time_t cachedFetch(const string& cid) {
 bool eraseCid(const string& cid) {
     Lock l(dataCs);
     return entries.erase(cid) > 0;
+}
+
+bool eraseIfFetchedBefore(const string& cid, time_t cutoff) {
+    Lock l(dataCs);
+    const auto it = entries.find(cid);
+    if(it == entries.end() || it->second.fetchTime < 0 || it->second.fetchTime >= cutoff)
+        return false;
+    entries.erase(it);
+    return true;
 }
 
 void mergeMigrated(const string& cid, int64_t shareSize, time_t fetchTime) {

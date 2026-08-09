@@ -33,7 +33,7 @@ void stripListExt(string& name) {
 
 } // namespace
 
-void ListRetention::onStartup() {
+void ListRetention::cleanup() {
     ListCacheStore::load();
     const StringList migrated = migrateSidecars();
     // Keep sidecars on disk if the centralized XML write fails.
@@ -91,7 +91,17 @@ StringList ListRetention::migrateSidecars() {
 
 bool ListRetention::expirePath(const string& path) {
     const string cid = cidFromPath(path);
-    if(ageOf(path, cid) >= cutoff)
+    if(!cid.empty()) {
+        const time_t fetched = ListCacheStore::cachedFetch(cid);
+        if(fetched >= 0) {
+            if(fetched >= cutoff)
+                return false;
+            File::deleteFile(path);
+            // Recheck under the store lock so a concurrent setMeta wins.
+            return ListCacheStore::eraseIfFetchedBefore(cid, cutoff);
+        }
+    }
+    if(fileMtime(path) >= cutoff)
         return false;
     File::deleteFile(path);
     return !cid.empty() && ListCacheStore::eraseCid(cid);
@@ -117,15 +127,6 @@ time_t ListRetention::fileMtime(const string& path) {
     } catch(const Exception&) {
         return 0;
     }
-}
-
-time_t ListRetention::ageOf(const string& path, const string& cid) const {
-    if(!cid.empty()) {
-        const time_t fetched = ListCacheStore::cachedFetch(cid);
-        if(fetched >= 0)
-            return fetched;
-    }
-    return fileMtime(path);
 }
 
 } // namespace dcpp

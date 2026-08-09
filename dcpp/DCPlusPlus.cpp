@@ -22,6 +22,7 @@
 #include "FinishedManager.h"
 #include "HashManager.h"
 #include "IncomingPortCheck.h"
+#include "listcache/ListCache.h"
 #include "sharemedia/MediaInfoCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
@@ -68,6 +69,8 @@ void shutdown() {
     if(socketsStopped)
         ScriptManager::deleteInstance();
 #endif
+    // Retention may delete FileLists/; finish before QueueManager dtor does the same.
+    ListCache::joinCleanup();
     QueueManager::getInstance()->removeUserLists();
     QueueManager::getInstance()->saveQueue(true);
     ClientManager::getInstance()->saveUsers();
