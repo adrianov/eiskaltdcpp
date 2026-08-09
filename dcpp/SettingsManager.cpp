@@ -88,6 +88,7 @@ const string SettingsManager::settingTags[] =
     "UseADLOnlyOnOwnList", "AllowSimUploads", "CheckTargetsPathsOnStart", "NmdcDebug",
     "ShareSkipZeroByte", "RequireTLS", "LogSpy", "AppUnitBase",
     "LogCmdDebug", "LogMaxFileSize", "MinMediaInfoSize",
+    "VideoEndFirst", "VideoEndFirstSize",
     "SENTRY",
     // Int64
     "TotalUpload", "TotalDownload",

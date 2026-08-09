@@ -38,7 +38,8 @@ set(DCPP_EXTRA_SOURCES
     ListCache.cpp
     ListCacheStore.cpp
     ExpectedMap.cpp
-    QueueItemSegment.cpp
+    queue/SegmentPicker.cpp
+    queue/QueueItemSegment.cpp
     QueueItemProgress.cpp
     SearchManagerUdp.cpp
     SearchManagerResponse.cpp
@@ -373,6 +374,8 @@ if (WITH_DEV_FILES)
     install (FILES ${dcpp_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/)
     file (GLOB sharemedia_hdrs ${PROJECT_SOURCE_DIR}/sharemedia/*.h)
     install (FILES ${sharemedia_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/sharemedia/)
+    file (GLOB queue_hdrs ${PROJECT_SOURCE_DIR}/queue/*.h)
+    install (FILES ${queue_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/queue/)
     file (GLOB adc_hdrs ${PROJECT_SOURCE_DIR}/adc/*.h)
     install (FILES ${adc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/adc/)
     file (GLOB nmdc_hdrs ${PROJECT_SOURCE_DIR}/nmdc/*.h)

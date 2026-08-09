@@ -897,6 +897,18 @@ from the queue either, you must do that manually.</string>
               <enum>Checked</enum>
              </property>
             </item>
+            <item>
+             <property name="text">
+              <string>Download video file end first</string>
+             </property>
+             <property name="toolTip">
+              <string>mkv, mp4, avi and similar videos often keep the container index at EOF.
+Fetch that trailing chunk first (size under Advanced), then fill the rest from the start.</string>
+             </property>
+             <property name="checkState">
+              <enum>Checked</enum>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -958,6 +970,29 @@ from the queue either, you must do that manually.</string>
            <widget class="QSpinBox" name="spinBox_SEGMENT_SIZE">
             <property name="maximum">
              <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_VIDEO_END_FIRST_SIZE">
+            <property name="text">
+             <string>Video end chunk (MB)</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spinBox_VIDEO_END_FIRST_SIZE">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>512</number>
+            </property>
+            <property name="value">
+             <number>20</number>
             </property>
            </widget>
           </item>
