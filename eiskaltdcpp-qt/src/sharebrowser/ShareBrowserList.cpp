@@ -15,55 +15,32 @@
 #include "WulforSettings.h"
 #include "WulforUtil.h"
 #include "sharebrowser/ShareFolderList.h"
+#include "sharebrowser/ShareListColumns.h"
 
 #include <QHeaderView>
 
 using namespace dcpp;
 
-namespace {
-
-void placeAfter(QHeaderView *h, int afterCol, int moveCol)
-{
-    if (!h || h->isSectionHidden(moveCol) || h->isSectionHidden(afterCol))
-        return;
-    const int afterVis = h->visualIndex(afterCol);
-    const int moveVis = h->visualIndex(moveCol);
-    if (afterVis < 0 || moveVis < 0)
-        return;
-    // When moveCol is before afterCol, target is afterVis (removal shifts left).
-    const int to = afterVis + (moveVis > afterVis ? 1 : 0);
-    if (moveVis != to)
-        h->moveSection(moveVis, to);
-}
-
-void applyColumnOrder(QHeaderView *h)
-{
-    placeAfter(h, COLUMN_FILEBROWSER_NAME, COLUMN_FILEBROWSER_PATH);
-    placeAfter(h, COLUMN_FILEBROWSER_SIZE, COLUMN_FILEBROWSER_WH);
-}
-
-} // namespace
-
 void ShareBrowser::changeRoot(DirectoryListing::Directory *root)
 {
-    if (!folderList || !root)
-        return;
-    if (mediaEnrich)
-        mediaEnrich->clearPending();
-    folderList->showFolder(root);
-    applyOptionalColumns();
-    if (mediaEnrich)
-        mediaEnrich->queue(folderList->missingMediaTths());
-    label_RIGHT->setText(totalStatusText());
+    loadRoot(root, false);
 }
 
 void ShareBrowser::changeRootFlat(DirectoryListing::Directory *root)
 {
+    loadRoot(root, true);
+}
+
+void ShareBrowser::loadRoot(DirectoryListing::Directory *root, bool flat)
+{
     if (!folderList || !root)
         return;
     if (mediaEnrich)
         mediaEnrich->clearPending();
-    folderList->showFlat(listing, root);
+    if (flat)
+        folderList->showFlat(listing, root);
+    else
+        folderList->showFolder(root);
     applyOptionalColumns();
     if (mediaEnrich)
         mediaEnrich->queue(folderList->missingMediaTths());
@@ -74,24 +51,9 @@ void ShareBrowser::applyOptionalColumns()
 {
     if (!folderList || !treeView_RPANE)
         return;
-    QHeaderView *h = treeView_RPANE->header();
-    bool changed = false;
-    const auto setHidden = [&](int col, bool hidden) {
-        if (h->isSectionHidden(col) != hidden) {
-            h->setSectionHidden(col, hidden);
-            changed = true;
-        }
-    };
-    setHidden(COLUMN_FILEBROWSER_BR, !folderList->hasBitrate());
-    setHidden(COLUMN_FILEBROWSER_WH, !folderList->hasResolution());
-    setHidden(COLUMN_FILEBROWSER_MVIDEO, !folderList->hasVideo());
-    setHidden(COLUMN_FILEBROWSER_MAUDIO, !folderList->hasAudio());
-    setHidden(COLUMN_FILEBROWSER_HIT, !folderList->hasDownloaded());
-    setHidden(COLUMN_FILEBROWSER_TS, !folderList->hasShared());
-    applyColumnOrder(h);
     // Re-fit only when optional columns appear/disappear — not on every media batch
     // (that kept TreeHeaderAutosize dirty and stalled main side-dock resizing).
-    if (changed)
+    if (ShareListColumns(treeView_RPANE->header()).apply(*folderList))
         WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
 }
 
@@ -147,15 +109,18 @@ void ShareBrowser::updateUpButton()
 void ShareBrowser::restoreSplitterSizes()
 {
     constexpr int kDefaultTreeWidth = 240; // UIShareBrowser frame_2 baseSize
-    const int total = qMax(splitter->width(), kDefaultTreeWidth + 100);
+    constexpr int kMinRight = 160;         // UIShareBrowser frame minimumSize
+    constexpr int kMinLeft = 80;
+    const int total = qMax(splitter->width(), kDefaultTreeWidth + kMinRight);
     const int w = WIGET(WI_SHARE_WIDTH);
     const int wr = WIGET(WI_SHARE_RPANE_WIDTH);
     int left = (w > 0 && wr > 0 && wr < w) ? (w - wr) : 0;
     // 0 (or tiny) left happens after starting in Flat — fall back to default.
-    if (left < 80)
+    if (left < kMinLeft)
         left = kDefaultTreeWidth;
-    if (left > total - 100)
-        left = qMin(kDefaultTreeWidth, total - 100);
+    // Keep a wide folder pane when the window is temporarily narrower than saved.
+    if (left > total - kMinRight)
+        left = qMax(kMinLeft, total - kMinRight);
     splitter->setSizes(QList<int>() << left << qMax(total - left, 1));
 }
 
@@ -179,7 +144,7 @@ void ShareBrowser::applyFlatMode(bool on)
     toolButton_FORWARD->setEnabled(!on);
     updateUpButton();
 
-    treeView_RPANE->header()->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
+    ShareListColumns(treeView_RPANE->header()).setPathVisible(on);
     WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
 
     // Flat default is Path; folder default is Name. Keep Size/etc. if the user chose it.

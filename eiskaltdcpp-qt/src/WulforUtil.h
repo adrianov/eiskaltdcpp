@@ -15,6 +15,7 @@
 #include <QObject>
 #include <QPixmap>
 #include <QImage>
+#include <QList>
 #include <QMap>
 #include <QHash>
 #include <QTextCodec>
@@ -107,7 +108,8 @@ public Q_SLOTS:
         return AppIcons::scale(source, logicalSide, mode);
     }
 
-    static void headerMenu(QTreeView*);
+    /** Optional skipColumns stay hidden and are omitted from the toggle menu. */
+    static void headerMenu(QTreeView*, const QList<int> &skipColumns = {});
 
     /** Restore saved layout; fit columns that are still too narrow once visible.
      *  Dragged columns keep their width; autosize will not rewrite them. */

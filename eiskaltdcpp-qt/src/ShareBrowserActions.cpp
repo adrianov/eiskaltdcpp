@@ -14,6 +14,7 @@
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
+#include "sharebrowser/ShareListColumns.h"
 
 #include "dcpp/FavoriteManager.h"
 #include "dcpp/ClientManager.h"
@@ -150,7 +151,7 @@ void ShareBrowser::slotLayoutUpdated(){
 }
 
 void ShareBrowser::slotHeaderMenu(){
-    WulforUtil::headerMenu(treeView_RPANE);
+    WulforUtil::headerMenu(treeView_RPANE, ShareListColumns::menuSkip());
 }
 
 void ShareBrowser::slotSettingsChanged(const QString &key, const QString&){

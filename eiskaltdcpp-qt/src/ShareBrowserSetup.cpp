@@ -21,6 +21,7 @@
 #include "ArenaWidgetManager.h"
 #include "AutoToolTip.h"
 #include "sharebrowser/ListingMediaIndex.h"
+#include "sharebrowser/ShareListColumns.h"
 
 #include "dcpp/ADLSearch.h"
 #include "dcpp/ClientManager.h"
@@ -29,25 +30,6 @@
 #include <QAction>
 
 using namespace dcpp;
-
-namespace {
-
-void hideTreeExtraColumns(QHeaderView *h)
-{
-    if (!h)
-        return;
-    h->hideSection(COLUMN_FILEBROWSER_ESIZE);
-    h->hideSection(COLUMN_FILEBROWSER_TTH);
-    h->hideSection(COLUMN_FILEBROWSER_BR);
-    h->hideSection(COLUMN_FILEBROWSER_WH);
-    h->hideSection(COLUMN_FILEBROWSER_MVIDEO);
-    h->hideSection(COLUMN_FILEBROWSER_MAUDIO);
-    h->hideSection(COLUMN_FILEBROWSER_HIT);
-    h->hideSection(COLUMN_FILEBROWSER_TS);
-    h->hideSection(COLUMN_FILEBROWSER_PATH);
-}
-
-} // namespace
 
 void ShareBrowser::init(){
     setupUi(this);
@@ -63,6 +45,8 @@ void ShareBrowser::init(){
     SearchFileTypes::fillCombo(comboBox_FILETYPES);
     lineEdit_FILTER->setPlaceholderText(tr("Filter path (space-separated, -exclude)"));
     lineEdit_FILTER->setToolTip(tr("Filter by path/name. Space-separated terms; prefix - to exclude."));
+    // Let the filter field shrink so the folder pane is not capped by the toolbar row.
+    lineEdit_FILTER->setMinimumWidth(0);
 
     proxy = new ListFilterProxy(this);
     proxy->setSourceModel(list_model);
@@ -73,7 +57,7 @@ void ShareBrowser::init(){
     lineEdit_FILTER->installEventFilter(this);
 
     treeView_LPANE->setModel(tree_proxy);
-    hideTreeExtraColumns(treeView_LPANE->header());
+    ShareListColumns::hideTreeExtras(treeView_LPANE->header());
 
     treeView_LPANE->setExpanded(treeMapFromSource(tree_model->index(0, 0)), true);
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -134,9 +118,11 @@ void ShareBrowser::load(){
     WulforUtil::restoreTreeHeader(treeView_LPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
     WulforUtil::restoreTreeHeader(treeView_RPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_RPANE_STATE).toUtf8()));
 
-    hideTreeExtraColumns(treeView_LPANE->header());
+    ShareListColumns::hideTreeExtras(treeView_LPANE->header());
+    ShareListColumns listCols(treeView_RPANE->header());
+    listCols.hideInternal();
     if (!checkBox_FLAT->isChecked())
-        treeView_RPANE->header()->hideSection(COLUMN_FILEBROWSER_PATH);
+        listCols.setPathVisible(false);
 
     treeView_LPANE->setSortingEnabled(true);
     treeView_RPANE->setSortingEnabled(true);

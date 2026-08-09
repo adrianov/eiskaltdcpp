@@ -22,23 +22,32 @@
 
 using namespace dcpp;
 
-void WulforUtil::headerMenu(QTreeView *tree){
+void WulforUtil::headerMenu(QTreeView *tree, const QList<int> &skipColumns){
     if (!tree || !tree->model() || !tree->header())
         return;
+
+    for (int col : skipColumns)
+        tree->header()->hideSection(col);
 
     QMenu * mcols = new QMenu(nullptr);
     QAbstractItemModel *model = tree->model();
     QAction * column;
 
     int count = 0;
-    for (int i = 0; i < model->columnCount(); ++i)
-        count += tree->header()->isSectionHidden(tree->header()->logicalIndex(i))? 0 : 1;
+    for (int i = 0; i < model->columnCount(); ++i) {
+        const int index = tree->header()->logicalIndex(i);
+        if (skipColumns.contains(index))
+            continue;
+        count += tree->header()->isSectionHidden(index) ? 0 : 1;
+    }
 
     bool allowDisable = count > 1;
     int index;
 
     for (int i = 0; i < model->columnCount(); ++i) {
         index = tree->header()->logicalIndex(i);
+        if (skipColumns.contains(index))
+            continue;
         column = mcols->addAction(model->headerData(index, Qt::Horizontal).toString());
         column->setCheckable(true);
 

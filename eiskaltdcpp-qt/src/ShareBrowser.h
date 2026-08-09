@@ -99,6 +99,7 @@ private:
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
     void changeRootFlat(dcpp::DirectoryListing::Directory*);
+    void loadRoot(dcpp::DirectoryListing::Directory *root, bool flat);
     void applyFlatMode(bool on);
     void restoreSplitterSizes();
     void updateUpButton();
