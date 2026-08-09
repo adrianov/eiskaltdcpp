@@ -15,6 +15,7 @@
 bool WulforUtil::loadIcons()
 {
     app_icons_path = findAppIconsPath() + "/";
+    m_SystemFileIconCache.clear();
     const bool ok = appIcons.load(app_icons_path, getClientResourcesPath(),
                                   WBGET("app/use-icon-theme", false));
     if (ok)

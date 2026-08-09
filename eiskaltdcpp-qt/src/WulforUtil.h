@@ -74,6 +74,8 @@ public Q_SLOTS:
     QString getAspellDataPath() const;
 
     const QPixmap &getPixmapForFile(const QString&);
+    /** Directory row icon for file lists (system folder icon when available). */
+    const QPixmap &getPixmapForFolder();
 
     void textToHtml(QString&,bool=true);
 
@@ -160,6 +162,7 @@ private:
 
     QMap<QString, int> connectionSpeeds;
     QMap<QString, Icons> m_FileTypeMap;
+    QMap<QString, QPixmap> m_SystemFileIconCache;
     QMap<QString, QString> QtEnc2DCEnc;
 
     static const QString magnetSignature;
