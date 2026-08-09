@@ -84,6 +84,8 @@ public Q_SLOTS:
 
 private:
     bool okToFind(const SearchItem*);
+    /** Full-row dataChanged for a TTH/dir group root and its source children. */
+    void emitGroupChanged(SearchItem *group);
     int filterRole;
     int sortColumn;
     Qt::SortOrder sortOrder;

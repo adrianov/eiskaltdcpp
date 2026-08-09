@@ -51,3 +51,9 @@ QColor AppTheme::queuedFileHighlight()
 
     return softWash(c, WulforSettings::getInstance()->getInt(WI_APP_QUEUED_FILES_ALPHA, 56));
 }
+
+QColor AppTheme::offlineSourceHighlight()
+{
+    // Fixed mute wash for the trial; shared/queued keep user-configurable colors.
+    return softWash(QColor(0x80, 0x80, 0x80), 56);
+}

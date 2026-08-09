@@ -53,13 +53,26 @@ void SearchModel::removeItem(const SearchItem *item){
 
     delete item;
 
-    // Parent Count column (unique sources) changed when a grouped child was removed.
-    if (p != rootItem && parentIndex.isValid())
-        emit dataChanged(parentIndex, parentIndex);
+    // Count + offline wash may change for the remaining group.
+    if (p != rootItem)
+        emitGroupChanged(p);
 }
 
 void SearchModel::setFilterRole(int role){
     filterRole = role;
+}
+
+void SearchModel::emitGroupChanged(SearchItem *group)
+{
+    const QModelIndex idx = createIndexForItem(group);
+    if (!idx.isValid())
+        return;
+    emit dataChanged(idx, idx.sibling(idx.row(), columnCount() - 1));
+    for (SearchItem *child : group->children()) {
+        const QModelIndex c = createIndexForItem(child);
+        if (c.isValid())
+            emit dataChanged(c, c.sibling(c.row(), columnCount() - 1));
+    }
 }
 
 void SearchModel::refreshLocal(const QString &tth){
@@ -81,15 +94,7 @@ void SearchModel::refreshLocal(const QString &tth){
         child->clearQueued();
     }
 
-    const QModelIndex idx = createIndexForItem(item);
-    if (idx.isValid())
-        emit dataChanged(idx, idx.sibling(idx.row(), columnCount() - 1));
-
-    for (SearchItem *child : item->children()) {
-        const QModelIndex c = createIndexForItem(child);
-        if (c.isValid())
-            emit dataChanged(c, c.sibling(c.row(), columnCount() - 1));
-    }
+    emitGroupChanged(item);
 }
 
 bool SearchModel::okToFind(const SearchItem *item){

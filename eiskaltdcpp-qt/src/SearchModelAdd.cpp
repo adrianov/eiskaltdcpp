@@ -69,12 +69,17 @@ bool SearchModel::addResult
 
     if (!isDir && tths.contains(tth)) {
         parent = tths[tth];
-        if (parent->exists(cid))
+        if (parent->exists(cid)) {
+            // Same CID again (ShareIndex then hub SR): refresh offline wash.
+            emitGroupChanged(parent);
             return false;
+        }
     } else if (isDir && dirs.contains(dirKey)) {
         parent = dirs[dirKey];
-        if (parent->exists(cid))
+        if (parent->exists(cid)) {
+            emitGroupChanged(parent);
             return false;
+        }
     }
 
     QList<QVariant> item_data;
@@ -119,9 +124,8 @@ bool SearchModel::addResult
     parent->appendChild(item);
     endInsertRows();
 
-    // Count column (unique sources) changed; notify without a full resort.
-    if (parentIdx.isValid())
-        emit dataChanged(parentIdx, parentIdx);
+    // Count + offline wash (all-offline → mixed) for parent and siblings.
+    emitGroupChanged(parent);
 
     // Defer Count-column root resort to end of batch (avoids layoutChanged per child).
     if (sortColumn == COLUMN_SF_COUNT)
