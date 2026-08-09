@@ -100,16 +100,18 @@ set(QT_EXTRA_SOURCES
     src/FinishedTransfersDelete.cpp
     src/FinishedTransfersProxy.cpp
     src/FinishedTransfersSlots.cpp
-    src/HubFrameClient.cpp
-    src/HubFrameLinkMagnet.cpp
-    src/HubFrameLinkParser.cpp
-    src/HubFrameMsg.cpp
-    src/HubFrameUserList.cpp
-    src/HubFrameUsers.cpp
     src/hubframe/HubChatCmd.cpp
+    src/hubframe/HubChatCompose.cpp
     src/hubframe/HubFrameChatMenu.cpp
+    src/hubframe/HubFrameClient.cpp
+    src/hubframe/HubFrameLinkMagnet.cpp
+    src/hubframe/HubFrameLinkParser.cpp
     src/hubframe/HubFrameMenu.cpp
     src/hubframe/HubFrameMenuExec.cpp
+    src/hubframe/HubFrameMsg.cpp
+    src/hubframe/HubFrameUserList.cpp
+    src/hubframe/HubFrameUsers.cpp
+    src/hubframe/HubPaneLayout.cpp
     src/PmSpamFilter.cpp
     src/PMWindowEvents.cpp
     src/MainAppCli.cpp
@@ -117,10 +119,21 @@ set(QT_EXTRA_SOURCES
     src/MainAppShareIndex.cpp
     src/MainAppUnix.cpp
     src/MainAppXdg.cpp
-    src/MainWindowArena.cpp
-    src/MainWindowAbout.cpp
-    src/MainWindowStatus.cpp
-    src/MainWindowTools.cpp
+    src/mainwindow/MainWindow.cpp
+    src/mainwindow/MainWindowArena.cpp
+    src/mainwindow/MainWindowAbout.cpp
+    src/mainwindow/MainWindowStatus.cpp
+    src/mainwindow/MainWindowTools.cpp
+    src/mainwindow/actions/WindowActions.cpp
+    src/mainwindow/actions/ActionCatalog.cpp
+    src/mainwindow/actions/MenuLabels.cpp
+    src/mainwindow/WindowChrome.cpp
+    src/mainwindow/WindowPlace.cpp
+    src/mainwindow/WindowLife.cpp
+    src/mainwindow/WindowSetup.cpp
+    src/mainwindow/WindowShare.cpp
+    src/mainwindow/WindowTools.cpp
+    src/statusbar/StatusHud.cpp
     src/statusbar/StatusStrip.cpp
     src/statusbar/FreeSpaceBar.cpp
     src/statusbar/HashProgressBar.cpp
@@ -197,7 +210,7 @@ set(QT_EXTRA_SOURCES
     src/WulforSettingsOldMaps.cpp
     src/WulforSettingsI18n.cpp
     src/ShareIndex.cpp
-    src/ShareIndexConn.cpp
+    src/shareindex/ShareIndexStore.cpp
     src/ShareIndexIngest.cpp
     src/ShareIndexIngestWrite.cpp
     src/ShareIndexInsert.cpp
@@ -273,7 +286,7 @@ set(QT_EXTRA_SOURCES
     src/DownloadQueueModelMut.cpp
     src/DownloadQueueModelPath.cpp
     src/DownloadQueueModelSort.cpp
-    src/TransferDisplay.cpp
+    src/transferdisplay/TransferDisplay.cpp
 
     src/TransferViewActions.cpp
     src/TransferViewConnectionListeners.cpp
@@ -323,15 +336,16 @@ endif (NOT HAIKU)
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
 list (APPEND MOC_HDRS
+            ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindow.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/ListFilterProxy.h
             ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsers.h
             ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsersModel.h)
 list (REMOVE_ITEM MOC_HDRS
-            ${PROJECT_SOURCE_DIR}/src/MainWindowPrivate.h
+            ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindowPrivate.h
             ${PROJECT_SOURCE_DIR}/src/SearchFramePrivate.h
             ${PROJECT_SOURCE_DIR}/src/SearchFrameLocal.h
-            ${PROJECT_SOURCE_DIR}/src/HubFramePrivate.h
+            ${PROJECT_SOURCE_DIR}/src/hubframe/HubFramePrivate.h
             ${PROJECT_SOURCE_DIR}/src/DownloadQueuePrivate.h)
 
 if (NOT HAIKU AND NOT APPLE)
@@ -509,6 +523,7 @@ endif ()
 
 include_directories (${PROJECT_SOURCE_DIR}
                      ${PROJECT_SOURCE_DIR}/src
+                     ${PROJECT_SOURCE_DIR}/src/mainwindow
                      ${PROJECT_SOURCE_DIR}/src/fb2epub
                      ${PROJECT_SOURCE_DIR}/scriptengine
                      ${PROJECT_SOURCE_DIR}/..

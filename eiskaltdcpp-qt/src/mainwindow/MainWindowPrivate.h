@@ -22,7 +22,9 @@
 #include "ToolBar.h"
 #include "LineEdit.h"
 #include "HashProgress.h"
-#include "statusbar/StatusStrip.h"
+#include "statusbar/StatusHud.h"
+#include "mainwindow/WindowPlace.h"
+#include "mainwindow/WindowLife.h"
 
 #ifdef USE_JS
 class ScriptConsole;
@@ -32,14 +34,8 @@ class MainWindowPrivate {
 public:
     typedef QList<QAction*> ActionList;
 
-    bool isUnload = false;
-    bool exitBegin = false;
-
-    bool showMax = false;
-    int w = 800;
-    int h = 600;
-    int xPos = 0;
-    int yPos = 0;
+    WindowLife life;
+    WindowPlace place;
 
     QDockWidget *arena = nullptr;
     QDockWidget *transfer_dock = nullptr;
@@ -49,7 +45,7 @@ public:
     ToolBar *sBar = nullptr;
 
     LineEdit *searchLineEdit = nullptr;
-    StatusStrip status;
+    StatusHud status;
     HashProgress *_progress_dialog = nullptr;
 
     QMenu   *menuFile = nullptr;

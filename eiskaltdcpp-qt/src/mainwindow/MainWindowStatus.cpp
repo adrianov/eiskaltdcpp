@@ -16,12 +16,96 @@
 #include "WulforUtil.h"
 #include "VersionGlobal.h"
 
+#include "dcpp/TimerManager.h"
+
+#include <QAction>
+#include <QMenu>
 #include <QStatusBar>
 
 void MainWindow::initStatusBar(){
     Q_D(MainWindow);
     d->status.build(statusBar(), this, this);
 }
+
+void MainWindow::updateStatus(const QMap<QString, QString> &map){
+    Q_D(MainWindow);
+    d->status.apply(map, Notification::getInstance(), d->toolsAwayOn, d->toolsAwayOff);
+    updateHashProgressStatus();
+}
+
+void MainWindow::updateHashProgressStatus() {
+    Q_D(MainWindow);
+    d->status.updateHashing(d->fileRefreshShareHashProgress, progress_dialog());
+}
+
+void MainWindow::setStatusMessage(QString msg){
+    Q_D(MainWindow);
+    d->status.setLogMessage(msg);
+}
+
+void MainWindow::on(dcpp::TimerManagerListener::Second, uint64_t ticks) noexcept{
+    Q_D(MainWindow);
+    emit coreUpdateStats(d->status.sample(ticks));
+}
+
+void MainWindow::slotHideProgressSpace() {
+    Q_D(MainWindow);
+    d->status.toggleFreeSpace(d->toolsHideProgressSpace);
+}
+
+void MainWindow::slotHideLastStatus(){
+    Q_D(MainWindow);
+    d->status.toggleLastStatus(d->toolsHideLastStatus);
+    reloadSomeSettings();
+}
+
+void MainWindow::slotHideUsersStatistics(){
+    Q_D(MainWindow);
+    d->status.toggleUsersStats(d->toolsHideUsersStatisctics);
+    reloadSomeSettings();
+}
+
+void MainWindow::slotShowSpeedLimits(){
+    if (Notification *N = Notification::getInstance())
+        N->slotShowSpeedLimits();
+}
+
+void MainWindow::slotSuppressTxt(){
+    Notification *N = Notification::getInstance();
+    QAction *act = qobject_cast<QAction*>(sender());
+    if (N && act)
+        N->setSuppressTxt(act->isChecked());
+}
+
+void MainWindow::slotSuppressSnd(){
+    Notification *N = Notification::getInstance();
+    QAction *act = qobject_cast<QAction*>(sender());
+    if (N && act)
+        N->setSuppressSnd(act->isChecked());
+}
+
+#if defined(Q_OS_MAC)
+void MainWindow::initDockMenuBar(){
+    QMenu *menu = new QMenu(this);
+    QAction *setup_speed_lim = new QAction(tr("Setup speed limits"), menu);
+    setup_speed_lim->setIcon(WICON(AppIcons::eiSPEED_LIMIT_ON));
+
+    QMenu *menuAdditional = new QMenu(tr("Additional"), this);
+    QAction *actSuppressSnd = new QAction(tr("Suppress sound notifications"), menuAdditional);
+    QAction *actSuppressTxt = new QAction(tr("Suppress text notifications"), menuAdditional);
+    actSuppressSnd->setCheckable(true);
+    actSuppressTxt->setCheckable(true);
+
+    connect(setup_speed_lim, SIGNAL(triggered()), this, SLOT(slotShowSpeedLimits()));
+    connect(actSuppressTxt, SIGNAL(triggered()), this, SLOT(slotSuppressTxt()));
+    connect(actSuppressSnd, SIGNAL(triggered()), this, SLOT(slotSuppressSnd()));
+
+    menuAdditional->addActions(QList<QAction*>() << actSuppressTxt << actSuppressSnd);
+    menu->addAction(setup_speed_lim);
+    menu->addMenu(menuAdditional);
+    menu->setAsDockMenu();
+}
+#endif
 
 void MainWindow::redrawToolPanel(){
     Q_D(MainWindow);

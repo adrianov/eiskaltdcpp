@@ -10,8 +10,14 @@
 ***************************************************************************/
 
 #include "HubFrame.h"
-#include "HubFramePrivate.h"
+#include "hubframe/HubFramePrivate.h"
 #include "WulforUtil.h"
+#include "hubframe/HubFrameMenu.h"
+#include "Antispam.h"
+
+#include <QApplication>
+#include <QClipboard>
+#include <QItemSelectionModel>
 
 using namespace dcpp;
 
@@ -151,3 +157,245 @@ void HubFrame::slotFilterTextChanged(){
     if (comboBox_COLUMNS->hasFocus())
         lineEdit_FILTER->setFocus();
 }
+
+template < QString (UserListItem::*func)() const >
+static void copyTagToClipboard(QModelIndexList &list){
+    QString ret = "";
+    UserListItem *item = nullptr;
+
+    for (const auto &i : list) {
+        item = reinterpret_cast<UserListItem*> ( i.internalPointer() );
+
+        if ( !ret.isEmpty() )
+            ret += "\n";
+
+        if ( item )
+            ret += (item->*func)();
+    }
+
+    qApp->clipboard()->setText ( ret, QClipboard::Clipboard );
+}
+
+template < qulonglong (UserListItem::*func)() const >
+static void copyTagToClipboard(QModelIndexList &list){
+    QString ret = "";
+    UserListItem *item = nullptr;
+
+    for (const auto &i : list) {
+        item = reinterpret_cast<UserListItem*> ( i.internalPointer() );
+
+        if ( !ret.isEmpty() )
+            ret += "\n";
+
+        if ( item )
+            ret += WulforUtil::formatBytes((item->*func)());
+    }
+
+    qApp->clipboard()->setText ( ret, QClipboard::Clipboard );
+}
+
+void HubFrame::slotUserListMenu(const QPoint&){
+    QItemSelectionModel *selection_model = treeView_USERS->selectionModel();
+    QModelIndexList proxy_list = selection_model->selectedRows(0);
+
+    if (proxy_list.size() < 1)
+        return;
+
+    QString cid = "";
+
+    Q_D(HubFrame);
+
+    if (d->proxy && treeView_USERS->model() == d->proxy){
+        QModelIndex i = d->proxy->mapToSource(proxy_list.at(0));
+        cid = reinterpret_cast<UserListItem*>(i.internalPointer())->getCID();
+    }
+    else{
+        QModelIndex i = proxy_list.at(0);
+        cid = reinterpret_cast<UserListItem*>(i.internalPointer())->getCID();
+    }
+
+    HubFrameMenu::Action action = HubFrameMenu::getInstance()->execUserMenu(d->client, cid);
+    UserListItem *item = nullptr;
+
+    proxy_list = selection_model->selectedRows(0);
+
+    if (proxy_list.size() < 1)
+        return;
+
+    QModelIndexList list;
+
+    if (d->proxy && treeView_USERS->model() == d->proxy){
+        for (const auto &i : proxy_list)
+            list.push_back(d->proxy->mapToSource(i));
+    }
+    else
+        list = proxy_list;
+
+    switch (action){
+        case HubFrameMenu::None:
+        {
+            return;
+        }
+        case HubFrameMenu::BrowseFilelist:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    browseUserFiles(item->getCID());
+            }
+
+            break;
+        }
+        case HubFrameMenu::PrivateMessage:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    addPM(item->getCID(), "", false);
+            }
+
+            break;
+        }
+        case HubFrameMenu::CopyText:
+        {
+            QString ttip = "";
+
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    ttip += getUserInfo(item) + "\n";
+
+                ttip += "\n";
+            }
+
+            if (!ttip.isEmpty())
+                qApp->clipboard()->setText(ttip, QClipboard::Clipboard);
+
+            break;
+        }
+        case HubFrameMenu::CopyNick:
+        {
+            copyTagToClipboard<&UserListItem::getNick> (list);
+
+            break;
+        }
+        case HubFrameMenu::CopyComment:
+        {
+            copyTagToClipboard<&UserListItem::getComment> (list);
+
+            break;
+        }
+        case HubFrameMenu::CopyIP:
+        {
+            copyTagToClipboard<&UserListItem::getIP> (list);
+
+            break;
+        }
+        case HubFrameMenu::CopyShare:
+        {
+            copyTagToClipboard<&UserListItem::getShare> (list);
+
+            break;
+        }
+        case HubFrameMenu::CopyTag:
+        {
+            copyTagToClipboard<&UserListItem::getTag> (list);
+
+            break;
+        }
+        case HubFrameMenu::CopyEmail:
+        {
+            copyTagToClipboard<&UserListItem::getEmail> (list);
+
+            break;
+        }
+        case HubFrameMenu::MatchQueue:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    browseUserFiles(item->getCID(), true);
+            }
+
+            break;
+        }
+        case HubFrameMenu::FavoriteAdd:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    addUserToFav(item->getCID());
+            }
+
+            break;
+        }
+        case HubFrameMenu::FavoriteRem:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    delUserFromFav(item->getCID());
+            }
+
+            break;
+        }
+        case HubFrameMenu::GrantSlot:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    grantSlot(item->getCID());
+            }
+
+            break;
+        }
+        case HubFrameMenu::RemoveQueue:
+        {
+            for (const auto &i : list){
+                item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                if (item)
+                    delUserFromQueue(item->getCID());
+            }
+
+            break;
+        }
+        case HubFrameMenu::AntiSpamWhite:
+        {
+
+            if (AntiSpam::getInstance()){
+                for (const auto &i : list){
+                    item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                    (*AntiSpam::getInstance()) << eIN_WHITE << item->getNick();
+                }
+            }
+
+            break;
+        }
+        case HubFrameMenu::AntiSpamBlack:
+        {
+            if (AntiSpam::getInstance()){
+                for (const auto &i : list){
+                    item = reinterpret_cast<UserListItem*>(i.internalPointer());
+
+                    (*AntiSpam::getInstance()) << eIN_BLACK << item->getNick();
+                }
+            }
+
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+

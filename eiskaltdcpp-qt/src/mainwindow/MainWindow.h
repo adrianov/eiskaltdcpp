@@ -114,6 +114,15 @@ friend class dcpp::Singleton<MainWindow>;
         MAINWINDOW_MENU_SLOTS
 
     private:
+        friend class WindowLife;
+        friend class WindowPlace;
+        friend class WindowChrome;
+        friend class WindowActions;
+        friend class WindowSetup;
+        friend class WindowShare;
+        friend class WindowTools;
+        friend class MenuLabels;
+
         MainWindow (QWidget *parent=nullptr);
         virtual ~MainWindow();
 

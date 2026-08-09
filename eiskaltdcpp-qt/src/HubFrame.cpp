@@ -11,6 +11,7 @@
 #include "HubFrame.h"
 #include "ChatSearchBar.h"
 #include "hubframe/HubChatCmd.h"
+#include "hubframe/HubChatCompose.h"
 #include "hubframe/HubFrameMenu.h"
 #include "PMWindow.h"
 #include "WulforUtil.h"
@@ -19,7 +20,6 @@
 #include "HubManager.h"
 #include "Notification.h"
 #include "ShellCommandRunner.h"
-#include "EmoticonDialog.h"
 #include "WulforSettings.h"
 #include "FlowLayout.h"
 #include "SearchFrame.h"
@@ -33,6 +33,7 @@
 
 #include "UserListModel.h"
 #include "EmoticonFactory.h"
+#include "hubframe/HubPaneLayout.h"
 
 #include "dcpp/LogManager.h"
 #include "dcpp/ClientManagerHubGuard.h"
@@ -65,27 +66,9 @@
 #include <QShortcut>
 #include <QHeaderView>
 
-
-#include <QtDebug>
-
 #include <exception>
 
-#include "HubFramePrivate.h"
-
-static inline void clearLayout(QLayout *l){
-    if (!l)
-        return;
-
-    QLayoutItem *item = nullptr;
-    while ((item = l->takeAt(0))){
-        l->removeWidget(item->widget());
-        item->widget()->deleteLater();
-
-        delete item;
-    }
-
-    l->invalidate();
-}
+#include "hubframe/HubFramePrivate.h"
 
 HubFrame::HubFrame(QWidget *parent, QString hub="", QString encoding="")
     : QWidget(parent)
@@ -122,6 +105,8 @@ HubFrame::HubFrame(QWidget *parent, QString hub="", QString encoding="")
 
     d->codec = WulforUtil::getInstance()->codecForEncoding(encoding);
 
+    d->compose = new HubChatCompose(this);
+
     init();
 
     FavoriteHubEntry* entry = FavoriteManager::getInstance()->getFavoriteHubEntry(_tq(hub));
@@ -132,9 +117,6 @@ HubFrame::HubFrame(QWidget *parent, QString hub="", QString encoding="")
     d->client->connect();
 
     setAttribute(Qt::WA_DeleteOnClose);
-
-    d->out_messages_index = 0;
-    d->out_messages_unsent = false;
 
     FavoriteManager::getInstance()->addListener(this);
 }
@@ -148,6 +130,7 @@ HubFrame::~HubFrame(){
 
     delete d->proxy;
     delete d->model;
+    delete d->compose;
 
     delete d;
 }
@@ -236,7 +219,7 @@ bool HubFrame::eventFilter(QObject *obj, QEvent *e){
                 */
             }
         }
-        else if ((isChat || isUserList) && m_e->button() == Qt::MidButton)
+        else if ((isChat || isUserList) && m_e->button() == Qt::MiddleButton)
         {
             QString nick;
             QString cid;
@@ -441,6 +424,9 @@ void HubFrame::showEvent(QShowEvent *e){
     d->hasMessages = false;
     d->hasHighlightMessages = false;
 
+    if (d->panes)
+        d->panes->restore();
+
     MainWindow::getInstance()->redrawToolPanel();
 }
 
@@ -461,8 +447,8 @@ void HubFrame::init(){
     d->model = new UserListModel(this);
     d->proxy = nullptr;
 
-    splitter_2->setHandleWidth(4);
-    splitter_2->setChildrenCollapsible(false);
+    d->panes = new HubPaneLayout(this);
+    d->panes->bind(splitter_2, treeView_USERS, textEdit_CHAT);
 
     treeView_USERS->setModel(d->model);
     treeView_USERS->setSortingEnabled(true);
@@ -501,16 +487,9 @@ void HubFrame::init(){
     toolButton_HIDE->setIcon(WICON(AppIcons::eiEDITDELETE));
 
     frame_SMILES->setLayout(new FlowLayout(frame_SMILES));
-    frame_SMILES->setVisible(false);
-
-    QSize sz;
-    Q_UNUSED(sz);
 
     if (EmoticonFactory::getInstance())
-        EmoticonFactory::getInstance()->fillLayout(frame_SMILES->layout(), sz);
-
-    for (const auto &l : frame_SMILES->findChildren<EmoticonLabel*>())
-        connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
+        d->compose->rebuildPanel();
 
     connect(this, SIGNAL(coreConnecting(QString)), this, SLOT(addStatus(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreConnected(QString)), this, SLOT(addStatus(QString)), Qt::QueuedConnection);
@@ -575,7 +554,7 @@ void HubFrame::init(){
     d->completer->setMaxVisibleItems(10);
     plainTextEdit_INPUT->setCompleter(d->completer, d->model);
 
-    syncFieldHeights();
+    d->panes->alignFields(lineEdit_FILTER, comboBox_COLUMNS, plainTextEdit_INPUT, toolButton_SMILE);
 
     slotSettingsChanged(WS_APP_EMOTICON_THEME, WSGET(WS_APP_EMOTICON_THEME));//toggle emoticon button
 }
@@ -637,50 +616,37 @@ void HubFrame::save(){
     Q_D(HubFrame);
 
     WSSET(WS_CHAT_USERLIST_STATE, treeView_USERS->header()->saveState().toBase64());
-    WISET(WI_CHAT_WIDTH, textEdit_CHAT->width());
-    WISET(WI_CHAT_USERLIST_WIDTH, treeView_USERS->width());
+    if (d->panes)
+        d->panes->save();
     WISET(WI_CHAT_SORT_COLUMN, d->model->getSortColumn());
     WISET(WI_CHAT_SORT_ORDER, WulforUtil::getInstance()->sortOrderToInt(d->model->getSortOrder()));
     WSSET("hubframe/chat-background-color", textEdit_CHAT->palette().color(QPalette::Active, QPalette::Base).name());
 }
 
 void HubFrame::load(){
-    const int w_chat = WIGET(WI_CHAT_WIDTH), w_ulist = WIGET(WI_CHAT_USERLIST_WIDTH);
+    WulforUtil::restoreTreeHeader(treeView_USERS->header(),
+                                  QByteArray::fromBase64(WSGET(WS_CHAT_USERLIST_STATE).toUtf8()));
 
-    QString ustate = WSGET(WS_CHAT_USERLIST_STATE);
-
-    WulforUtil::restoreTreeHeader(treeView_USERS->header(), QByteArray::fromBase64(ustate.toUtf8()));
-
-    if (w_chat >= 0 && w_ulist >= 0){
-        QList<int> frames;
-
-        frames << w_chat << w_ulist;
-
-        splitter_2->setSizes(frames);
-    }
-
-    treeView_USERS->sortByColumn(WIGET(WI_CHAT_SORT_COLUMN), WulforUtil::getInstance()->intToSortOrder(WIGET(WI_CHAT_SORT_ORDER)));
+    treeView_USERS->sortByColumn(WIGET(WI_CHAT_SORT_COLUMN),
+                                 WulforUtil::getInstance()->intToSortOrder(WIGET(WI_CHAT_SORT_ORDER)));
 
     reloadSomeSettings();
 }
 
 void HubFrame::reloadSomeSettings(){
-    label_USERSTATE->setVisible(WBGET(WB_USERS_STATISTICS));
+    Q_D(HubFrame);
 
+    label_USERSTATE->setVisible(WBGET(WB_USERS_STATISTICS));
     label_LAST_STATUS->setVisible(WBGET(WB_LAST_STATUS));
 
-    QPalette p = textEdit_CHAT->palette();
     QColor clr = AppTheme::chatBackground();
-
-    if (WBGET("hubframe/change-chat-background-color", false)){
+    if (WBGET("hubframe/change-chat-background-color", false)) {
         clr.setNamedColor(WSGET("hubframe/chat-background-color"));
-
         if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
             clr = AppTheme::chatBackground();
     }
-
-    p.setColor(QPalette::Base, clr);
-    textEdit_CHAT->setPalette(p);
+    if (d->panes)
+        d->panes->fillChat(clr);
 }
 
 QWidget *HubFrame::getWidget(){
@@ -808,20 +774,8 @@ void HubFrame::sendChat(QString msg, bool thirdPerson, bool stripNewLines){
     if (!script_ret && !parseForCmd(msg, this))
         d->client->hubMessage(msg.toStdString(), thirdPerson);
 
-    //qDebug() << "cmd: " << cmd <<" sript_ret: " << script_ret;
-    if (!thirdPerson){
-        if (d->out_messages_unsent){
-            d->out_messages.removeLast();
-            d->out_messages_unsent = false;
-        }
-
-        d->out_messages << msg;
-
-        if (d->out_messages.size() > WIGET(WI_OUT_IN_HIST))
-            d->out_messages.removeFirst();
-
-        d->out_messages_index = d->out_messages.size()-1;
-    }
+    if (!thirdPerson)
+        d->compose->remember(msg);
 }
 
 bool HubFrame::parseForCmd(QString line, QWidget *wg){
@@ -1109,17 +1063,8 @@ void HubFrame::follow(QString redirect){
     d->client->connect();
 }
 
-void HubFrame::syncFieldHeights(){
-    const int h = qMax(lineEdit_FILTER->sizeHint().height(),
-                       comboBox_COLUMNS->sizeHint().height());
-
-    lineEdit_FILTER->setFixedHeight(h);
-    comboBox_COLUMNS->setFixedHeight(h);
-    plainTextEdit_INPUT->setMinimumHeight(h);
-    toolButton_SMILE->setFixedSize(h, h);
-}
-
 void HubFrame::updateStyles(){
+    Q_D(HubFrame);
     QString custom_font_desc = WSGET(WS_CHAT_FONT);
     QFont custom_font;
 
@@ -1141,7 +1086,8 @@ void HubFrame::updateStyles(){
     if (!custom_font_desc.isEmpty() && custom_font.fromString(custom_font_desc))
         treeView_USERS->setFont(custom_font);
 
-    syncFieldHeights();
+    if (d->panes)
+        d->panes->alignFields(lineEdit_FILTER, comboBox_COLUMNS, plainTextEdit_INPUT, toolButton_SMILE);
 }
 
 void HubFrame::slotActivate(){
@@ -1172,247 +1118,6 @@ void HubFrame::slotPMClosed(QString cid){
 
     if (it != d->pm.end())
         d->pm.erase(it);
-}
-
-template < QString (UserListItem::*func)() const >
-static void copyTagToClipboard(QModelIndexList &list){
-    QString ret = "";
-    UserListItem *item = nullptr;
-
-    for (const auto &i : list) {
-        item = reinterpret_cast<UserListItem*> ( i.internalPointer() );
-
-        if ( !ret.isEmpty() )
-            ret += "\n";
-
-        if ( item )
-            ret += (item->*func)();
-    }
-
-    qApp->clipboard()->setText ( ret, QClipboard::Clipboard );
-}
-
-template < qulonglong (UserListItem::*func)() const >
-static void copyTagToClipboard(QModelIndexList &list){
-    QString ret = "";
-    UserListItem *item = nullptr;
-
-    for (const auto &i : list) {
-        item = reinterpret_cast<UserListItem*> ( i.internalPointer() );
-
-        if ( !ret.isEmpty() )
-            ret += "\n";
-
-        if ( item )
-            ret += WulforUtil::formatBytes((item->*func)());
-    }
-
-    qApp->clipboard()->setText ( ret, QClipboard::Clipboard );
-}
-
-void HubFrame::slotUserListMenu(const QPoint&){
-    QItemSelectionModel *selection_model = treeView_USERS->selectionModel();
-    QModelIndexList proxy_list = selection_model->selectedRows(0);
-
-    if (proxy_list.size() < 1)
-        return;
-
-    QString cid = "";
-
-    Q_D(HubFrame);
-
-    if (d->proxy && treeView_USERS->model() == d->proxy){
-        QModelIndex i = d->proxy->mapToSource(proxy_list.at(0));
-        cid = reinterpret_cast<UserListItem*>(i.internalPointer())->getCID();
-    }
-    else{
-        QModelIndex i = proxy_list.at(0);
-        cid = reinterpret_cast<UserListItem*>(i.internalPointer())->getCID();
-    }
-
-    Menu::Action action = Menu::getInstance()->execUserMenu(d->client, cid);
-    UserListItem *item = nullptr;
-
-    proxy_list = selection_model->selectedRows(0);
-
-    if (proxy_list.size() < 1)
-        return;
-
-    QModelIndexList list;
-
-    if (d->proxy && treeView_USERS->model() == d->proxy){
-        for (const auto &i : proxy_list)
-            list.push_back(d->proxy->mapToSource(i));
-    }
-    else
-        list = proxy_list;
-
-    switch (action){
-        case Menu::None:
-        {
-            return;
-        }
-        case Menu::BrowseFilelist:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    browseUserFiles(item->getCID());
-            }
-
-            break;
-        }
-        case Menu::PrivateMessage:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    addPM(item->getCID(), "", false);
-            }
-
-            break;
-        }
-        case Menu::CopyText:
-        {
-            QString ttip = "";
-
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    ttip += getUserInfo(item) + "\n";
-
-                ttip += "\n";
-            }
-
-            if (!ttip.isEmpty())
-                qApp->clipboard()->setText(ttip, QClipboard::Clipboard);
-
-            break;
-        }
-        case Menu::CopyNick:
-        {
-            copyTagToClipboard<&UserListItem::getNick> (list);
-
-            break;
-        }
-        case Menu::CopyComment:
-        {
-            copyTagToClipboard<&UserListItem::getComment> (list);
-
-            break;
-        }
-        case Menu::CopyIP:
-        {
-            copyTagToClipboard<&UserListItem::getIP> (list);
-
-            break;
-        }
-        case Menu::CopyShare:
-        {
-            copyTagToClipboard<&UserListItem::getShare> (list);
-
-            break;
-        }
-        case Menu::CopyTag:
-        {
-            copyTagToClipboard<&UserListItem::getTag> (list);
-
-            break;
-        }
-        case Menu::CopyEmail:
-        {
-            copyTagToClipboard<&UserListItem::getEmail> (list);
-
-            break;
-        }
-        case Menu::MatchQueue:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    browseUserFiles(item->getCID(), true);
-            }
-
-            break;
-        }
-        case Menu::FavoriteAdd:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    addUserToFav(item->getCID());
-            }
-
-            break;
-        }
-        case Menu::FavoriteRem:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    delUserFromFav(item->getCID());
-            }
-
-            break;
-        }
-        case Menu::GrantSlot:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    grantSlot(item->getCID());
-            }
-
-            break;
-        }
-        case Menu::RemoveQueue:
-        {
-            for (const auto &i : list){
-                item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                if (item)
-                    delUserFromQueue(item->getCID());
-            }
-
-            break;
-        }
-        case Menu::AntiSpamWhite:
-        {
-
-            if (AntiSpam::getInstance()){
-                for (const auto &i : list){
-                    item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                    (*AntiSpam::getInstance()) << eIN_WHITE << item->getNick();
-                }
-            }
-
-            break;
-        }
-        case Menu::AntiSpamBlack:
-        {
-            if (AntiSpam::getInstance()){
-                for (const auto &i : list){
-                    item = reinterpret_cast<UserListItem*>(i.internalPointer());
-
-                    (*AntiSpam::getInstance()) << eIN_BLACK << item->getNick();
-                }
-            }
-
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
 }
 
 void HubFrame::slotHeaderMenu(const QPoint&){
@@ -1457,55 +1162,13 @@ void HubFrame::slotShellFinished(bool ok, QString output){
 }
 
 void HubFrame::nextMsg(){
-    if (!plainTextEdit_INPUT->hasFocus())
-        return;
-
     Q_D(HubFrame);
-
-    if (d->out_messages_index < 0 ||
-        d->out_messages_index+1 > d->out_messages.size()-1 ||
-        d->out_messages.isEmpty())
-        return;
-
-    if (d->out_messages.at(d->out_messages_index) != plainTextEdit_INPUT->toPlainText())
-        d->out_messages[d->out_messages_index] = plainTextEdit_INPUT->toPlainText();
-
-    if (d->out_messages_index+1 <= d->out_messages.size()-1)
-        d->out_messages_index++;
-
-    plainTextEdit_INPUT->setPlainText(d->out_messages.at(d->out_messages_index));
-
-    if (d->out_messages_unsent && d->out_messages_index == d->out_messages.size()-1){
-        d->out_messages.removeLast();
-        d->out_messages_unsent = false;
-        d->out_messages_index = d->out_messages.size()-1;
-    }
+    d->compose->nextMsg();
 }
 
 void HubFrame::prevMsg(){
-    if (!plainTextEdit_INPUT->hasFocus())
-        return;
-
     Q_D(HubFrame);
-
-    if (d->out_messages_index < 1 ||
-        d->out_messages_index-1 > d->out_messages.size()-1 ||
-        d->out_messages.isEmpty())
-        return;
-
-    if (!d->out_messages_unsent && d->out_messages_index == d->out_messages.size()-1){
-        d->out_messages << plainTextEdit_INPUT->toPlainText();
-        d->out_messages_unsent = true;
-        d->out_messages_index++;
-    }
-
-    if (d->out_messages.at(d->out_messages_index) != plainTextEdit_INPUT->toPlainText())
-        d->out_messages[d->out_messages_index] = plainTextEdit_INPUT->toPlainText();
-
-    if (d->out_messages_index >= 1)
-        d->out_messages_index--;
-
-    plainTextEdit_INPUT->setPlainText(d->out_messages.at(d->out_messages_index));
+    d->compose->prevMsg();
 }
 
 void HubFrame::slotShowSearchBar(){
@@ -1519,86 +1182,18 @@ void HubFrame::slotHideSearchBar(){
 }
 
 void HubFrame::slotSmile(){
-    if (!(WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance()))
-        return;
-
-    if (WBGET(WB_CHAT_USE_SMILE_PANEL)){
-        frame_SMILES->setVisible(!frame_SMILES->isVisible());
-    }
-    else {
-        EmoticonDialog *dialog = new EmoticonDialog(this);
-
-        if (dialog->exec() == QDialog::Accepted) {
-
-            QString smiley = dialog->getEmoticonText();
-
-            if (!smiley.isEmpty()) {
-
-                smiley.replace("&lt;", "<");
-                smiley.replace("&gt;", ">");
-                smiley.replace("&amp;", "&");
-                smiley.replace("&apos;", "\'");
-                smiley.replace("&quot;", "\"");
-
-                smiley += " ";
-
-                plainTextEdit_INPUT->textCursor().insertText(smiley);
-                plainTextEdit_INPUT->setFocus();
-            }
-        }
-
-        delete dialog;
-    }
+    Q_D(HubFrame);
+    d->compose->toggleSmiles();
 }
 
 void HubFrame::slotSmileClicked(){
-    EmoticonLabel *lbl = qobject_cast<EmoticonLabel* >(sender());
-
-    if (!lbl)
-        return;
-
-    QString smiley = lbl->toolTip();
-
-    if (!smiley.isEmpty()) {
-
-        smiley.replace("&lt;", "<");
-        smiley.replace("&gt;", ">");
-        smiley.replace("&amp;", "&");
-        smiley.replace("&apos;", "\'");
-        smiley.replace("&quot;", "\"");
-
-        smiley += " ";
-
-        plainTextEdit_INPUT->textCursor().insertText(smiley);
-        plainTextEdit_INPUT->setFocus();
-    }
-
-    if (WBGET(WB_CHAT_HIDE_SMILE_PANEL))
-        frame_SMILES->setVisible(false);
+    Q_D(HubFrame);
+    d->compose->smileClicked(sender());
 }
 
 void HubFrame::slotSmileContextMenu(){
-    QMenu *m = new QMenu(this);
-
-    for (const auto &f : QDir(WulforUtil::getInstance()->getEmoticonsPath())
-                              .entryList(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot)){
-        if (!f.isEmpty()){
-            QAction * act = m->addAction(f);
-            act->setCheckable(true);
-
-            if (f == WSGET(WS_APP_EMOTICON_THEME)){
-                act->setChecked(false);
-                act->setChecked(true);
-            }
-        }
-    }
-
-    QAction *a = m->exec(QCursor::pos());
-
-    if (a && a->isChecked())
-        WSSET(WS_APP_EMOTICON_THEME, a->text());
-
-    m->deleteLater();
+    Q_D(HubFrame);
+    d->compose->smileThemeMenu();
 }
 
 void HubFrame::slotInputTextChanged(){
@@ -1740,23 +1335,14 @@ void HubFrame::slotHubMenu(QAction *res) {
 }
 
 void HubFrame::slotSettingsChanged(const QString &key, const QString &value){
+    Q_D(HubFrame);
+
     if (key == WS_CHAT_FONT || key == WS_CHAT_ULIST_FONT)
         updateStyles();
     else if (key == WS_APP_EMOTICON_THEME){
         if (EmoticonFactory::getInstance()){
             EmoticonFactory::getInstance()->load();
-
-            frame_SMILES->setVisible(false);
-
-            clearLayout(frame_SMILES->layout());
-
-            QSize sz;
-            Q_UNUSED(sz);
-
-            EmoticonFactory::getInstance()->fillLayout(frame_SMILES->layout(), sz);
-
-            for (const auto &l : frame_SMILES->findChildren<EmoticonLabel*>())
-                connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
+            d->compose->rebuildPanel();
 
             if (WBGET(WB_APP_ENABLE_EMOTICON))
                 EmoticonFactory::getInstance()->addEmoticons(textEdit_CHAT->document());
@@ -1770,25 +1356,15 @@ void HubFrame::slotSettingsChanged(const QString &key, const QString &value){
 }
 
 void HubFrame::slotBoolSettingsChanged(const QString &key, int value){
+    Q_D(HubFrame);
+
     if (key == WB_APP_ENABLE_EMOTICON){
         bool enable = static_cast<bool>(value);
 
         if (enable){
             EmoticonFactory::newInstance();
             EmoticonFactory::getInstance()->load();
-
-            frame_SMILES->setVisible(false);
-
-            clearLayout(frame_SMILES->layout());
-
-            QSize sz;
-            Q_UNUSED(sz);
-
-            EmoticonFactory::getInstance()->fillLayout(frame_SMILES->layout(), sz);
-
-            for (const auto &l : frame_SMILES->findChildren<EmoticonLabel*>())
-                connect(l, SIGNAL(clicked()), this, SLOT(slotSmileClicked()));
-
+            d->compose->rebuildPanel();
             EmoticonFactory::getInstance()->addEmoticons(textEdit_CHAT->document());
         }
         else{
@@ -1796,8 +1372,7 @@ void HubFrame::slotBoolSettingsChanged(const QString &key, int value){
                 EmoticonFactory::deleteInstance();
 
             frame_SMILES->setVisible(false);
-
-            clearLayout(frame_SMILES->layout());
+            d->compose->clearPanel();
         }
 
         toolButton_SMILE->setVisible(enable);

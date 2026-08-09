@@ -5,7 +5,7 @@
  */
 
 #include "HubFrame.h"
-#include "HubFramePrivate.h"
+#include "hubframe/HubFramePrivate.h"
 
 #include "Antispam.h"
 #include "ArenaWidgetFactory.h"

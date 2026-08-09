@@ -20,6 +20,7 @@
 #include <QAction>
 #include <QDesktopServices>
 #include <QHash>
+#include <QMessageBox>
 #include <QUrl>
 
 using namespace dcpp;
@@ -261,5 +262,9 @@ void MainWindow::slotAboutClient() {
         );
 
     a.exec();
+}
+
+void MainWindow::slotAboutQt(){
+    QMessageBox::aboutQt(this);
 }
 

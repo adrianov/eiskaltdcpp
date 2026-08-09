@@ -42,6 +42,7 @@ class ShellCommandRunner;
 class PMWindow;
 class HubFramePrivate;
 class HubChatCmd;
+class HubChatCompose;
 
 using namespace dcpp;
 
@@ -64,6 +65,7 @@ class HubFrame :
 
     using Menu = HubFrameMenu;
     friend class HubChatCmd;
+    friend class HubChatCompose;
 
 public:
     class LinkParser{
@@ -214,7 +216,6 @@ private:
     void pmUserEvent(const QString &, const QString &);
 
     void updateStyles();
-    void syncFieldHeights();
 
     /** Extracts data from user identity */
     void getParams(VarMap &, const Identity &);

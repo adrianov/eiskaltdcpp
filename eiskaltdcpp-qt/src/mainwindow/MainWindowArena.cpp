@@ -11,6 +11,12 @@
 
 #include "MainWindow.h"
 #include "MainWindowPrivate.h"
+#include "WulforUtil.h"
+#include "PMWindow.h"
+#include "ArenaWidgetManager.h"
+#include "Magnet.h"
+#include "HubManager.h"
+#include "HubFrame.h"
 #include "ArenaWidgetFactory.h"
 #include "DownloadQueue.h"
 #include "FinishedTransfers.h"
@@ -23,6 +29,11 @@
 #include "Secretary.h"
 #include "queuedusers/QueuedUsers.h"
 
+#include "dcpp/FavoriteManager.h"
+#include "dcpp/SettingsManager.h"
+
+#include <typeinfo>
+#include <QUrl>
 #include <QToolButton>
 #include <QToolBar>
 
@@ -145,3 +156,188 @@ ArenaWidget *MainWindow::widgetForRole(ArenaWidget::Role r) const{
 
     return awgt;
 }
+
+void MainWindow::newHubFrame(QString address, QString enc){
+    if (address.isEmpty())
+        return;
+
+    address = QUrl::fromPercentEncoding(address.toUtf8());
+
+    HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->getHub(address));
+
+    if (fr){
+        ArenaWidgetManager::getInstance()->activate(fr);
+
+        return;
+    }
+
+    fr = ArenaWidgetFactory().create<HubFrame, QWidget*, QString, QString>(this, address, enc);
+
+    ArenaWidgetManager::getInstance()->activate(fr);
+}
+
+void MainWindow::autoconnect(){
+    const FavoriteHubEntryList& fl = FavoriteManager::getInstance()->getFavoriteHubs();
+
+    for (const auto &i : fl) {
+        FavoriteHubEntry* entry = i;
+
+        if (entry->getConnect()) {
+            if (entry->getNick().empty() && SETTING(NICK).empty())
+                continue;
+
+            QString encoding = WulforUtil::getInstance()->dcEnc2QtEnc(QString::fromStdString(entry->getEncoding()));
+
+            newHubFrame(QString::fromStdString(entry->getServer()), encoding);
+        }
+    }
+}
+
+void MainWindow::parseCmdLine(const QStringList &args){
+    for (const auto &arg : args){
+        if (arg.startsWith("magnet:?")){
+            Magnet m(this);
+            m.setLink(arg);
+            m.exec();
+        }
+        else if (arg.startsWith("dchub://") || arg.startsWith("nmdcs://")){
+            newHubFrame(arg, "");
+        }
+        else if (arg.startsWith("adc://") || arg.startsWith("adcs://")){
+            newHubFrame(arg, "UTF-8");
+        }
+    }
+}
+
+void MainWindow::parseInstanceLine(const QString &data){
+    if (!isVisible()){
+        show();
+        raise();
+
+        redrawToolPanel();
+    }
+
+    const QStringList args = data.split("\n", WULFOR_SKIP_EMPTY);
+    parseCmdLine(args);
+}
+
+void MainWindow::insertWidget ( ArenaWidget* awgt ) {
+    if (!awgt || (awgt && (awgt->state() & ArenaWidget::Hidden)))
+        return;
+
+    Q_D(MainWindow);
+
+    QAction *act = d->menuWidgets->addAction(awgt->getPixmap(), awgt->getArenaShortTitle());
+
+    d->menuWidgetsHash.insert(act, awgt);
+
+    connect(act, SIGNAL(triggered(bool)), this, SLOT(slotWidgetsToggle()));
+}
+
+void MainWindow::removeWidget ( ArenaWidget* awgt ) {
+    Q_D(MainWindow);
+
+    QAction *act = d->menuWidgetsHash.key(awgt);
+
+    if (!act)
+        return;
+
+    d->menuWidgetsHash.remove(act);
+
+    act->deleteLater();
+}
+
+void MainWindow::updated ( ArenaWidget* awgt ) {
+    if (!awgt)
+        return;
+
+    if (awgt->state() & ArenaWidget::Hidden)
+        removeWidget(awgt);
+    else
+        insertWidget(awgt);
+}
+
+void MainWindow::slotUpdateFavHubMenu() {
+    Q_D(MainWindow);
+
+    d->favHubMenu->clear();
+
+    const FavoriteHubEntryList& fl = FavoriteManager::getInstance()->getFavoriteHubs();
+
+    for (auto &i : fl) {
+        const FavoriteHubEntry &entry = *i;
+
+        QString url = _q(entry.getServer());
+        QString name = entry.getName().empty() ? tr("[No name]") : _q(entry.getName());
+        QString encoding = WulforUtil::getInstance()->dcEnc2QtEnc(QString::fromStdString(entry.getEncoding()));
+        QString menuItem = QString("%1 - %2").arg(name).arg(url);
+
+        QAction *action = new QAction(menuItem, d->favHubMenu);
+        action->setStatusTip(encoding);
+        action->setToolTip(url);
+
+        if (qobject_cast<HubFrame*>(HubManager::getInstance()->getHub(url))) {
+            action->setCheckable(true);
+            action->setChecked(true);
+        }
+
+        d->favHubMenu->addAction(action);
+    }
+}
+
+void MainWindow::slotConnectFavHub(QAction *action) {
+
+    QString url = action->toolTip();
+    QString encoding = action->statusTip();
+
+    newHubFrame(url, encoding);
+}
+
+void MainWindow::nextMsg(){
+    Q_D(MainWindow);
+
+    HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->activeHub());
+
+    if (fr)
+        fr->nextMsg();
+    else{
+        QWidget *wg = d->arena->widget();
+
+        bool pmw = false;
+
+        if (wg)
+            pmw = (typeid(*wg) == typeid(PMWindow));
+
+        if(pmw){
+            PMWindow *pm = qobject_cast<PMWindow *>(wg);
+
+            if (pm)
+                pm->nextMsg();
+        }
+    }
+}
+
+void MainWindow::prevMsg(){
+    Q_D(MainWindow);
+    HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->activeHub());
+
+    if (fr)
+        fr->prevMsg();
+    else{
+        QWidget *wg = d->arena->widget();
+
+        bool pmw = false;
+
+        if (wg)
+            pmw = (typeid(*wg) == typeid(PMWindow));
+
+        if(pmw){
+            PMWindow *pm = qobject_cast<PMWindow *>(wg);
+
+            if (pm)
+                pm->prevMsg();
+        }
+    }
+}
+
+

@@ -26,12 +26,17 @@
 #include <QTextCodec>
 #include <QVariantMap>
 
+class HubChatCompose;
+class HubPaneLayout;
+
 class HubFramePrivate {
     typedef QMap<QString, PMWindow*> PMMap;
     typedef QVariantMap VarMap;
     typedef QList<ShellCommandRunner*> ShellList;
 public:
     QMenu *arenaMenu = nullptr;
+    HubPaneLayout *panes = nullptr;
+    HubChatCompose *compose = nullptr;
 
     dcpp::Client *client = nullptr;
 
@@ -48,9 +53,6 @@ public:
     qint64 quietUntilMs = 0;
 
     QStringList status_msg_history;
-    QStringList out_messages;
-    int out_messages_index = 0;
-    bool out_messages_unsent = false;
 
     PMMap pm;
     ShellList shell_list;

@@ -6,7 +6,7 @@
  */
 
 #include "HubFrame.h"
-#include "HubFramePrivate.h"
+#include "hubframe/HubFramePrivate.h"
 #include "HubManager.h"
 #include "WulforSettings.h"
 

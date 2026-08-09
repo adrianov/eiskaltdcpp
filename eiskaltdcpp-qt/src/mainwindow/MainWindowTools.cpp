@@ -11,258 +11,129 @@
 
 #include "MainWindow.h"
 #include "MainWindowPrivate.h"
-#include "ArenaWidgetFactory.h"
-#include "SearchFrame.h"
-#include "AntiSpamFrame.h"
-#include "IPFilterFrame.h"
-#include "Settings.h"
-#include "TransferView.h"
+
+#include "ArenaWidgetManager.h"
+#include "HubFrame.h"
+#include "HubManager.h"
+#include "Notification.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"
 
-#include "dcpp/SettingsManager.h"
-#include "dcpp/Util.h"
+#include "dcpp/ClientManager.h"
+#include "dcpp/ConnectivityManager.h"
 
 #include <QAction>
-#include <QApplication>
-#include <QClipboard>
-#include <QLineEdit>
 #include <QMessageBox>
-
-#ifdef USE_JS
-#include "ScriptManagerDialog.h"
-#include "scriptengine/ScriptConsole.h"
-#include "scriptengine/ScriptEngine.h"
-#endif
 
 using namespace dcpp;
 
-namespace {
-void bindSpeedLimitIcon(QAction *act, bool enabled)
+void MainWindow::startSocket(bool changed)
 {
-    WulforUtil::bindActionIcon(act, enabled ? AppIcons::eiSPEED_LIMIT_ON : AppIcons::eiSPEED_LIMIT_OFF);
+    if (changed)
+        ConnectivityManager::getInstance()->updateLast();
+    try {
+        ConnectivityManager::getInstance()->setup(true);
+    } catch (const Exception& e) {
+        showPortsError(e.getError());
+    }
+    ClientManager::getInstance()->infoUpdated();
 }
 
-#ifdef USE_JS
-enum class ScriptChangedAction: int {
-    DoNothing=0,
-    AskUser,
-    ReloadIt
-};
-#endif
-}
-
-void MainWindow::slotToolsADLS(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::ADLS));
-}
-
-void MainWindow::slotToolsCmdDebug()
+void MainWindow::showPortsError(const string& port)
 {
-    toggleSingletonWidget(widgetForRole(ArenaWidget::CmdDebug));
+    QString msg = tr("Unable to open %1 port. Searching or file transfers will not work correctly until you change settings or turn off any application that might be using that port.").arg(_q(port));
+    QMessageBox::warning(this, tr("Connectivity Manager: Warning"), msg, QMessageBox::Ok);
 }
 
-void MainWindow::slotToolsSecretary()
+void MainWindow::slotShareIndexQueueEmpty()
 {
-    toggleSingletonWidget(widgetForRole(ArenaWidget::Secretary));
+    emit notifyMessage(Notification::TRANSFER, tr("Download Queue"), tr("All downloads complete"));
 }
 
-void MainWindow::slotToolsSearch() {
-    SearchFrame *sf = ArenaWidgetFactory().create<SearchFrame>();
+void MainWindow::slotHubsReconnect()
+{
+    HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->activeHub());
+    if (fr)
+        fr->reconnect();
+}
 
-    QLineEdit *le = qobject_cast<QLineEdit *> ( sender() );
+void MainWindow::updateActionIcons()
+{
+    WulforUtil *WU = WulforUtil::getInstance();
 
+    for (QAction *act : findChildren<QAction*>()) {
+        const QVariant iconId = act->property("wulforIcon");
+        if (!iconId.isValid())
+            continue;
+        act->setIcon(WU->getIcon(static_cast<WulforUtil::Icons>(iconId.toInt())));
+    }
+}
+
+void MainWindow::slotChatClear()
+{
     Q_D(MainWindow);
 
-    if ( le != d->searchLineEdit )
+    if (!d->arena->widget() || !qobject_cast<ArenaWidget*>(d->arena->widget()))
         return;
 
-    QString text = d->searchLineEdit->text();
-    bool isTTH = false;
-
-    if ( text.startsWith ( "magnet:" ) ) {
-        QString link = text;
-        QString tth = "", name = "";
-        int64_t size = 0;
-
-        WulforUtil::splitMagnet ( link, size, tth, name );
-
-        text  = tth;
-        isTTH = true;
-    }
-
-    sf->fastSearch ( text, isTTH || WulforUtil::isTTH ( text ) );
+    ArenaWidget *awgt = qobject_cast<ArenaWidget*>(d->arena->widget());
+    awgt->requestClear();
 }
 
-void MainWindow::slotToolsDownloadQueue(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::Downloads));
-}
-
-void MainWindow::slotToolsQueuedUsers(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::QueuedUsers));
-}
-
-void MainWindow::slotToolsHubManager(){
-}
-
-void MainWindow::slotToolsFinishedDownloads(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::FinishedDownloads));
-}
-
-void MainWindow::slotToolsFinishedUploads(){
-   toggleSingletonWidget(widgetForRole(ArenaWidget::FinishedUploads));
-}
-
-void MainWindow::slotToolsSpy(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::SearchSpy));
-}
-
-void MainWindow::slotToolsAntiSpam(){
-    AntiSpamFrame fr(this);
-
-    fr.exec();
-
+void MainWindow::slotFind()
+{
     Q_D(MainWindow);
 
-    d->toolsAntiSpam->setChecked(AntiSpam::getInstance() != nullptr);
-}
-
-void MainWindow::slotToolsIPFilter(){
-    IPFilterFrame fr(this);
-
-    fr.exec();
-
-    Q_D(MainWindow);
-
-    d->toolsIPFilter->setChecked(BOOLSETTING(SettingsManager::IPFILTER));
-}
-
-void MainWindow::slotToolsAutoAway(){
-    Q_D(MainWindow);
-
-    WBSET(WB_APP_AUTO_AWAY, d->toolsAutoAway->isChecked());
-}
-
-void MainWindow::slotToolsSwitchAway(){
-    Q_D(MainWindow);
-
-    if ((sender() != d->toolsAwayOff) && (sender() != d->toolsAwayOn))
+    if (!d->arena->widget() || !qobject_cast<ArenaWidget*>(d->arena->widget()))
         return;
 
-    bool away = d->toolsAwayOn->isChecked();
-
-    Util::setAway(away);
-    Util::setManualAway(away);
+    ArenaWidget *awgt = qobject_cast<ArenaWidget*>(d->arena->widget());
+    awgt->requestFilter();
 }
 
-void MainWindow::slotToolsJS(){
-#ifdef USE_JS
-    ScriptManagerDialog(this).exec();
-#endif
+void MainWindow::slotChatDisable()
+{
+    HubFrame *fr = qobject_cast<HubFrame*>(HubManager::getInstance()->activeHub());
+    if (fr)
+        fr->disableChat();
 }
 
-void MainWindow::slotJSFileChanged(const QString &script){
-#ifdef USE_JS
-    enum ScriptChangedAction act = (enum ScriptChangedAction)WIGET("scriptmanager/script-changed-action", 0);
-    bool ask = false;
-
-    switch (act){
-    case ScriptChangedAction::DoNothing:
-        break;
-    case ScriptChangedAction::AskUser:
-        ask = true;
-    case ScriptChangedAction::ReloadIt:
-    {
-        auto raiseMe = [this]() -> bool {
-            if (!this->isVisible()){
-                this->show();
-                this->raise();
-            }
-
-            return true;
-        };
-
-        if (ask && raiseMe() && (QMessageBox::warning(this,
-                                                      tr("Script Engine"),
-                                                      QString("\'%1\' has been changed. Reload it?").arg(script),
-                                                      QMessageBox::Yes, QMessageBox::No) != QMessageBox::Yes))
-            break;
-
-
-        ScriptEngine::getInstance()->loadScript(script);
-
-        break;
-    }
-    }
-#else
-    Q_UNUSED(script)
-#endif
-}
-
-
-void MainWindow::slotToolsJSConsole(){
-#ifdef USE_JS
+void MainWindow::slotWidgetsToggle()
+{
     Q_D(MainWindow);
 
-    if (!d->scriptConsole)
-        d->scriptConsole = new ScriptConsole(this);
+    QAction *act = reinterpret_cast<QAction*>(sender());
+    auto it = d->menuWidgetsHash.find(act);
+    if (it == d->menuWidgetsHash.end())
+        return;
 
-    d->scriptConsole->setWindowModality(Qt::NonModal);
-    d->scriptConsole->show();
-    d->scriptConsole->raise();
-#endif
+    ArenaWidgetManager::getInstance()->activate(it.value());
 }
 
-void MainWindow::slotHubsFavoriteHubs(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::FavoriteHubs));
-}
-
-void MainWindow::slotHubsPublicHubs(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::PublicHubs));
-}
-
-void MainWindow::slotHubsFavoriteUsers(){
-    toggleSingletonWidget(widgetForRole(ArenaWidget::FavoriteUsers));
-}
-
-void MainWindow::slotToolsCopyWindowTitle(){
-    QString text = windowTitle();
-
-    if (!text.isEmpty())
-        qApp->clipboard()->setText(text, QClipboard::Clipboard);
-}
-
-void MainWindow::slotToolsSettings(){
-    Settings s;
-
-    s.exec();
-
-    reloadSomeSettings();
-
+void MainWindow::slotHideWindow()
+{
     Q_D(MainWindow);
 
-    //reload some settings
-    if (!WBGET(WB_TRAY_ENABLED))
-        d->fileHideWindow->setText(tr("Show/hide find frame"));
-    else
-        d->fileHideWindow->setText(tr("Hide window"));
+    if (!d->life.isUnload && isActiveWindow() && WBGET(WB_TRAY_ENABLED))
+        hide();
 }
 
-void MainWindow::slotToolsTransfer(bool toggled){
-    Q_D(MainWindow);
-
-    if (toggled){
-        d->transfer_dock->setVisible(true);
-        d->transfer_dock->setWidget(TransferView::getInstance());
-    }
-    else {
-        d->transfer_dock->setWidget(nullptr);
-        d->transfer_dock->setVisible(false);
-    }
+void MainWindow::slotExit()
+{
+    setUnload(true);
+    close();
 }
 
-void MainWindow::slotToolsSwitchSpeedLimit(){
+void MainWindow::slotUnixSignal(int sig)
+{
+    printf("Received unix signal %i\n", sig);
+}
+
+void MainWindow::slotCloseCurrentWidget()
+{
     Q_D(MainWindow);
 
-    SettingsManager::getInstance()->set(SettingsManager::THROTTLE_ENABLE, d->toolsSwitchSpeedLimit->isChecked());
-    bindSpeedLimitIcon(d->toolsSwitchSpeedLimit, BOOLSETTING(THROTTLE_ENABLE));
+    ArenaWidget *awgt = dynamic_cast<ArenaWidget*>(d->arena->widget());
+    if (awgt)
+        ArenaWidgetManager::getInstance()->rem(awgt);
 }

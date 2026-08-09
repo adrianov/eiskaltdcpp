@@ -10,7 +10,7 @@
 ***************************************************************************/
 
 #include "HubFrame.h"
-#include "HubFramePrivate.h"
+#include "hubframe/HubFramePrivate.h"
 #include "MainWindow.h"
 #include "Notification.h"
 #include "PMWindow.h"
