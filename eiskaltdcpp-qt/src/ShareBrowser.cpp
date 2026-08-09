@@ -111,6 +111,9 @@ void ShareBrowser::closeEvent(QCloseEvent *e){
 }
 
 bool ShareBrowser::eventFilter(QObject *obj, QEvent *e){
+    if (obj == splitter && e->type() == QEvent::Resize)
+        restoreSplitterSizes();
+
     QTreeView *tree_view = qobject_cast<QTreeView*>(obj);
 
     if (tree_view && (e->type() == QEvent::KeyRelease)){

@@ -130,6 +130,7 @@ private:
     FileBrowserFilterProxy *tree_proxy = nullptr;
     bool viewFilterPending = false;
     bool flatMode = false;
+    bool splitReady = false;
 
     QVector<SelPair>::iterator pathHistory_iter;
     QVector<SelPair> pathHistory;

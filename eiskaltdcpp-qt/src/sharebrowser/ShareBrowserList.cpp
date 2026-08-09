@@ -108,20 +108,29 @@ void ShareBrowser::updateUpButton()
 
 void ShareBrowser::restoreSplitterSizes()
 {
-    constexpr int kDefaultTreeWidth = 240; // UIShareBrowser frame_2 baseSize
-    constexpr int kMinRight = 160;         // UIShareBrowser frame minimumSize
+    // Defer until the splitter has a real width (HubPaneLayout does the same).
+    // Applying against a tiny pre-layout width + stretch used to grow the folder pane.
+    if (flatMode || splitReady)
+        return;
+
+    constexpr int kMinRight = 160; // UIShareBrowser frame minimumSize
     constexpr int kMinLeft = 80;
-    const int total = qMax(splitter->width(), kDefaultTreeWidth + kMinRight);
+    const int total = splitter->width();
+    if (total < kMinLeft + kMinRight)
+        return;
+
     const int w = WIGET(WI_SHARE_WIDTH);
     const int wr = WIGET(WI_SHARE_RPANE_WIDTH);
-    int left = (w > 0 && wr > 0 && wr < w) ? (w - wr) : 0;
-    // 0 (or tiny) left happens after starting in Flat — fall back to default.
-    if (left < kMinLeft)
-        left = kDefaultTreeWidth;
-    // Keep a wide folder pane when the window is temporarily narrower than saved.
-    if (left > total - kMinRight)
-        left = qMax(kMinLeft, total - kMinRight);
-    splitter->setSizes(QList<int>() << left << qMax(total - left, 1));
+    const bool haveSaved = (w > 0 && wr > 0 && wr < w);
+    // Saved folder width, or default left ≈ half the right pane (1:2).
+    int left = haveSaved ? (w - wr) : (total / 3);
+    left = qBound(kMinLeft, left, total - kMinRight);
+
+    // Saved: keep folder width sticky. Default 1:2: keep the ratio on resize.
+    splitter->setStretchFactor(0, haveSaved ? 0 : 1);
+    splitter->setStretchFactor(1, haveSaved ? 1 : 2);
+    splitReady = true;
+    splitter->setSizes(QList<int>() << left << (total - left));
 }
 
 void ShareBrowser::applyFlatMode(bool on)
@@ -137,8 +146,10 @@ void ShareBrowser::applyFlatMode(bool on)
 
     flatMode = on;
     frame_2->setVisible(!on);
-    if (!on)
+    if (!on) {
+        splitReady = false;
         restoreSplitterSizes();
+    }
 
     toolButton_BACK->setEnabled(!on);
     toolButton_FORWARD->setEnabled(!on);

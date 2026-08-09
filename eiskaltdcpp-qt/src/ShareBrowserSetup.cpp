@@ -35,6 +35,7 @@ void ShareBrowser::init(){
     setupUi(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
+    splitter->installEventFilter(this);
 
     toolButton_UP->setIcon(WICON(AppIcons::eiTOP));
     toolButton_FORWARD->setIcon(WICON(AppIcons::eiNEXT));
@@ -113,6 +114,7 @@ void ShareBrowser::init(){
 }
 
 void ShareBrowser::load(){
+    splitReady = false;
     restoreSplitterSizes();
 
     WulforUtil::restoreTreeHeader(treeView_LPANE->header(), QByteArray::fromBase64(WSGET(WS_SHARE_LPANE_STATE).toUtf8()));
@@ -134,8 +136,11 @@ void ShareBrowser::save(){
     WBSET(WB_SHARE_FLAT, checkBox_FLAT->isChecked());
 
     if (!flatMode) {
-        WISET(WI_SHARE_RPANE_WIDTH, treeView_RPANE->width());
-        WISET(WI_SHARE_WIDTH, treeView_RPANE->width() + treeView_LPANE->width());
+        const QList<int> sizes = splitter->sizes();
+        if (sizes.size() >= 2 && sizes.at(0) >= 80) {
+            WISET(WI_SHARE_RPANE_WIDTH, sizes.at(1));
+            WISET(WI_SHARE_WIDTH, sizes.at(0) + sizes.at(1));
+        }
     }
 }
 
