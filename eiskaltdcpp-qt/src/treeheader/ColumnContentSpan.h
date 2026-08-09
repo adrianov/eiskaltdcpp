@@ -22,6 +22,7 @@ struct ColumnWidths {
 /**
  * Column width from header title and cell text (with icons). Soft is
  * min(p80 + 30% of p80, p100); full is p100. Blank cells are not sampled.
+ * Column 0 includes tree indentation (and root decoration when enabled).
  */
 class ColumnContentSpan
 {

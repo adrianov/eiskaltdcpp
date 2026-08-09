@@ -97,12 +97,16 @@ ColumnWidths ColumnContentSpan::widths(int column) const
         return ColumnWidths{floor, floor};
 
     int indent = 0;
-    if (QTreeView *tree = qobject_cast<QTreeView*>(view_))
+    int depth0 = 0;
+    if (QTreeView *tree = qobject_cast<QTreeView*>(view_)) {
         indent = tree->indentation();
+        // Match QTreeView: decorated roots sit at indent level 1.
+        depth0 = tree->rootIsDecorated() ? 1 : 0;
+    }
 
     QVector<int> samples;
     samples.reserve(qMin(model->rowCount(), kSampleRows));
     collectWidths(model, QModelIndex(), column, QFontMetrics(view_->font()),
-                  0, indent, samples);
+                  depth0, indent, samples);
     return fromSamples(samples, floor);
 }

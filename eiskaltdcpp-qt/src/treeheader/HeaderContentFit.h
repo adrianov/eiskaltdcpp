@@ -17,9 +17,9 @@ class QAbstractItemView;
 class QHeaderView;
 
 /**
- * Content-based header widths: soft (p80+30%) or p100 when all p100 fit;
- * enlarge non-manual columns to fill free space; if total is at most 30%
- * over the viewport, scale every column down to fit.
+ * Applies HeaderWidthPlan to a visible tree/table: p100 when it fits,
+ * otherwise soft floors with shared growth toward p100 (spare to widest).
+ * Modest soft overflow (≤30%) scales every column down evenly.
  */
 class HeaderContentFit
 {
@@ -32,8 +32,6 @@ public:
     void apply();
 
 private:
-    void scaleToViewport(QHeaderView *header, int viewW) const;
-
     QAbstractItemView *view_ = nullptr;
     QSet<int> manual_;
 };
