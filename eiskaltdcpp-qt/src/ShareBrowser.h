@@ -53,6 +53,8 @@ public:
 protected:
     void closeEvent(QCloseEvent *) override;
     bool eventFilter(QObject *, QEvent *) override;
+    /** Cap width so the filter toolbar cannot limit the main side dock. */
+    QSize minimumSizeHint() const override;
 
 Q_SIGNALS:
     void die(const QString &msg);

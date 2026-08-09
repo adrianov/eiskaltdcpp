@@ -133,6 +133,13 @@ bool ShareBrowser::eventFilter(QObject *obj, QEvent *e){
     return QWidget::eventFilter(obj, e);
 }
 
+QSize ShareBrowser::minimumSizeHint() const
+{
+    // Filter row (type/size/Flat/Clear) reports ~500px+; that would become the
+    // central-widget floor and block widening MainWindow's left dock.
+    return QSize(120, QWidget::minimumSizeHint().height());
+}
+
 QString ShareBrowser::getArenaTitle(){
     return title;
 }
