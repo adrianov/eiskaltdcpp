@@ -29,6 +29,7 @@
 #include "FinishedManager.h"
 #include "HashManager.h"
 #include "LogManager.h"
+#include "queue/LocalMatch.h"
 #include "PeerConnectLog.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchManager.h"
@@ -100,6 +101,7 @@ QueueManager::QueueManager() :
     lastSave(0),
     queueFile(Util::getPath(Util::PATH_USER_CONFIG) + "Queue.xml"),
     rechecker(this),
+    localMatch(new LocalMatch(*this)),
     dirty(true),
     nextSearch(0)
 {
@@ -111,6 +113,7 @@ QueueManager::QueueManager() :
 }
 
 QueueManager::~QueueManager() {
+    localMatch.reset();
     SearchManager::getInstance()->removeListener(this);
     TimerManager::getInstance()->removeListener(this);
     ClientManager::getInstance()->removeListener(this);

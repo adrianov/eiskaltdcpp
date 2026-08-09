@@ -17,53 +17,66 @@
 #include "SettingsManager.h"
 #include "Transfer.h"
 #include "UserConnection.h"
+#include "queue/LocalMatch.h"
 
 namespace dcpp {
 
 Download* QueueManager::getDownload(UserConnection& aSource, bool supportsTrees) noexcept {
-    Lock l(cs);
+    string dropTarget;
+    {
+        Lock l(cs);
 
-    UserPtr& u = aSource.getUser();
-    dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
+        UserPtr& u = aSource.getUser();
+        dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
 
-    QueueItem* q = userQueue.getNext(u, QueueItem::LOWEST, aSource.getChunkSize());
+        QueueItem* q = userQueue.getNext(u, QueueItem::LOWEST, aSource.getChunkSize());
 
-    if(!q) {
-        dcdebug("none\n");
-        return 0;
-    }
+        if(!q) {
+            dcdebug("none\n");
+            return 0;
+        }
 
-    // Check that the file we will be downloading to exists
-    if(q->getDownloadedBytes() > 0) {
-        int64_t tempSize = File::getSize(q->getTempTarget());
-        if(tempSize != q->getSize()) {
-            // <= 0.706 added ".antifrag" to temporary download files if antifrag was enabled...
-            // 0.705 added ".antifrag" even if antifrag was disabled
-            std::string antifrag = q->getTempTarget() + ".antifrag";
-            if(File::getSize(antifrag) > 0) {
-                File::renameFile(antifrag, q->getTempTarget());
-                tempSize = File::getSize(q->getTempTarget());
-            }
-            if(tempSize != q->getSize()) {
-                if(tempSize > 0 && tempSize < q->getSize()) {
-                    // Probably started with <=0.699 or with 0.705 without antifrag enabled...
-                    try {
-                        File(q->getTempTarget(), File::WRITE, File::OPEN).setSize(q->getSize());
-                    } catch(const FileException&) { }
-                } else {
-                    // Temp target gone?
-                    q->resetDownloaded();
+        if(!q->isSet(QueueItem::FLAG_USER_LIST) && !q->isSet(QueueItem::FLAG_PARTIAL_LIST)
+                && LocalMatch::matches(q->getTarget(), q->getSize(), q->getTTH())) {
+            dropTarget = q->getTarget();
+        } else {
+            // Check that the file we will be downloading to exists
+            if(q->getDownloadedBytes() > 0) {
+                int64_t tempSize = File::getSize(q->getTempTarget());
+                if(tempSize != q->getSize()) {
+                    // <= 0.706 added ".antifrag" to temporary download files if antifrag was enabled...
+                    // 0.705 added ".antifrag" even if antifrag was disabled
+                    std::string antifrag = q->getTempTarget() + ".antifrag";
+                    if(File::getSize(antifrag) > 0) {
+                        File::renameFile(antifrag, q->getTempTarget());
+                        tempSize = File::getSize(q->getTempTarget());
+                    }
+                    if(tempSize != q->getSize()) {
+                        if(tempSize > 0 && tempSize < q->getSize()) {
+                            // Probably started with <=0.699 or with 0.705 without antifrag enabled...
+                            try {
+                                File(q->getTempTarget(), File::WRITE, File::OPEN).setSize(q->getSize());
+                            } catch(const FileException&) { }
+                        } else {
+                            // Temp target gone?
+                            q->resetDownloaded();
+                        }
+                    }
                 }
             }
+            Download* d = new Download(aSource, *q, q->isSet(QueueItem::FLAG_PARTIAL_LIST) ? q->getTempTarget() : q->getTarget(), supportsTrees);
+
+            userQueue.addDownload(q, d);
+
+            fire(QueueManagerListener::StatusUpdated(), q);
+            dcdebug("found %s\n", q->getTarget().c_str());
+            return d;
         }
     }
-    Download* d = new Download(aSource, *q, q->isSet(QueueItem::FLAG_PARTIAL_LIST) ? q->getTempTarget() : q->getTarget(), supportsTrees);
 
-    userQueue.addDownload(q, d);
-
-    fire(QueueManagerListener::StatusUpdated(), q);
-    dcdebug("found %s\n", q->getTarget().c_str());
-    return d;
+    if(!dropTarget.empty())
+        remove(dropTarget);
+    return 0;
 }
 
 bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes,

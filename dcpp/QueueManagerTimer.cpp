@@ -12,12 +12,15 @@
 #include "stdinc.h"
 #include "QueueManager.h"
 
+#include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "HashManager.h"
 #include "LogManager.h"
 #include "SearchManager.h"
 #include "SettingsManager.h"
+#include "Socket.h"
 #include "Util.h"
+#include "queue/LocalMatch.h"
 
 #ifdef WITH_DHT
 #include "dht/IndexManager.h"
@@ -27,13 +30,13 @@ namespace dcpp {
 
 namespace {
 
-struct PartsInfoReqParam{
-    PartsInfo       parts;
-    string          tth;
-    string          myNick;
-    string          hubIpPort;
-    string          ip;
-    string          udpPort;
+struct PartsInfoReqParam {
+    PartsInfo parts;
+    string tth;
+    string myNick;
+    string hubIpPort;
+    string ip;
+    string udpPort;
 };
 
 bool wasSearched(const StringList& recent, const string& target) {
@@ -57,7 +60,6 @@ QueueItem* findSearchCandidate(QueueItem* cand, QueueItem::StringIter start, Que
     return cand;
 }
 
-/** Next queued file for background TTH source search; updates the recent-target ring. */
 QueueItem* nextAutoSearch(QueueItem::StringMap& queue, StringList& recent) {
     while(recent.size() >= queue.size() || recent.size() > 30)
         recent.erase(recent.begin());
@@ -75,83 +77,87 @@ QueueItem* nextAutoSearch(QueueItem::StringMap& queue, StringList& recent) {
     return cand;
 }
 
-} // namespace
+void collectPfsRequests(FileQueue& fileQueue, uint64_t aTick, vector<PartsInfoReqParam*>& params) {
+    PFSSourceList sl;
+    fileQueue.findPFSSources(sl);
+    for(auto& i: sl) {
+        QueueItem::PartialSource::Ptr source = i.first->getPartialSource();
+        const QueueItem* qi = i.second;
 
-void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
-    // Hub sockets are torn down while TimerManager is still alive.
-    if(ConnectionManager::getInstance()->isShuttingDown())
-        return;
+        auto* param = new PartsInfoReqParam;
+        int64_t blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
+        if(blockSize == 0)
+            blockSize = qi->getSize();
+        qi->getPartialInfo(param->parts, blockSize);
+        param->tth = qi->getTTH().toBase32();
+        param->ip = source->getIp();
+        param->udpPort = source->getUdpPort();
+        param->myNick = source->getMyNick();
+        param->hubIpPort = source->getHubIpPort();
+        params.push_back(param);
 
-    string searchString;
-    vector<const PartsInfoReqParam*> params;
-    TTHValue* tthPub = NULL;
-    {
-        Lock l(cs);
-        //find max 10 pfs sources to exchange parts
-        //the source basis interval is 5 minutes
-        PFSSourceList sl;
-        fileQueue.findPFSSources(sl);
-
-        for(PFSSourceList::const_iterator i = sl.begin(); i != sl.end(); ++i){
-            QueueItem::PartialSource::Ptr source = (*i->first).getPartialSource();
-            const QueueItem* qi = i->second;
-
-            PartsInfoReqParam* param = new PartsInfoReqParam;
-
-            int64_t blockSize = HashManager::getInstance()->getBlockSize(qi->getTTH());
-            if(blockSize == 0)
-                blockSize = qi->getSize();
-            qi->getPartialInfo(param->parts, blockSize);
-
-            param->tth = qi->getTTH().toBase32();
-            param->ip  = source->getIp();
-            param->udpPort = source->getUdpPort();
-            param->myNick = source->getMyNick();
-            param->hubIpPort = source->getHubIpPort();
-
-            params.push_back(param);
-
-            source->setPendingQueryCount(source->getPendingQueryCount() + 1);
-            source->setNextQueryTime(aTick + 300000);               // 5 minutes
-        }
-
-#ifdef WITH_DHT
-        if(BOOLSETTING(USE_DHT) && SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_PASSIVE)
-            tthPub = fileQueue.findPFSPubTTH();
-#endif
-
-        if(BOOLSETTING(AUTO_SEARCH) && (aTick >= nextSearch) && (fileQueue.getSize() > 0)) {
-            if(QueueItem* qi = nextAutoSearch(fileQueue.getQueue(), autoSearchRecent)) {
-                searchString = qi->getTTH().toBase32();
-                nextSearch = aTick + (SETTING(AUTO_SEARCH_TIME) * 60000);
-                if(BOOLSETTING(REPORT_ALTERNATES)) {
-                    string name = qi->getTargetFileName();
-                    if(name.empty())
-                        name = qi->getTarget();
-                    if(!name.empty())
-                        LogManager::getInstance()->message(str(F_("Auto-searching for more sources: %1%") % name));
-                }
-            }
-        }
+        source->setPendingQueryCount(source->getPendingQueryCount() + 1);
+        source->setNextQueryTime(aTick + 300000);
     }
-    // Request parts info from partial file sharing sources
-    for(vector<const PartsInfoReqParam*>::const_iterator i = params.begin(); i != params.end(); ++i){
-        const PartsInfoReqParam* param = *i;
+}
 
+void sendPfsRequests(const vector<PartsInfoReqParam*>& params) {
+    for(auto* param: params) {
         try {
-            AdcCommand cmd = SearchManager::getInstance()->toPSR(true, param->myNick, param->hubIpPort, param->tth, param->parts);
+            AdcCommand cmd = SearchManager::getInstance()->toPSR(true, param->myNick, param->hubIpPort,
+                    param->tth, param->parts);
             Socket s;
             s.writeTo(param->ip, param->udpPort, cmd.toString(ClientManager::getInstance()->getMyCID()));
         } catch(...) {
             dcdebug("Partial search caught error\n");
         }
-
         delete param;
     }
+}
 
-    // DHT PFS announce
-    if(tthPub)
+string pickAutoSearch(FileQueue& fileQueue, StringList& recent, uint64_t aTick, uint64_t& nextSearch) {
+    if(!BOOLSETTING(AUTO_SEARCH) || aTick < nextSearch || fileQueue.getSize() == 0)
+        return Util::emptyString;
+
+    QueueItem* qi = nextAutoSearch(fileQueue.getQueue(), recent);
+    if(!qi)
+        return Util::emptyString;
+
+    nextSearch = aTick + (SETTING(AUTO_SEARCH_TIME) * 60000);
+    if(BOOLSETTING(REPORT_ALTERNATES)) {
+        string name = qi->getTargetFileName();
+        if(name.empty())
+            name = qi->getTarget();
+        if(!name.empty())
+            LogManager::getInstance()->message(str(F_("Auto-searching for more sources: %1%") % name));
+    }
+    return qi->getTTH().toBase32();
+}
+
+} // namespace
+
+void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
+    if(ConnectionManager::getInstance()->isShuttingDown())
+        return;
+
+    localMatch->sweep();
+
+    string searchString;
+    vector<PartsInfoReqParam*> params;
+    TTHValue* tthPub = nullptr;
     {
+        Lock l(cs);
+        collectPfsRequests(fileQueue, aTick, params);
+#ifdef WITH_DHT
+        if(BOOLSETTING(USE_DHT) && SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_PASSIVE)
+            tthPub = fileQueue.findPFSPubTTH();
+#endif
+        searchString = pickAutoSearch(fileQueue, autoSearchRecent, aTick, nextSearch);
+    }
+
+    sendPfsRequests(params);
+
+    if(tthPub) {
 #ifdef WITH_DHT
         dht::IndexManager::getInstance()->publishPartialFile(*tthPub);
 #endif

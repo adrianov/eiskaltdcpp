@@ -15,6 +15,7 @@
 #include "File.h"
 #include "SettingsManager.h"
 #include "ShareManager.h"
+#include "queue/LocalMatch.h"
 
 #if !defined(_WIN32) && !defined(PATH_MAX)
 #if defined(__linux)
@@ -38,7 +39,11 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& roo
     }
     // Check that target contains at least one directory...we don't want headless files...
     // Check that the file doesn't already exist...
-    const string target = checkTarget(aTarget, aSize);
+    string target = checkTarget(aTarget, false);
+    if(LocalMatch::matches(target, aSize, root))
+        return;
+    // Preserve prior behavior: non-zero size still rejects an existing target path.
+    target = checkTarget(aTarget, aSize != 0);
 
     // Check if it's a zero-byte file, if so, create and return...
     // Hashed magnets with size 0 still queue (size may arrive from the peer).

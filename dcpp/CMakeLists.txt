@@ -43,6 +43,7 @@ set(DCPP_EXTRA_SOURCES
     ExpectedMap.cpp
     queue/SegmentPicker.cpp
     queue/QueueItemSegment.cpp
+    queue/LocalMatch.cpp
     QueueItemProgress.cpp
     SearchManagerUdp.cpp
     SearchManagerResponse.cpp

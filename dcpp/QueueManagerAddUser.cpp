@@ -18,122 +18,141 @@
 #include "PeerConnectHub.h"
 #include "SettingsManager.h"
 #include "ShareManager.h"
+#include "queue/LocalMatch.h"
 
 #include <utility>
 #include <vector>
 
 namespace dcpp {
 
+namespace {
+
+void rejectSelfDownload(const HintedUser& user) {
+    if(user == ClientManager::getInstance()->getMe())
+        throw QueueException(_("You're trying to download from yourself!"));
+}
+
+void rejectSharedTth(const TTHValue& root) {
+    if(BOOLSETTING(DONT_DL_ALREADY_SHARED) && ShareManager::getInstance()->isTTHShared(root))
+        throw QueueException(_("A file with the same hash already exists in your share"));
+}
+
+void createEmptyFile(const string& target) {
+    if(BOOLSETTING(SKIP_ZERO_BYTE))
+        return;
+    File::ensureDirectory(target);
+    File f(target, File::WRITE, File::CREATE);
+}
+
+void noteSource(vector<pair<QueueItem*, bool>>& updates, QueueItem* qi, const HintedUser& user, bool updated) {
+    if(updated)
+        updates.emplace_back(qi, qi->isSource(user));
+}
+
+} // namespace
+
+bool QueueManager::attachQueuedSources(const TTHValue& root, const HintedUser& user, int addBad,
+        const QueuedDownloadUsers& queued, bool& wantConnection, SourceUpdates& updates) {
+    if(!BOOLSETTING(DONT_DL_ALREADY_QUEUED))
+        return false;
+
+    auto ql = fileQueue.find(root);
+    if(ql.empty())
+        return false;
+
+    bool sourceAdded = false;
+    Flags::MaskType flags = addBad ? QueueItem::Source::FLAG_MASK : 0;
+    for(auto& i: ql) {
+        if(i->isSource(user))
+            continue;
+        try {
+            bool updated = false;
+            wantConnection = addSource(i, user, flags, &queued, false, &updated);
+            noteSource(updates, i, user, updated);
+            sourceAdded = true;
+        } catch(...) { }
+    }
+    if(!sourceAdded)
+        throw QueueException(_("This file is already queued"));
+    return true;
+}
+
+QueueItem* QueueManager::queueFileItem(const string& target, int64_t size, int flags,
+        const string& tempTarget, const TTHValue& root, vector<QueueItem*>& added) {
+    QueueItem* q = fileQueue.find(target);
+    if(!q) {
+        q = fileQueue.add(target, size, flags, QueueItem::DEFAULT, tempTarget, GET_TIME(), root);
+        added.push_back(q);
+        return q;
+    }
+    if(q->getSize() != size)
+        throw QueueException(_("A file with a different size already exists in the queue"));
+    if(!(root == q->getTTH()))
+        throw QueueException(_("A file with a different TTH root already exists in the queue"));
+    if(q->isFinished())
+        throw QueueException(_("This file has already finished downloading"));
+    q->setFlag(flags);
+    return q;
+}
+
+void QueueManager::notifyQueuedAdd(const HintedUser& user, bool wantConnection,
+        const QueuedDownloadUsers& queued, const vector<QueueItem*>& added, SourceUpdates& updates) {
+    for(auto* q: added)
+        fire(QueueManagerListener::Added(), q);
+    for(auto& u: updates) {
+        if(u.second)
+            fire(QueueManagerListener::SourceAdded(), u.first, user);
+        fire(QueueManagerListener::SourcesUpdated(), u.first);
+        if(wantConnection && hasBusyAlias(u.first, user, queued))
+            wantConnection = false;
+    }
+    if(wantConnection && user.user->isOnline())
+        ConnectionManager::getInstance()->getDownloadConnection(user);
+}
+
 void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& root, const HintedUser& aUser,
                        int aFlags /* = 0 */, bool addBad /* = true */)
 {
-    bool wantConnection = true;
-
-    // Check that we're not downloading from ourselves...
-    if(aUser == ClientManager::getInstance()->getMe()) {
-        throw QueueException(_("You're trying to download from yourself!"));
-    }
-
-    // User-initiated queue add — allow a previously silent peer again.
+    rejectSelfDownload(aUser);
     PeerConnectHub::clearUnreachablePeer(aUser.user);
-
-    // Check if we're not downloading something already in our share
-    if(BOOLSETTING(DONT_DL_ALREADY_SHARED)){
-        if (ShareManager::getInstance()->isTTHShared(root)){
-            throw QueueException(_("A file with the same hash already exists in your share"));
-        }
-    }
+    rejectSharedTth(root);
 
     string target;
     string tempTarget;
-    if((aFlags & QueueItem::FLAG_USER_LIST) == QueueItem::FLAG_USER_LIST) {
+    const bool userList = (aFlags & QueueItem::FLAG_USER_LIST) == QueueItem::FLAG_USER_LIST;
+    if(userList) {
         target = getListPath(aUser);
         tempTarget = aTarget;
     } else {
-        target = checkTarget(aTarget, /*checkExistence*/ true);
+        target = checkTarget(aTarget, false);
+        if(LocalMatch::matches(target, aSize, root))
+            return;
+        target = checkTarget(aTarget, true);
     }
 
-    // True empty files (no TTH): create locally. Hashed results may report size 0
-    // (e.g. ShareIndex gaps) and must still enter the queue.
+    // True empty files (no TTH): create locally. Hashed size-0 hits still queue.
     if(aSize == 0 && !root) {
-        if(!BOOLSETTING(SKIP_ZERO_BYTE)) {
-            File::ensureDirectory(target);
-            File f(target, File::WRITE, File::CREATE);
-        }
+        createEmptyFile(target);
         return;
     }
 
     const auto queued = ConnectionManager::getInstance()->queuedDownloadUsers();
-    // Fire after releasing cs — listeners (DownloadQueue) call ClientManager::getNicks.
     vector<QueueItem*> addedItems;
-    vector<pair<QueueItem*, bool>> sourceUpdates; // qi, fire SourceAdded
+    SourceUpdates sourceUpdates;
+    bool wantConnection = true;
     {
         Lock l(cs);
-
-        // This will be pretty slow on large queues...
-        if(BOOLSETTING(DONT_DL_ALREADY_QUEUED) && !(aFlags & QueueItem::FLAG_USER_LIST)) {
-            auto ql = fileQueue.find(root);
-            if (!ql.empty()) {
-                // Found one or more existing queue items, lets see if we can add the source to them
-                bool sourceAdded = false;
-                for(auto& i : ql) {
-                    if(!i->isSource(aUser)) {
-                        try {
-                            bool updated = false;
-                            wantConnection = addSource(i, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0,
-                                                       &queued, false, &updated);
-                            if(updated)
-                                sourceUpdates.emplace_back(i, i->isSource(aUser));
-                            sourceAdded = true;
-                        } catch(...) { }
-                    }
-                }
-
-                if(!sourceAdded) {
-                    throw QueueException(_("This file is already queued"));
-                }
-                goto notify;
-            }
-        }
-
-        QueueItem* q = fileQueue.find(target);
-        if(q == NULL) {
-            q = fileQueue.add(target, aSize, aFlags, QueueItem::DEFAULT, tempTarget, GET_TIME(), root);
-            addedItems.push_back(q);
+        if(!userList && attachQueuedSources(root, aUser, addBad, queued, wantConnection, sourceUpdates)) {
+            // attached to existing TTH — notify below
         } else {
-            if(q->getSize() != aSize) {
-                throw QueueException(_("A file with a different size already exists in the queue"));
-            }
-            if(!(root == q->getTTH())) {
-                throw QueueException(_("A file with a different TTH root already exists in the queue"));
-            }
-
-            if(q->isFinished()) {
-                throw QueueException(_("This file has already finished downloading"));
-            }
-
-            q->setFlag(aFlags);
+            QueueItem* q = queueFileItem(target, aSize, aFlags, tempTarget, root, addedItems);
+            bool updated = false;
+            wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0,
+                                       &queued, false, &updated);
+            noteSource(sourceUpdates, q, aUser, updated);
         }
-
-        bool updated = false;
-        wantConnection = addSource(q, aUser, addBad ? QueueItem::Source::FLAG_MASK : 0,
-                                   &queued, false, &updated);
-        if(updated)
-            sourceUpdates.emplace_back(q, q->isSource(aUser));
     }
-
-notify:
-    for(auto* q: addedItems)
-        fire(QueueManagerListener::Added(), q);
-    for(auto& u: sourceUpdates) {
-        if(u.second)
-            fire(QueueManagerListener::SourceAdded(), u.first, aUser);
-        fire(QueueManagerListener::SourcesUpdated(), u.first);
-        if(wantConnection && hasBusyAlias(u.first, aUser, queued))
-            wantConnection = false;
-    }
-    if(wantConnection && aUser.user->isOnline())
-        ConnectionManager::getInstance()->getDownloadConnection(aUser);
+    notifyQueuedAdd(aUser, wantConnection, queued, addedItems, sourceUpdates);
 }
 
 void QueueManager::readd(const string& target, const HintedUser& aUser) {
