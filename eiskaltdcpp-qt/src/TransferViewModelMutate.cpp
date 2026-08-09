@@ -75,6 +75,8 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
     item->fail = vbol(p["FAIL"]);
+    if (item->fail)
+        item->smoothTleft = -1;
     // Uploads: segment-complete (finished) is set in completeUpload and cleared in initTransfer.
     if (!item->fail && item->download)
         item->finished = false;

@@ -65,6 +65,7 @@ void TransferViewModel::initTransfer(const VarMap &params){
             item->segBytes = 0;
             item->speedStart = 0;
             item->speedBase = 0;
+            item->smoothTleft = -1;
         } else {
             TransferSessionRow::commitSegment(item);
         }

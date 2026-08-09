@@ -134,7 +134,8 @@ void TransferSession::writeUi(QVariantMap &params, qlonglong fileSize) const
             speed = prev;
     }
     params["SPEED"] = speed;
-    params["TLEFT"] = static_cast<qlonglong>(rate.etaSec);
+    scope_->smoothTleft = TransferDisplay::smoothTimeLeft(scope_->smoothTleft, rate.etaSec);
+    params["TLEFT"] = static_cast<qlonglong>(scope_->smoothTleft);
     params["DPOS"] = static_cast<qlonglong>(rate.progress);
     params["PERC"] = fileSize > 0
             ? qBound(0.0, rate.progress * 100.0 / fileSize, 100.0) : 0.0;

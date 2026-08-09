@@ -26,6 +26,7 @@ void TransferViewModel::finishParent(const VarMap &params){
     p->finished = true;
     p->speedStart = 0;
     p->speedBase = 0;
+    p->smoothTleft = -1;
     p->updateColumn(COLUMN_TRANSFER_SPEED, qlonglong(0));
     p->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
 
@@ -89,6 +90,7 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
 
     if (!session.uploadDone()) {
         if (item->fail) {
+            item->smoothTleft = -1;
             item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
             item->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
         } else {
@@ -113,13 +115,16 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
             for (const auto &child : scope->childItems)
                 child->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
         }
+        item->smoothTleft = -1;
         item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
         item->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload finished"));
         scope->finished = true;
         scope->percent = 100.0;
         scope->speedStart = 0;
         scope->speedBase = 0;
+        scope->smoothTleft = -1;
         scope->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+        scope->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
         scope->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload finished"));
         notify(scope);
     }

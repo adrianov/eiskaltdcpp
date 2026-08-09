@@ -59,7 +59,7 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
     group->smoothTleft = -1;
     group->speedStart = 0;
     group->speedBase = 0;
-    // Downloads: queue FPOS. Uploads: reset completed-segment counter for the new file.
+    // Downloads: queue FPOS. Uploads: reset finished-segment counter for the new file.
     group->fpos = item->download && p.contains("FPOS") ? p.value("FPOS").toLongLong() : 0;
     group->dpos = group->fpos;
     // New file on this connection — clear peer/upload segment counters.
@@ -68,6 +68,7 @@ inline bool retargetGroup(TransferViewItem *item, TransferViewItem *group,
     item->segBytes = 0;
     item->speedStart = 0;
     item->speedBase = 0;
+    item->smoothTleft = -1;
     if (p.contains("ESIZE"))
         group->updateColumn(COLUMN_TRANSFER_SIZE, p.value("ESIZE"));
     if (p.contains("FNAME"))

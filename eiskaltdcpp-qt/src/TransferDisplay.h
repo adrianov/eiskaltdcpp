@@ -21,17 +21,20 @@ constexpr int ByteSigFigs = 2;
 double roundBytes(double bytes);
 inline double roundSpeed(double speed) { return roundBytes(speed); }
 
-inline int64_t smoothTimeLeft(int64_t displayed, int64_t actual)
+/**
+ * Time left (seconds): never increase.
+ * If the new estimate is lower, step to the midpoint of shown and estimate.
+ * If the estimate is unknown, keep the value already shown.
+ */
+inline int64_t smoothTimeLeft(int64_t shown, int64_t estimate)
 {
-    if (actual < 0 || displayed < 0)
-        return actual;
-    if (actual < displayed)
-        return (displayed + actual) / 2;
-    if (actual == displayed)
-        return actual;
-    if (!displayed || actual * 2 >= displayed * 3)
-        return actual;
-    return displayed;
+    if (estimate < 0)
+        return shown;
+    if (shown < 0)
+        return estimate;
+    if (estimate < shown)
+        return (shown + estimate) / 2;
+    return shown;
 }
 
 /** True for "Downloaded …" / "Uploaded …" progress status text. */

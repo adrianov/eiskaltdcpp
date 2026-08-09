@@ -66,6 +66,7 @@ public:
     qlonglong speedBase;
     qint64 queuePos;
     double percent;
+    /** Shown Time left (seconds), smoothed — see TransferDisplay::smoothTimeLeft. */
     qlonglong smoothTleft;
     QList<QVariant> itemData;
 

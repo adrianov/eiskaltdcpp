@@ -56,7 +56,8 @@ Publish rate/ETA only when the session has begun, `moved > 0`, and `elapsed ≥ 
 
 1. ETA from raw bytes/s; round only the Speed column.
 2. Progress bar, `%`, and status text share `progress / size` for that row’s scope.
-3. `eta < 0` means unknown.
+3. Time left never increases. If the new estimate is lower, step halfway from the
+   shown value toward it; if the estimate is unknown, keep the shown value.
 
 ## Non-goals
 

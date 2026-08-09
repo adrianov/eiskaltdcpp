@@ -121,9 +121,10 @@ void TransferSessionRow::publishPeer(TransferViewItem *item, TransferViewItem *s
         const qlonglong queueDone = params.contains("FPOS")
                 ? lng(params.value("FPOS"))
                 : (scope ? scope->fpos : 0);
-        // speedBase on a peer = left-at-join (size for % / ETA), not a byte baseline.
+        // speedBase = file left at join (size for % / ETA), not a byte baseline.
         item->speedStart = GET_TICK();
         item->speedBase = leftAtJoin(fileSize, queueDone);
+        item->smoothTleft = -1;
     }
 
     const qlonglong left = item->speedBase > 0 ? item->speedBase : fileSize;

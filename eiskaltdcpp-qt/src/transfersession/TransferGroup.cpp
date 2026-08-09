@@ -118,7 +118,7 @@ void TransferGroup::writeSpeed(const Scan &s) const
     double speed = params.value("SPEED").toDouble();
     qint64 timeLeft = params.value("TLEFT").toLongLong();
     if (timeLeft < 0)
-        timeLeft = 0;
+        timeLeft = 0; // display 00:00:00 until the first estimate
     parent_->updateColumn(COLUMN_TRANSFER_SPEED, speed);
     parent_->updateColumn(COLUMN_TRANSFER_TLEFT, timeLeft);
     if (!parent_->finished)
