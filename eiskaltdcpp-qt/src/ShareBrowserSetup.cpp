@@ -18,6 +18,7 @@
 #include "SearchFileTypes.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
+#include "AutoToolTip.h"
 #include "sharebrowser/ListingMediaIndex.h"
 
 #include "dcpp/ADLSearch.h"
@@ -80,6 +81,10 @@ void ShareBrowser::init(){
     treeView_RPANE->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->installEventFilter(this);
+
+    AutoToolTipDelegate *rpaneTip = new AutoToolTipDelegate(treeView_RPANE);
+    rpaneTip->setElideLeftColumns({COLUMN_FILEBROWSER_PATH});
+    treeView_RPANE->setItemDelegate(rpaneTip);
 
     arena_menu = new QMenu(tr("Filebrowser"));
 

@@ -13,11 +13,31 @@
 #include "FileBrowserModel.h"
 #include "MediaEnrichQueue.h"
 #include "WulforSettings.h"
+#include "WulforUtil.h"
 #include "sharebrowser/ShareFolderList.h"
+#include "treeheader/TreeHeaderAutosize.h"
 
 #include <QHeaderView>
 
 using namespace dcpp;
+
+namespace {
+
+void placePathAfterName(QHeaderView *h)
+{
+    if (!h)
+        return;
+    const int nameVis = h->visualIndex(COLUMN_FILEBROWSER_NAME);
+    const int pathVis = h->visualIndex(COLUMN_FILEBROWSER_PATH);
+    if (nameVis < 0 || pathVis < 0)
+        return;
+    // When Path is before Name, target is nameVis (removal shifts Name left).
+    const int to = nameVis + (pathVis > nameVis ? 1 : 0);
+    if (pathVis != to)
+        h->moveSection(pathVis, to);
+}
+
+} // namespace
 
 void ShareBrowser::changeRoot(DirectoryListing::Directory *root)
 {
@@ -103,8 +123,15 @@ void ShareBrowser::applyFlatMode(bool on)
     toolButton_BACK->setEnabled(!on);
     toolButton_FORWARD->setEnabled(!on);
     toolButton_UP->setEnabled(!on);
-    treeView_RPANE->header()->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
+
+    QHeaderView *h = treeView_RPANE->header();
+    h->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
+    if (on)
+        placePathAfterName(h);
+    TreeHeaderAutosize::setStretchColumn(treeView_RPANE, on ? COLUMN_FILEBROWSER_PATH : -1);
+
     reloadRightPane(currentDir());
+    WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
     applyViewFiltersNow();
 }
 
