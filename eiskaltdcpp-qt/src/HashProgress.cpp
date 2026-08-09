@@ -106,8 +106,6 @@ HashProgress::HashProgress(QWidget *parent)
     progressIndicator->hide();
     adjustSize();
 
-    HashManager::getInstance()->setPriority(Thread::NORMAL);
-
     timer = new QTimer();
     timer->setInterval(250);
     connect(timer, SIGNAL(timeout()), this, SLOT(timerTick()));
@@ -127,7 +125,6 @@ HashProgress::~HashProgress()
 {
     timer->stop();
     delete timer;
-    HashManager::getInstance()->setPriority(Thread::LOW);
 }
 
 float HashProgress::getProgress()

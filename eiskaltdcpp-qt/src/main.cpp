@@ -30,8 +30,8 @@ using namespace std;
 #include "dcpp/DCPlusPlus.h"
 
 #include "Notification.h"
-#include "MainAppCli.h"
-#include "MainAppRun.h"
+#include "appshell/MainAppCli.h"
+#include "appshell/MainAppRun.h"
 
 #if defined(Q_OS_HAIKU)
 #include "EiskaltApp_haiku.h"
@@ -42,7 +42,7 @@ using namespace std;
 #endif
 
 #ifdef FORCE_XDG
-#include "MainAppXdg.h"
+#include "appshell/MainAppXdg.h"
 #endif
 
 #include <QCoreApplication>

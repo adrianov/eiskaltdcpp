@@ -56,6 +56,8 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 
 # Explicit modules (also from aux_source_directory). Keeps splits visible; appends if glob is stale.
 set(QT_EXTRA_SOURCES
+    src/appshell/AppPriority.cpp
+    src/appshell/AppSession.cpp
     src/AppThemeControls.cpp
     src/AppThemeCombo.cpp
     src/AppThemeInputs.cpp
@@ -114,11 +116,11 @@ set(QT_EXTRA_SOURCES
     src/hubframe/HubPaneLayout.cpp
     src/PmSpamFilter.cpp
     src/PMWindowEvents.cpp
-    src/MainAppCli.cpp
-    src/MainAppRun.cpp
-    src/MainAppShareIndex.cpp
-    src/MainAppUnix.cpp
-    src/MainAppXdg.cpp
+    src/appshell/MainAppCli.cpp
+    src/appshell/MainAppRun.cpp
+    src/appshell/MainAppShareIndex.cpp
+    src/appshell/MainAppUnix.cpp
+    src/appshell/MainAppXdg.cpp
     src/mainwindow/MainWindow.cpp
     src/mainwindow/MainWindowArena.cpp
     src/mainwindow/MainWindowAbout.cpp
@@ -346,6 +348,7 @@ endif (NOT HAIKU)
 file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/transfergrace/TransferGrace.h)
+list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/appshell/AppPriority.h)
 list (APPEND MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindow.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h
@@ -687,7 +690,7 @@ endif()
 
 if (FORCE_XDG)
    set_property(SOURCE ${PROJECT_SOURCE_DIR}/src/main.cpp
-                        ${PROJECT_SOURCE_DIR}/src/MainAppXdg.cpp
+                        ${PROJECT_SOURCE_DIR}/src/appshell/MainAppXdg.cpp
                 PROPERTY COMPILE_DEFINITIONS FORCE_XDG )
 endif (FORCE_XDG)
 
