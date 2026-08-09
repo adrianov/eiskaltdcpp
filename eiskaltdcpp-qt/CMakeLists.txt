@@ -210,6 +210,7 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilText.cpp
     src/treeheader/ColumnContentSpan.cpp
     src/treeheader/HeaderContentFit.cpp
+    src/treeheader/HeaderWidthPlan.cpp
     src/treeheader/TreeHeaderAutosize.cpp
     src/treeheader/WulforTreeHeader.cpp
     src/WulforSettingsDefaults.cpp

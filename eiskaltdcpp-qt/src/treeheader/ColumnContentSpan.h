@@ -29,10 +29,9 @@ class ColumnContentSpan
 public:
     explicit ColumnContentSpan(QAbstractItemView *view);
 
+    int title(int column) const;
     ColumnWidths widths(int column) const;
 
 private:
-    int title(int column) const;
-
     QAbstractItemView *view_ = nullptr;
 };

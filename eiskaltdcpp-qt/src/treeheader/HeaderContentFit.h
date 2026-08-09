@@ -18,8 +18,8 @@ class QHeaderView;
 
 /**
  * Applies HeaderWidthPlan to a visible tree/table: p100 when it fits,
- * otherwise soft floors with shared growth toward p100 (spare to widest).
- * Modest soft overflow (≤30%) scales every column down evenly.
+ * otherwise soft floors, side columns grow to p100 first, widest takes
+ * leftover. Modest soft overflow (≤30%) scales every column down evenly.
  */
 class HeaderContentFit
 {

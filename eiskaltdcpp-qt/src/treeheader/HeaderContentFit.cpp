@@ -60,8 +60,13 @@ void HeaderContentFit::apply()
     }
 
     plan.setSoft(header);
-    if (plan.sumSoft() < viewW)
+    if (plan.sumSoft() < viewW) {
         plan.fillSpare(header, viewW - plan.sumSoft());
-    else if (plan.sumSoft() > viewW)
+        return;
+    }
+    if (plan.sumSoft() > viewW) {
+        // Prefer trimming the widest column so side columns keep their soft floor.
+        plan.trimWidest(header, plan.sumSoft() - viewW);
         plan.shrinkOverflow(header, viewW);
+    }
 }
