@@ -17,10 +17,9 @@ class QAbstractItemView;
 class QHeaderView;
 
 /**
- * Applies content-based header widths: grow columns that are too narrow;
- * shrink a column that is wider than its own content when there is scroll;
- * if total width is at most 30% over the viewport, scale every column
- * proportionally to fit.
+ * Content-based header widths: soft (p80+30%) or p100 when all p100 fit;
+ * enlarge non-manual columns to fill free space; if total is at most 30%
+ * over the viewport, scale every column down to fit.
  */
 class HeaderContentFit
 {

@@ -61,16 +61,16 @@ void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
     }
 }
 
-int contentWidth(QVector<int> &widths)
+ColumnWidths fromSamples(QVector<int> &widths, int floor)
 {
     if (widths.isEmpty())
-        return 0;
+        return ColumnWidths{floor, floor};
     std::sort(widths.begin(), widths.end());
     const int p80 = widths.at(qBound(0, (widths.size() * kPercentile + 99) / 100 - 1,
                                      widths.size() - 1));
     const int p100 = widths.last();
-    // min(p80 + 30% of p80, p100)
-    return qMin(p80 + (p80 * kAboveP80Pct) / 100, p100);
+    const int soft = qMin(p80 + (p80 * kAboveP80Pct) / 100, p100);
+    return ColumnWidths{qMax(floor, soft), qMax(floor, p100)};
 }
 
 } // namespace
@@ -89,20 +89,20 @@ int ColumnContentSpan::title(int column) const
                    model->headerData(column, Qt::Horizontal).toString()) + 24);
 }
 
-int ColumnContentSpan::cells(int column) const
+ColumnWidths ColumnContentSpan::widths(int column) const
 {
     const int floor = title(column);
     QAbstractItemModel *model = view_ ? view_->model() : nullptr;
     if (!model || model->rowCount() < 1)
-        return floor;
+        return ColumnWidths{floor, floor};
 
     int indent = 0;
     if (QTreeView *tree = qobject_cast<QTreeView*>(view_))
         indent = tree->indentation();
 
-    QVector<int> widths;
-    widths.reserve(qMin(model->rowCount(), kSampleRows));
+    QVector<int> samples;
+    samples.reserve(qMin(model->rowCount(), kSampleRows));
     collectWidths(model, QModelIndex(), column, QFontMetrics(view_->font()),
-                  0, indent, widths);
-    return qMax(floor, contentWidth(widths));
+                  0, indent, samples);
+    return fromSamples(samples, floor);
 }

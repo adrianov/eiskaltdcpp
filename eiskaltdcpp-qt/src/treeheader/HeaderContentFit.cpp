@@ -23,10 +23,28 @@ namespace {
 
 constexpr int kMaxOverflowPct = 30;
 
-struct ColNeed {
+struct ColSpan {
     int col = 0;
-    int need = 0;
+    int soft = 0;
+    int full = 0;
 };
+
+void scaleColumns(QHeaderView *header, const QVector<int> &cols,
+                  const QVector<int> &sizes, int total, int budget)
+{
+    if (cols.isEmpty() || total < 1 || budget < 1 || total == budget)
+        return;
+    const int minSec = header->minimumSectionSize();
+    int allocated = 0;
+    for (int i = 0; i < cols.size(); ++i) {
+        int neu = (i + 1 == cols.size())
+                ? budget - allocated
+                : int((qint64(sizes.at(i)) * budget) / total);
+        neu = qMax(neu, minSec);
+        header->resizeSection(cols.at(i), neu);
+        allocated += neu;
+    }
+}
 
 } // namespace
 
@@ -55,34 +73,41 @@ bool HeaderContentFit::ready() const
 
 void HeaderContentFit::scaleToViewport(QHeaderView *header, int viewW) const
 {
-    QVector<int> cols;
-    QVector<int> sizes;
+    QVector<int> allCols;
+    QVector<int> allSizes;
+    QVector<int> flexCols;
+    QVector<int> flexSizes;
     int total = 0;
+    int flexSum = 0;
     for (int v = 0; v < header->count(); ++v) {
         const int col = header->logicalIndex(v);
         if (header->isSectionHidden(col))
             continue;
-        cols.append(col);
         const int sz = header->sectionSize(col);
-        sizes.append(sz);
+        allCols.append(col);
+        allSizes.append(sz);
         total += sz;
+        if (!manual_.contains(col)) {
+            flexCols.append(col);
+            flexSizes.append(sz);
+            flexSum += sz;
+        }
     }
-    if (cols.isEmpty() || total <= viewW)
-        return;
-    // Only when overflow is modest: total <= viewport + 30%.
-    if (total * 100LL > viewW * (100LL + kMaxOverflowPct))
+    if (allCols.isEmpty() || total < 1 || total == viewW)
         return;
 
-    const int minSec = header->minimumSectionSize();
-    int allocated = 0;
-    for (int i = 0; i < cols.size(); ++i) {
-        int neu = (i + 1 == cols.size())
-                ? viewW - allocated
-                : int((qint64(sizes.at(i)) * viewW) / total);
-        neu = qMax(neu, minSec);
-        header->resizeSection(cols.at(i), neu);
-        allocated += neu;
+    if (total > viewW) {
+        // Modest overflow: shrink every column (including manual).
+        if (total * 100LL > viewW * (100LL + kMaxOverflowPct))
+            return;
+        scaleColumns(header, allCols, allSizes, total, viewW);
+        return;
     }
+
+    // Free space: enlarge non-manual columns only so user drags stay put.
+    if (flexSum < 1)
+        return;
+    scaleColumns(header, flexCols, flexSizes, flexSum, flexSum + (viewW - total));
 }
 
 void HeaderContentFit::apply()
@@ -92,26 +117,25 @@ void HeaderContentFit::apply()
         return;
     header->setStretchLastSection(false);
 
-    ColumnContentSpan span(view_);
-    QVector<ColNeed> slackCols;
+    const int viewW = view_->viewport()->width();
+    ColumnContentSpan measure(view_);
+    QVector<ColSpan> autos;
+    int sumFull = 0;
     for (int v = 0; v < header->count(); ++v) {
         const int col = header->logicalIndex(v);
-        if (header->isSectionHidden(col) || manual_.contains(col))
+        if (header->isSectionHidden(col))
             continue;
-        const int need = span.cells(col);
-        int have = header->sectionSize(col);
-        if (have < need) {
-            header->resizeSection(col, need);
-            have = need;
+        if (manual_.contains(col)) {
+            sumFull += header->sectionSize(col);
+            continue;
         }
-        if (have > need)
-            slackCols.append(ColNeed{col, need});
+        const ColumnWidths w = measure.widths(col);
+        autos.append(ColSpan{col, w.soft, w.full});
+        sumFull += w.full;
     }
 
-    const int viewW = view_->viewport()->width();
-    if (!slackCols.isEmpty() && header->length() > viewW) {
-        for (const ColNeed &item : slackCols)
-            header->resizeSection(item.col, item.need);
-    }
+    const bool useFull = sumFull <= viewW;
+    for (const ColSpan &item : autos)
+        header->resizeSection(item.col, useFull ? item.full : item.soft);
     scaleToViewport(header, viewW);
 }

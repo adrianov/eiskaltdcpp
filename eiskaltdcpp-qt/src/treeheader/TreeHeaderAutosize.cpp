@@ -119,8 +119,6 @@ bool TreeHeaderAutosize::eventFilter(QObject *obj, QEvent *ev)
         if (!done_)
             scheduleCheck();
     } else if (ev->type() == QEvent::Resize) {
-        // Full re-apply: grow back after a prior scale when the view widens,
-        // or scale/slack-shrink when it narrows.
         scheduleCheck();
     }
     return false;

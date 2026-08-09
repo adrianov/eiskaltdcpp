@@ -13,19 +13,25 @@
 
 class QAbstractItemView;
 
+/** Soft (p80+30%) and full (p100) content widths, each at least the header title. */
+struct ColumnWidths {
+    int soft = 0;
+    int full = 0;
+};
+
 /**
- * Column width from header title and cell text (with icons). Uses
- * min(p80 + 30% of p80, p100) of non-blank sampled cells.
+ * Column width from header title and cell text (with icons). Soft is
+ * min(p80 + 30% of p80, p100); full is p100. Blank cells are not sampled.
  */
 class ColumnContentSpan
 {
 public:
     explicit ColumnContentSpan(QAbstractItemView *view);
 
-    int title(int column) const;
-    /** max(title, min(p80+30%, p100)); title alone when the column has no rows. */
-    int cells(int column) const;
+    ColumnWidths widths(int column) const;
 
 private:
+    int title(int column) const;
+
     QAbstractItemView *view_ = nullptr;
 };
