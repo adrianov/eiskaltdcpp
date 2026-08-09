@@ -21,125 +21,175 @@
 
 using namespace dcpp;
 
+namespace {
+
+QString virtualPath(const FileBrowserModel *model, FileBrowserItem *item)
+{
+    QStringList dirs = model->createRemotePath(item).split("\\");
+    if (dirs.size() < 2)
+        return QString();
+    dirs.removeFirst();
+    return "/" + dirs.join("/");
+}
+
+QVariant nameIcon(FileBrowserItem *item, int column)
+{
+    if (column != COLUMN_FILEBROWSER_NAME)
+        return QVariant();
+    WulforUtil *wu = WulforUtil::getInstance();
+    if (item->dir)
+        return WulforUtil::scalePixmap(wu->getPixmapForFolder(), 16);
+    return WulforUtil::scalePixmap(
+            wu->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()), 16);
+}
+
+QVariant displayCell(FileBrowserItem *item, int column, const QString &path,
+                     const QMap<QString, unsigned> &restrict_map)
+{
+    if (restrict_map.contains(path) && column == COLUMN_FILEBROWSER_NAME)
+        return FileBrowserModel::tr("%1 [%2 Gb]")
+                .arg(item->data(column).toString())
+                .arg(restrict_map[path]);
+
+    // Non-media files keep bitrate 0 internally; show blank, not "0".
+    if (column == COLUMN_FILEBROWSER_BR
+            && item->data(COLUMN_FILEBROWSER_BR).toInt() <= 0)
+        return QVariant();
+
+    return item->data(column);
+}
+
+QVariant backgroundCell(FileBrowserItem *item, bool ownList)
+{
+    if (item->isDuplicate)
+        return qApp->palette().color(QPalette::Highlight);
+    if (item->dir || ownList)
+        return QVariant();
+
+    TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
+    if (ShareManager::getInstance()->isTTHShared(t))
+        return AppTheme::sharedFileHighlight();
+    return QVariant();
+}
+
+QString duplicateTip(FileBrowserItem *item,
+                     const QHash<QString, DirectoryListing::File*> &hash)
+{
+    const QString &tth = item->data(COLUMN_FILEBROWSER_TTH).toString();
+    auto it = hash.find(tth);
+    if (it == hash.end())
+        return QString();
+
+    DirectoryListing::File *file = const_cast<DirectoryListing::File*>(it.value());
+    DirectoryListing::Directory *parentDir = file->getParent();
+    if (!parentDir)
+        return QString();
+
+    QString dupPath;
+    do {
+        dupPath = _q(parentDir->getName()) + "/" + dupPath;
+        parentDir = parentDir->getParent();
+    } while (parentDir->getParent());
+
+    return FileBrowserModel::tr("File marked as a duplicate of another file: %1")
+            .arg(dupPath + _q(file->getName()));
+}
+
+QString mediaTip(DirectoryListing::File *f)
+{
+    if (f->mediaInfo.video_info.empty() && f->mediaInfo.audio_info.empty())
+        return QString();
+
+    const MediaInfo &mi = f->mediaInfo;
+    QString tip = FileBrowserModel::tr("<b>Media Info:</b><br/>");
+    if (!mi.video_info.empty())
+        tip += FileBrowserModel::tr("&nbsp;&nbsp;<b>Video:</b> %1<br/>").arg(_q(mi.video_info));
+    if (!mi.audio_info.empty())
+        tip += FileBrowserModel::tr("&nbsp;&nbsp;<b>Audio:</b> %1<br/>").arg(_q(mi.audio_info));
+    if (mi.bitrate > 0)
+        tip += FileBrowserModel::tr("&nbsp;&nbsp;<b>Bitrate:</b> %1<br/>").arg(mi.bitrate);
+    if (!mi.resolution.empty())
+        tip += FileBrowserModel::tr("&nbsp;&nbsp;<b>Resolution:</b> %1<br/><br/>")
+                .arg(_q(mi.resolution));
+    return tip;
+}
+
+QString sharedPathTip(FileBrowserItem *item)
+{
+    TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
+    ShareManager *sm = ShareManager::getInstance();
+    try {
+        return FileBrowserModel::tr("File already exists: %1")
+                .arg(_q(sm->toReal(sm->toVirtual(t))));
+    } catch (...) {
+        return QString();
+    }
+}
+
+QVariant toolTipCell(FileBrowserItem *item, bool ownList,
+                     const QHash<QString, DirectoryListing::File*> &hash)
+{
+    if (item->isDuplicate && item->file) {
+        const QString tip = duplicateTip(item, hash);
+        if (!tip.isEmpty())
+            return tip;
+    }
+
+    QString tip;
+    if (item->dir)
+        tip = item->data(COLUMN_FILEBROWSER_NAME).toString();
+    if (item->file) {
+        const QString media = mediaTip(item->file);
+        if (!media.isEmpty())
+            tip = media;
+    }
+
+    if (!ownList) {
+        const QString existing = sharedPathTip(item);
+        if (!existing.isEmpty())
+            return tip + existing;
+    }
+
+    if (!tip.isEmpty())
+        return tip;
+    return QVariant();
+}
+
+QVariant restrictedBold(const QString &path, int column,
+                        const QMap<QString, unsigned> &restrict_map)
+{
+    if (!restrict_map.contains(path) || column != COLUMN_FILEBROWSER_NAME)
+        return QVariant();
+    QFont f;
+    f.setBold(true);
+    return f;
+}
+
+} // namespace
+
 QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
 
     FileBrowserItem *item = static_cast<FileBrowserItem*>(index.internalPointer());
-    QString path;
-    QStringList dirs = createRemotePath(item).split("\\");
+    const int col = index.column();
+    const QString path = virtualPath(this, item);
 
-    if (dirs.size() >= 2){
-        dirs.removeFirst();
-        path = "/" + dirs.join("/");
-    }
-
-    switch(role) {
+    switch (role) {
         case Qt::DecorationRole:
-        {
-            if (item->dir && index.column() == COLUMN_FILEBROWSER_NAME)
-                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFolder(), 16);
-            else if (index.column() == COLUMN_FILEBROWSER_NAME)
-                return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()), 16);
-            break;
-        }
+            return nameIcon(item, col);
         case Qt::DisplayRole:
-        {
-            if (restrict_map.contains(path) && index.column() == COLUMN_FILEBROWSER_NAME)
-                return tr("%1 [%2 Gb]").arg(item->data(index.column()).toString()).arg(restrict_map[path]);
-
-            return item->data(index.column());
-        }
+            return displayCell(item, col, path, restrict_map);
         case Qt::TextAlignmentRole:
-        {
-            bool align_right = (index.column() == COLUMN_FILEBROWSER_ESIZE) || (index.column() == COLUMN_FILEBROWSER_SIZE);
-            return align_right ? Qt::AlignRight : Qt::AlignLeft;
-        }
+            return (col == COLUMN_FILEBROWSER_ESIZE || col == COLUMN_FILEBROWSER_SIZE)
+                    ? Qt::AlignRight : Qt::AlignLeft;
         case Qt::BackgroundRole:
-        {
-            if (item->isDuplicate)
-                return qApp->palette().color(QPalette::Highlight);
-
-            if (item->dir || ownList)
-                break;
-
-            TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
-            if (ShareManager::getInstance()->isTTHShared(t))
-                return AppTheme::sharedFileHighlight();
-            break;
-        }
+            return backgroundCell(item, ownList);
         case Qt::ToolTipRole:
-        {
-            if (item->isDuplicate && item->file){
-                const QString &tth = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                auto it = hash.find(tth);
-
-                if (it == hash.end())
-                    break;
-
-                dcpp::DirectoryListing::File *file = const_cast<dcpp::DirectoryListing::File*>(it.value());
-                dcpp::DirectoryListing::Directory *parentDir = file->getParent();
-
-                if (!parentDir)
-                    break;
-
-                QString dupPath;
-                do {
-                    dupPath = _q(parentDir->getName()) + "/" + dupPath;
-                    parentDir = parentDir->getParent();
-                } while (parentDir->getParent());
-
-                return tr("File marked as a duplicate of another file: %1").arg(dupPath+_q(file->getName()));
-            }
-
-            QString tooltip;
-
-            if (item->dir)
-                tooltip = item->data(COLUMN_FILEBROWSER_NAME).toString();
-
-            if (item->file){
-                DirectoryListing::File *f = item->file;
-
-                if (!f->mediaInfo.video_info.empty() || !f->mediaInfo.audio_info.empty()){
-                    MediaInfo &mi = f->mediaInfo;
-
-                    tooltip = tr("<b>Media Info:</b><br/>");
-                    if (!f->mediaInfo.video_info.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Video:</b> %1<br/>").arg(_q(mi.video_info));
-                    if (!f->mediaInfo.audio_info.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Audio:</b> %1<br/>").arg(_q(mi.audio_info));
-                    if (f->mediaInfo.bitrate > 0)
-                        tooltip += tr("&nbsp;&nbsp;<b>Bitrate:</b> %1<br/>").arg(mi.bitrate);
-                    if (!f->mediaInfo.resolution.empty())
-                        tooltip += tr("&nbsp;&nbsp;<b>Resolution:</b> %1<br/><br/>").arg(_q(mi.resolution));
-                }
-            }
-
-            TTHValue t(_tq(item->data(COLUMN_FILEBROWSER_TTH).toString()));
-            ShareManager *SM = ShareManager::getInstance();
-
-            if (!ownList){
-                try{
-                    QString toolTip = _q(SM->toReal(SM->toVirtual(t)));
-                    return tooltip + tr("File already exists: %1").arg(toolTip);
-                }catch( ... ){}
-            }
-
-            if (!tooltip.isEmpty())
-                return tooltip;
-
-            break;
-        }
+            return toolTipCell(item, ownList, hash);
         case Qt::FontRole:
-        {
-            if (restrict_map.contains(path) && index.column() == COLUMN_FILEBROWSER_NAME){
-                QFont f;
-                f.setBold(true);
-                return f;
-            }
-            break;
-        }
+            return restrictedBold(path, col, restrict_map);
         default:
             break;
     }

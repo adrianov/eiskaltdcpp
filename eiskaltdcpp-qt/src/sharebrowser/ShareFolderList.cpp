@@ -26,7 +26,9 @@ QList<QVariant> fileRowData(DirectoryListing::File *file)
             << WulforUtil::formatBytes(file->getSize())
             << static_cast<quint64>(file->getSize())
             << _q(file->getTTH().toBase32())
-            << file->mediaInfo.bitrate
+            << (file->mediaInfo.bitrate > 0
+                ? QVariant(static_cast<int>(file->mediaInfo.bitrate))
+                : QVariant())
             << _q(file->mediaInfo.resolution)
             << _q(file->mediaInfo.video_info)
             << _q(file->mediaInfo.audio_info)
