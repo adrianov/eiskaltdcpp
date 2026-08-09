@@ -54,15 +54,15 @@ public:
     QString cid;
     QString tth;
     QString target;
-    /** Child: segment or file bytes in flight. Parent: displayed aggregate. */
+    /** Shown bytes: download peer = lifetime total; download parent = file aggregate. */
     qlonglong dpos;
-    /** Download parent: committed queue bytes. Upload parent/row: completed segment bytes. */
+    /** Download parent: queue committed. Download peer / upload: finished segment bytes. */
     qlonglong fpos;
-    /** Upload leaf: bytes sent on the current part (Upload::getPos). */
+    /** Current segment in flight (Download/Upload::getPos). */
     qlonglong segBytes;
     /** Session begin tick (GET_TICK); see transfersession/. */
     quint64 speedStart;
-    /** File bytes already done at session begin (download FPOS / upload startPos). */
+    /** File/upload session: baseline at begin. Download peer: file left at join. */
     qlonglong speedBase;
     qint64 queuePos;
     double percent;

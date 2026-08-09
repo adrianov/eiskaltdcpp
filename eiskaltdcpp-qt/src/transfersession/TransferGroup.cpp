@@ -59,8 +59,9 @@ void TransferGroup::scanChild(TransferViewItem *child, Scan &s) const
     const qint64 sz = child->data(COLUMN_TRANSFER_SIZE).toLongLong();
     if (sz > s.totalSize)
         s.totalSize = sz;
+    // In-flight only — peer lifetime totals stay on the child row (fpos + segBytes).
     if (parent_->download)
-        s.progressPos += child->dpos;
+        s.progressPos += child->segBytes;
     if (s.nick.isEmpty())
         s.nick = child->data(COLUMN_TRANSFER_USERS).toString();
 }
@@ -68,14 +69,14 @@ void TransferGroup::scanChild(TransferViewItem *child, Scan &s) const
 void TransferGroup::noteActive(TransferViewItem *child, Scan &s) const
 {
     if (parent_->download) {
-        if (child->dpos > 0)
+        if (child->segBytes > 0)
             s.active++;
         else if (child->queuePos > 0
                  && (s.bestQueuePos == 0 || child->queuePos < s.bestQueuePos))
             s.bestQueuePos = child->queuePos;
         return;
     }
-    // Named in-flight part — not SPEED (0 for the first session second).
+    // In-flight upload segment (finished means idle between segments).
     if (!child->finished
             && !child->data(COLUMN_TRANSFER_FNAME).toString().isEmpty())
         s.active++;
@@ -118,11 +119,6 @@ void TransferGroup::writeSpeed(const Scan &s) const
     qint64 timeLeft = params.value("TLEFT").toLongLong();
     if (timeLeft < 0)
         timeLeft = 0;
-    // Settled partials: hide decaying mean; keep speedStart (no warm-up restart).
-    if (!parent_->download && s.active == 0) {
-        speed = 0.0;
-        timeLeft = 0;
-    }
     parent_->updateColumn(COLUMN_TRANSFER_SPEED, speed);
     parent_->updateColumn(COLUMN_TRANSFER_TLEFT, timeLeft);
     if (!parent_->finished)

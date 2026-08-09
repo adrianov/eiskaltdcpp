@@ -56,17 +56,17 @@ qlonglong TransferSession::downloadTotal() const
     if (!scope_ || !scope_->download)
         return 0;
 
-    qlonglong total = scope_->fpos;
+    // File group: queue committed + in-flight per peer.
     if (scope_->cid.isEmpty()) {
+        qlonglong total = scope_->fpos;
         for (const auto &child : scope_->childItems) {
             if (!child->fail)
-                total += child->dpos;
+                total += child->segBytes;
         }
-    } else if (!scope_->fail) {
-        total += scope_->dpos;
+        return TransferDisplay::highWaterBytes(scope_->dpos, total);
     }
-    // Complete may set parent dpos to an absolute high-water before fpos catches up.
-    return TransferDisplay::highWaterBytes(scope_->dpos, total);
+    // Peer: finished segments + current in-flight.
+    return scope_->fail ? scope_->fpos : (scope_->fpos + scope_->segBytes);
 }
 
 qlonglong TransferSession::movedBytes() const
@@ -75,6 +75,9 @@ qlonglong TransferSession::movedBytes() const
         return 0;
     if (scope_->download) {
         const qlonglong total = downloadTotal();
+        // Peer: speedBase is left-at-join (size), not a subtracted baseline.
+        if (!scope_->cid.isEmpty())
+            return total > 0 ? total : 0;
         const qlonglong moved = total - scope_->speedBase;
         return moved > 0 ? moved : 0;
     }
@@ -104,18 +107,33 @@ void TransferSession::writeUi(QVariantMap &params, qlonglong fileSize) const
     if (!scope_)
         return;
 
+    // Download peer: speedBase = left-at-join; rate baseline is 0.
+    const bool downloadPeer = scope_->download && !scope_->cid.isEmpty();
+    qlonglong baseline = scope_->speedBase;
+    if (downloadPeer) {
+        baseline = 0;
+        if (scope_->speedBase > 0)
+            fileSize = scope_->speedBase;
+    }
     if (fileSize <= 0)
         fileSize = scope_->data(COLUMN_TRANSFER_SIZE).toLongLong();
 
     const TransferSessionRate::Result rate = TransferSessionRate::compute({
             movedBytes(),
-            scope_->speedBase,
+            baseline,
             fileSize,
             scope_->speedStart,
             GET_TICK()
     });
 
-    params["SPEED"] = TransferDisplay::roundSpeed(rate.bytesPerSec);
+    double speed = TransferDisplay::roundSpeed(rate.bytesPerSec);
+    // Warm-up / clock edge: keep last rate so Speed does not flicker to 0 B/s.
+    if (speed <= 0.0 && rate.progress > 0 && scope_->speedStart > 0 && !scope_->finished) {
+        const double prev = scope_->data(COLUMN_TRANSFER_SPEED).toDouble();
+        if (prev > 0.0)
+            speed = prev;
+    }
+    params["SPEED"] = speed;
     params["TLEFT"] = static_cast<qlonglong>(rate.etaSec);
     params["DPOS"] = static_cast<qlonglong>(rate.progress);
     params["PERC"] = fileSize > 0

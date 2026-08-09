@@ -17,8 +17,12 @@
 class TransferViewItem;
 
 /**
- * File transfer session for Transfer View: baseline + moved bytes, mean rate,
- * progress %, and ETA. Upload scope is peer+file; download scope is our file.
+ * Session counters for Transfer View: moved bytes, mean rate, progress, ETA.
+ *
+ * Upload: one session per peer+file across segments.
+ * Download file group: full file from queue baseline.
+ * Download peer: peer byte sum vs file left when that peer's first segment starts
+ * (`speedBase` holds left-at-join; see TransferSessionRow).
  */
 class TransferSession
 {
@@ -31,17 +35,11 @@ public:
     bool valid() const { return scope_ != nullptr; }
     TransferViewItem *item() const { return scope_; }
 
-    /** Bytes transferred after baseline (parts / download delta). */
     qlonglong movedBytes() const;
-    /** Absolute bytes done: baseline + moved (clamped by caller via writeUi). */
     qlonglong progressBytes() const;
 
-    /** Start the session clock once; `baseline` is already-done file bytes. */
     void begin(qlonglong baseline);
-    /** Fill SPEED, TLEFT, DPOS, PERC from the session mean. */
     void writeUi(QVariantMap &params, qlonglong fileSize) const;
-
-    /** Upload: every part finished and completed bytes cover the file. */
     bool uploadDone() const;
 
 private:

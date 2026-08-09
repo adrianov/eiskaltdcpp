@@ -11,10 +11,9 @@
 
 #include "TransferViewModel.h"
 #include "TransferDisplay.h"
-#include "TransferViewMetrics.h"
 #include "TransferViewModelTree.h"
 #include "TransferViewRemoveUtil.h"
-#include "transfersession/TransferSession.h"
+#include "transfersession/TransferSessionRow.h"
 
 void TransferViewModel::updateTransfer(const VarMap &params){
     if (params.empty())
@@ -37,9 +36,9 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)
                 && !vbol(params["DOWN"]) && !hub.isEmpty())
             findTransfer(vstr(params["CID"]), false, &item, QString());
-        if (!item)
-            return;
     }
+    if (!item)
+        return;
 
     if (vbol(params["FAIL"]) && shouldRemoveStaleRow(item)) {
         removeTransfer(params);
@@ -71,14 +70,7 @@ void TransferViewModel::updateTransfer(const VarMap &params){
             item->updateColumn(i.value(), p[i.key()]);
     }
 
-    // Downloads: DPOS is per-source segment bytes (parent sums them).
-    // Uploads: absolute progress comes from TransferSession::writeUi.
-    if (vbol(p["DOWN"])) {
-        if (p.contains("DPOS"))
-            item->dpos = vlng(p["DPOS"]);
-        if (p.contains("PERC"))
-            item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
-    }
+    TransferSessionRow::trackPeer(item, p);
 
     if (p.contains("TARGET"))
         item->target = vstr(p["TARGET"]);
@@ -139,47 +131,8 @@ void TransferViewModel::updateTransfer(const VarMap &params){
     if (showTranferedFilesOnly && TransferViewTree::isHiddenName(fname))
         return;
 
-    // Download parents only — upload parents use fpos for completed segment bytes.
-    if (item->download && item->parent() != rootItem
-            && rootItem->childItems.contains(item->parent()) && p.contains("FPOS"))
-        item->parent()->fpos = vlng(p["FPOS"]);
-
-    // Session rate/progress — skip Connected-only rows (no SEGP yet).
-    if (!item->fail) {
-        TransferViewItem *scope = TransferSession::scopeOf(item, rootItem);
-        TransferSession session(scope);
-        if (session.valid() && (scope->speedStart > 0 || p.contains("SEGP"))) {
-            if (scope->speedStart == 0) {
-                const qlonglong base = item->download
-                        ? (p.contains("FPOS") ? vlng(p["FPOS"]) : scope->fpos)
-                        : (p.contains("BASE") ? vlng(p["BASE"]) : 0);
-                session.begin(base);
-            }
-            qlonglong fileSize = p.contains("ESIZE")
-                    ? vlng(p["ESIZE"]) : vlng(scope->data(COLUMN_TRANSFER_SIZE));
-            session.writeUi(p, fileSize);
-            item->updateColumn(COLUMN_TRANSFER_SPEED, p["SPEED"]);
-            item->updateColumn(COLUMN_TRANSFER_TLEFT, p["TLEFT"]);
-            if (!item->download) {
-                item->dpos = vlng(p["DPOS"]);
-                item->percent = qBound(0.0, vdbl(p["PERC"]), 100.0);
-                if (vlng(item->data(COLUMN_TRANSFER_SIZE)) <= 0 && p.contains("ESIZE"))
-                    item->updateColumn(COLUMN_TRANSFER_SIZE, p["ESIZE"]);
-                const QString stat = item->data(COLUMN_TRANSFER_STATS).toString();
-                if (stat.isEmpty()
-                        || TransferDisplay::isProgressStat(stat, tr("Downloaded "), tr("Uploaded "))
-                        || vbol(p.value("SOFT_STAT"))) {
-                    item->updateColumn(COLUMN_TRANSFER_STATS,
-                            TransferViewMetrics::uploadProgressStat(
-                                    item->dpos, vlng(item->data(COLUMN_TRANSFER_SIZE))));
-                }
-                if (scope != item) {
-                    scope->dpos = item->dpos;
-                    scope->percent = item->percent;
-                }
-            }
-        }
-    }
+    TransferSessionRow::setQueuePos(item, rootItem, p);
+    TransferSessionRow::publish(item, rootItem, p, tr("Downloaded "), tr("Uploaded "));
 
     const QModelIndex idx = createIndexForItem(item);
     if (idx.isValid()) {

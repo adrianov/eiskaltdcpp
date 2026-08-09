@@ -11,6 +11,7 @@
 
 #include "TransferViewModel.h"
 #include "transfersession/TransferSession.h"
+#include "transfersession/TransferSessionRow.h"
 
 void TransferViewModel::finishParent(const VarMap &params){
     if (params.empty() || !params.contains("TARGET"))
@@ -54,16 +55,14 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
         return;
     TransferViewItem *scope = session.item();
 
-    // One Complete per Upload (SEGP = getPos). Skip fail/double-settle under-count.
-    const bool alreadySettled = item->finished;
-    if (segmentDone && !alreadySettled) {
-        item->finished = true;
+    // Commit this segment into the file session once (segBytes from updateTransfer).
+    if (segmentDone) {
         item->fail = false;
-        const qlonglong seg = vlng(params.value("SEGP"));
-        if (seg > 0)
-            scope->fpos += seg;
+        if (!item->finished && item->segBytes > 0)
+            scope->fpos += item->segBytes;
         item->segBytes = 0;
-    } else if (!segmentDone) {
+        item->finished = true; // idle until next Starting; session clock keeps running
+    } else {
         item->fail = true;
         item->finished = false;
         item->segBytes = 0;
@@ -76,27 +75,31 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
             scope->fpos = size;
     }
 
-    // File/fail dismiss quickly; partial Complete waits briefly for the next Starting
-    // on the same connection (peers often pause while fetching other sources).
+    // Fail/file: drop soon. Segment gap: wait for next Starting on this connection.
     static const int donePruneMs = 2000;
     static const int partGapPruneMs = 10000;
 
-    if (!session.uploadDone()) {
-        // Freeze the settled segment — do not keep the last Tick speed for hours.
-        item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
-        item->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
-        const QModelIndex idx = createIndexForItem(item);
+    auto notify = [this](TransferViewItem *row) {
+        const QModelIndex idx = createIndexForItem(row);
         if (idx.isValid()) {
             emit dataChanged(index(idx.row(), 0, idx.parent()),
                              index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
         }
+    };
+
+    if (!session.uploadDone()) {
+        if (item->fail) {
+            item->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
+            item->updateColumn(COLUMN_TRANSFER_TLEFT, qlonglong(-1));
+        } else {
+            // Same session mean vs full file size — no 0 B/s between segments.
+            VarMap ui = params;
+            TransferSessionRow::publish(item, rootItem, ui, tr("Downloaded "), tr("Uploaded "));
+        }
+        notify(item);
         if (scope->cid.isEmpty()) {
             updateParent(scope);
-            const QModelIndex pidx = createIndexForItem(scope);
-            if (pidx.isValid()) {
-                emit dataChanged(index(pidx.row(), 0, pidx.parent()),
-                                 index(pidx.row(), columnCount(pidx.parent()) - 1, pidx.parent()));
-            }
+            notify(scope);
         }
         if (item->fail || fileDone)
             armUploadPrune(params, donePruneMs);
@@ -118,11 +121,7 @@ void TransferViewModel::settleUpload(const VarMap &params, bool segmentDone) {
         scope->speedBase = 0;
         scope->updateColumn(COLUMN_TRANSFER_SPEED, 0.0);
         scope->updateColumn(COLUMN_TRANSFER_STATS, tr("Upload finished"));
-        const QModelIndex idx = createIndexForItem(scope);
-        if (idx.isValid()) {
-            emit dataChanged(index(idx.row(), 0, idx.parent()),
-                             index(idx.row(), columnCount(idx.parent()) - 1, idx.parent()));
-        }
+        notify(scope);
     }
     armUploadPrune(params, donePruneMs);
 }

@@ -32,8 +32,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Requesting, dcpp::Download*
     }
 
     params["FPOS"]  = (qlonglong)QueueManager::getInstance()->getPos(dl->getPath());
-    const DownloadUiState s = downloadState(dl);
-    applyDownloadMetrics(params, dl, s, tr("Requesting"));
+    applyDownloadMetrics(params, downloadState(dl), tr("Requesting"));
     params["FAIL"]  = false;
     params["SOFT_STAT"] = true;
 
@@ -60,11 +59,10 @@ void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* d
     params["FPOS"]  = (qlonglong)QueueManager::getInstance()->getPos(dl->getPath());
     params["QUEUE_POS"] = static_cast<qlonglong>(0);
     const DownloadUiState s = downloadState(dl);
-    const QString stat = s.continuing ? downloadProgressStat(s.downloaded, s.fileSize) : tr("Download starting...");
-    applyDownloadMetrics(params, dl, s, stat);
+    // Peer progress text comes from TransferSession (sum of this peer's segments).
+    applyDownloadMetrics(params, s, tr("Download starting..."));
     applyDownloadSpeed(params, dl, s);
-    if (!s.continuing)
-        params["SOFT_STAT"] = true;
+    params["SOFT_STAT"] = true;
 
     emit coreDMStarting(params);
 }
@@ -84,7 +82,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadL
         params["FPOS"]  = (qlonglong)QueueManager::getInstance()->getPos(dl->getPath());
         const DownloadUiState s = downloadState(dl);
 
-        applyDownloadMetrics(params, dl, s, QString());
+        applyDownloadMetrics(params, s, QString());
         applyDownloadSpeed(params, dl, s);
 
         if (dl->getUserConnection().isSecure())
@@ -101,7 +99,6 @@ void TransferView::on(dcpp::DownloadManagerListener::Tick, const dcpp::DownloadL
             str += QString("[Z]");
         
         params["FLAGS"] = str;
-        params["STAT"] = downloadProgressStat(s.downloaded, s.fileSize);
 
         emit coreDMTick(params);
         any = true;
@@ -119,9 +116,10 @@ void TransferView::on(dcpp::DownloadManagerListener::Complete, dcpp::Download* d
     getParams(params, dl);
 
     const DownloadUiState s = downloadState(dl);
-    applyDownloadMetrics(params, dl, s, tr("Download complete"));
+    applyDownloadMetrics(params, s, tr("Download complete"));
     applyDownloadSpeed(params, dl, s);
     params["SOFT_STAT"] = true;
+    params["SEGMENT_DONE"] = true;
 
     qint64 pos = QueueManager::getInstance()->getPos(dl->getPath()) + dl->getPos();
 
@@ -145,7 +143,7 @@ void TransferView::onFailed(dcpp::Download* dl, const std::string& reason) {
     getParams(params, dl);
 
     const DownloadUiState s = downloadState(dl);
-    applyDownloadMetrics(params, dl, s, _q(reason));
+    applyDownloadMetrics(params, s, _q(reason));
     params["SPEED"] = 0;
     params["FAIL"]  = true;
     params["TLEFT"] = -1;

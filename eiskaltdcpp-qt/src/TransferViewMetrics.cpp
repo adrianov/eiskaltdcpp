@@ -111,9 +111,8 @@ DownloadUiState downloadState(const Download *dl)
 {
     DownloadUiState s;
     s.fileSize = downloadFileSize(dl);
-    const int64_t base = QueueManager::getInstance()->getPos(dl->getPath());
-    s.downloaded = base + dl->getPos();
-    s.continuing = base > 0;
+    s.segmentPos = dl->getPos();
+    s.continuing = QueueManager::getInstance()->getPos(dl->getPath()) > 0;
     return s;
 }
 
@@ -123,10 +122,10 @@ QString uploadProgressStat(int64_t sent, int64_t fileSize)
     return QObject::tr("Uploaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(sent)).arg(percent, 0, 'f', 1);
 }
 
-QString downloadProgressStat(int64_t downloaded, int64_t fileSize)
+QString downloadProgressStat(int64_t bytes, int64_t size)
 {
-    const double percent = fileSize > 0 ? downloaded * 100.0 / fileSize : 0.0;
-    return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(downloaded)).arg(percent, 0, 'f', 1);
+    const double percent = size > 0 ? bytes * 100.0 / size : 0.0;
+    return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(bytes)).arg(percent, 0, 'f', 1);
 }
 
 QString slotWaitStat(qint64 queuePos, bool trailingSpace)
@@ -151,12 +150,11 @@ void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QStri
     params["FAIL"] = false;
 }
 
-void applyDownloadMetrics(QVariantMap &params, const Download *dl,
-                          const DownloadUiState &s, const QString &stat)
+void applyDownloadMetrics(QVariantMap &params, const DownloadUiState &s, const QString &stat)
 {
+    // ESIZE = full file. DPOS = in-flight segment; peer totals are summed in the model.
     params["ESIZE"] = static_cast<qlonglong>(s.fileSize);
-    params["DPOS"] = static_cast<qlonglong>(dl->getPos());
-    params["PERC"] = s.fileSize > 0 ? s.downloaded * 100.0 / s.fileSize : 0.0;
+    params["DPOS"] = static_cast<qlonglong>(s.segmentPos);
     if (!stat.isEmpty())
         params["STAT"] = stat;
     params["DOWN"] = true;
@@ -164,7 +162,7 @@ void applyDownloadMetrics(QVariantMap &params, const Download *dl,
 
 void applyUploadSpeed(QVariantMap &params, const Upload *ul, const UploadUiState &)
 {
-    // Session metrics: transfersession/TransferSessionRate.md. SEGP/BASE = part.
+    // Session metrics: transfersession/TransferSessionRate.md. SEGP/BASE = segment.
     params["SEGP"] = static_cast<qlonglong>(ul->getPos());
     params["BASE"] = static_cast<qlonglong>(ul->getStartPos());
     params.remove("SPEED");
@@ -173,7 +171,7 @@ void applyUploadSpeed(QVariantMap &params, const Upload *ul, const UploadUiState
 
 void applyDownloadSpeed(QVariantMap &params, const Download *dl, const DownloadUiState &)
 {
-    // Session metrics: transfersession/TransferSessionRate.md. SEGP = part bytes.
+    // Session metrics: transfersession/TransferSessionRate.md. SEGP = segment bytes.
     params["SEGP"] = static_cast<qlonglong>(dl->getPos());
     params.remove("SPEED");
     params.remove("TLEFT");

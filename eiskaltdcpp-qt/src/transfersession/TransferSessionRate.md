@@ -9,34 +9,44 @@ Session-mean throughput (constant-rate MLE):
 ```text
 rate      = moved / elapsed
 progress  = baseline + moved
-remaining = fileSize - progress
+remaining = size - progress
 eta       = remaining / rate
-percent   = progress / fileSize
+percent   = progress / size
 ```
 
-Assumption: future average rate ≈ average so far. Prefer this for “when will it finish?” over a short EMA (EMA is snappier on the wire, noisier for ETA, and resets between parts).
+Assumption: future average rate ≈ average so far. Prefer this for “when will it finish?” over a short EMA (EMA is snappier on the wire, noisier for ETA, and resets between segments).
 
 | Term | Meaning |
 |------|---------|
-| `baseline` (`speedBase`) | File bytes already done when the session begins |
+| `baseline` (`speedBase` on file/upload) | Bytes already done when the session begins |
 | `moved` | Bytes transferred after baseline |
 | `progress` | Absolute bytes done now |
-| `elapsed` | Wall time since begin (includes stalls and part gaps) |
-| `fileSize` | Full object size |
+| `elapsed` | Wall time since begin (includes stalls and gaps between segments) |
+| `size` | Full file, or (download peer) file left at join |
 
-**Effective remaining at begin:** `fileSize - baseline`. After transfers: `fileSize - progress`.
+**Effective remaining at begin:** `size - baseline`. After transfers: `size - progress`.
 
 ## Scopes
 
 **Upload (peer + file)** — parent keyed by path + peer IP (or the leaf if alone).
 
-- Begin on first `Starting`; `baseline` = first part `startPos`
-- `moved` = completed part sizes (`fpos`) + in-flight `getPos()` (`segBytes`)
+- Begin once on first `Starting`; `baseline` = first segment `startPos`
+- `moved` = finished segment bytes (`fpos`) + in-flight `segBytes`
+- Do not restart the clock between segments; Speed is the session mean (not 0 B/s in gaps)
+- `%` / Size use full file size
 
-**Download (our file)** — parent keyed by path (all sources), or the leaf if alone.
+**Download file group** — parent keyed by path (all peers).
 
-- Begin on first part tick; `baseline` = queue committed position (`FPOS`)
-- `progress` = committed `fpos` + in-flight source `dpos`
+- Begin on first segment tick; `baseline` = queue committed position (`FPOS`)
+- `progress` = committed `fpos` + in-flight `segBytes` from each peer
+
+**Download peer** — child under a file group; one session for that peer on this file.
+
+- Session is **not** reset between segments
+- `fpos` = bytes from finished segments; `segBytes` = current segment
+- On first segment: `leftAtJoin = fileSize - FPOS` (whole-file bytes still left)
+- Speed, progress text, and `%` use peer bytes against **leftAtJoin**
+- Size column still shows full file size
 
 ## Readiness
 
@@ -45,7 +55,7 @@ Publish rate/ETA only when the session has begun, `moved > 0`, and `elapsed ≥ 
 ## Display
 
 1. ETA from raw bytes/s; round only the Speed column.
-2. Progress bar, `%`, and status text share `progress / fileSize`.
+2. Progress bar, `%`, and status text share `progress / size` for that row’s scope.
 3. `eta < 0` means unknown.
 
 ## Non-goals
@@ -59,6 +69,7 @@ Publish rate/ETA only when the session has begun, `moved > 0`, and `elapsed ≥ 
 | Unit | Role |
 |------|------|
 | `TransferSessionRate.h` | Pure rate math |
-| `TransferSession` | Scope counters + UI fields |
-| `TransferGroup` | Parent row aggregate (progress, speed, identity) |
+| `TransferSession` | Scope counters + `writeUi` |
+| `TransferSessionRow` | Peer tracking + publish onto a row |
+| `TransferGroup` | File-group parent aggregate |
 | Transfer View model | Tree / settle / listeners |

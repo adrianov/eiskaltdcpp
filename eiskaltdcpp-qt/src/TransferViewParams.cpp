@@ -81,9 +81,7 @@ void TransferView::getParams(TransferView::VarMap &params, const dcpp::Transfer 
     params["DPOS"]  = (qlonglong)trf->getPos();
 
     if (const auto *dl = dynamic_cast<const Download *>(trf)) {
-        const DownloadUiState s = downloadState(dl);
-        params["ESIZE"] = static_cast<qlonglong>(s.fileSize);
-        params["PERC"] = s.fileSize > 0 ? s.downloaded * 100.0 / s.fileSize : 0.0;
+        applyDownloadMetrics(params, downloadState(dl), QString());
     } else {
         params["ESIZE"] = (qlonglong)trf->getSize();
         params["PERC"] = trf->getSize() > 0

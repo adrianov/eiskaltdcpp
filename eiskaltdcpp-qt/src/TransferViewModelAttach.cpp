@@ -13,6 +13,7 @@
 #include "TransferViewModelTree.h"
 #include "TransferViewRemoveUtil.h"
 #include "transfersession/TransferSession.h"
+#include "transfersession/TransferSessionRow.h"
 
 void TransferViewModel::initTransfer(const VarMap &params){
     if (params.empty())
@@ -51,12 +52,22 @@ void TransferViewModel::initTransfer(const VarMap &params){
                 scope->speedBase = 0;
             }
             scope->finished = false;
-            // Downloads begin in updateTransfer (with FPOS baseline).
+            // Once per file — keeps the mean across segments (BASE ignored if already begun).
             TransferSession(scope).begin(vlng(params.value("BASE")));
         }
     } else if (item) {
+        // Same peer, next segment: commit in-flight bytes; keep mean rate + peer total.
         item->finished = false;
-        item->segBytes = 0;
+        const QString newTarget = vstr(params.value("TARGET"));
+        if (!item->target.isEmpty() && !newTarget.isEmpty() && newTarget != item->target) {
+            item->fpos = 0;
+            item->dpos = 0;
+            item->segBytes = 0;
+            item->speedStart = 0;
+            item->speedBase = 0;
+        } else {
+            TransferSessionRow::commitSegment(item);
+        }
     }
 
     updateTransfer(params);

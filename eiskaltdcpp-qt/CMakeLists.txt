@@ -300,6 +300,7 @@ set(QT_EXTRA_SOURCES
     src/TransferViewUploadListeners.cpp
     src/transfersession/TransferGroup.cpp
     src/transfersession/TransferSession.cpp
+    src/transfersession/TransferSessionRow.cpp
     src/UserListItem.cpp
     src/UserListModelData.cpp
     src/UserListModelMatch.cpp
