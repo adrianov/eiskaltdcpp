@@ -10,16 +10,13 @@
  ***************************************************************************/
 
 #include "treeheader/TreeHeaderAutosize.h"
-#include "treeheader/ColumnContentSpan.h"
+#include "treeheader/HeaderContentFit.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QHeaderView>
-#include <QTableView>
 #include <QTimer>
-#include <QTreeView>
-#include <QTreeWidget>
 
 namespace {
 const char kObjectName[] = "TreeHeaderAutosize";
@@ -34,17 +31,6 @@ TreeHeaderAutosize *TreeHeaderAutosize::attached(QAbstractItemView *view)
             QLatin1String(kObjectName), Qt::FindDirectChildrenOnly))
         return static_cast<TreeHeaderAutosize*>(existing);
     return new TreeHeaderAutosize(view);
-}
-
-QHeaderView *TreeHeaderAutosize::headerOf(QAbstractItemView *view)
-{
-    if (QTableView *table = qobject_cast<QTableView*>(view))
-        return table->horizontalHeader();
-    if (QTreeWidget *tw = qobject_cast<QTreeWidget*>(view))
-        return tw->header();
-    if (QTreeView *tree = qobject_cast<QTreeView*>(view))
-        return tree->header();
-    return nullptr;
 }
 
 TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
@@ -63,7 +49,7 @@ TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
 
 void TreeHeaderAutosize::hookHeader()
 {
-    QHeaderView *header = headerOf(view_);
+    QHeaderView *header = HeaderContentFit::headerOf(view_);
     if (!header)
         return;
     connect(header, &QHeaderView::sectionResized, this, [this](int logical, int, int) {
@@ -88,12 +74,7 @@ void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
     a->fitting_ = false;
     a->manual_.clear();
     a->hookModel();
-    if (state.isEmpty()) {
-        a->requestFit();
-    } else {
-        // Keep saved widths; a later row-count change may refit non-manual columns.
-        a->done_ = true;
-    }
+    a->requestFit();
 }
 
 void TreeHeaderAutosize::ensure(QAbstractItemView *view)
@@ -106,6 +87,7 @@ void TreeHeaderAutosize::ensure(QAbstractItemView *view)
 void TreeHeaderAutosize::requestFit()
 {
     done_ = false;
+    shrinkOnly_ = false;
     hookModel();
     scheduleCheck();
 }
@@ -134,35 +116,35 @@ bool TreeHeaderAutosize::eventFilter(QObject *obj, QEvent *ev)
     Q_UNUSED(obj);
     if (!view_)
         return false;
-    if ((ev->type() == QEvent::Show || ev->type() == QEvent::Resize) && !done_)
-        scheduleCheck();
-    return false;
-}
-
-void TreeHeaderAutosize::applyFit()
-{
-    QHeaderView *header = headerOf(view_);
-    if (!header || header->count() < 1)
-        return;
-    header->setStretchLastSection(false);
-    ColumnContentSpan span(view_);
-    for (int v = 0; v < header->count(); ++v) {
-        const int col = header->logicalIndex(v);
-        if (header->isSectionHidden(col) || manual_.contains(col))
-            continue;
-        header->resizeSection(col, span.cells(col));
+    if (ev->type() == QEvent::Show) {
+        if (!done_)
+            scheduleCheck();
+    } else if (ev->type() == QEvent::Resize) {
+        if (!done_) {
+            scheduleCheck();
+        } else {
+            // Narrower view may create scroll while columns still have slack.
+            shrinkOnly_ = true;
+            scheduleCheck();
+        }
     }
+    return false;
 }
 
 void TreeHeaderAutosize::checkLayout()
 {
-    if (!view_ || !view_->isVisible() || !view_->viewport()
-        || view_->viewport()->width() < 40 || !headerOf(view_)) {
+    HeaderContentFit fit(view_, manual_);
+    if (!fit.ready()) {
         // Not mapped yet — Show/Resize while !done_ will schedule again.
         return;
     }
+    const bool onlyShrink = shrinkOnly_ && done_;
+    shrinkOnly_ = false;
     fitting_ = true;
-    applyFit();
+    if (onlyShrink)
+        fit.shrinkSlack();
+    else
+        fit.apply();
     fitting_ = false;
     done_ = true;
 }

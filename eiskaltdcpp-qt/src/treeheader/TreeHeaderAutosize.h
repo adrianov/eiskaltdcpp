@@ -22,11 +22,8 @@ class QHeaderView;
 class QTimer;
 
 /**
- * Debounced column autosize for tree/table headers:
- * - width = max(header title, p80 or p100 if within 20% of p80); scroll OK
- * - user-dragged columns stay fixed; cell value updates alone do not refit
- * - refit when the row count changes (1s debounce after the last change)
- * - saved header state is kept on load until a later row-count fit
+ * Debounced column autosize for tree/table headers. Timing and manual-drag
+ * tracking live here; width rules are applied by HeaderContentFit.
  */
 class TreeHeaderAutosize : public QObject
 {
@@ -38,19 +35,18 @@ private:
     explicit TreeHeaderAutosize(QAbstractItemView *view);
 
     static TreeHeaderAutosize *attached(QAbstractItemView *view);
-    static QHeaderView *headerOf(QAbstractItemView *view);
 
     void hookHeader();
     void requestFit();
     void hookModel();
     void scheduleCheck();
     void checkLayout();
-    void applyFit();
     bool eventFilter(QObject *obj, QEvent *ev) override;
 
     QPointer<QAbstractItemView> view_;
     QTimer *debounce_ = nullptr;
     bool done_ = false;
+    bool shrinkOnly_ = false;
     bool modelHooked_ = false;
     bool fitting_ = false;
     QSet<int> manual_;

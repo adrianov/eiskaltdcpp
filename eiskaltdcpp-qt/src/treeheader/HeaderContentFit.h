@@ -11,21 +11,30 @@
 
 #pragma once
 
+#include <QSet>
+
 class QAbstractItemView;
+class QHeaderView;
 
 /**
- * Column width from header title and cell text (with icons). Uses
- * min(p80 + 30% of p80, p100) of non-blank sampled cells.
+ * Applies content-based header widths: grow columns that are too narrow, and
+ * shrink slack only when horizontal scroll is present, content fits the
+ * viewport, and every non-manual column has spare width.
  */
-class ColumnContentSpan
+class HeaderContentFit
 {
 public:
-    explicit ColumnContentSpan(QAbstractItemView *view);
+    HeaderContentFit(QAbstractItemView *view, const QSet<int> &manual);
 
-    int title(int column) const;
-    /** max(title, min(p80+30%, p100)); title alone when the column has no rows. */
-    int cells(int column) const;
+    static QHeaderView *headerOf(QAbstractItemView *view);
+
+    bool ready() const;
+    void apply();
+    void shrinkSlack();
 
 private:
+    void fit(bool grow);
+
     QAbstractItemView *view_ = nullptr;
+    QSet<int> manual_;
 };

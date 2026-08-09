@@ -25,8 +25,8 @@ namespace {
 
 constexpr int kSampleRows = 300;
 constexpr int kPercentile = 80;
-/** Prefer p100 when it is within this fraction of p80 (no tall outliers). */
-constexpr int kNearMaxPct = 20;
+/** Allow up to this fraction above p80, still capped by p100. */
+constexpr int kAboveP80Pct = 30;
 
 int iconPad(const QVariant &deco)
 {
@@ -50,10 +50,10 @@ void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
         if (!idx.isValid())
             continue;
         const QString text = idx.data(Qt::DisplayRole).toString();
-        // Empty cells are not samples — they must not pull p80/p100 down.
-        if (!text.isEmpty()) {
-            out.append(fm.horizontalAdvance(text)
-                       + 20 + iconPad(idx.data(Qt::DecorationRole))
+        const int icons = iconPad(idx.data(Qt::DecorationRole));
+        // Blank cells are not samples — they must not pull p80/p100 down.
+        if (!text.trimmed().isEmpty() || icons > 0) {
+            out.append(fm.horizontalAdvance(text) + 20 + icons
                        + (column == 0 ? depth * indent : 0));
         }
         if (model->hasChildren(idx))
@@ -69,10 +69,8 @@ int contentWidth(QVector<int> &widths)
     const int p80 = widths.at(qBound(0, (widths.size() * kPercentile + 99) / 100 - 1,
                                      widths.size() - 1));
     const int p100 = widths.last();
-    // p100 if at most 20% wider than p80 (p100 / p80 <= 1.2).
-    if (p100 * 100LL <= p80 * (100LL + kNearMaxPct))
-        return p100;
-    return p80;
+    // min(p80 + 30% of p80, p100)
+    return qMin(p80 + (p80 * kAboveP80Pct) / 100, p100);
 }
 
 } // namespace
