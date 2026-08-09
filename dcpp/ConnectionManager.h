@@ -29,6 +29,7 @@ using std::vector;
 
 using QueuedDownloadUsers = unordered_set<CID>;
 
+class DownloadRetryPolicy;
 class SocketException;
 
 class ConnectionManager : public Speaker<ConnectionManagerListener>,
@@ -52,7 +53,7 @@ public:
     bool allowOutgoingConnect(const UserPtr& user) const;
     /** True when a download CQI exists for the user (connecting, waiting, or active). */
     bool isQueuedForDownload(const UserPtr& user) const;
-    /** Snapshot of users with a live download CQI (caller must not hold QueueManager::cs). */
+    /** Snapshot of ACTIVE/CONNECTING download peers (caller must not hold QueueManager::cs). */
     QueuedDownloadUsers queuedDownloadUsers() const;
     /** Arm short CTM/RCM latch (RevConnect / upload-notify anti-spam). */
     void noteOutgoingConnect(const UserPtr& user);
@@ -155,13 +156,12 @@ private:
     void accept(const Socket& sock, bool secure) noexcept;
 
     void failed(UserConnection* aSource, const string& aError, bool protocolError);
-    void failDownloadQueue(ConnectionQueueItem* dlCqi, UserConnection* aSource, const string& aError, bool protocolError);
-    void markQueueGiveUp(ConnectionQueueItem* cqi, int attempts, bool slotWait);
+    void failDownloadQueue(ConnectionQueueItem* dlCqi, const DownloadRetryPolicy& policy, const string& aError);
     void reviveDownloadQueue(ConnectionQueueItem* cqi, bool forced = false);
     /** CONNECTING timed out. True → drop CQI; peer is unreachable (caller removes queue sources). */
     bool onDownloadConnectTimeout(ConnectionQueueItem* cqi);
-    /** All hubs timed out or connect give-up, no peer response — caller removes CQI/sources. */
-    bool dropUnreachableDownload(ConnectionQueueItem* cqi);
+    /** Move the item to a better online hub identity of the same peer (caller holds cs). */
+    bool switchDownloadIdentity(ConnectionQueueItem* cqi);
 
     bool isHubCtmBlocked(const string& aServer, const string& aPort, const string& aHubUrl);
     void blockHubCtm(UserConnection* aSource);

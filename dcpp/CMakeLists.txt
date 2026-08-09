@@ -117,6 +117,7 @@ set(DCPP_EXTRA_SOURCES
     ConnectionManagerGetDownload.cpp
     ConnectionManagerCooldown.cpp
     ConnectionManagerPeerMatch.cpp
+    DownloadRetryPolicy.cpp
     ConnectionManagerListen.cpp
     ConnectionManagerFail.cpp
     ConnectionManagerFailQueue.cpp
