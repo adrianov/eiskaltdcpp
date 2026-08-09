@@ -29,17 +29,16 @@
 #include <QStandardPaths>
 #endif
 
-namespace {
-
-QString resolveLocalFile(QString file)
+QString finishedLocalPath(const QString &file)
 {
+    QString path = file;
 #if !defined(Q_OS_WIN)
     // Legacy targets may omit the leading slash; keep them rooted.
-    if (!file.isEmpty() && !QFileInfo(file).isAbsolute())
-        file.prepend(QLatin1Char('/'));
+    if (!path.isEmpty() && !QFileInfo(path).isAbsolute())
+        path.prepend(QLatin1Char('/'));
 #endif
 
-    QFileInfo info(file);
+    QFileInfo info(path);
     if (info.exists())
         return info.absoluteFilePath();
 
@@ -48,12 +47,15 @@ QString resolveLocalFile(QString file)
     if (name.isEmpty() || !dir.exists())
         return info.absoluteFilePath();
 
+    // macOS often stores a different Unicode form than the directory entry.
     const QStringList matches = dir.entryList(QStringList(QStringLiteral("*%1*").arg(name)),
                                               QDir::Files, QDir::Name);
     if (!matches.isEmpty())
         return dir.absoluteFilePath(matches.first());
     return info.absoluteFilePath();
 }
+
+namespace {
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MAC)
 void absorbMimeApps(const QString &path, QSet<QString> &mimes)
@@ -148,13 +150,13 @@ bool hasAssociatedApp(const QString &path)
 template <bool isUpload>
 void FinishedTransfers<isUpload>::openFile(QString file)
 {
-    QDesktopServices::openUrl(QUrl::fromLocalFile(resolveLocalFile(file)));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(finishedLocalPath(file)));
 }
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::openOrReveal(QString file)
 {
-    file = resolveLocalFile(file);
+    file = finishedLocalPath(file);
     if (hasAssociatedApp(file)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(file));
         return;

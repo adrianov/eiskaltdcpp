@@ -70,31 +70,41 @@ void FinishedTransfers<isUpload>::slotContextMenu()
         return;
 
     QStringList files;
+    bool hasFb2 = false;
 
     if (comboBox->currentIndex() == 0){
-        FinishedTransfersItem *item = nullptr;
-        QString file;
-
         for (const auto &i : indexes){
-            item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            file = item->data(COLUMN_FINISHED_TARGET).toString();
-
-            if (!file.isEmpty())
-                files.push_back(file);
+            auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+            if (!item)
+                continue;
+            const QString file = item->data(COLUMN_FINISHED_TARGET).toString();
+            if (file.isEmpty())
+                continue;
+            files.push_back(file);
+            // Suffix on TARGET/FNAME only — exists() can fail until finishedLocalPath().
+            if (!isUpload && (Fb2EpubExport::isFb2Name(file)
+                    || Fb2EpubExport::isFb2Name(item->data(COLUMN_FINISHED_NAME).toString())))
+                hasFb2 = true;
         }
     }
     else {
-        FinishedTransfersItem *item = nullptr;
-        QString file_list;
-
         for (const auto &i : indexes){
-            item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            file_list = item->data(COLUMN_FINISHED_PATH).toString();
-
-            if (!file_list.isEmpty()){
-                files.append(file_list.split("; ", WULFOR_SKIP_EMPTY));
+            auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+            if (!item)
+                continue;
+            const QString file_list = item->data(COLUMN_FINISHED_PATH).toString();
+            if (file_list.isEmpty())
+                continue;
+            const QStringList parts = file_list.split("; ", WULFOR_SKIP_EMPTY);
+            files.append(parts);
+            if (!isUpload) {
+                for (const auto &part : parts) {
+                    if (Fb2EpubExport::isFb2Name(part)) {
+                        hasFb2 = true;
+                        break;
+                    }
+                }
             }
-
         }
     }
 
@@ -108,28 +118,9 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     m->addAction(open_f);
     m->addAction(open_dir);
 
-    if (!isUpload) {
-        // Gate on name/suffix; TARGET may not match the on-disk Unicode form until resolved.
-        bool hasFb2 = false;
-        for (const auto &f : files) {
-            if (Fb2EpubExport::isFb2Name(f)) {
-                hasFb2 = true;
-                break;
-            }
-        }
-        if (!hasFb2 && comboBox->currentIndex() == 0) {
-            for (const auto &i : indexes) {
-                auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-                if (item && Fb2EpubExport::isFb2Name(item->data(COLUMN_FINISHED_NAME).toString())) {
-                    hasFb2 = true;
-                    break;
-                }
-            }
-        }
-        if (hasFb2) {
-            convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), tr("Convert to EPUB"), m);
-            m->addAction(convert_epub);
-        }
+    if (!isUpload && hasFb2) {
+        convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), tr("Convert to EPUB"), m);
+        m->addAction(convert_epub);
     }
 
     if (comboBox->currentIndex() == 0){
@@ -151,7 +142,7 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     }
     else if (ret == open_dir){
         for (const auto &f : files)
-            WulforUtil::revealPath(f);
+            WulforUtil::revealPath(finishedLocalPath(f));
     }
     else if (convert_epub && ret == convert_epub){
         QStringList resolved;
