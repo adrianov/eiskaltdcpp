@@ -28,6 +28,11 @@ QString joinPath(const QString &path, const QString &name)
     return path + QLatin1Char('\\') + name;
 }
 
+bool stale(const std::atomic<int> *gen, int expect)
+{
+    return gen && gen->load() != expect;
+}
+
 } // namespace
 
 bool FilterMatch::needTth() const
@@ -125,38 +130,47 @@ bool FilterMatch::filePasses(const QString &filePath, qulonglong size, const QSt
     return acceptFile(name, path, tth, size);
 }
 
-bool FilterMatch::subtreeHasMatch(DirectoryListing::Directory *dir, const QString &path) const
+bool FilterMatch::subtreeHasMatch(DirectoryListing::Directory *dir, const QString &path,
+                                  const std::atomic<int> *gen, int expect) const
 {
-    if (!dir)
+    if (!dir || stale(gen, expect))
         return false;
+    // Dir path can match on its own (empty dirs / tree parents); skip when ext-only.
+    if (!terms.empty() && extFilter.isEmpty() && matchesText(path))
+        return true;
+    int n = 0;
     for (const auto &file : dir->files) {
+        if ((n++ & 63) == 0 && stale(gen, expect))
+            return false;
         const QString filePath = joinPath(path, _q(file->getName()));
         if (filePasses(filePath, file->getSize(), _q(file->getTTH().toBase32())))
             return true;
     }
     for (const auto &sub : dir->directories) {
-        if (subtreeHasMatch(sub, joinPath(path, _q(sub->getName()))))
+        if (subtreeHasMatch(sub, joinPath(path, _q(sub->getName())), gen, expect))
             return true;
     }
     return false;
 }
 
-bool FilterMatch::subtreeHasVisibleDir(DirectoryListing::Directory *dir, const QString &path) const
+bool FilterMatch::subtreeHasVisibleDir(DirectoryListing::Directory *dir, const QString &path,
+                                       const std::atomic<int> *gen, int expect) const
 {
-    if (!dir)
+    if (!dir || stale(gen, expect))
         return false;
     if (dirPasses(path, dir->getTotalSize(true)))
         return true;
     for (const auto &sub : dir->directories) {
-        if (subtreeHasVisibleDir(sub, joinPath(path, _q(sub->getName()))))
+        if (subtreeHasVisibleDir(sub, joinPath(path, _q(sub->getName())), gen, expect))
             return true;
     }
     return false;
 }
 
-bool FilterMatch::acceptItem(FileBrowserItem *item, const QString &pathPrefix) const
+bool FilterMatch::acceptItem(FileBrowserItem *item, const QString &pathPrefix,
+                             const std::atomic<int> *gen, int expect) const
 {
-    if (!item)
+    if (!item || stale(gen, expect))
         return false;
 
     const QString name = item->data(COLUMN_FILEBROWSER_NAME).toString();
@@ -171,8 +185,8 @@ bool FilterMatch::acceptItem(FileBrowserItem *item, const QString &pathPrefix) c
             return false;
         const QString full = joinPath(path, name);
         if (dirsOnly)
-            return dirPasses(full, size) || subtreeHasVisibleDir(item->dir, full);
-        return subtreeHasMatch(item->dir, full);
+            return dirPasses(full, size) || subtreeHasVisibleDir(item->dir, full, gen, expect);
+        return subtreeHasMatch(item->dir, full, gen, expect);
     }
 
     const QString tth = needTth() ? item->data(COLUMN_FILEBROWSER_TTH).toString() : QString();

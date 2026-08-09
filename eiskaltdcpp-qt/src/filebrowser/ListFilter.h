@@ -36,17 +36,22 @@ public:
     bool set(const QStringList &terms, qulonglong size, int sizeMode,
              bool dirsOnly, bool filesOnly, const QStringList &exts);
     void cancel();
+    /** Cancel async scans and wait until workers (parented to owner) exit. */
+    void join(QObject *owner);
 
     bool isActive() const { return match_.isActive(); }
     bool dirsOnly() const { return match_.dirsOnly; }
-    bool acceptItem(FileBrowserItem *item, const QString &pathPrefix) const {
-        return match_.acceptItem(item, pathPrefix);
+    bool acceptItem(FileBrowserItem *item, const QString &pathPrefix,
+                    const std::atomic<int> *gen = nullptr, int expect = 0) const {
+        return match_.acceptItem(item, pathPrefix, gen, expect);
     }
-    bool subtreeHasMatch(dcpp::DirectoryListing::Directory *dir, const QString &path) const {
-        return match_.subtreeHasMatch(dir, path);
+    bool subtreeHasMatch(dcpp::DirectoryListing::Directory *dir, const QString &path,
+                         const std::atomic<int> *gen = nullptr, int expect = 0) const {
+        return match_.subtreeHasMatch(dir, path, gen, expect);
     }
-    bool subtreeHasVisibleDir(dcpp::DirectoryListing::Directory *dir, const QString &path) const {
-        return match_.subtreeHasVisibleDir(dir, path);
+    bool subtreeHasVisibleDir(dcpp::DirectoryListing::Directory *dir, const QString &path,
+                              const std::atomic<int> *gen = nullptr, int expect = 0) const {
+        return match_.subtreeHasVisibleDir(dir, path, gen, expect);
     }
 
     bool shouldAsync(int rowCount) const { return rowCount >= asyncRows; }

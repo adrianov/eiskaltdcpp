@@ -49,6 +49,17 @@ void ListFilter::cancel()
     ++(*gen_);
 }
 
+void ListFilter::join(QObject *owner)
+{
+    cancel();
+    if (!owner)
+        return;
+    for (AsyncRunner *r : owner->findChildren<AsyncRunner*>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (r && r->isRunning())
+            r->wait();
+    }
+}
+
 void ListFilter::scanAsync(FileBrowserItem *root, const QString &pathPrefix, QObject *receiver,
                            const std::function<void(QVector<int>)> &onDone)
 {
@@ -62,7 +73,7 @@ void ListFilter::scanAsync(FileBrowserItem *root, const QString &pathPrefix, QOb
     const QList<FileBrowserItem*> items = root->childItems;
 
     QPointer<QObject> guard(receiver);
-    // Parent to receiver so ListFilterProxy can wait for us before items are freed.
+    // Parent to receiver so join(owner) can wait before items are freed.
     AsyncRunner *runner = new AsyncRunner(receiver);
     runner->setRunFunction([guard, liveGen, gen, items, match, pathPrefix, onDone]() {
         QVector<int> rows;
@@ -70,7 +81,7 @@ void ListFilter::scanAsync(FileBrowserItem *root, const QString &pathPrefix, QOb
         for (int i = 0; i < items.size(); ++i) {
             if ((i & 63) == 0 && liveGen->load() != gen)
                 return;
-            if (match.acceptItem(items.at(i), pathPrefix))
+            if (match.acceptItem(items.at(i), pathPrefix, liveGen.get(), gen))
                 rows.append(i);
         }
         if (!guard || liveGen->load() != gen)

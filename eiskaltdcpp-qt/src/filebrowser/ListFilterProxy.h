@@ -26,8 +26,9 @@ class ListFilterProxy : public QAbstractProxyModel
 {
     Q_OBJECT
 public:
-    explicit ListFilterProxy(QObject *parent = nullptr);
-    ~ListFilterProxy() override;
+    explicit ListFilterProxy(QObject *parent = nullptr)
+        : QAbstractProxyModel(parent) {}
+    ~ListFilterProxy() override { filter_.join(this); }
 
     void setSourceModel(QAbstractItemModel *sourceModel) override;
     void sort(int column, Qt::SortOrder order) override;
@@ -44,11 +45,10 @@ public:
                       const QString &pathPrefix);
 
 private:
+    void clearMap();
     void setIdentity();
     void setRows(QVector<int> rows);
     void scheduleFilter();
-    void joinScans();
-    FileBrowserItem *listRoot() const;
 
     ListFilter filter_;
     QString pathPrefix_;

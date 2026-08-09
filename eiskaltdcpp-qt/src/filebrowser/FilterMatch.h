@@ -16,6 +16,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <atomic>
 #include <vector>
 
 class FileBrowserItem;
@@ -42,9 +43,12 @@ public:
     bool acceptFile(const QString &name, const QString &path, const QString &tth,
                     qulonglong size) const;
     bool filePasses(const QString &filePath, qulonglong size, const QString &tth) const;
-    bool acceptItem(FileBrowserItem *item, const QString &pathPrefix) const;
-    bool subtreeHasMatch(dcpp::DirectoryListing::Directory *dir, const QString &path) const;
-    bool subtreeHasVisibleDir(dcpp::DirectoryListing::Directory *dir, const QString &path) const;
+    bool acceptItem(FileBrowserItem *item, const QString &pathPrefix,
+                    const std::atomic<int> *gen = nullptr, int expect = 0) const;
+    bool subtreeHasMatch(dcpp::DirectoryListing::Directory *dir, const QString &path,
+                         const std::atomic<int> *gen = nullptr, int expect = 0) const;
+    bool subtreeHasVisibleDir(dcpp::DirectoryListing::Directory *dir, const QString &path,
+                              const std::atomic<int> *gen = nullptr, int expect = 0) const;
 
     bool isActive() const;
     void setTerms(const QStringList &raw);

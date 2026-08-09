@@ -11,56 +11,34 @@
 
 #include "filebrowser/ListFilterProxy.h"
 #include "FileBrowserModel.h"
-#include "sharebrowser/AsyncRunner.h"
 
-#include <QHash>
-
-ListFilterProxy::ListFilterProxy(QObject *parent)
-    : QAbstractProxyModel(parent)
+void ListFilterProxy::clearMap()
 {
-}
-
-ListFilterProxy::~ListFilterProxy()
-{
-    joinScans();
-}
-
-void ListFilterProxy::joinScans()
-{
-    filter_.cancel();
-    const auto runners = findChildren<AsyncRunner*>(QString(), Qt::FindDirectChildrenOnly);
-    for (AsyncRunner *r : runners) {
-        if (r && r->isRunning())
-            r->wait(5000);
-    }
+    rows_.clear();
+    sourceToProxy_.clear();
+    filtered_ = false;
 }
 
 void ListFilterProxy::setSourceModel(QAbstractItemModel *sourceModel)
 {
-    joinScans();
-
+    filter_.join(this);
     if (this->sourceModel())
         disconnect(this->sourceModel(), nullptr, this, nullptr);
 
     beginResetModel();
     QAbstractProxyModel::setSourceModel(sourceModel);
-    rows_.clear();
-    sourceToProxy_.clear();
-    filtered_ = false;
+    clearMap();
     endResetModel();
-
     if (!sourceModel)
         return;
 
     // Join before the source frees rows (beginResetModel → aboutToBeReset → qDeleteAll).
     connect(sourceModel, &QAbstractItemModel::modelAboutToBeReset, this, [this]() {
-        joinScans();
+        filter_.join(this);
     });
     connect(sourceModel, &QAbstractItemModel::modelReset, this, [this]() {
         beginResetModel();
-        rows_.clear();
-        sourceToProxy_.clear();
-        filtered_ = false;
+        clearMap();
         endResetModel();
         if (filter_.isActive())
             scheduleFilter();
@@ -82,9 +60,8 @@ void ListFilterProxy::sort(int column, Qt::SortOrder order)
 
 QModelIndex ListFilterProxy::index(int row, int column, const QModelIndex &parent) const
 {
-    if (parent.isValid() || !sourceModel() || row < 0 || column < 0)
-        return QModelIndex();
-    if (row >= rowCount() || column >= columnCount())
+    if (parent.isValid() || !sourceModel() || row < 0 || column < 0
+            || row >= rowCount() || column >= columnCount())
         return QModelIndex();
     return createIndex(row, column);
 }
@@ -130,20 +107,12 @@ QModelIndex ListFilterProxy::mapFromSource(const QModelIndex &sourceIndex) const
     return index(it.value(), sourceIndex.column());
 }
 
-FileBrowserItem *ListFilterProxy::listRoot() const
-{
-    const FileBrowserModel *fb = qobject_cast<const FileBrowserModel*>(sourceModel());
-    return fb ? const_cast<FileBrowserModel*>(fb)->getRootElem() : nullptr;
-}
-
 void ListFilterProxy::setIdentity()
 {
     if (!filtered_)
         return;
     beginResetModel();
-    rows_.clear();
-    sourceToProxy_.clear();
-    filtered_ = false;
+    clearMap();
     endResetModel();
 }
 
@@ -166,7 +135,8 @@ void ListFilterProxy::scheduleFilter()
         return;
     }
 
-    FileBrowserItem *root = listRoot();
+    const FileBrowserModel *fb = qobject_cast<const FileBrowserModel*>(sourceModel());
+    FileBrowserItem *root = fb ? const_cast<FileBrowserModel*>(fb)->getRootElem() : nullptr;
     if (!root)
         return;
 
