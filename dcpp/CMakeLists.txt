@@ -163,8 +163,11 @@ set(DCPP_EXTRA_SOURCES
     ScriptManagerLua.cpp
     ScriptManagerLuaQuery.cpp
     ScriptManagerEval.cpp
-    ShareManagerFile.cpp
-    ShareManagerRemoveDir.cpp
+    share/ShareManagerFile.cpp
+    share/ShareManagerRemoveDir.cpp
+    share/ShareFileType.cpp
+    share/ShareTreeScan.cpp
+    share/ShareDirSearch.cpp
     FinishedManagerComplete.cpp
     FinishedManagerMap.cpp
 )

@@ -241,6 +241,10 @@ private:
         Directory(const string& aName, const Ptr& aParent);
         ~Directory() { }
 
+        /** Match files in this directory against an ADC search; stop at maxResults. */
+        void searchAdcFiles(SearchResultList& results, AdcSearch& query, StringSearch::List* terms,
+                            StringList::size_type maxResults) const noexcept;
+
         /** Set of flags that say which SearchManager::TYPE_* a directory contains */
         uint32_t fileTypes;
 
@@ -248,6 +252,7 @@ private:
 
     friend class Directory;
     friend struct ShareLoader;
+    friend class ShareTreeScan;
 
     friend class Singleton<ShareManager>;
     ShareManager();
