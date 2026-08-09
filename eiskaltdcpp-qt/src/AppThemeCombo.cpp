@@ -13,24 +13,52 @@
 
 #include <QDir>
 #include <QFile>
+#include <QGuiApplication>
+#include <QImage>
 #include <QPainter>
 #include <QPen>
-#include <QPixmap>
+#include <QScreen>
 
-/** Qt5 stylesheets cache url() images by path; a color-specific name avoids a
- *  stale glyph surviving a light/dark switch. */
+/** QSS image: uses QIcon(url); QIcon::addFile loads url + url@Nx via qt_findAtNxFile. */
+static QString withNx(const QString &path, int n){
+    return path.left(path.size() - 4) + QStringLiteral("@%1x.png").arg(n);
+}
+
+static qreal maxDeviceRatio(){
+    qreal dpr = 1.0;
+    for (const QScreen *s : QGuiApplication::screens()) {
+        if (s)
+            dpr = qMax(dpr, s->devicePixelRatio());
+    }
+    return dpr;
+}
+
+/** Logical paint coords; QImage buffer is physical (avoids QPixmap Retina quirks). */
+static void writeGlyph(const QString &path, int w, int h, int scale, const QColor &c,
+                       void (*paint)(QPainter &, const QColor &)){
+    if (QFile::exists(path))
+        return;
+    const qreal dpr = scale;
+    QImage img(qMax(1, w * scale), qMax(1, h * scale), QImage::Format_ARGB32_Premultiplied);
+    img.setDevicePixelRatio(dpr);
+    img.fill(Qt::transparent);
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    paint(p, c);
+    img.save(path, "PNG");
+}
+
+/** 1x path for url(); @2x/@3x siblings for QIcon / StyleSheetStyle HiDPI lookup. */
 static QString glyphPath(const QString &kind, int w, int h, const QColor &c,
                          void (*paint)(QPainter &, const QColor &)){
     const QString path = QDir::temp().filePath(
         QStringLiteral("eiskalt-%1-%2.png").arg(kind, c.name(QColor::HexRgb).mid(1)));
-    if (!QFile::exists(path)) {
-        QPixmap pm(w, h);
-        pm.fill(Qt::transparent);
-        QPainter p(&pm);
-        p.setRenderHint(QPainter::Antialiasing, true);
-        paint(p, c);
-        pm.save(path, "PNG");
-    }
+    writeGlyph(path, w, h, 1, c, paint);
+    const qreal dpr = maxDeviceRatio();
+    if (dpr > 1.01)
+        writeGlyph(withNx(path, 2), w, h, 2, c, paint);
+    if (dpr > 2.01)
+        writeGlyph(withNx(path, 3), w, h, 3, c, paint);
     return path;
 }
 
