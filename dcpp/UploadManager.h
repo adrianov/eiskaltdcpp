@@ -65,8 +65,8 @@ public:
     void reserveSlot(const HintedUser& aUser);
 
     /** NMDC MyINFO FIREBALL / SERVER bits (fast upload / long-lived large share). */
-    bool isFireball() const { return fireball; }
-    bool isFileServer() const { return fileServer; }
+    bool isFireball() const { return fireball.load(); }
+    bool isFileServer() const { return fileServer.load(); }
 
     /** */
     void reloadRestrictions();
@@ -95,8 +95,8 @@ private:
     mutable CriticalSection cs;
 
     uint64_t fireballStartTick;
-    bool fireball;
-    bool fileServer;
+    std::atomic<bool> fireball;
+    std::atomic<bool> fileServer;
     void refreshShareStatus(uint64_t aTick);
 
     typedef unordered_set<UserPtr, User::Hash> SlotSet;
