@@ -12,7 +12,6 @@
 #include "DownloadQueueModel.h"
 
 #include "ProgressBarPaint.h"
-#include "WulforUtil.h"
 
 #include <QtWidgets>
 
@@ -37,10 +36,8 @@ void DownloadQueueDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         return;
     }
 
-    const qulonglong esize = item->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong();
-    double percent = ((double)item->data(COLUMN_DOWNLOADQUEUE_DOWN).toLongLong() * 100.0);
-    percent = (esize > 0) ? (percent/(double)esize) : 0.0;
-    const QString status = QString("%1%").arg(percent, 0, 'f', 1);
-
-    paintProgressCell(painter, option, static_cast<int>(percent), status);
+    const qulonglong esize = item->data(COLUMN_DOWNLOADQUEUE_ESIZE).toULongLong();
+    const qulonglong down = item->data(COLUMN_DOWNLOADQUEUE_DOWN).toULongLong();
+    const int percent = esize > 0 ? int(down * 100.0 / esize) : 0;
+    paintProgressCell(painter, option, percent, index.data(Qt::DisplayRole).toString());
 }

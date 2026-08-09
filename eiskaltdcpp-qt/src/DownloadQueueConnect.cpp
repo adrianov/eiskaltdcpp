@@ -31,10 +31,12 @@ void DownloadQueue::loadList(){
     applyIndexUsers(rows, true);
 
     Q_D(DownloadQueue);
+    // One pass: full VarMaps (getParams + index users) then a quiet batch insert.
     for (const VarMap &params : rows) {
-        d->queue_model->addItem(params);
+        d->queue_model->addItem(params, true);
         syncSourceMaps(params["TARGET"].toString());
     }
+    d->queue_model->finishBatch();
     d->queue_model->sort();
 }
 
