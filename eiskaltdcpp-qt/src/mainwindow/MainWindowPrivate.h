@@ -25,6 +25,7 @@
 #include "statusbar/StatusHud.h"
 #include "mainwindow/WindowPlace.h"
 #include "mainwindow/WindowLife.h"
+#include "mainwindow/WindowPresence.h"
 
 #ifdef USE_JS
 class ScriptConsole;
@@ -35,6 +36,7 @@ public:
     typedef QList<QAction*> ActionList;
 
     WindowLife life;
+    WindowPresence presence;
     WindowPlace place;
 
     QDockWidget *arena = nullptr;

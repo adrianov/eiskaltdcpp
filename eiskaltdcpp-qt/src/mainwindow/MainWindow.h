@@ -115,6 +115,7 @@ friend class dcpp::Singleton<MainWindow>;
 
     private:
         friend class WindowLife;
+        friend class WindowPresence;
         friend class WindowPlace;
         friend class WindowChrome;
         friend class WindowActions;

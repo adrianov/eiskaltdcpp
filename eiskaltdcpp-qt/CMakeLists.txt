@@ -130,6 +130,7 @@ set(QT_EXTRA_SOURCES
     src/mainwindow/WindowChrome.cpp
     src/mainwindow/WindowPlace.cpp
     src/mainwindow/WindowLife.cpp
+    src/mainwindow/WindowPresence.cpp
     src/mainwindow/WindowSetup.cpp
     src/mainwindow/WindowShare.cpp
     src/mainwindow/WindowTools.cpp
@@ -208,7 +209,6 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilMagnet.cpp
     src/WulforUtilText.cpp
     src/treeheader/ColumnContentSpan.cpp
-    src/treeheader/HeaderColumnFit.cpp
     src/treeheader/TreeHeaderAutosize.cpp
     src/treeheader/WulforTreeHeader.cpp
     src/WulforSettingsDefaults.cpp

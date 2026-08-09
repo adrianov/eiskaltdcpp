@@ -13,15 +13,21 @@
 
 class MainWindow;
 class MainWindowPrivate;
-class QCloseEvent;
+class QShowEvent;
+class QHideEvent;
+class QEvent;
+class QObject;
 
-/** Unload/exit flags and close handling for the main window. */
-class WindowLife {
+/** Boot/teardown and show/hide/filter handling while the main window is present. */
+class WindowPresence {
 public:
-    bool isUnload = false;
-    bool exitBegin = false;
+    void boot(MainWindow *host, MainWindowPrivate *d);
+    void teardown(MainWindow *host, MainWindowPrivate *d);
 
-    void setUnload(bool b) { isUnload = b; }
-    void beginExit();
-    void onClose(MainWindow *host, MainWindowPrivate *d, QCloseEvent *e);
+    void onShow(MainWindow *host, MainWindowPrivate *d, QShowEvent *e);
+    void onHide(MainWindow *host, MainWindowPrivate *d, QHideEvent *e);
+    bool filter(MainWindow *host, MainWindowPrivate *d, QObject *obj, QEvent *e);
+
+private:
+    void ensureNick(MainWindow *host);
 };

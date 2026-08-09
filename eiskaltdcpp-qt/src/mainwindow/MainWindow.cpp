@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     init();
     retranslateUi();
-    d->life.boot(this, d);
+    d->presence.boot(this, d);
 }
 
 HashProgress *MainWindow::progress_dialog()
@@ -57,7 +57,7 @@ HashProgress *MainWindow::progress_dialog()
 MainWindow::~MainWindow()
 {
     Q_D(MainWindow);
-    d->life.teardown(this, d);
+    d->presence.teardown(this, d);
     delete d_ptr;
 }
 
@@ -88,7 +88,7 @@ void MainWindow::show()
 void MainWindow::showEvent(QShowEvent *e)
 {
     Q_D(MainWindow);
-    d->life.onShow(this, d, e);
+    d->presence.onShow(this, d, e);
 }
 
 void MainWindow::getWindowGeometry()
@@ -100,7 +100,7 @@ void MainWindow::getWindowGeometry()
 void MainWindow::hideEvent(QHideEvent *e)
 {
     Q_D(MainWindow);
-    d->life.onHide(this, d, e);
+    d->presence.onHide(this, d, e);
 }
 
 void MainWindow::changeEvent(QEvent *event)
@@ -113,7 +113,7 @@ void MainWindow::changeEvent(QEvent *event)
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
     Q_D(MainWindow);
-    if (d->life.filter(this, d, obj, e))
+    if (d->presence.filter(this, d, obj, e))
         return true;
     return QMainWindow::eventFilter(obj, e);
 }
