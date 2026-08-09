@@ -120,7 +120,7 @@ void TransferView::on(dcpp::DownloadManagerListener::Complete, dcpp::Download* d
 
     const DownloadUiState s = downloadState(dl);
     applyDownloadMetrics(params, dl, s, tr("Download complete"));
-    params["SPEED"] = 0;
+    applyDownloadSpeed(params, dl, s);
     params["SOFT_STAT"] = true;
 
     qint64 pos = QueueManager::getInstance()->getPos(dl->getPath()) + dl->getPos();

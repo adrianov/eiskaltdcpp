@@ -58,6 +58,12 @@ public:
     qlonglong dpos;
     /** Download parent: committed queue bytes. Upload parent/row: completed segment bytes. */
     qlonglong fpos;
+    /** Upload leaf: bytes sent on the current part (Upload::getPos). */
+    qlonglong segBytes;
+    /** Session begin tick (GET_TICK); see transfersession/TransferSessionRate.md. */
+    quint64 speedStart;
+    /** File bytes already done at session begin (download FPOS / upload startPos). */
+    qlonglong speedBase;
     qint64 queuePos;
     double percent;
     qlonglong smoothTleft;
@@ -165,8 +171,6 @@ private:
     bool shouldRemoveStaleRow(const TransferViewItem *item) const;
     void dropTransferRow(TransferViewItem *item);
     TransferViewItem *findUploadRow(const VarMap &params);
-    TransferViewItem *uploadScope(TransferViewItem *item) const;
-    bool uploadFullyIdle(TransferViewItem *scope) const;
     void settleUpload(const VarMap &params, bool segmentDone);
     /** Arm auto-drop; delayMs keeps Connected grace longer than Upload complete. */
     void armUploadPrune(const VarMap &params, int delayMs);

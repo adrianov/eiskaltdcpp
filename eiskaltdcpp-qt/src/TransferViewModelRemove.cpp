@@ -11,6 +11,7 @@
 
 #include "TransferViewModel.h"
 #include "TransferViewRemoveUtil.h"
+#include "transfersession/TransferSession.h"
 
 #include <QTimer>
 
@@ -152,8 +153,9 @@ void TransferViewModel::pruneUpload(QString key, int gen, VarMap params) {
     if (!item || item->download)
         return;
 
-    TransferViewItem *scope = uploadScope(item);
-    if (scope && scope->cid.isEmpty() && uploadFullyIdle(scope)) {
+    TransferSession session(TransferSession::scopeOf(item, rootItem));
+    TransferViewItem *scope = session.item();
+    if (scope && scope->cid.isEmpty() && session.uploadDone()) {
         const QList<TransferViewItem*> children = scope->childItems;
         for (TransferViewItem *child : children)
             dropTransferRow(child);

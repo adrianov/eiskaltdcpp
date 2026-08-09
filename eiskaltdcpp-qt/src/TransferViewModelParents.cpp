@@ -13,6 +13,7 @@
 #include "TransferDisplay.h"
 #include "TransferViewMetrics.h"
 #include "WulforUtil.h"
+#include "transfersession/TransferSession.h"
 
 using namespace TransferViewMetrics;
 
@@ -43,25 +44,28 @@ void TransferViewModel::updateParent(TransferViewItem *p){
     QList<QString> tags;
     int active = 0;
     qint64 bestQueuePos = 0;
-    double speed = 0.0;
     qint64 totalSize = vlng(p->data(COLUMN_TRANSFER_SIZE));
-    // Downloads: committed fpos + in-flight segment bytes (never reuse aggregate dpos as base).
-    qlonglong progressPos = p->download ? p->fpos : 0;
+    // Downloads: committed fpos + in-flight segment bytes.
+    // Uploads: absolute session progress (speedBase + Σ part bytes), not file-offset high-water.
+    qlonglong progressPos = 0;
 
-    bool betweenParts = false;
     for (const auto &i : p->childItems){
         if (!i->fail) {
-            // Upload part gaps keep a held child speed; do not count finished segments.
-            const double childSpeed = (!p->download && i->finished)
-                    ? 0.0 : vdbl(i->data(COLUMN_TRANSFER_SPEED));
-            speed += childSpeed;
-            if (childSpeed > 0)
-                active++;
-            else if (i->queuePos > 0 && (bestQueuePos == 0 || i->queuePos < bestQueuePos))
-                bestQueuePos = i->queuePos;
+            // Downloads: active = sources with bytes in flight (file speed is shared).
+            if (p->download) {
+                if (i->dpos > 0)
+                    active++;
+                else if (i->queuePos > 0 && (bestQueuePos == 0 || i->queuePos < bestQueuePos))
+                    bestQueuePos = i->queuePos;
+            } else {
+                const double childSpeed = i->finished
+                        ? 0.0 : vdbl(i->data(COLUMN_TRANSFER_SPEED));
+                if (childSpeed > 0)
+                    active++;
+                else if (i->queuePos > 0 && (bestQueuePos == 0 || i->queuePos < bestQueuePos))
+                    bestQueuePos = i->queuePos;
+            }
         }
-        if (!p->download && i->finished && !i->fail)
-            betweenParts = true;
 
         if (!hubs.contains(vstr(i->data(COLUMN_TRANSFER_HOST))))
             hubs.append(vstr(i->data(COLUMN_TRANSFER_HOST)));
@@ -76,16 +80,19 @@ void TransferViewModel::updateParent(TransferViewItem *p){
 
         if (p->download)
             progressPos += i->dpos;
-        else if (i->dpos > progressPos)
-            progressPos = i->dpos;
     }
 
-    if (totalSize > 0 && progressPos > totalSize)
-        progressPos = totalSize;
-
-    // High-water bytes, then one percent for both bar and status text.
-    if (!p->finished)
-        progressPos = TransferDisplay::highWaterBytes(p->dpos, progressPos);
+    if (p->download) {
+        progressPos += p->fpos;
+        if (totalSize > 0 && progressPos > totalSize)
+            progressPos = totalSize;
+        if (!p->finished)
+            progressPos = TransferDisplay::highWaterBytes(p->dpos, progressPos);
+    } else {
+        progressPos = TransferSession(p).progressBytes();
+        if (totalSize > 0 && progressPos > totalSize)
+            progressPos = totalSize;
+    }
     p->dpos = progressPos;
 
     if (totalSize > 0)
@@ -95,21 +102,12 @@ void TransferViewModel::updateParent(TransferViewItem *p){
         ? qBound(0.0, (double)(p->dpos * 100.0) / totalSize, 100.0) : 0.0;
     p->percent = progress;
 
-    speed = TransferDisplay::roundSpeed(speed);
-    // Hold speed/ETA only between parts (finished child waiting), not on a real stall.
-    const bool uploadGap = !p->download && speed <= 0 && totalSize > 0
-            && p->fpos < totalSize && !p->finished && betweenParts;
-    qint64 timeLeft;
-    if (uploadGap) {
-        const double prev = vdbl(p->data(COLUMN_TRANSFER_SPEED));
-        if (prev > 0)
-            speed = prev;
-        timeLeft = p->smoothTleft > 0 ? p->smoothTleft : 0;
-    } else {
-        timeLeft = speed > 0 ? (totalSize - p->dpos) / speed : 0;
-        p->smoothTleft = TransferDisplay::smoothTimeLeft(p->smoothTleft, timeLeft);
-        timeLeft = p->smoothTleft;
-    }
+    VarMap speedParams;
+    TransferSession(p).writeUi(speedParams, totalSize);
+    const double speed = vdbl(speedParams["SPEED"]);
+    qint64 timeLeft = vlng(speedParams["TLEFT"]);
+    if (timeLeft < 0)
+        timeLeft = 0;
 
     // Keep progress wording while sources briefly idle between segments (speed→0).
     if (!p->finished && (active || p->dpos > 0 || p->percent > 0))

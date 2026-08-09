@@ -66,10 +66,9 @@ void TransferView::on(dcpp::UploadManagerListener::Starting, dcpp::Upload* ul) n
     VarMap params;
     getParams(params, ul);
     const UploadUiState s = uploadState(ul);
-    const QString stat = s.continuing ? uploadProgressStat(s.sent, s.fileSize) : tr("Upload starting...");
-    applyUploadMetrics(params, s, stat);
+    applyUploadMetrics(params, s, s.continuing ? QString() : tr("Upload starting..."));
     applyUploadSpeed(params, ul, s);
-    // Keep one stable row across consecutive parts (progress/ETA smoothing).
+    // Keep one stable row across consecutive parts; model fills Uploaded N (%).
     params["SOFT_STAT"] = true;
 
     if (IPFilter::getInstance()){
@@ -110,7 +109,7 @@ void TransferView::on(dcpp::UploadManagerListener::Tick, const dcpp::UploadList&
             stat += QString("[Z]");
         
         params["FLAGS"] = stat;
-        params["STAT"] = uploadProgressStat(s.sent, s.fileSize);
+        // STAT/percent: session bytes / file size in TransferViewModel.
 
         emit coreUMTick(params);
         any = true;
@@ -126,19 +125,14 @@ void TransferView::on(dcpp::UploadManagerListener::Complete, dcpp::Upload* ul) n
     const UploadUiState s = uploadState(ul);
     clearUploadUiThrottle(uploadTickKey(ul));
 
-    const QString stat = s.fileDone ? tr("Upload complete")
-                                    : uploadProgressStat(s.sent, s.fileSize);
-    applyUploadMetrics(params, s, stat);
+    applyUploadMetrics(params, s, s.fileDone ? tr("Upload complete") : QString());
     // Bytes for this Upload only (TransmitDone fires Complete once, then removes it).
-    params["SEGP"] = static_cast<qlonglong>(ul->getPos());
+    applyUploadSpeed(params, ul, s);
     params["DOWN"] = false;
     params["FAIL"] = false;
     params["FILE_DONE"] = s.fileDone;
-    if (s.fileDone) {
-        params["SPEED"] = 0.0;
-        params["TLEFT"] = qlonglong(-1);
-    } else {
-        // Next part often follows on the same connection — do not flash speed/ETA to 0.
+    if (!s.fileDone) {
+        // Next part often follows on the same connection — keep progress text.
         params["SOFT_STAT"] = true;
     }
 

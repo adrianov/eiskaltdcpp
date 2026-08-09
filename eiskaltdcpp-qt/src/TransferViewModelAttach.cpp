@@ -12,6 +12,7 @@
 #include "TransferViewModel.h"
 #include "TransferViewModelTree.h"
 #include "TransferViewRemoveUtil.h"
+#include "transfersession/TransferSession.h"
 
 void TransferViewModel::initTransfer(const VarMap &params){
     if (params.empty())
@@ -28,10 +29,8 @@ void TransferViewModel::initTransfer(const VarMap &params){
     }
 
     // Reuse the row for the next file/parts — clear complete state before applying metrics.
-    if (item) {
-        TransferViewItem *scope = item->download ? nullptr : uploadScope(item);
-        // Mid-file parts keep fpos. Reset only after a full file, or when a leaf
-        // row changes TARGET (grouped retarget/move is handled in updateTransfer).
+    if (item && !item->download) {
+        TransferViewItem *scope = TransferSession::scopeOf(item, rootItem);
         const qlonglong size = scope
                 ? scope->data(COLUMN_TRANSFER_SIZE).toLongLong() : 0;
         const QString newTarget = vstr(params.value("TARGET"));
@@ -41,15 +40,23 @@ void TransferViewModel::initTransfer(const VarMap &params){
                 && (scope->percent >= 100.0 || (size > 0 && scope->fpos >= size));
         const bool nextFile = leafRetarget || fullyDone;
         item->finished = false;
+        item->segBytes = 0;
         if (scope) {
             if (nextFile) {
                 scope->fpos = 0;
                 scope->dpos = 0;
                 scope->percent = 0.0;
                 scope->smoothTleft = -1;
+                scope->speedStart = 0;
+                scope->speedBase = 0;
             }
             scope->finished = false;
+            // Downloads begin in updateTransfer (with FPOS baseline).
+            TransferSession(scope).begin(vlng(params.value("BASE")));
         }
+    } else if (item) {
+        item->finished = false;
+        item->segBytes = 0;
     }
 
     updateTransfer(params);

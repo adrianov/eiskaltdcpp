@@ -91,11 +91,11 @@ UploadUiState uploadState(const Upload *ul)
     const int64_t segmentSize = ul->getSize();
     const int64_t diskSize = uploadDiskSize(ul);
 
-    // Use full-file offsets only when File::getSize succeeds. Falling back to
-    // segment size while still adding startPos produced millions of percent.
+    // Progress % uses session transferred bytes in TransferViewModel (not startPos+pos).
+    // Here `sent` is this part only; absolute progress is speedBase + Σ parts.
     if (diskSize > 0) {
         s.fileSize = diskSize;
-        s.sent = startPos + pos;
+        s.sent = pos;
         if (s.sent > s.fileSize)
             s.sent = s.fileSize;
     } else {
@@ -142,9 +142,9 @@ QString slotWaitStat(qint64 queuePos, bool trailingSpace)
 void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat)
 {
     params["ESIZE"] = static_cast<qlonglong>(s.fileSize);
-    params["DPOS"] = static_cast<qlonglong>(s.sent);
-    params["PERC"] = s.fileSize > 0
-        ? qBound(0.0, s.sent * 100.0 / s.fileSize, 100.0) : 0.0;
+    // DPOS/PERC come from session progress (bytes transferred / file size).
+    params.remove("DPOS");
+    params.remove("PERC");
     if (!stat.isEmpty())
         params["STAT"] = stat;
     params["DOWN"] = false;
@@ -162,24 +162,21 @@ void applyDownloadMetrics(QVariantMap &params, const Download *dl,
     params["DOWN"] = true;
 }
 
-void applyUploadSpeed(QVariantMap &params, const Upload *ul, const UploadUiState &s)
+void applyUploadSpeed(QVariantMap &params, const Upload *ul, const UploadUiState &)
 {
-    double speed = ul->getUserConnection().getDisplaySpeed();
-    if (speed <= 0)
-        speed = ul->getAverageSpeed();
-    params["SPEED"] = speed;
-    params["TLEFT"] = (speed > 0 && s.fileSize > s.sent)
-        ? static_cast<qlonglong>((s.fileSize - s.sent) / speed) : static_cast<qlonglong>(-1);
+    // Session metrics: transfersession/TransferSessionRate.md. SEGP/BASE = part.
+    params["SEGP"] = static_cast<qlonglong>(ul->getPos());
+    params["BASE"] = static_cast<qlonglong>(ul->getStartPos());
+    params.remove("SPEED");
+    params.remove("TLEFT");
 }
 
-void applyDownloadSpeed(QVariantMap &params, const Download *dl, const DownloadUiState &s)
+void applyDownloadSpeed(QVariantMap &params, const Download *dl, const DownloadUiState &)
 {
-    double speed = dl->getUserConnection().getDisplaySpeed();
-    if (speed <= 0)
-        speed = dl->getAverageSpeed();
-    params["SPEED"] = speed;
-    params["TLEFT"] = (speed > 0 && s.fileSize > s.downloaded)
-        ? static_cast<qlonglong>((s.fileSize - s.downloaded) / speed) : static_cast<qlonglong>(-1);
+    // Session metrics: transfersession/TransferSessionRate.md. SEGP = part bytes.
+    params["SEGP"] = static_cast<qlonglong>(dl->getPos());
+    params.remove("SPEED");
+    params.remove("TLEFT");
 }
 
 } // namespace TransferViewMetrics
