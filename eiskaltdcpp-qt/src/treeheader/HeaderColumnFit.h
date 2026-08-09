@@ -17,8 +17,8 @@ class QAbstractItemView;
 class QHeaderView;
 
 /**
- * Measures tree/table column content and applies section widths so the header
- * fills the viewport. One logical column may absorb leftover or deficit width.
+ * Fits tree/table columns to content and the viewport. Keeps existing section
+ * widths when larger than content; one stretch column takes leftover or shrinks.
  */
 class HeaderColumnFit
 {

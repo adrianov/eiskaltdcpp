@@ -44,8 +44,12 @@ TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
 
 void TreeHeaderAutosize::setStretchColumn(QAbstractItemView *view, int logicalColumn)
 {
-    if (TreeHeaderAutosize *a = attached(view))
-        a->stretchColumn_ = logicalColumn;
+    TreeHeaderAutosize *a = attached(view);
+    if (!a || a->stretchColumn_ == logicalColumn)
+        return;
+    a->stretchColumn_ = logicalColumn;
+    a->rowsSized_ = false;
+    a->requestFit();
 }
 
 void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
@@ -58,13 +62,18 @@ void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
     header->setStretchLastSection(false);
     if (!state.isEmpty())
         header->restoreState(state);
-    attached(view)->requestFit();
+    TreeHeaderAutosize *a = attached(view);
+    a->rowsSized_ = false;
+    a->requestFit();
 }
 
 void TreeHeaderAutosize::ensure(QAbstractItemView *view)
 {
-    if (view)
-        attached(view)->requestFit();
+    if (!view)
+        return;
+    TreeHeaderAutosize *a = attached(view);
+    a->rowsSized_ = false;
+    a->requestFit();
 }
 
 void TreeHeaderAutosize::requestFit()
@@ -82,10 +91,12 @@ void TreeHeaderAutosize::hookModel()
     if (!model)
         return;
     modelHooked_ = true;
-    const auto dirty = [this]() { requestFit(); };
-    connect(model, &QAbstractItemModel::rowsInserted, this, dirty);
-    connect(model, &QAbstractItemModel::modelReset, this, dirty);
-    connect(model, &QAbstractItemModel::columnsInserted, this, dirty);
+    connect(model, &QAbstractItemModel::rowsInserted, this, [this]() { requestFit(); });
+    connect(model, &QAbstractItemModel::columnsInserted, this, [this]() { requestFit(); });
+    connect(model, &QAbstractItemModel::modelReset, this, [this]() {
+        rowsSized_ = false;
+        requestFit();
+    });
 }
 
 void TreeHeaderAutosize::scheduleCheck()
@@ -115,7 +126,10 @@ void TreeHeaderAutosize::checkLayout()
     if (!view_)
         return;
     HeaderColumnFit fit(view_, stretchColumn_);
-    if (fit.isAdequate()) {
+    const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
+    // Viewport fill alone is not enough before the first content fit — empty
+    // fits leave header-sized columns that stay narrow after rows arrive.
+    if (fit.isAdequate() && (!hasRows || rowsSized_)) {
         done_ = true;
         return;
     }
@@ -124,4 +138,6 @@ void TreeHeaderAutosize::checkLayout()
         return;
     fit.apply();
     done_ = fit.isAdequate();
+    if (hasRows && done_)
+        rowsSized_ = true;
 }

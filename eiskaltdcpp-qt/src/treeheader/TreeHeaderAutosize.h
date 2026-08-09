@@ -20,7 +20,8 @@ class QEvent;
 class QHeaderView;
 
 /**
- * Defers header column fitting until the view is ready, then runs once.
+ * Defers header column fitting until the view is ready. One content fit runs
+ * after rows exist; later inserts do not keep rewriting widths.
  * Does not watch ancestor widgets — dock/window drags must stay fluid.
  */
 class TreeHeaderAutosize : public QObject
@@ -46,4 +47,5 @@ private:
     bool done_ = false;
     bool pending_ = false;
     bool modelHooked_ = false;
+    bool rowsSized_ = false; // one content fit after the model has rows
 };

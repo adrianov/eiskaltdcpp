@@ -24,13 +24,14 @@
 
 namespace {
 
-void measureTopRows(QAbstractItemModel *model, int column, const QFontMetrics &fm, int &w)
+void measureRows(QAbstractItemModel *model, const QModelIndex &parent,
+                 int column, const QFontMetrics &fm, int depth, int &w)
 {
-    if (!model)
+    if (!model || depth > 24)
         return;
-    const int rows = qMin(model->rowCount(), 300);
+    const int rows = qMin(model->rowCount(parent), 300);
     for (int r = 0; r < rows; ++r) {
-        const QModelIndex idx = model->index(r, column);
+        const QModelIndex idx = model->index(r, column, parent);
         if (!idx.isValid())
             continue;
         int rowW = fm.horizontalAdvance(idx.data(Qt::DisplayRole).toString()) + 20;
@@ -43,6 +44,8 @@ void measureTopRows(QAbstractItemModel *model, int column, const QFontMetrics &f
                 rowW += icon.actualSize(QSize(16, 16)).width() + 4;
         }
         w = qMax(w, rowW);
+        if (model->hasChildren(idx))
+            measureRows(model, idx, column, fm, depth + 1, w);
     }
 }
 
@@ -105,7 +108,7 @@ int HeaderColumnFit::contentWidth(int column) const
     w = qMax(w, header->sectionSize(column));
     w = qMax(w, header->sectionSizeHint(column) + 16);
     if (QAbstractItemModel *model = view_->model())
-        measureTopRows(model, column, QFontMetrics(view_->font()), w);
+        measureRows(model, QModelIndex(), column, QFontMetrics(view_->font()), 0, w);
     return w;
 }
 
@@ -130,13 +133,15 @@ bool HeaderColumnFit::isAdequate() const
         return false;
 
     QHeaderView *header = headerOf(view_);
+    const int viewW = view_->viewport()->width();
     int total = 0;
     for (int col : visible) {
         if (header->sectionSize(col) < labelWidth(col))
             return false;
         total += header->sectionSize(col);
     }
-    return total >= view_->viewport()->width() - 32;
+    // Saved/user widths that fill the viewport are fine — do not refit to content.
+    return total >= viewW - 32;
 }
 
 void HeaderColumnFit::apply()
@@ -151,22 +156,34 @@ void HeaderColumnFit::apply()
 
     header->setStretchLastSection(false);
     const int viewWidth = view_->viewport()->width();
+    const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
+
+    // Snapshot before contentWidth() mutates sections via resizeColumnToContents.
+    QVector<int> previous;
+    previous.reserve(visible.size());
+    for (int col : visible)
+        previous.append(header->sectionSize(col));
+
     QVector<int> widths;
     widths.reserve(visible.size());
     int total = 0;
-    for (int col : visible) {
-        widths.append(contentWidth(col));
+    for (int i = 0; i < visible.size(); ++i) {
+        const int col = visible.at(i);
+        // Keep restored/user widths; with no rows only enforce label minimum.
+        const int need = hasRows ? contentWidth(col) : labelWidth(col);
+        widths.append(qMax(need, previous.at(i)));
         total += widths.last();
     }
 
     const int stretch = stretchIndex(visible);
+    const int shrinkAt = visible.indexOf(stretchColumn_);
     if (total < viewWidth - 8)
         widths[stretch] += viewWidth - total;
-    else if (total > viewWidth && stretchColumn_ >= 0) {
-        const int minW = labelWidth(visible.at(stretch));
-        const int shrink = qMin(total - viewWidth, qMax(0, widths[stretch] - minW));
+    else if (total > viewWidth && shrinkAt >= 0) {
+        const int minW = labelWidth(stretchColumn_);
+        const int shrink = qMin(total - viewWidth, qMax(0, widths[shrinkAt] - minW));
         if (shrink > 0)
-            widths[stretch] -= shrink;
+            widths[shrinkAt] -= shrink;
     }
 
     for (int i = 0; i < visible.size(); ++i)
