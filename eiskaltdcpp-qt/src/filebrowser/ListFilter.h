@@ -36,7 +36,11 @@ public:
     bool set(const QStringList &terms, qulonglong size, int sizeMode,
              bool dirsOnly, bool filesOnly, const QStringList &exts);
     void cancel();
-    /** Cancel async scans and wait until workers (parented to owner) exit. */
+    /**
+     * Cancel scans and wait until workers parented to owner exit.
+     * Safe to block: workers observe gen_ at least every 64 items/files
+     * (scanAsync + FilterMatch subtree walks), so cancel returns promptly.
+     */
     void join(QObject *owner);
 
     bool isActive() const { return match_.isActive(); }

@@ -54,6 +54,7 @@ void ListFilter::join(QObject *owner)
     cancel();
     if (!owner)
         return;
+    // No timeout: returning while a worker still holds FileBrowserItem* is a UAF.
     for (AsyncRunner *r : owner->findChildren<AsyncRunner*>(QString(), Qt::FindDirectChildrenOnly)) {
         if (r && r->isRunning())
             r->wait();
