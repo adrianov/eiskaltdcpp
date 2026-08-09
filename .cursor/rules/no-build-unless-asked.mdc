@@ -1,0 +1,22 @@
+---
+description: Do not compile or rebuild unless asked; verify edits with linters or IDE diagnostics instead.
+alwaysApply: true
+---
+
+# No builds unless requested
+
+Do **not** run the compiler, linker, CMake configure/build, `make`/`ninja`, or packaging steps unless the user explicitly asks to build, compile, or confirm the project builds. Other rules that mention CMake or new sources do **not** override this.
+
+## Verify without building
+
+After editing code, catch syntax and obvious mistakes with:
+
+- IDE/linter diagnostics (`ReadLints` / language server)
+- Project MCP or other static-analysis tools when available
+- A short review of the changed files and their call sites
+
+A full compile is **not** the default verification step.
+
+## When a build is appropriate
+
+Build only when the user clearly asks for it — for example “build”, “compile”, “reconfigure cmake”, or “check that it builds” — or when they request packaging/install work that cannot be done without a build.
