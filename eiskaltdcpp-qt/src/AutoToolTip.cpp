@@ -20,6 +20,18 @@
 AutoToolTipDelegate::AutoToolTipDelegate(QObject *parent): QStyledItemDelegate(parent) {}
 AutoToolTipDelegate::~AutoToolTipDelegate() {}
 
+void AutoToolTipDelegate::setElideLeftColumns(const QSet<int> &columns)
+{
+    elideLeftColumns = columns;
+}
+
+void AutoToolTipDelegate::initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const
+{
+    QStyledItemDelegate::initStyleOption(option, index);
+    if (elideLeftColumns.contains(index.column()))
+        option->textElideMode = Qt::ElideLeft;
+}
+
 bool AutoToolTipDelegate::helpEvent(QHelpEvent* e, QAbstractItemView* view,
     const QStyleOptionViewItem& option, const QModelIndex& index)
 {

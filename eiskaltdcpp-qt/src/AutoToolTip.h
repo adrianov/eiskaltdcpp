@@ -16,6 +16,7 @@
 #include <QStyledItemDelegate>
 #include <QHelpEvent>
 #include <QAbstractItemView>
+#include <QSet>
 
 class AutoToolTipDelegate : public QStyledItemDelegate
 {
@@ -24,6 +25,15 @@ public:
     AutoToolTipDelegate(QObject* parent);
     ~AutoToolTipDelegate();
 
+    /** Columns that elide the start of the text (e.g. Path) when the cell is too narrow. */
+    void setElideLeftColumns(const QSet<int> &columns);
+
 public slots:
-    bool helpEvent(QHelpEvent* e, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index);
+    bool helpEvent(QHelpEvent* e, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index) override;
+
+protected:
+    void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override;
+
+private:
+    QSet<int> elideLeftColumns;
 };
