@@ -11,7 +11,7 @@
 
 #include "stdinc.h"
 
-#include "NmdcHub.h"
+#include "../NmdcHub.h"
 
 #include "CryptoManager.h"
 #include "StringTokenizer.h"

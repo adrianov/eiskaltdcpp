@@ -26,7 +26,7 @@ void AdcHub::on(Connected c) noexcept {
         return;
     }
 
-    lastInfoMap.clear();
+    selfInfo.clear();
     sid = 0;
     forbiddenCommands.clear();
 

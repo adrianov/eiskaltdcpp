@@ -118,7 +118,8 @@ private:
     unordered_map<string, uint64_t> ctmLatch;
 
     uint32_t floodCounter;
-    unordered_set<string> hubsBlockingCC;
+    /** CTM2HUB targets (`host:port`) that must not receive C-C connects. */
+    unordered_set<string> blockedHubCtms;
 
     Server* server;
     Server* secureServer;
@@ -162,7 +163,8 @@ private:
     /** All hubs timed out or connect give-up, no peer response — caller removes CQI/sources. */
     bool dropUnreachableDownload(ConnectionQueueItem* cqi);
 
-    bool checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl);
+    bool isHubCtmBlocked(const string& aServer, const string& aPort, const string& aHubUrl);
+    void blockHubCtm(UserConnection* aSource);
 
     // UserConnectionListener
     virtual void on(Connected, UserConnection*) noexcept;

@@ -52,25 +52,41 @@ bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
     return true;
 }
 
-bool ConnectionManager::checkHubCCBlock(const string& aServer, const string& aPort, const string& aHubUrl)
-{
-    const auto server_lower = Text::toLower(aServer);
-    dcassert(server_lower == aServer);
-
-    bool cc_blocked = false;
-
+void ConnectionManager::blockHubCtm(UserConnection* aSource) {
+    const string endpoint = Text::toLower(aSource->getRemoteIp() + ":" + aSource->getPort());
     {
         Lock l(cs);
-        cc_blocked = !hubsBlockingCC.empty() && hubsBlockingCC.find(server_lower) != hubsBlockingCC.end();
+        blockedHubCtms.insert(endpoint);
+    }
+    LogManager::getInstance()->message(str(F_("Blocking hub endpoint '%1%' (CTM2HUB from '%2%')")
+                                           % endpoint % aSource->getHubUrl()));
+}
+
+bool ConnectionManager::isHubCtmBlocked(const string& aServer, const string& aPort, const string& aHubUrl)
+{
+    const auto key = Text::toLower(aServer + ":" + aPort);
+
+    bool blocked = false;
+    {
+        Lock l(cs);
+        blocked = !blockedHubCtms.empty() && blockedHubCtms.find(key) != blockedHubCtms.end();
     }
 
-    if(cc_blocked)
+    if(blocked)
     {
-        PeerConnectLog::skip(aServer, aHubUrl, str(F_("blocked hub IP (C-C protection) %1%:%2%") % aServer % aPort));
-        LogManager::getInstance()->message(str(F_("Blocked a C-C connection to a hub ('%1%:%2%'; request from '%3%')") % aServer % aPort % aHubUrl));
+        PeerConnectLog::skip(aServer, aHubUrl, str(F_("blocked hub CTM (C-C protection) %1%:%2%") % aServer % aPort));
+        LogManager::getInstance()->message(str(F_("Blocked a peer connect aimed at a hub ('%1%:%2%'; request from '%3%')")
+                                               % aServer % aPort % aHubUrl));
         return true;
     }
     return false;
+}
+
+void ConnectionManager::on(UserConnectionListener::ProtocolError, UserConnection* aSource, const string& aError) noexcept {
+    if(aError.compare(0, 7, "CTM2HUB", 7) == 0)
+        blockHubCtm(aSource);
+
+    failed(aSource, aError, true);
 }
 
 } // namespace dcpp

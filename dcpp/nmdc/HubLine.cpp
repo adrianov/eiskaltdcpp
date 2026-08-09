@@ -19,29 +19,14 @@
 
 #include "stdinc.h"
 
-#include "NmdcHub.h"
+#include "../NmdcHub.h"
+#include "ChatLine.h"
 
-#include "BufferedSocket.h"
-#include "ChatMessage.h"
-#include "HubSearchDenied.h"
-#include "SearchManager.h"
-#include "format.h"
+#include "../BufferedSocket.h"
+#include "../SearchManager.h"
+#include "../format.h"
 
 namespace dcpp {
-
-namespace {
-
-bool isHubBan(const string& text) {
-    return Util::findSubString(text, "banned") != string::npos
-        || Util::findSubString(text, "забанен") != string::npos;
-}
-
-void stopOnBan(Client& c, const string& text) {
-    if(isHubBan(text))
-        c.setAutoReconnect(false);
-}
-
-} // namespace
 
 void NmdcHub::onLine(const string& aLine) noexcept {
     if(aLine.empty())
@@ -58,73 +43,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
     }
 
     if(aLine[0] != '$') {
-        string line = toUtf8(aLine);
-        if(line[0] != '<') {
-            const string text = unescape(line);
-            // Corrupted framing or embedded protocol (e.g. nulls + "$Search …") — drop.
-            if(hasControlChars(text) || text.find("$Search") != string::npos)
-                return;
-            stopOnBan(*this, text);
-            stopInfectedConnect(text);
-            noteSecureCtmRejected(text);
-            noteSearchDenied(*this, text);
-            noteSearchRateLimit(searchQueue, text);
-            fire(ClientListener::StatusMessage(), this, text);
-            return;
-        }
-
-        string::size_type i = line.find('>', 2);
-        if(i == string::npos) {
-            // Malformed "<…$Search…" with no nick close — was shown as status.
-            if(hasControlChars(line) || line.find('$') != string::npos)
-                return;
-            const string text = unescape(line);
-            stopOnBan(*this, text);
-            fire(ClientListener::StatusMessage(), this, text);
-            return;
-        }
-
-        string nick = line.substr(1, i - 1);
-        if(!isNickLike(nick))
-            return;
-        if((line.length() - 1) <= i) {
-            const string text = unescape(line);
-            stopOnBan(*this, text);
-            fire(ClientListener::StatusMessage(), this, text);
-            return;
-        }
-
-        string message = line.substr(i + 2);
-        if((line.find("Hub-Security") != string::npos) && (line.find("was kicked by") != string::npos)) {
-            fire(ClientListener::StatusMessage(), this, unescape(line), ClientListener::FLAG_IS_SPAM);
-            return;
-        }
-        if((line.find("is kicking") != string::npos) && (line.find("because:") != string::npos)) {
-            fire(ClientListener::StatusMessage(), this, unescape(line), ClientListener::FLAG_IS_SPAM);
-            return;
-        }
-
-        string body = unescape(message);
-        stopOnBan(*this, body);
-        stopInfectedConnect(body, nick);
-        noteSecureCtmRejected(body);
-        // Rate-limit text is specific; honor it from any nick (hub scripts vary).
-        noteSearchRateLimit(searchQueue, body);
-
-        ChatMessage chatMessage = { body, findUser(nick), nullptr, nullptr, false, 0 };
-        if(!chatMessage.from) {
-            OnlineUser& o = getUser(nick);
-            o.getIdentity().setHub(true);
-            o.getIdentity().setHidden(true);
-            updated(o);
-            chatMessage.from = &o;
-        }
-
-        const Identity& id = chatMessage.from->getIdentity();
-        if(id.isHub() || id.isBot() || id.isOp() || chatMessage.from->getUser()->isSet(User::BOT))
-            noteSearchDenied(*this, body);
-
-        fire(ClientListener::Message(), this, chatMessage);
+        NmdcChatLine(*this).handle(toUtf8(aLine));
         return;
     }
 
@@ -172,10 +91,13 @@ void NmdcHub::onLine(const string& aLine) noexcept {
     } else if(cmd == "$HubTopic" || cmd == "$GetHubURL" || cmd == "$SearchRule" ||
               cmd == "$NickRule" || cmd == "$BadNick")
         onLineHubExt(cmd, param);
-    else if(cmd == "$UserIP" || cmd == "$NickList" || cmd == "$OpList")
+    else if(cmd == "$UserIP" || cmd == "$NickList" || cmd == "$OpList" || cmd == "$BotList")
         onLineUserLists(cmd, param);
     else if(cmd == "$To:")
         onLineTo(param);
+    else if(cmd == "$LogedIn")
+        fire(ClientListener::StatusMessage(), this,
+             str(F_("You are an operator on %1%") % getHubUrl()));
     else if(cmd == "$GetPass") {
         OnlineUser& ou = getUser(getMyNick());
         ou.getIdentity().set("RG", "1");

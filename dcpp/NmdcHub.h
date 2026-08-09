@@ -83,6 +83,7 @@ public:
 
 private:
     friend class ClientManager;
+    friend class NmdcChatLine;
     enum SupportFlags {
         SUPPORTS_USERCOMMAND = 0x01,
         SUPPORTS_NOGETINFO = 0x02,

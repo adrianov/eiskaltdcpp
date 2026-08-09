@@ -29,7 +29,7 @@ void ConnectionManager::nmdcConnect(const string& aServer, const string& aPort, 
     if(isShuttingDown())
         return;
 
-    if(checkHubCCBlock(aServer, aPort, hubUrl))
+    if(isHubCtmBlocked(aServer, aPort, hubUrl))
         return;
 
     // Skip $ConnectToMe only when an idle upload already holds this IP (spam).
@@ -72,24 +72,31 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string &aPort,
     if(isShuttingDown())
         return;
 
+    const string& aServer = aUser.getIdentity().getIp();
+    if(aServer.empty())
+        return;
+#ifdef WITH_DHT
+    const string hubUrl = aUser.getClient().getType() == Client::DHT ? "DHT" : aUser.getClient().getHubUrl();
+#else
+    const string& hubUrl = aUser.getClient().getHubUrl();
+#endif
+    if(isHubCtmBlocked(aServer, aPort, hubUrl))
+        return;
+
     UserConnection* uc = getConnection(false, secure);
     uc->setToken(aToken);
     uc->setUser(aUser.getUser());
     uc->setEncoding(Text::utf8);
     uc->setState(UserConnection::STATE_CONNECT);
-#ifdef WITH_DHT
-    uc->setHubUrl(aUser.getClient().getType() == Client::DHT ? "DHT" : aUser.getClient().getHubUrl());
-#else
-    uc->setHubUrl(aUser.getClient().getHubUrl());
-#endif
+    uc->setHubUrl(hubUrl);
     if(aUser.getIdentity().isOp()) {
         uc->setFlag(UserConnection::FLAG_OP);
     }
-    PeerConnectLog::tcpOut(aUser.getIdentity().getNick(), aUser.getIdentity().getIp(), aPort, secure, "ADC");
+    PeerConnectLog::tcpOut(aUser.getIdentity().getNick(), aServer, aPort, secure, "ADC");
     try {
-        uc->connect(aUser.getIdentity().getIp(), aPort, localPort, natRole);
+        uc->connect(aServer, aPort, localPort, natRole);
     } catch(const Exception& e) {
-        PeerConnectLog::tcpFail(aUser.getIdentity().getNick(), aUser.getIdentity().getIp(), aPort, e.getError());
+        PeerConnectLog::tcpFail(aUser.getIdentity().getNick(), aServer, aPort, e.getError());
         putConnection(uc);
     }
 }

@@ -15,6 +15,7 @@
 #include "AdcHub.h"
 
 #include "ChatMessage.h"
+#include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "format.h"
 #include "HubSearchDenied.h"
@@ -152,6 +153,12 @@ void AdcHub::handle(AdcCommand::STA, AdcCommand& c) noexcept {
             return;
         disconnect(false);
         fire(ClientListener::NickTaken(), this);
+        return;
+
+    case AdcCommand::ERROR_CID_TAKEN:
+        fire(ClientListener::StatusMessage(), this,
+             str(F_("CID taken: %1%") % ClientManager::getInstance()->getMyCID().toBase32()),
+             ClientListener::FLAG_NORMAL);
         return;
     }
     noteSearchDenied(*this, c.getParam(1));

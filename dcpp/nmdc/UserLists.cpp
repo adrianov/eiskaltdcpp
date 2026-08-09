@@ -11,7 +11,7 @@
 
 #include "stdinc.h"
 
-#include "NmdcHub.h"
+#include "../NmdcHub.h"
 
 #include "ChatMessage.h"
 #include "HubSearchDenied.h"
@@ -84,6 +84,21 @@ void NmdcHub::onLineUserLists(const string& cmd, const string& param) {
         updated(v);
         updateCounts(false);
         myInfo(false);
+    } else if(cmd == "$BotList") {
+        if(param.empty())
+            return;
+
+        OnlineUserList v;
+        StringTokenizer<string> t(param, "$$");
+        for(auto& it: t.getTokens()) {
+            if(it.empty())
+                continue;
+            OnlineUser& ou = getUser(it);
+            ou.getIdentity().setBot(true);
+            ou.getUser()->setFlag(User::BOT);
+            v.push_back(&ou);
+        }
+        updated(v);
     }
 }
 

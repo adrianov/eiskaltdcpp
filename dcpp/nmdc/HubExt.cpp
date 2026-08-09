@@ -8,7 +8,7 @@
 
 #include "stdinc.h"
 
-#include "NmdcHub.h"
+#include "../NmdcHub.h"
 
 #include "FavoriteManager.h"
 #include "HubReconnectFilter.h"

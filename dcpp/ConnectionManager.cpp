@@ -177,18 +177,4 @@ void ConnectionManager::on(UserConnectionListener::Failed, UserConnection* aSour
     failed(aSource, aError, false);
 }
 
-void ConnectionManager::on(UserConnectionListener::ProtocolError, UserConnection* aSource, const string& aError) noexcept {
-    if(aError.compare(0, 7, "CTM2HUB", 7) == 0) {
-        {
-            Lock l(cs);
-            hubsBlockingCC.insert(Text::toLower(aSource->getRemoteIp()));
-        }
-
-        string aServerPort = aSource->getRemoteIp() + ":" + aSource->getPort();
-        LogManager::getInstance()->message(str(F_("Blocking '%1%', potential DDoS detected (originating hub '%2%')") % aServerPort % aSource->getHubUrl() ));
-    }
-
-    failed(aSource, aError, true);
-}
-
 } // namespace dcpp

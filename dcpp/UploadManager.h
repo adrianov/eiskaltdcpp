@@ -18,6 +18,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <list>
 #include <set>
 #include <unordered_map>
@@ -63,6 +64,10 @@ public:
     /** @param aUser Reserve an upload slot for this user and connect. */
     void reserveSlot(const HintedUser& aUser);
 
+    /** NMDC MyINFO FIREBALL / SERVER bits (fast upload / long-lived large share). */
+    bool isFireball() const { return fireball; }
+    bool isFileServer() const { return fileServer; }
+
     /** */
     void reloadRestrictions();
 
@@ -89,23 +94,34 @@ private:
     UploadList uploads;
     mutable CriticalSection cs;
 
+    uint64_t fireballStartTick;
+    bool fireball;
+    bool fileServer;
+    void refreshShareStatus(uint64_t aTick);
+
     typedef unordered_set<UserPtr, User::Hash> SlotSet;
     typedef SlotSet::iterator SlotIter;
     SlotSet reservedSlots;
     CPerfolderLimit limits;
     int lastFreeSlots; /// amount of free slots at the previous minute
 
-    typedef pair<HintedUser, uint64_t> WaitingUser;
+    /** Queued upload requester; token is the ADC TO used when they reconnect. */
+    struct WaitingUser {
+        HintedUser user;
+        uint64_t tick;
+        string token;
+    };
     typedef list<WaitingUser> WaitingUserList;
 
     struct WaitingUserFresh {
-        bool operator()(const WaitingUser& wu) { return wu.second > GET_TICK() - 5*60*1000; }
+        bool operator()(const WaitingUser& wu) { return wu.tick > GET_TICK() - 5*60*1000; }
     };
 
     //functions for manipulating waitingFiles and waitingUsers
     WaitingUserList waitingUsers;       //this one merely lists the users waiting for slots
     FilesMap waitingFiles;      //set of files which this user has asked for
     void addFailedUpload(const UserConnection& source, string filename);
+    void expireWaitingUsers();
 
     friend class Singleton<UploadManager>;
     UploadManager() noexcept;

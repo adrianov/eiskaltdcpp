@@ -54,6 +54,8 @@ public:
     enum StatusFlags {
         NORMAL          = 0x01,
         AWAY            = 0x02,
+        SERVER          = 0x04,
+        FIREBALL        = 0x08,
         TLS             = 0x10,
         NAT             = 0x20
     };

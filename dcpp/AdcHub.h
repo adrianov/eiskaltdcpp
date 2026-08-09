@@ -21,6 +21,7 @@
 #include "typedefs.h"
 #include "Client.h"
 #include "AdcCommand.h"
+#include "adc/SelfInfo.h"
 #include "Socket.h"
 #ifdef LUA_SCRIPT
 #include "ScriptManager.h"
@@ -101,7 +102,7 @@ private:
     bool oldPassword;
     Socket udp;
     SIDMap users;
-    StringMap lastInfoMap;
+    AdcSelfInfo selfInfo;
     mutable CriticalSection cs;
 
     string salt;

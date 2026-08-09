@@ -64,7 +64,7 @@ Currently supported features (not full list):
 * Support of IDN2 (recognition of national domain names).
 * Support of URL encoded strings for hub addresses.
 * Support of traffic encryption.
-* NMDC hub extensions also used by FlylinkDC++ (except proprietary ExtJSON2): `HubTopic`, `HubURL` (`$GetHubURL` / `$MyHubURL`), `NickRule` and `$BadNick` nick fixes, `SearchRule` minimum interval (`Int` when active, `IntPas` when passive), and `TTHS` compact TTH search (`$SA` / `$SP`).
+* NMDC hub extensions also used by FlylinkDC++ (except proprietary ExtJSON2): `HubTopic`, `HubURL` (`$GetHubURL` / `$MyHubURL`), `NickRule` and `$BadNick` nick fixes, `SearchRule` minimum interval (`Int` when active, `IntPas` when passive), `TTHS` compact TTH search (`$SA` / `$SP`), `$BotList`, `$LogedIn`, MyINFO fireball/file-server status bits, and CTM2HUB block of peer connects to a hub `host:port`.
 
 <a href="https://tehnick.github.io/eiskaltdcpp/eiskaltdcpp-qt-2.2.10-588_search_widget.png" title="Example of search results">
     <img src="https://tehnick.github.io/eiskaltdcpp/eiskaltdcpp-qt-2.2.10-588_search_widget.png" width="99%">

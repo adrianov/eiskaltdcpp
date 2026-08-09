@@ -66,6 +66,7 @@ namespace dht
         {
             string port = secure ? dcpp::ConnectionManager::getInstance()->getSecurePort() : dcpp::ConnectionManager::getInstance()->getPort();
             cmd.addParam(port);
+            dcpp::ConnectionManager::getInstance()->adcExpect(token, node->getUser());
         }
 
         cmd.addParam(token);

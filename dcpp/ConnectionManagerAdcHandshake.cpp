@@ -144,6 +144,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
             rejectConnection(aSource, _("ADC incoming INF missing TO field"));
             return;
         }
+        aSource->setToken(token); // MaxedOut waiting queue reuses this TO
     } else {
         token = aSource->getToken();
     }
@@ -164,13 +165,24 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
         }
     }
 
-    if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
-        const bool expected = consumeAdc(token, aSource->getUser());
-        if(!down && !expected) {
+    const bool incoming = aSource->isSet(UserConnection::FLAG_INCOMING);
+    if(incoming) {
+        bool expected = down;
+        if(!expected) {
+            Lock l(cs);
+            auto range = adcExpected.equal_range(token);
+            for(auto i = range.first; i != range.second; ++i) {
+                if(i->second.first == aSource->getUser()) {
+                    expected = true;
+                    break;
+                }
+            }
+        }
+        if(!expected) {
             rejectConnection(aSource, _("unexpected ADC connection token"));
             return;
         }
-        // The connecting party sends INF first; answer after validating its identity and token.
+        // Connecting party sends INF first; answer after identity + token checks.
         aSource->inf(false);
     }
 
@@ -181,6 +193,10 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
         aSource->setFlag(UserConnection::FLAG_UPLOAD);
         addUploadConnection(aSource);
     }
+
+    // Consume only after association so a failed add* still allows peer retry.
+    if(incoming && aSource->isSet(UserConnection::FLAG_ASSOCIATED))
+        consumeAdc(token, aSource->getUser());
 }
 
 } // namespace dcpp

@@ -98,6 +98,10 @@ void NmdcHub::myInfo(bool alwaysSend) {
         ? Util::toString(upLimit) + "KiB/s" : SETTING(UPLOAD_SPEED);
     if(Util::getAway())
         StatusMode |= Identity::AWAY;
+    if(UploadManager::getInstance()->isFileServer())
+        StatusMode |= Identity::SERVER;
+    if(UploadManager::getInstance()->isFireball())
+        StatusMode |= Identity::FIREBALL;
     // TLS/NAT bits: only if hub $Supports TLS (YnHub rejects them otherwise).
     if(supportFlags & SUPPORTS_TLS) {
         if(BOOLSETTING(ALLOW_NATT) && !isActive())

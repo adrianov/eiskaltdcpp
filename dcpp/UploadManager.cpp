@@ -43,7 +43,10 @@ namespace dcpp {
 static const string UPLOAD_AREA = "Uploads";
 
 
-UploadManager::UploadManager() noexcept : extra(0), lastGrant(0), running(0), limits(NULL), lastFreeSlots(-1) {
+UploadManager::UploadManager() noexcept :
+    extra(0), lastGrant(0), running(0), limits(NULL), lastFreeSlots(-1),
+    fireballStartTick(0), fireball(false), fileServer(false)
+{
     ClientManager::getInstance()->addListener(this);
     TimerManager::getInstance()->addListener(this);
 }
@@ -88,15 +91,6 @@ void UploadManager::removeUpload(Upload* aUpload) {
     dcassert(find(uploads.begin(), uploads.end(), aUpload) != uploads.end());
     uploads.erase(remove(uploads.begin(), uploads.end(), aUpload), uploads.end());
     delete aUpload;
-}
-
-void UploadManager::reserveSlot(const HintedUser& aUser) {
-    {
-        Lock l(cs);
-        reservedSlots.insert(aUser);
-    }
-    if(aUser.user->isOnline())
-        ClientManager::getInstance()->connect(aUser, Util::toString(Util::rand()));
 }
 
 } // namespace dcpp

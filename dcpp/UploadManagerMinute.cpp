@@ -26,18 +26,11 @@ namespace dcpp {
 void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
     UploadRequestGuard::getInstance().prune(aTick);
 
+    expireWaitingUsers();
+
     UserList disconnects;
     {
         Lock l(cs);
-
-        auto i = stable_partition(waitingUsers.begin(), waitingUsers.end(), WaitingUserFresh());
-        for (auto j = i; j != waitingUsers.end(); ++j) {
-            auto fit = waitingFiles.find(j->first);
-            if (fit != waitingFiles.end()) waitingFiles.erase(fit);
-            fire(UploadManagerListener::WaitingRemoveUser(), j->first);
-        }
-
-        waitingUsers.erase(i, waitingUsers.end());
 
         if( BOOLSETTING(AUTO_KICK) ) {
             for(auto u: uploads) {

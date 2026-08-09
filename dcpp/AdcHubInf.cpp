@@ -53,10 +53,13 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
         return;
     }
 
+    bool sawSu = false;
     for(auto& i: c.getParameters()) {
         if(i.length() < 2)
             continue;
 
+        if(i.compare(0, 2, "SU") == 0)
+            sawSu = true;
         u->getIdentity().set(i.c_str(), i.substr(2));
     }
 
@@ -66,8 +69,22 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
         u->getUser()->unsetFlag(User::BOT);
     }
 
-    if(u->getIdentity().supports(ADCS_FEATURE)) {
-        u->getUser()->setFlag(User::TLS);
+    // Mirror Flylink AdcSupports: SU drives connect-mode flags used by wantRevConnect / queue.
+    if(sawSu) {
+        if(u->getIdentity().supports(TCP4_FEATURE))
+            u->getUser()->unsetFlag(User::PASSIVE);
+        else
+            u->getUser()->setFlag(User::PASSIVE);
+
+        if(u->getIdentity().supports(NAT0_FEATURE))
+            u->getUser()->setFlag(User::NAT_TRAVERSAL);
+        else
+            u->getUser()->unsetFlag(User::NAT_TRAVERSAL);
+
+        if(u->getIdentity().supports(ADCS_FEATURE))
+            u->getUser()->setFlag(User::TLS);
+        else
+            u->getUser()->unsetFlag(User::TLS);
     }
 
     if(!u->getIdentity().get("US").empty()) {

@@ -70,11 +70,14 @@ set(DCPP_EXTRA_SOURCES
     sharemedia/MediaInfoScan.cpp
     sharemedia/MediaInfoCache.cpp
     sharemedia/MediaInfoProbe.cpp
-    NmdcHubLine.cpp
-    NmdcHubLineProfile.cpp
-    NmdcHubLineHub.cpp
-    NmdcHubLineExt.cpp
-    NmdcHubLineLists.cpp
+    adc/AdcCommand.cpp
+    adc/SelfInfo.cpp
+    nmdc/ChatLine.cpp
+    nmdc/HubLine.cpp
+    nmdc/Profile.cpp
+    nmdc/HubSetup.cpp
+    nmdc/HubExt.cpp
+    nmdc/UserLists.cpp
     NmdcHubConnect.cpp
     AdcHubConnect.cpp
     AdcHubConnectIn.cpp
@@ -369,6 +372,10 @@ if (WITH_DEV_FILES)
     install (FILES ${dcpp_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/)
     file (GLOB sharemedia_hdrs ${PROJECT_SOURCE_DIR}/sharemedia/*.h)
     install (FILES ${sharemedia_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/sharemedia/)
+    file (GLOB adc_hdrs ${PROJECT_SOURCE_DIR}/adc/*.h)
+    install (FILES ${adc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/adc/)
+    file (GLOB nmdc_hdrs ${PROJECT_SOURCE_DIR}/nmdc/*.h)
+    install (FILES ${nmdc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/nmdc/)
 
     set (prefix ${CMAKE_INSTALL_PREFIX})
     set (libdir ${LIBDIR})
