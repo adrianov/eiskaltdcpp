@@ -53,6 +53,7 @@
 
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QMetaObject>
 #include <QObject>
 #include <QThread>
 
@@ -163,8 +164,19 @@ void AppSession::createWindow()
 
 void AppSession::startServices()
 {
+    // Shell-only before first paint; bulkier widgets and optional chrome
+    // follow on a queued turn after show() (see showWindow).
     HubManager::newInstance();
+    Notification::newInstance();
+#ifdef USE_JS
+    ScriptEngine::newInstance();
+    QObject::connect(ScriptEngine::getInstance(), SIGNAL(scriptChanged(QString)),
+                     MainWindow::getInstance(), SLOT(slotJSFileChanged(QString)));
+#endif
+}
 
+void AppSession::startDeferredServices()
+{
     if (WBGET(WB_APP_ENABLE_EMOTICON)) {
         EmoticonFactory::newInstance();
         EmoticonFactory::getInstance()->load();
@@ -173,12 +185,6 @@ void AppSession::startServices()
     if (WBGET(WB_APP_ENABLE_ASPELL))
         SpellCheck::newInstance();
 #endif
-    Notification::newInstance();
-#ifdef USE_JS
-    ScriptEngine::newInstance();
-    QObject::connect(ScriptEngine::getInstance(), SIGNAL(scriptChanged(QString)),
-                     MainWindow::getInstance(), SLOT(slotJSFileChanged(QString)));
-#endif
     ArenaWidgetFactory().create<dcpp::Singleton, FinishedUploads>();
     ArenaWidgetFactory().create<dcpp::Singleton, FinishedDownloads>();
     ArenaWidgetFactory().create<dcpp::Singleton, QueuedUsers>();
@@ -186,10 +192,15 @@ void AppSession::startServices()
 
 void AppSession::showWindow()
 {
-    MainWindow::getInstance()->autoconnect();
-    MainWindow::getInstance()->parseCmdLine(app_.arguments());
     if (!WBGET(WB_MAINWINDOW_HIDE) || !WBGET(WB_TRAY_ENABLED))
         MainWindow::getInstance()->show();
+
+    // Paint first; then SQLite/emoticons; then hub autoconnect and magnet CLI.
+    QMetaObject::invokeMethod(qApp, [this] {
+        startDeferredServices();
+        MainWindow::getInstance()->autoconnect();
+        MainWindow::getInstance()->parseCmdLine(app_.arguments());
+    }, Qt::QueuedConnection);
 }
 
 void AppSession::stopUi()
