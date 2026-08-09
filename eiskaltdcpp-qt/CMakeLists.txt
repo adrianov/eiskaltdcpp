@@ -169,6 +169,10 @@ set(QT_EXTRA_SOURCES
     src/ReciprocalList.cpp
     src/ReciprocalListPeer.cpp
     src/ShareIndexListListener.cpp
+    src/settings/SettingsSharing.cpp
+    src/settings/ShareDirModel.cpp
+    src/settings/ShareDirsPane.cpp
+    src/settings/SimpleShareTree.cpp
     src/SettingsConnectionInit.cpp
     src/SettingsConnectionPorts.cpp
     src/SettingsConnectionSave.cpp
@@ -203,6 +207,7 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilHeader.cpp
     src/WulforUtilMagnet.cpp
     src/WulforUtilText.cpp
+    src/treeheader/ColumnContentSpan.cpp
     src/treeheader/HeaderColumnFit.cpp
     src/treeheader/TreeHeaderAutosize.cpp
     src/treeheader/WulforTreeHeader.cpp
@@ -340,7 +345,11 @@ list (APPEND MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/ListFilterProxy.h
             ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsers.h
-            ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsersModel.h)
+            ${PROJECT_SOURCE_DIR}/src/queuedusers/QueuedUsersModel.h
+            ${PROJECT_SOURCE_DIR}/src/settings/SettingsSharing.h
+            ${PROJECT_SOURCE_DIR}/src/settings/ShareDirModel.h
+            ${PROJECT_SOURCE_DIR}/src/settings/ShareDirsPane.h
+            ${PROJECT_SOURCE_DIR}/src/settings/SimpleShareTree.h)
 list (REMOVE_ITEM MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindowPrivate.h
             ${PROJECT_SOURCE_DIR}/src/SearchFramePrivate.h
@@ -847,7 +856,6 @@ if (APPLE)
                 "-DBUNDLE_DYLIB_EXTRA_OLDS=/opt/homebrew/opt/duckdb/lib/${_DUCKDB_NAME};/usr/local/opt/duckdb/lib/${_DUCKDB_NAME}"
                 "-DCMAKE_INSTALL_PREFIX=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/.."
                 -P "${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake"
-            COMMENT "Bundle libduckdb into ${PROJECT_NAME_GLOBAL}.app"
             VERBATIM)
     endif (USE_QT_SQLITE AND DuckDB_LIBRARY)
 
@@ -875,19 +883,10 @@ if (APPLE)
                 "-DBUNDLE_DYLIB_EXTRA_OLDS=/opt/homebrew/opt/libzen/lib/${_ZEN_NAME};/usr/local/opt/libzen/lib/${_ZEN_NAME}"
                 "-DCMAKE_INSTALL_PREFIX=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/.."
                 -P "${PROJECT_SOURCE_DIR}/../macos/BundleHomebrewDylib.cmake"
-            COMMAND install_name_tool -change
-                "/opt/homebrew/opt/libzen/lib/libzen.0.dylib"
-                "@executable_path/../Frameworks/${_ZEN_NAME}"
-                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
-            COMMAND install_name_tool -change
-                "/usr/local/opt/libzen/lib/libzen.0.dylib"
-                "@executable_path/../Frameworks/${_ZEN_NAME}"
-                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
-            COMMAND codesign --remove-signature
-                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}"
-            COMMAND codesign -s - --force --deep
-                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
-            COMMENT "Bundle libmediainfo into ${PROJECT_NAME_GLOBAL}.app"
+            COMMAND bash -c "install_name_tool -change '/opt/homebrew/opt/libzen/lib/libzen.0.dylib' '@executable_path/../Frameworks/${_ZEN_NAME}' '$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}' 2>/dev/null || true"
+            COMMAND bash -c "install_name_tool -change '/usr/local/opt/libzen/lib/libzen.0.dylib' '@executable_path/../Frameworks/${_ZEN_NAME}' '$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}' 2>/dev/null || true"
+            COMMAND bash -c "codesign --remove-signature '$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/${_MI_NAME}' >/dev/null 2>&1 || true"
+            COMMAND bash -c "codesign -s - --force --deep '$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>' >/dev/null 2>&1"
             VERBATIM)
     endif (USE_MEDIAINFO AND MediaInfo_LIBRARY AND Zen_LIBRARY)
 

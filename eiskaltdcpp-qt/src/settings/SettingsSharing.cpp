@@ -7,53 +7,39 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "SettingsSharing.h"
-#include "HashProgress.h"
+#include "settings/SettingsSharing.h"
+#include "settings/ShareDirsPane.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/SettingsManager.h"
-#include "dcpp/ShareManager.h"
 
-#include <QListWidgetItem>
-#include <QTreeWidget>
-#include <QList>
-#include <QMenu>
-#include <QAction>
+#include <QDir>
 #include <QFileDialog>
 #include <QInputDialog>
-#include <QDir>
-#include <QFile>
-#include <QTextStream>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QStack>
+#include <QListWidgetItem>
 
 using namespace dcpp;
 
-SettingsSharing::SettingsSharing(QWidget *parent):
-        QWidget(parent)
+SettingsSharing::SettingsSharing(QWidget *parent)
+    : QWidget(parent)
 {
     setupUi(this);
-
-    model = nullptr;
-
     init();
 }
 
-SettingsSharing::~SettingsSharing(){
-    delete model;
-}
-
-void SettingsSharing::showEvent(QShowEvent *e){
+void SettingsSharing::showEvent(QShowEvent *e)
+{
     e->accept();
-
-    if (model)
-        WulforUtil::restoreTreeHeader(treeView->header(), QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
+    if (!WSGET(WS_SHAREHEADER_STATE).isEmpty()) {
+        WulforUtil::restoreTreeHeader(treeView->header(),
+                QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
+    }
 }
 
-void SettingsSharing::ok(){
+void SettingsSharing::ok()
+{
     SettingsManager *SM = SettingsManager::getInstance();
 
     SM->set(SettingsManager::FOLLOW_LINKS, checkBox_FOLLOW->isChecked());
@@ -74,11 +60,9 @@ void SettingsSharing::ok(){
     QStringList list;
     for (int k = 0; k < listWidget_SKIPLIST->count(); ++k)
         list << listWidget_SKIPLIST->item(k)->text();
-
-    SM->set(SettingsManager::SKIPLIST_SHARE, (list.isEmpty()? "|" : _tq(list.join("|"))));
+    SM->set(SettingsManager::SKIPLIST_SHARE, list.isEmpty() ? "|" : _tq(list.join("|")));
 
     WBSET(WB_SIMPLE_SHARE_MODE, checkBox_SIMPLE_SHARE_MODE->isChecked());
-
     if (checkBox_SIMPLE_SHARE_MODE->isChecked())
         SM->save();
 
@@ -87,14 +71,13 @@ void SettingsSharing::ok(){
     WBSET(WB_APP_REMOVE_NOT_EX_DIRS, checkBox_AUTOREMOVE->isChecked());
 }
 
-void SettingsSharing::init(){
+void SettingsSharing::init()
+{
     WulforUtil *WU = WulforUtil::getInstance();
-
     toolButton_ADD->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
     toolButton_EDIT->setIcon(WU->getPixmap(AppIcons::eiEDIT));
     toolButton_DELETE->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
     toolButton_BROWSE->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
-
     toolButton_RECREATE->setIcon(WU->getPixmap(AppIcons::eiRELOAD));
 
     checkBox_SHAREHIDDEN->setChecked(BOOLSETTING(SHARE_HIDDEN));
@@ -110,451 +93,105 @@ void SettingsSharing::init(){
     checkBox_SHARE_SKIP_ZERO_BYTE->setChecked(BOOLSETTING(SHARE_SKIP_ZERO_BYTE));
     checkBox_FASTHASH->setChecked(BOOLSETTING(FAST_HASH));
     groupBox_FASTHASH->setEnabled(BOOLSETTING(FAST_HASH));
-
     listWidget_SKIPLIST->addItems(_q(SETTING(SKIPLIST_SHARE)).split('|', WULFOR_SKIP_EMPTY));
 
-    label_TOTALSHARED->setText(tr("Total shared: %1")
-                               .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
-
-    checkBox_SIMPLE_SHARE_MODE->setChecked(WBGET(WB_SIMPLE_SHARE_MODE));
-    treeWidget_SIMPLE_MODE->setVisible(WBGET(WB_SIMPLE_SHARE_MODE));
+    const bool simple = WBGET(WB_SIMPLE_SHARE_MODE);
+    checkBox_SIMPLE_SHARE_MODE->setChecked(simple);
+    treeWidget_SIMPLE_MODE->setVisible(simple);
     treeWidget_SIMPLE_MODE->setContextMenuPolicy(Qt::CustomContextMenu);
-    treeView->setHidden(WBGET(WB_SIMPLE_SHARE_MODE));
+    treeView->setHidden(simple);
 
     checkBox_MAPNORESERVE->setChecked(SETTING(HASH_BUFFER_NORESERVE));
     checkBox_MAPPOPULATE->setChecked(SETTING(HASH_BUFFER_POPULATE));
     checkBox_MAPPRIVATE->setChecked(SETTING(HASH_BUFFER_PRIVATE));
-
-    int ind = comboBox_BUFSIZE->findText(QString().setNum(SETTING(HASH_BUFFER_SIZE_MB)));
+    const int ind = comboBox_BUFSIZE->findText(QString::number(SETTING(HASH_BUFFER_SIZE_MB)));
     if (ind >= 0)
         comboBox_BUFSIZE->setCurrentIndex(ind);
 
-    connect(toolButton_ADD, SIGNAL(clicked()), this, SLOT(slotAddExeption()));
-    connect(toolButton_EDIT, SIGNAL(clicked()), this, SLOT(slotEditExeption()));
-    connect(toolButton_DELETE, SIGNAL(clicked()), this, SLOT(slotDeleteExeption()));
-    connect(toolButton_BROWSE, SIGNAL(clicked()), this, SLOT(slotAddDirExeption()));
-    connect(listWidget_SKIPLIST, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(slotEditExeption()));
+    dirs = new ShareDirsPane(treeView, treeWidget_SIMPLE_MODE, label_TOTALSHARED, this);
 
+    connect(toolButton_ADD, SIGNAL(clicked()), this, SLOT(slotAddException()));
+    connect(toolButton_EDIT, SIGNAL(clicked()), this, SLOT(slotEditException()));
+    connect(toolButton_DELETE, SIGNAL(clicked()), this, SLOT(slotDeleteException()));
+    connect(toolButton_BROWSE, SIGNAL(clicked()), this, SLOT(slotAddDirException()));
+    connect(listWidget_SKIPLIST, SIGNAL(itemDoubleClicked(QListWidgetItem *)),
+            this, SLOT(slotEditException()));
     connect(toolButton_RECREATE, SIGNAL(clicked()), this, SLOT(slotRecreateShare()));
     connect(checkBox_SHAREHIDDEN, SIGNAL(clicked(bool)), this, SLOT(slotShareHidden(bool)));
-    connect(treeView->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu()));
-
-    connect(treeWidget_SIMPLE_MODE, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu(QPoint)));
+    connect(treeView->header(), SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(slotHeaderMenu()));
+    connect(treeWidget_SIMPLE_MODE, SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(slotContextMenu(QPoint)));
     connect(checkBox_SIMPLE_SHARE_MODE, SIGNAL(clicked()), this, SLOT(slotSimpleShareModeChanged()));
 
     slotSimpleShareModeChanged();
+    dirs->refreshTotals();
 }
 
-void SettingsSharing::updateShareView(){
-    if (checkBox_SIMPLE_SHARE_MODE->isChecked()){
-        treeWidget_SIMPLE_MODE->clear();
-
-        StringPairList directories = ShareManager::getInstance()->getDirectories();
-        for (const auto &pair : directories){
-            QTreeWidgetItem *item = new QTreeWidgetItem(treeWidget_SIMPLE_MODE);
-
-            item->setText(0, pair.second.c_str());
-            item->setText(1, pair.first.c_str());
-            item->setText(2, Util::formatBytes(ShareManager::getInstance()->getShareSize(pair.second)).c_str());
-            item->setText(3, QString().setNum(ShareManager::getInstance()->getShareSize(pair.second)));
-        }
-    }
-
-    label_TOTALSHARED->setText(tr("Total shared: %1")
-                               .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
+void SettingsSharing::slotRecreateShare()
+{
+    dirs->recreateShare();
 }
 
-void SettingsSharing::slotRecreateShare(){
-    ShareManager *SM = ShareManager::getInstance();
-
-    SM->setDirty();
-    SM->refresh(true);
-
-    HashProgress progress(this);
-
-    if (progress.exec() == QDialog::Accepted){
-        updateShareView();
-    }
+void SettingsSharing::slotShareHidden(bool share)
+{
+    dirs->setShareHidden(share);
 }
 
-void SettingsSharing::slotShareHidden(bool share){
-    SettingsManager::getInstance()->set(SettingsManager::SHARE_HIDDEN, share);
-    ShareManager::getInstance()->setDirty();
-    ShareManager::getInstance()->refresh(true);
-
-    updateShareView();
-}
-
-void SettingsSharing::slotGetName(QModelIndex index){
-    bool ok = false;
-    QString dir_alias = QInputDialog::getText(this, tr("Select directory"), tr("Name"),
-                                              QLineEdit::Normal, QDir(model->filePath(index)).dirName(), &ok);
-
-    dir_alias = dir_alias.trimmed();
-
-    if (!ok || dir_alias.isEmpty())
-        return;
-
-    model->setAlias(index, dir_alias);
-}
-
-void SettingsSharing::slotHeaderMenu(){
+void SettingsSharing::slotHeaderMenu()
+{
     WulforUtil::headerMenu(treeView);
 }
 
-void SettingsSharing::slotAddExeption(){
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Add item"), tr("Enter text:"), QLineEdit::Normal, "", &ok);
-
+void SettingsSharing::slotAddException()
+{
+    bool ok = false;
+    const QString text = QInputDialog::getText(this, tr("Add item"), tr("Enter text:"),
+                                               QLineEdit::Normal, QString(), &ok);
     if (ok && !text.isEmpty())
         listWidget_SKIPLIST->addItem(text);
 }
 
-void SettingsSharing::slotAddDirExeption(){
-    QString dir = QFileDialog::getExistingDirectory(this, tr("Choose the directory"), QDir::home().dirName());
-
-    if (!dir.isEmpty()){
-        dir = QDir::toNativeSeparators(dir);
-
-        if (!dir.endsWith(QDir::separator()))
-            dir += QDir::separator();
-
-        listWidget_SKIPLIST->addItem(dir + "*");
-    }
+void SettingsSharing::slotAddDirException()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Choose the directory"),
+                                                    QDir::home().dirName());
+    if (dir.isEmpty())
+        return;
+    dir = QDir::toNativeSeparators(dir);
+    if (!dir.endsWith(QDir::separator()))
+        dir += QDir::separator();
+    listWidget_SKIPLIST->addItem(dir + "*");
 }
 
-void SettingsSharing::slotEditExeption(){
+void SettingsSharing::slotEditException()
+{
     QListWidgetItem *item = listWidget_SKIPLIST->currentItem();
-
     if (!item)
         return;
 
-    QString old_text = item->text();
-    int row = listWidget_SKIPLIST->row(item);
+    const int row = listWidget_SKIPLIST->row(item);
     bool ok = false;
-
-    QString new_text = QInputDialog::getText(this, tr("Add item"), tr("Enter text:"), QLineEdit::Normal, old_text, &ok);
-
-    if (ok && !new_text.isEmpty()){
-        delete item;
-        listWidget_SKIPLIST->insertItem(row, new_text);
-        listWidget_SKIPLIST->setCurrentRow(row);
-    }
-}
-
-void SettingsSharing::slotDeleteExeption(){
-    QListWidgetItem *item = listWidget_SKIPLIST->currentItem();
-
-    if (item)
-        delete item;
-}
-
-void SettingsSharing::slotSimpleShareModeChanged(){
-    if (!checkBox_SIMPLE_SHARE_MODE->isChecked()){
-        if (!model){
-            model = new ShareDirModel();
-            treeView->setModel(model);
-
-            treeView->setSortingEnabled(true);
-            treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
-            treeView->header()->hideSection(1);
-            treeView->header()->hideSection(2);
-
-            if (!WSGET(WS_SHAREHEADER_STATE).isEmpty())
-                WulforUtil::restoreTreeHeader(treeView->header(), QByteArray::fromBase64(WSGET(WS_SHAREHEADER_STATE).toUtf8()));
-
-            connect(model, SIGNAL(getName(QModelIndex)), this, SLOT(slotGetName(QModelIndex)));
-            connect(model, SIGNAL(expandMe(QModelIndex)), treeView, SLOT(expand(QModelIndex)));
-
-            model->beginExpanding();
-        }
-        else{
-            model->beginExpanding();
-        }
-    }
-    else{
-        WulforUtil::restoreTreeHeader(treeWidget_SIMPLE_MODE->header(), QByteArray::fromBase64((WSGET("settings-simple-share-headerstate").toUtf8())));
-
-        updateShareView();
-    }
-}
-
-void SettingsSharing::slotContextMenu(const QPoint &){
-    QList<QTreeWidgetItem*> selected = treeWidget_SIMPLE_MODE->selectedItems();
-    QMenu *menu = new QMenu(nullptr);
-    QAction *add_new = nullptr, *rem = nullptr, *rename = nullptr;
-    WulforUtil *WU = WulforUtil::getInstance();
-
-    add_new = new QAction(WU->getPixmap(AppIcons::eiEDITADD), tr("Add"), menu);
-    menu->addAction(add_new);
-
-    if (selected.size() == 1){
-        rename = new QAction(WU->getPixmap(AppIcons::eiEDIT), tr("Rename"), menu);
-        menu->addAction(rename);
-    }
-
-    if (!selected.isEmpty()){
-        rem = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Remove"), menu);
-        menu->addAction(rem);
-    }
-
-    QAction *res = menu->exec(QCursor::pos());
-
-    delete menu;
-
-    if (!res)
+    const QString text = QInputDialog::getText(this, tr("Add item"), tr("Enter text:"),
+                                               QLineEdit::Normal, item->text(), &ok);
+    if (!ok || text.isEmpty())
         return;
-
-    if (res == add_new){
-        QString dir = QFileDialog::getExistingDirectory(this, tr("Select directory"), QDir::homePath());
-
-        if (dir.isEmpty())
-            return;
-
-        dir = QDir::toNativeSeparators(dir);
-
-        if (!dir.endsWith(PATH_SEPARATOR))
-            dir += PATH_SEPARATOR_STR;
-
-        bool ok = false;
-        QString dir_alias = QInputDialog::getText(this, tr("Select directory"), tr("Name"),
-                                                  QLineEdit::Normal, QDir(dir).dirName(), &ok);
-
-        dir_alias = dir_alias.trimmed();
-
-        if (!ok || dir_alias.isEmpty())
-            return;
-
-        try
-        {
-            ShareManager::getInstance()->addDirectory(dir.toStdString(), dir_alias.toStdString());
-        }
-        catch (const ShareException &e)
-        {
-            QMessageBox msg_box(QMessageBox::Critical,
-                                tr("Error"),
-                                QString::fromStdString(e.getError()),
-                                QMessageBox::Ok);
-
-            msg_box.exec();
-
-            return;
-        }
-
-        QTreeWidgetItem *item = new QTreeWidgetItem(treeWidget_SIMPLE_MODE);
-
-        item->setText(0, dir);
-        item->setText(1, dir_alias);
-        item->setText(2, "");
-        item->setText(3, "");
-    }
-    else if (res == rem){
-        for (const auto &i : selected)
-            ShareManager::getInstance()->removeDirectory(i->text(0).toStdString());
-    }
-    else if (res == rename){
-        QTreeWidgetItem *item = selected.at(0);
-        QString realname = item->text(0);
-        QString virtname = item->text(1);
-        bool ok = false;
-        QString new_virtname = QInputDialog::getText(this, tr("Enter new name"),
-                                                     tr("Name"), QLineEdit::Normal, virtname, &ok);
-
-        if (!ok || new_virtname.isEmpty() || new_virtname == virtname)
-            return;
-
-        try {
-            ShareManager::getInstance()->renameDirectory(realname.toStdString(), new_virtname.toStdString());
-        }
-        catch (const ShareException &e){
-            QMessageBox msg_box(QMessageBox::Critical,
-                                tr("Error"),
-                                QString::fromStdString(e.getError()),
-                                QMessageBox::Ok);
-
-            msg_box.exec();
-
-            return;
-        }
-    }
-
-    updateShareView();
+    delete item;
+    listWidget_SKIPLIST->insertItem(row, text);
+    listWidget_SKIPLIST->setCurrentRow(row);
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-QString ShareDirModel::filePath( const QModelIndex & index ) const {
-    return QDir::toNativeSeparators( QDirModel::filePath(index) );
-}
-
-ShareDirModel::ShareDirModel(QObject *parent){
-    QDirModel::setParent(parent);
-    QDirModel::setFilter((QDir::AllDirs | QDir::NoDotAndDotDot));
-
-    StringPairList directories = ShareManager::getInstance()->getDirectories();
-    for (const auto &pair : directories){
-        QString path = pair.second.c_str();
-
-        if (path.endsWith(QDir::separator()))
-            path = path.left(path.lastIndexOf(QDir::separator()));
-
-        emit expandMe(index(path));
-
-        checked.insert(path);
-    }
-}
-
-ShareDirModel::~ShareDirModel(){
-
-}
-
-Qt::ItemFlags ShareDirModel::flags(const QModelIndex& index) const{
-    Qt::ItemFlags f = QDirModel::flags(index);
-
-    if (!index.column())
-        f |= Qt::ItemIsUserCheckable;
-
-    QString fp = filePath(index);
-
-    for (const QString &file : checked){
-        if (fp.startsWith(file) && (fp.split(QDir::separator()).length() != file.split(QDir::separator()).length()) && fp != file){
-            f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-
-            break;
-        }
-    }
-
-    return f;
-}
-
-QVariant ShareDirModel::data(const QModelIndex& index, int role = Qt::DisplayRole) const{
-    if (!index.isValid())
-        return QVariant();
-
-    QString fp = filePath(index);
-
-    switch (role){
-        case Qt::CheckStateRole:
-        {
-            if (!index.column()){
-                for (const QString &f : checked){
-                    if (fp.startsWith(f) && fp.length() == f.length())
-                        return Qt::Checked;
-                }
-
-                return (checked.contains(fp)? Qt::Checked : Qt::Unchecked);
-            }
-
-            break;
-        }
-        case Qt::ForegroundRole:
-        {
-            /*for (const auto &f : checked){
-                if (f.startsWith(fp))
-                    return QColor(0x1F, 0x8F, 0x1F);
-            }*/
-
-            break;
-        }
-        case Qt::FontRole:
-        {
-            if (!index.column()){
-                static QFont font;
-                font.setBold(true);
-
-                for (const QString &f : checked){
-                    if (f == fp)
-                        return font;
-                }
-
-                if (checked.contains(fp))
-                    return font;
-            }
-
-            break;
-        }
-    }
-
-    return QDirModel::data(index, role);
-}
-
-bool ShareDirModel::setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole)
+void SettingsSharing::slotDeleteException()
 {
-    if (index.isValid() && !index.column() && role == Qt::CheckStateRole){
-
-        if (value.toInt() == Qt::Checked)
-            emit getName(index);//checked.insert(filePath(index));
-        else{
-            try {
-                QString path = filePath(index);
-
-                if (!path.endsWith(QDir::separator()))
-                    path += QDir::separator();
-
-                ShareManager::getInstance()->removeDirectory(path.toStdString());
-            }
-            catch (const Exception&){}
-
-            checked.remove(filePath(index));
-        }
-
-        return true;
-    }
-
-    return QDirModel::setData(index, value, role);
+    delete listWidget_SKIPLIST->currentItem();
 }
 
-void ShareDirModel::setAlias(const QModelIndex &index, const QString &alias){
-    QString fp = filePath(index);
-
-    if (checked.contains(fp) || !QDir(fp).exists())
-        return;
-
-    checked.insert(fp);
-
-    try
-    {
-        if (!fp.endsWith(QDir::separator()))
-            fp += QDir::separator();
-
-        ShareManager::getInstance()->addDirectory(fp.toStdString(), alias.toStdString());
-    }
-    catch (const ShareException &e)
-    {
-        QMessageBox msg_box(QMessageBox::Critical,
-                            tr("Error"),
-                            QString::fromStdString(e.getError()),
-                            QMessageBox::Ok);
-
-        msg_box.exec();
-
-        return;
-    }
-
-    QDirModel::setData(index, true, Qt::CheckStateRole);
-
-    emit layoutChanged();
+void SettingsSharing::slotSimpleShareModeChanged()
+{
+    dirs->setSimpleMode(checkBox_SIMPLE_SHARE_MODE->isChecked());
 }
 
-void ShareDirModel::beginExpanding(){
-    for (const QString &f : checked){
-        QStack<QModelIndex> stack;
-        QModelIndex i = index(f);
-
-        while (i.isValid()){
-            stack.push(i);
-
-            i = i.parent();
-        }
-
-        while (!stack.isEmpty())
-            emit expandMe(stack.pop());
-    }
+void SettingsSharing::slotContextMenu(const QPoint &pos)
+{
+    dirs->showSimpleMenu(pos);
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

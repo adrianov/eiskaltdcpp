@@ -11,7 +11,7 @@
 #include "SettingsPersonal.h"
 #include "SettingsConnection.h"
 #include "SettingsDownloads.h"
-#include "SettingsSharing.h"
+#include "settings/SettingsSharing.h"
 #include "SettingsGUI.h"
 #include "SettingsNotification.h"
 #include "SettingsLog.h"

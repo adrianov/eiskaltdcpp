@@ -10,33 +10,12 @@
 #pragma once
 
 #include <QWidget>
-#include <QDirModel>
 #include <QShowEvent>
 #include <QHeaderView>
 
 #include "ui_UISettingsSharing.h"
 
-class ShareDirModel: public QDirModel{
-    Q_OBJECT
-public:
-
-    ShareDirModel(QObject* = nullptr);
-    virtual ~ShareDirModel();
-
-    Qt::ItemFlags flags(const QModelIndex& index) const;
-    QVariant data(const QModelIndex& index, int role) const;
-    bool setData(const QModelIndex& index, const QVariant& value, int role);
-
-    void setAlias(const QModelIndex&, const QString &);
-    void beginExpanding();
-    QString filePath( const QModelIndex & index ) const;
-
-Q_SIGNALS:
-    void getName(QModelIndex);
-    void expandMe(QModelIndex);
-private:
-    QSet<QString> checked;
-};
+class ShareDirsPane;
 
 class SettingsSharing :
         public QWidget,
@@ -44,10 +23,11 @@ class SettingsSharing :
 {
     Q_OBJECT
 public:
-    SettingsSharing(QWidget* = nullptr);
-    virtual ~SettingsSharing();
+    SettingsSharing(QWidget *parent = nullptr);
+    ~SettingsSharing() override = default;
+
 protected:
-    virtual void showEvent(QShowEvent *);
+    void showEvent(QShowEvent *) override;
 
 public Q_SLOTS:
     void ok();
@@ -55,18 +35,16 @@ public Q_SLOTS:
 private slots:
     void slotRecreateShare();
     void slotShareHidden(bool);
-    void slotGetName(QModelIndex);
     void slotHeaderMenu();
-    void slotAddExeption();
-    void slotEditExeption();
-    void slotDeleteExeption();
-    void slotAddDirExeption();
+    void slotAddException();
+    void slotEditException();
+    void slotDeleteException();
+    void slotAddDirException();
     void slotSimpleShareModeChanged();
-    void slotContextMenu(const QPoint&);
+    void slotContextMenu(const QPoint &);
 
 private:
     void init();
-    void updateShareView();
 
-    ShareDirModel *model;
+    ShareDirsPane *dirs = nullptr;
 };
