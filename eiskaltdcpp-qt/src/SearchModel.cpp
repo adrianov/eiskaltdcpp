@@ -22,7 +22,7 @@ using namespace dcpp;
 SearchModel::SearchModel(QObject *parent):
         QAbstractItemModel(parent),
         filterRole(SearchFrame::None),
-        sortColumn(COLUMN_SF_ESIZE),
+        sortColumn(COLUMN_SF_COUNT),
         sortOrder(Qt::DescendingOrder)
 {
     QList<QVariant> rootData;

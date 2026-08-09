@@ -142,8 +142,8 @@ void WulforSettings::writeFirstRunDefaults() {
     settings.setValue(WI_MAINWINDOW_WIDTH,      -1);
     settings.setValue(WI_MAINWINDOW_X,          -1);
     settings.setValue(WI_MAINWINDOW_Y,          -1);
-    settings.setValue(WI_SEARCH_SORT_COLUMN,    1);
-    settings.setValue(WI_SEARCH_SORT_ORDER,     0);
+    settings.setValue(WI_SEARCH_SORT_COLUMN,    0); // Count
+    settings.setValue(WI_SEARCH_SORT_ORDER,     1); // descending
     settings.setValue(WI_SEARCH_SHARED_ACTION,  0);
     settings.setValue(WI_SEARCH_LAST_TYPE,      0);
     settings.setValue(WI_TRANSFER_HEIGHT,       -1);

@@ -136,8 +136,8 @@ void WulforSettings::fillOldConfigMaps() {
     intmap.insert(WI_MAINWINDOW_WIDTH,      -1);
     intmap.insert(WI_MAINWINDOW_X,          -1);
     intmap.insert(WI_MAINWINDOW_Y,          -1);
-    intmap.insert(WI_SEARCH_SORT_COLUMN,    1);
-    intmap.insert(WI_SEARCH_SORT_ORDER,     0);
+    intmap.insert(WI_SEARCH_SORT_COLUMN,    0); // Count
+    intmap.insert(WI_SEARCH_SORT_ORDER,     1); // descending
     intmap.insert(WI_SEARCH_SHARED_ACTION,  0);
     intmap.insert(WI_SEARCH_LAST_TYPE,      0);
     intmap.insert(WI_TRANSFER_HEIGHT,       -1);

@@ -79,6 +79,16 @@ void WulforSettings::load(){
             settings.setValue(WI_STATUSBAR_HISTORY_SZ, WI_STATUSBAR_HISTORY_DEFAULT);
         settings.setValue("app/statusbar-history-migrated", true);
     }
+
+    // Old factory default was File ascending; keep any user-chosen column/order.
+    if (!settings.value("app/search-sort-count-migrated", false).toBool()) {
+        if (settings.value(WI_SEARCH_SORT_COLUMN).toInt() == 1
+            && settings.value(WI_SEARCH_SORT_ORDER).toInt() == 0) {
+            settings.setValue(WI_SEARCH_SORT_COLUMN, 0); // Count
+            settings.setValue(WI_SEARCH_SORT_ORDER, 1);  // descending
+        }
+        settings.setValue("app/search-sort-count-migrated", true);
+    }
 }
 
 void WulforSettings::loadOldConfig(){

@@ -53,6 +53,32 @@ struct Compare {
         bool static NumCmp(const SearchItem * l, const SearchItem * r) {
             return Cmp(l->data(i).toULongLong(), r->data(i).toULongLong());
         }
+        /** Natural Path, then File; negative if l precedes r. */
+        int static pathThenFile(const SearchItem * l, const SearchItem * r) {
+            const int byPath = compareNaturalQ(l->data(COLUMN_SF_PATH).toString(),
+                                               r->data(COLUMN_SF_PATH).toString());
+            if (byPath != 0)
+                return byPath;
+            return compareNaturalQ(l->data(COLUMN_SF_FILENAME).toString(),
+                                   r->data(COLUMN_SF_FILENAME).toString());
+        }
+        /** Count first (follows header order); Path then File break ties (A→Z). */
+        bool static CountCmp(const SearchItem * l, const SearchItem * r) {
+            const auto lc = l->data(COLUMN_SF_COUNT).toULongLong();
+            const auto rc = r->data(COLUMN_SF_COUNT).toULongLong();
+            if (lc != rc)
+                return Cmp(lc, rc);
+            return pathThenFile(l, r) < 0;
+        }
+        /** Path first (follows header order); File breaks ties (A→Z). */
+        bool static PathCmp(const SearchItem * l, const SearchItem * r) {
+            const int byPath = compareNaturalQ(l->data(COLUMN_SF_PATH).toString(),
+                                               r->data(COLUMN_SF_PATH).toString());
+            if (byPath != 0)
+                return Cmp(byPath, 0);
+            return compareNaturalQ(l->data(COLUMN_SF_FILENAME).toString(),
+                                   r->data(COLUMN_SF_FILENAME).toString()) < 0;
+        }
         template <typename T>
         bool static Cmp(const T& l, const T& r);
 
@@ -60,11 +86,11 @@ struct Compare {
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[17] = { NumCmp<COLUMN_SF_COUNT>,
+typename Compare<order>::AttrComp Compare<order>::attrs[17] = { CountCmp,
                                                                 NaturalAttrCmp<COLUMN_SF_FILENAME>,
                                                                 AttrCmp<COLUMN_SF_EXTENSION>,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
-                                                                NaturalAttrCmp<COLUMN_SF_PATH>,
+                                                                PathCmp,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
                                                                 AttrCmp<COLUMN_SF_TTH>,
                                                                 AttrCmp<COLUMN_SF_NICK>,
