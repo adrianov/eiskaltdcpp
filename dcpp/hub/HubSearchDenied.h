@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "forward.h"
+#include "../forward.h"
 
 namespace dcpp {
 

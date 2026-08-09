@@ -66,6 +66,8 @@ void DownloadRetryPolicy::apply(ConnectionQueueItem* cqi) const {
              source->getState() == UserConnection::STATE_SND);
     const bool slotWait = postClose && !hadSlot;
     cqi->setGrantedSlot(false);
+    if(!slotWait)
+        cqi->setQueuePos(-1);
 
     PeerConnectTls::scheduleRetry(cqi, source->isSecure(), protocolError, source->getState(), error);
 

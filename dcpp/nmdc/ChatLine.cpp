@@ -13,7 +13,7 @@
 
 #include "../ChatMessage.h"
 #include "../ClientListener.h"
-#include "../HubSearchDenied.h"
+#include "../hub/HubSearchDenied.h"
 #include "../NmdcHub.h"
 #include "../User.h"
 
@@ -24,9 +24,10 @@ bool NmdcChatLine::mentionsBan(const string& text) {
         || Util::findSubString(text, "забанен") != string::npos;
 }
 
-void NmdcChatLine::watchBan(const string& text) {
+void NmdcChatLine::honorLimits(const string& text) {
     if(mentionsBan(text))
         hub.setAutoReconnect(false);
+    hub.noteHubLimits(text);
 }
 
 void NmdcChatLine::status(const string& text, int flags) {
@@ -35,11 +36,9 @@ void NmdcChatLine::status(const string& text, int flags) {
 
 void NmdcChatLine::chat(const string& nick, const string& message) {
     string body = NmdcHub::unescape(message);
-    watchBan(body);
+    honorLimits(body);
     hub.stopInfectedConnect(body, nick);
     hub.noteSecureCtmRejected(body);
-    // Rate-limit text is specific; honor it from any nick (hub scripts vary).
-    noteSearchRateLimit(hub.searchQueue, body);
 
     ChatMessage chatMessage = { body, hub.findUser(nick), nullptr, nullptr, false, 0 };
     if(!chatMessage.from) {
@@ -66,11 +65,10 @@ void NmdcChatLine::handle(const string& utf8Line) {
         // Corrupted framing or embedded protocol (e.g. nulls + "$Search …") — drop.
         if(NmdcHub::hasControlChars(text) || text.find("$Search") != string::npos)
             return;
-        watchBan(text);
+        honorLimits(text);
         hub.stopInfectedConnect(text);
         hub.noteSecureCtmRejected(text);
         noteSearchDenied(hub, text);
-        noteSearchRateLimit(hub.searchQueue, text);
         status(text);
         return;
     }
@@ -81,22 +79,27 @@ void NmdcChatLine::handle(const string& utf8Line) {
         if(NmdcHub::hasControlChars(utf8Line) || utf8Line.find('$') != string::npos)
             return;
         const string text = NmdcHub::unescape(utf8Line);
-        watchBan(text);
+        honorLimits(text);
         status(text);
         return;
     }
 
     string nick = utf8Line.substr(1, i - 1);
-    if(!NmdcHub::isNickLike(nick))
-        return;
     if((utf8Line.length() - 1) <= i) {
         const string text = NmdcHub::unescape(utf8Line);
-        watchBan(text);
+        honorLimits(text);
         status(text);
         return;
     }
 
     string message = utf8Line.substr(i + 2);
+    if(!NmdcHub::isNickLike(nick)) {
+        // Bot nicks with spaces (# Guard) still carry limit text.
+        const string body = NmdcHub::unescape(message);
+        honorLimits(body);
+        status(NmdcHub::unescape(utf8Line));
+        return;
+    }
     if((utf8Line.find("Hub-Security") != string::npos) && (utf8Line.find("was kicked by") != string::npos)) {
         status(NmdcHub::unescape(utf8Line), ClientListener::FLAG_IS_SPAM);
         return;

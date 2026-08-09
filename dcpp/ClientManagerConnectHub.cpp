@@ -64,6 +64,10 @@ OnlineUser* ClientManager::findBestOnlineUser(const CID& cid, const string& hint
             }
 
             int score = 0;
+            // Prefer hubs that are not in a peer-connect wait.
+            if(!u->getClient().allowHubConnect())
+                score -= 1000;
+
             if(!hintUrl.empty() && hub == hintUrl)
                 score += 10;
 

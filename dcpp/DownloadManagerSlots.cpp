@@ -91,7 +91,7 @@ void DownloadManager::noSlots(UserConnection* aSource, size_t queuePos) {
     }
 
     // Next close should use slot-wait backoff, not a between-files soft retry.
-    ConnectionManager::getInstance()->forgetDownloadSlot(aSource->getUser());
+    ConnectionManager::getInstance()->forgetDownloadSlot(aSource->getUser(), queuePos);
 
     const string nick = ClientManager::getInstance()->getNickOrCid(aSource->getHintedUser());
     const string file = Util::addBrackets(d->getTargetFileName());

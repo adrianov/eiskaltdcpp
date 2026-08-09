@@ -11,9 +11,9 @@
 #pragma once
 
 #include "MediaInfo.h"
-#include "MerkleTree.h"
-#include "Singleton.h"
-#include "CriticalSection.h"
+#include "../MerkleTree.h"
+#include "../Singleton.h"
+#include "../CriticalSection.h"
 
 #include <unordered_map>
 

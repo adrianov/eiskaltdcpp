@@ -16,6 +16,7 @@
 #include "DownloadManager.h"
 #include "DownloadRetryPolicy.h"
 #include "MappingManager.h"
+#include "PeerConnectAttempt.h"
 #include "PeerConnectFilter.h"
 #include "PeerConnectLog.h"
 #include "QueueManager.h"
@@ -33,150 +34,120 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
         bool attemptDone = false;
         const bool upnpReady = MappingManager::getInstance()->readyForPeerConnect();
 
-        for(auto& cqi: downloads) {
+        // Spend the connect attempt on a peer that can start now, not on one that
+        // will answer MaxedOut. Removals stay deferred, so a copy is safe to walk.
+        ConnectionQueueItem::List order = downloads;
+        PeerConnectAttempt::preferFreeSlots(order);
 
-            if(cqi->getState() != ConnectionQueueItem::ACTIVE) {
-                if(cqi->getUser().user->isSet(User::NMDC) && Util::toInt64(
-                        ClientManager::getInstance()->getField(cqi->getUser().user->getCID(),
-                        cqi->getUser().hint, "SS")) <= 0) {
-                    waitPeerInfo(cqi->getUser().user);
+        for(auto& cqi: order) {
+            if(cqi->getState() == ConnectionQueueItem::ACTIVE)
+                continue;
+
+            if(cqi->getUser().user->isSet(User::NMDC) && Util::toInt64(
+                    ClientManager::getInstance()->getField(cqi->getUser().user->getCID(),
+                    cqi->getUser().hint, "SS")) <= 0) {
+                waitPeerInfo(cqi->getUser().user);
+                removed.push_back(cqi);
+                continue;
+            }
+            if(cqi->getState() == ConnectionQueueItem::WAITING) {
+                auto* alias = findDownloadCqi(cqi->getUser());
+                if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
+                        alias->getState() == ConnectionQueueItem::CONNECTING)) {
+                    mergeQueueState(alias, cqi);
                     removed.push_back(cqi);
                     continue;
                 }
-                if(cqi->getState() == ConnectionQueueItem::WAITING) {
-                    auto* alias = findDownloadCqi(cqi->getUser());
-                    if(alias && alias != cqi && (alias->getState() == ConnectionQueueItem::ACTIVE ||
-                            alias->getState() == ConnectionQueueItem::CONNECTING)) {
-                        mergeQueueState(alias, cqi);
-                        removed.push_back(cqi);
-                        continue;
-                    }
-                    // Only skipped hubs still online (others left) — drop as unreachable.
-                    // Hub identity rotation already happened on connect timeout.
-                    if(DownloadRetryPolicy::dropUnreachable(cqi)) {
+                // Only skipped hubs still online (others left) — drop as unreachable.
+                // Hub identity rotation already happened on connect timeout.
+                if(DownloadRetryPolicy::dropUnreachable(cqi)) {
+                    unreachableUsers.push_back(cqi->getUser());
+                    removed.push_back(cqi);
+                    continue;
+                }
+            }
+            if(!cqi->getUser().user->isOnline()) {
+                removed.push_back(cqi);
+                continue;
+            }
+
+            if(cqi->getUser().user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive()) {
+                PeerConnectLog::passiveWait(cqi->getUser());
+                passiveUsers.push_back(cqi->getUser());
+                removed.push_back(cqi);
+                continue;
+            }
+
+            // Drop idle CQIs before give-up/backoff skips (finished file list, etc.).
+            const QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
+            if(prio == QueueItem::PAUSED) {
+                removed.push_back(cqi);
+                continue;
+            }
+
+            if(cqi->getErrors() == -1) {
+                reviveDownloadQueue(cqi);
+                if(cqi->getErrors() == -1)
+                    continue;
+            }
+
+            // CONNECTING timeout before WAITING backoff so hub rotate is not delayed.
+            if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
+                // lastAttempt==0 is invalid while CONNECTING; recover instead of instant timeout.
+                if(cqi->getLastAttempt() == 0) {
+                    cqi->setLastAttempt(aTick);
+                    continue;
+                }
+                if(cqi->getLastAttempt() + PeerConnectFilter::CONNECT_TIMEOUT_MS < aTick) {
+                    if(onDownloadConnectTimeout(cqi)) {
                         unreachableUsers.push_back(cqi->getUser());
                         removed.push_back(cqi);
-                        continue;
                     }
                 }
-                if(!cqi->getUser().user->isOnline()) {
+                continue;
+            }
+
+            const bool startDown = DownloadManager::getInstance()->startDownload(prio);
+            if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS) {
+                if(!startDown)
+                    continue;
+                cqi->setState(ConnectionQueueItem::WAITING);
+            }
+
+            if(queueBackoffActive(cqi))
+                continue;
+
+            if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
+                if(DownloadRetryPolicy::dropUnreachable(cqi)) {
+                    unreachableUsers.push_back(cqi->getUser());
                     removed.push_back(cqi);
                     continue;
                 }
+                DownloadRetryPolicy::markGiveUp(cqi, cqi->getErrors(), false);
+                continue;
+            }
 
-                if(cqi->getUser().user->isSet(User::PASSIVE) && !ClientManager::getInstance()->isActive()) {
-                    PeerConnectLog::passiveWait(cqi->getUser());
-                    passiveUsers.push_back(cqi->getUser());
-                    removed.push_back(cqi);
-                    continue;
-                }
+            if(cqi->getLastAttempt() != 0 && attemptDone)
+                continue;
 
-                // Drop idle CQIs before give-up/backoff skips (finished file list, etc.).
-                if(QueueManager::getInstance()->hasDownload(cqi->getUser()) == QueueItem::PAUSED) {
-                    removed.push_back(cqi);
-                    continue;
-                }
+            if(!upnpReady || !PeerConnectAttempt::ready(cqi->getUser()) ||
+                    peerConnectInFlight(cqi->getUser()))
+                continue;
 
-                if(cqi->getErrors() == -1) {
-                    reviveDownloadQueue(cqi);
-                    if(cqi->getErrors() == -1)
-                        continue;
-                }
+            if(!startDown) {
+                cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
+                cqi->setLastAttempt(0);
+                // Our limit, not the peer's: drop any remembered slot wait.
+                cqi->setQueuePos(-1);
+                fire(ConnectionManagerListener::Failed(), cqi, _("All download slots taken"));
+                continue;
+            }
 
-                // CONNECTING timeout before WAITING backoff so hub rotate is not delayed.
-                if(cqi->getState() == ConnectionQueueItem::CONNECTING) {
-                    // lastAttempt==0 is invalid while CONNECTING; recover instead of instant timeout.
-                    if(cqi->getLastAttempt() == 0) {
-                        cqi->setLastAttempt(aTick);
-                        continue;
-                    }
-                    if(cqi->getLastAttempt() + PeerConnectFilter::CONNECT_TIMEOUT_MS < aTick) {
-                        if(onDownloadConnectTimeout(cqi)) {
-                            unreachableUsers.push_back(cqi->getUser());
-                            removed.push_back(cqi);
-                        }
-                    }
-                    continue;
-                }
-
-                if(cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS) {
-                    QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
-                    if(DownloadManager::getInstance()->startDownload(prio))
-                        cqi->setState(ConnectionQueueItem::WAITING);
-                    else
-                        continue;
-                }
-
-                if(queueBackoffActive(cqi)) {
-                    continue;
-                }
-
-                if(PeerConnectFilter::shouldGiveUp(cqi->getErrors())) {
-                    if(DownloadRetryPolicy::dropUnreachable(cqi)) {
-                        unreachableUsers.push_back(cqi->getUser());
-                        removed.push_back(cqi);
-                        continue;
-                    }
-                    DownloadRetryPolicy::markGiveUp(cqi, cqi->getErrors(), false);
-                    continue;
-                }
-
-                if(cqi->getLastAttempt() == 0 || !attemptDone)
-                {
-                    if(!upnpReady)
-                        continue;
-
-                    if(DownloadManager::getInstance()->isWaitingUploadSlot(cqi->getUser().user))
-                        continue;
-
-                    if(!QueueManager::getInstance()->allowDownloadConnect(cqi->getUser()))
-                        continue;
-
-                    if(peerConnectInFlight(cqi->getUser()))
-                        continue;
-
-                    QueueItem::Priority prio = QueueManager::getInstance()->hasDownload(cqi->getUser());
-                    bool startDown = DownloadManager::getInstance()->startDownload(prio);
-
-                    if(cqi->getState() == ConnectionQueueItem::WAITING) {
-                        if(startDown) {
-                            cqi->setLastAttempt(aTick);
-                            cqi->setConnectAttempts(cqi->getConnectAttempts() + 1);
-
-                            {
-                                // Rotate NMDC hub identities / ADC hub hints before CTM.
-                                switchDownloadIdentity(cqi);
-                                const string hub = ClientManager::getInstance()->resolveHubHint(
-                                        cqi->getUser().user, cqi->getUser().hint);
-                                if(!hub.empty())
-                                    cqi->setHubHint(hub);
-                            }
-
-                            const bool reverseConnect = ClientManager::getInstance()->wantRevConnect(
-                                    cqi->getUser(), cqi->getConnectAttempts());
-                            string usedHub;
-                            // Mark CONNECTING only after connect() accepts — otherwise
-                            // allowOutgoingConnect sees our own CQI as "still in flight".
-                            if(ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(),
-                                    reverseConnect, cqi->getSecureMode(), &usedHub)) {
-                                cqi->setState(ConnectionQueueItem::CONNECTING);
-                                if(!usedHub.empty())
-                                    cqi->setHubHint(usedHub);
-                                PeerConnectLog::queueStart(cqi->getUser());
-                                fire(ConnectionManagerListener::StatusChanged(), cqi);
-                                attemptDone = true;
-                            } else {
-                                // Stay WAITING; keep lastAttempt for queueBackoffMs pacing.
-                                if(cqi->getConnectAttempts() > 0)
-                                    cqi->setConnectAttempts(cqi->getConnectAttempts() - 1);
-                            }
-                        } else {
-                            cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
-                            cqi->setLastAttempt(0);
-                            fire(ConnectionManagerListener::Failed(), cqi, _("All download slots taken"));
-                        }
-                    }
-                }
+            // Rotate NMDC hub identities / ADC hub hints before CTM.
+            switchDownloadIdentity(cqi);
+            if(PeerConnectAttempt(cqi, aTick).start()) {
+                fire(ConnectionManagerListener::StatusChanged(), cqi);
+                attemptDone = true;
             }
         }
 

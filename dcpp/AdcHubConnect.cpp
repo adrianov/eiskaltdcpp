@@ -31,6 +31,10 @@ void AdcHub::connectSecure(const OnlineUser& user, string const& token, bool sec
         return;
     auto* cm = ConnectionManager::getInstance();
     const string& nick = user.getIdentity().getNick();
+    if(!allowHubConnect()) {
+        PeerConnectLog::skip(nick, getHubUrl(), _("hub peer-connect wait"));
+        return;
+    }
     if(!cm->allowOutgoingConnect(user.getUser())) {
         PeerConnectLog::skip(nick, getHubUrl(), _("recent CTM/RCM still in flight"));
         return;

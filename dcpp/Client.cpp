@@ -73,12 +73,16 @@ StringMap& Client::escapeParams(StringMap& sm) {
 }
 
 void Client::setSearchInterval(uint32_t aInterval) {
-    searchQueue.interval = (aInterval + min(aInterval, (uint32_t)1)) * (uint32_t)1000;
+    searchQueue.setInterval((aInterval + min(aInterval, (uint32_t)1)) * (uint32_t)1000);
 }
 
 void Client::noteHubLimits(const string& message) {
     noteSearchRateLimit(searchQueue, message);
-    connectPace.note(message);
+    connectPace.note(hubUrl, message);
+}
+
+void Client::hubReady() {
+    connectPace.ready(hubUrl);
 }
 
 void Client::updateCounts(bool aRemove) {

@@ -79,6 +79,8 @@ public:
     GETSET(int, secureMode, SecureMode);
     /** Peer granted a download slot on the current/last socket. */
     GETSET(bool, grantedSlot, GrantedSlot);
+    /** Remote upload queue while parked by MaxedOut: -1 not waiting, 0 place unknown. */
+    GETSET(int, queuePos, QueuePos);
 
     const HintedUser& getUser() const { return user; }
     void setHubHint(const string& hub) { user.hint = hub; }

@@ -74,6 +74,13 @@ set(DCPP_EXTRA_SOURCES
     sharemedia/MediaInfoScan.cpp
     sharemedia/MediaInfoCache.cpp
     sharemedia/MediaInfoProbe.cpp
+    hash/HashFileGate.cpp
+    hash/HashWorker.cpp
+    hash/HashFastPath.cpp
+    hash/HashStore.cpp
+    hash/HashDataFile.cpp
+    hash/HashIndexXml.cpp
+    hash/StreamStore.cpp
     adc/AdcCommand.cpp
     adc/SelfInfo.cpp
     nmdc/ChatLine.cpp
@@ -268,9 +275,9 @@ if (USE_IDN2)
 endif(USE_IDN2)
 
 if (XATTR_FOUND)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/HashManager.h
-                 PROPERTY COMPILE_DEFINITIONS USE_XATTR APPEND)
-    set_property(SOURCE ${PROJECT_SOURCE_DIR}/HashManager.cpp
+    set_property(SOURCE ${PROJECT_SOURCE_DIR}/hash/StreamStore.h
+                        ${PROJECT_SOURCE_DIR}/hash/StreamStore.cpp
+                        ${PROJECT_SOURCE_DIR}/hash/HashFastPath.cpp
                  PROPERTY COMPILE_DEFINITIONS USE_XATTR APPEND)
 endif (XATTR_FOUND)
 

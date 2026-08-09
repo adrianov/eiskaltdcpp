@@ -63,8 +63,9 @@ public:
     void clearOutgoingConnect(const UserPtr& user);
     /** Peer granted a download slot: mark CQI and clear CTM latch. */
     void clearOutgoingStrikes(const UserPtr& user);
-    /** MaxedOut: next close should use slot-wait backoff, not between-files retry. */
-    void forgetDownloadSlot(const UserPtr& user);
+    /** MaxedOut: next close should use slot-wait backoff, not between-files retry.
+     *  queuePos is the place the peer reported, 0 when it sent none. */
+    void forgetDownloadSlot(const UserPtr& user, size_t queuePos);
 
     void disconnect(const UserPtr& user); // disconnect all transfers for the user
     void disconnect(const UserPtr& user, int isDownload);

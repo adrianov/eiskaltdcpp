@@ -14,7 +14,7 @@
 #include "../NmdcHub.h"
 
 #include "ChatMessage.h"
-#include "HubSearchDenied.h"
+#include "hub/HubSearchDenied.h"
 #include "StringTokenizer.h"
 
 namespace dcpp {
@@ -148,7 +148,7 @@ void NmdcHub::onLineTo(const string& param) {
     }
 
     if(message.from)
-        noteSearchRateLimit(searchQueue, message.text);
+        noteHubLimits(message.text);
 
     fire(ClientListener::Message(), this, message);
 }

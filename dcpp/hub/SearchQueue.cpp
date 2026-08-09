@@ -108,6 +108,7 @@ void SearchQueue::delayNext(uint32_t seconds, uint64_t now) {
     if(!seconds)
         return;
 
+    Lock l(cs);
     const uint64_t waitMs = (uint64_t)seconds * 1000;
     // Same +1s fudge as Client::setSearchInterval.
     const uint64_t minInterval = (uint64_t)(seconds + min(seconds, (uint32_t)1)) * 1000;
@@ -117,6 +118,22 @@ void SearchQueue::delayNext(uint32_t seconds, uint64_t now) {
     const uint64_t until = now + waitMs;
     if(nextAllowed < until)
         nextAllowed = until;
+}
+
+uint64_t SearchQueue::getInterval() const {
+    Lock l(cs);
+    return interval;
+}
+
+void SearchQueue::setInterval(uint64_t ms) {
+    Lock l(cs);
+    interval = ms;
+}
+
+void SearchQueue::raiseInterval(uint64_t ms) {
+    Lock l(cs);
+    if(interval < ms)
+        interval = ms;
 }
 
 } // namespace dcpp

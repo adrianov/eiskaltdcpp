@@ -61,6 +61,10 @@ bool ClientManager::connect(const HintedUser& user, const string& token, bool re
     }
 
     if(u) {
+        if(!u->getClient().allowHubConnect()) {
+            PeerConnectLog::skip(getNickOrCid(user), user.hint, _("hub peer-connect wait"));
+            return false;
+        }
         if(!ConnectionManager::getInstance()->allowOutgoingConnect(u->getUser())) {
             PeerConnectLog::skip(getNickOrCid(user), user.hint, _("recent $ConnectToMe still in flight"));
             return false;

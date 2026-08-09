@@ -86,8 +86,7 @@ void NmdcHub::raiseSearchFloor(int seconds) {
         return;
     const uint32_t sec = static_cast<uint32_t>(seconds);
     const uint64_t ms = (uint64_t)(sec + min(sec, (uint32_t)1)) * 1000;
-    if(searchQueue.interval < ms)
-        searchQueue.interval = ms;
+    searchQueue.raiseInterval(ms);
 }
 
 bool NmdcHub::passiveSearch() const {

@@ -116,25 +116,28 @@ void NmdcHub::onRevConnectToMe(const string& param) {
     }
 
     auto* cm = ConnectionManager::getInstance();
+    const string& nick = u->getIdentity().getNick();
+    if(!allowHubConnect()) {
+        PeerConnectLog::skip(nick, getHubUrl(), _("hub peer-connect wait"));
+        return;
+    }
     if(isActive()) {
         if(!cm->allowOutgoingConnect(u->getUser())) {
-            PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
-                    _("recent $ConnectToMe still in flight"));
+            PeerConnectLog::skip(nick, getHubUrl(), _("recent $ConnectToMe still in flight"));
             return;
         }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, replying with $ConnectToMe");
         connectToMe(*u);
     } else if(BOOLSETTING(ALLOW_NATT) && u->getUser()->isSet(User::NAT_TRAVERSAL)) {
         if(!cm->allowOutgoingConnect(u->getUser())) {
-            PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
-                    _("recent $ConnectToMe still in flight"));
+            PeerConnectLog::skip(nick, getHubUrl(), _("recent $ConnectToMe still in flight"));
             return;
         }
         PeerConnectLog::nmdcRecv(*u, "$RevConnectToMe, NAT traversal");
         bool secure = allowSecureCtm() && PeerConnectTls::resolveSecureNmdc(PeerConnectTls::AUTO, *u);
-        cm->nmdcExpect(u->getIdentity().getNick(), getMyNick(), getHubUrl());
+        cm->nmdcExpect(nick, getMyNick(), getHubUrl());
         cm->noteOutgoingConnect(u->getUser());
-        send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " +
+        send("$ConnectToMe " + fromUtf8(nick) + " " +
              getLocalIp() + ":" + sock->getLocalPort() +
              (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
     } else if(!u->getUser()->isSet(User::PASSIVE)) {
@@ -143,7 +146,7 @@ void NmdcHub::onRevConnectToMe(const string& param) {
         revConnectToMe(*u);
         updated(*u);
     } else {
-        PeerConnectLog::skip(u->getIdentity().getNick(), getHubUrl(),
+        PeerConnectLog::skip(nick, getHubUrl(),
                 _("$RevConnectToMe: both passive — no connection possible"));
     }
 }

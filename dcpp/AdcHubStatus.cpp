@@ -18,7 +18,7 @@
 #include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "format.h"
-#include "HubSearchDenied.h"
+#include "hub/HubSearchDenied.h"
 #include "UserCommand.h"
 
 namespace dcpp {
@@ -162,7 +162,7 @@ void AdcHub::handle(AdcCommand::STA, AdcCommand& c) noexcept {
         return;
     }
     noteSearchDenied(*this, c.getParam(1));
-    noteSearchRateLimit(searchQueue, c.getParam(1));
+    noteHubLimits(c.getParam(1));
     ChatMessage message = { c.getParam(1), u, nullptr, nullptr, false, 0 };
     fire(ClientListener::Message(), this, message);
 }

@@ -39,7 +39,7 @@ uint64_t Client::search(int aSizeMode, int64_t aSize, int aFileType, const strin
                 break;
             // 6-arg overload → hub send (not this queueing method).
             search(out.sizeType, out.size, out.fileType, out.query, out.token, out.exts);
-            if(searchQueue.interval)
+            if(searchQueue.getInterval())
                 break;
         }
     }
@@ -59,7 +59,7 @@ void Client::on(Second, uint64_t aTick) noexcept {
         if(!searchQueue.pop(s, aTick))
             break;
         search(s.sizeType, s.size, s.fileType, s.query, s.token, s.exts);
-        if(searchQueue.interval)
+        if(searchQueue.getInterval())
             break;
     }
 }

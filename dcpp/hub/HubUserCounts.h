@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "Atomic.h"
+#include "../Atomic.h"
 
 namespace dcpp {
 

@@ -127,6 +127,7 @@ void NmdcHub::onLineHubSetup(const string& cmd, const string& param, const strin
 
         if(state == STATE_IDENTIFY && u.getUser() == getMyIdentity().getUser()) {
             state = STATE_NORMAL;
+            hubReady();
             storeHubNick();
             updateCounts(false);
             version();

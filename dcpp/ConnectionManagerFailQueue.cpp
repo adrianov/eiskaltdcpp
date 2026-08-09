@@ -43,6 +43,8 @@ ConnectionQueueItem* findUploadCqi(ConnectionQueueItem::List& uploads, UserConne
 
 bool ConnectionManager::onDownloadConnectTimeout(ConnectionQueueItem* cqi) {
     cqi->setErrors(cqi->getErrors() + 1);
+    // Unreachable now, whatever the peer answered last time.
+    cqi->setQueuePos(-1);
     // Zero lastAttempt: full CONNECTING wait already elapsed — hub-rotate now.
     cqi->setLastAttempt(0);
     const string timedOutHub = cqi->getUser().hint;
@@ -82,6 +84,7 @@ void ConnectionManager::reviveDownloadQueue(ConnectionQueueItem* cqi, bool force
         return;
     cqi->setErrors(0);
     cqi->setSlotWaits(0);
+    cqi->setQueuePos(-1);
     cqi->setLastAttempt(0);
     cqi->setConnectAttempts(0);
     clearOutgoingConnect(cqi->getUser().user);

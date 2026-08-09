@@ -44,8 +44,7 @@ int main() {
     // Manual before auto; ETA by position * interval.
     {
         SearchQueue q;
-        q.interval = 60000;
-        q.nextAllowed = t0;
+        q.setInterval(60000);
         q.add(makeSearch("auto1", "auto", nullptr));
         q.add(makeSearch("man1", "tok1", tabA));
         q.add(makeSearch("auto2", "auto", nullptr));
@@ -54,7 +53,6 @@ int main() {
 
         SearchCore out;
         expect(q.pop(out, t0) && out.query == "man1", "pop manual first", fails);
-        expect(q.nextAllowed == t0 + 60000, "nextAllowed += interval", fails);
         expect(q.pop(out, t0) == false, "paced: second pop blocked", fails);
         expect(q.pop(out, t0 + 60000) && out.query == "auto1", "auto after interval", fails);
         expect(q.pop(out, t0 + 120000) && out.query == "auto2", "second auto", fails);
@@ -63,11 +61,9 @@ int main() {
     // Hub rate-limit raises floor and defers next send.
     {
         SearchQueue q;
-        q.interval = 10000;
-        q.nextAllowed = t0;
+        q.setInterval(10000);
         q.delayNext(64, t0);
-        expect(q.interval == 65000, "interval floor from hub secs+1", fails);
-        expect(q.nextAllowed == t0 + 64000, "nextAllowed from delayNext", fails);
+        expect(q.getInterval() == 65000, "interval floor from hub secs+1", fails);
         q.add(makeSearch("q", "t", tabA));
         SearchCore out;
         expect(q.pop(out, t0 + 64000 - 1) == false, "before delay", fails);
@@ -77,8 +73,7 @@ int main() {
     // cancelSearch removes every item for that owner.
     {
         SearchQueue q;
-        q.interval = 1000;
-        q.nextAllowed = t0;
+        q.setInterval(1000);
         q.add(makeSearch("a", "t1", tabA));
         q.add(makeSearch("b", "t2", tabA));
         q.add(makeSearch("c", "t3", tabB));
@@ -92,7 +87,7 @@ int main() {
     // Unpaced: drain without waiting.
     {
         SearchQueue q;
-        q.interval = 0;
+        q.setInterval(0);
         q.add(makeSearch("x", "t", tabA));
         q.add(makeSearch("y", "t2", tabB));
         SearchCore out;
@@ -100,17 +95,15 @@ int main() {
         expect(q.pop(out, t0) && out.query == "y", "unpaced second same tick", fails);
     }
 
-        // Hub rate-limit raises floor and defers; a later "reload" with lower cfg must not wipe it.
-        {
-            SearchQueue q;
-            q.interval = 10000;
-            q.delayNext(64, t0);
-            expect(q.interval == 65000, "hub floor raised", fails);
-            const uint64_t cfgMs = (uint64_t)(10 + 1) * 1000; // would-be reload to 10s
-            if(q.interval < cfgMs)
-                q.interval = cfgMs;
-            expect(q.interval == 65000, "reload must not lower hub floor", fails);
-        }
+    // Hub rate-limit raises floor; a later lower cfg reload must not wipe it.
+    {
+        SearchQueue q;
+        q.setInterval(10000);
+        q.delayNext(64, t0);
+        expect(q.getInterval() == 65000, "hub floor raised", fails);
+        q.raiseInterval((uint64_t)(10 + 1) * 1000);
+        expect(q.getInterval() == 65000, "reload must not lower hub floor", fails);
+    }
 
     if(fails) {
         std::fprintf(stderr, "%d search-queue smoke failure(s)\n", fails);

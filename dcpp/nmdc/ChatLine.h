@@ -30,7 +30,8 @@ private:
     NmdcHub& hub;
 
     void status(const string& text, int flags = 0);
-    void watchBan(const string& text);
+    /** Ban watch + search/connect limit text from hub notices. */
+    void honorLimits(const string& text);
     void chat(const string& nick, const string& message);
     static bool mentionsBan(const string& text);
 };

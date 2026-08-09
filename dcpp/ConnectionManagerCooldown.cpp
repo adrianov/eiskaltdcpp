@@ -99,20 +99,24 @@ void ConnectionManager::clearOutgoingStrikes(const UserPtr& user) {
     const HintedUser hinted = resolveUser(user);
     {
         Lock l(cs);
-        if(auto* cqi = findDownloadCqi(hinted))
+        if(auto* cqi = findDownloadCqi(hinted)) {
             cqi->setGrantedSlot(true);
+            cqi->setQueuePos(-1);
+        }
     }
     clearOutgoingConnect(user);
 }
 
-void ConnectionManager::forgetDownloadSlot(const UserPtr& user) {
+void ConnectionManager::forgetDownloadSlot(const UserPtr& user, size_t queuePos) {
     if(!user)
         return;
     PeerConnectHub::notePeerReached(user);
     const HintedUser hinted = resolveUser(user);
     Lock l(cs);
-    if(auto* cqi = findDownloadCqi(hinted))
+    if(auto* cqi = findDownloadCqi(hinted)) {
         cqi->setGrantedSlot(false);
+        cqi->setQueuePos(static_cast<int>(queuePos));
+    }
 }
 
 } // namespace dcpp

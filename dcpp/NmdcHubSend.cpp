@@ -42,6 +42,10 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
     checkstate();
     dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
     const string& utf8Nick = aUser.getIdentity().getNick();
+    if(!allowHubConnect()) {
+        PeerConnectLog::skip(utf8Nick, getHubUrl(), _("hub peer-connect wait"));
+        return;
+    }
     if(!ConnectionManager::getInstance()->allowOutgoingConnect(aUser.getUser())) {
         PeerConnectLog::skip(utf8Nick, getHubUrl(), _("recent $ConnectToMe still in flight"));
         return;
@@ -64,6 +68,10 @@ void NmdcHub::connectToMe(const OnlineUser& aUser, int secureMode) {
 void NmdcHub::revConnectToMe(const OnlineUser& aUser) {
     checkstate();
     dcdebug("NmdcHub::revConnectToMe %s\n", aUser.getIdentity().getNick().c_str());
+    if(!allowHubConnect()) {
+        PeerConnectLog::skip(aUser.getIdentity().getNick(), getHubUrl(), _("hub peer-connect wait"));
+        return;
+    }
     if(!ConnectionManager::getInstance()->allowOutgoingConnect(aUser.getUser())) {
         PeerConnectLog::skip(aUser.getIdentity().getNick(), getHubUrl(), _("recent $ConnectToMe still in flight"));
         return;

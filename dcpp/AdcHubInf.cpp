@@ -93,6 +93,7 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
 
     if(u->getUser() == getMyIdentity().getUser()) {
         state = STATE_NORMAL;
+        hubReady();
         setAutoReconnect(true);
         setMyIdentity(u->getIdentity());
         storeHubNick();

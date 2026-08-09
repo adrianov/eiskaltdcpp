@@ -10,8 +10,11 @@
 #include "stdinc.h"
 #include "hub/HubConnectPace.h"
 
+#include "CriticalSection.h"
 #include "TimerManager.h"
 #include "Util.h"
+
+#include <unordered_map>
 
 namespace dcpp {
 
@@ -19,6 +22,27 @@ namespace {
 
 /** Pause when the hub reports CTM flood without a duration. */
 constexpr uint32_t FLOOD_PAUSE_SEC = 6;
+
+CriticalSection floorCs;
+/** hubUrl → learned minimum online ms before peer connects. */
+std::unordered_map<string, uint64_t> learnedFloor;
+
+uint64_t loadFloor(const string& hubUrl) {
+    if(hubUrl.empty())
+        return 0;
+    Lock l(floorCs);
+    const auto i = learnedFloor.find(hubUrl);
+    return i == learnedFloor.end() ? 0 : i->second;
+}
+
+void storeFloor(const string& hubUrl, uint64_t ms) {
+    if(hubUrl.empty() || !ms)
+        return;
+    Lock l(floorCs);
+    uint64_t& slot = learnedFloor[hubUrl];
+    if(ms > slot)
+        slot = ms;
+}
 
 bool unitAt(const string& message, string::size_type i, const char* unit) {
     return Util::findSubString(message, unit, i) == i;
@@ -53,21 +77,17 @@ uint32_t parseSeconds(const string& message) {
 
 /**
  * Ledokol ctmuptime and similar: wait before further peer connects.
- * Keep phrasing tight so login/IP "connection" notices are ignored.
+ * Phrases stay specific so login/IP "connection" notices are ignored.
  */
 bool isPeerConnectWait(const string& message) {
     static const char* const keys[] = {
         "connecting to other",
         "connecting to more",
-        "before connecting",
         "connect to other users",
         "connect to more users",
         "подключаться к другим",
         "подключаться к большему",
-        "прежде чем подключаться",
-        "перед подключением к",
         "соединяться с другими",
-        "прежде чем соединяться",
     };
     for(const char* key : keys) {
         if(Util::findSubString(message, key) != string::npos)
@@ -77,13 +97,13 @@ bool isPeerConnectWait(const string& message) {
 }
 
 bool isConnectFlood(const string& message) {
-    if(Util::findSubString(message, "flood") == string::npos)
+    const bool flooded = Util::findSubString(message, "flood") != string::npos
+        || Util::findSubString(message, "флуд") != string::npos;
+    if(!flooded)
         return false;
     return Util::findSubString(message, "ConnectToMe") != string::npos
         || Util::findSubString(message, "RevConnectToMe") != string::npos
-        || Util::findSubString(message, "connect flood") != string::npos
-        || Util::findSubString(message, "флуд ConnectToMe") != string::npos
-        || Util::findSubString(message, "флуд с ConnectToMe") != string::npos;
+        || Util::findSubString(message, "connect flood") != string::npos;
 }
 
 uint32_t parsePauseSeconds(const string& message) {
@@ -100,20 +120,44 @@ uint32_t parsePauseSeconds(const string& message) {
 
 } // namespace
 
-void HubConnectPace::delay(uint32_t seconds) {
-    if(!seconds)
-        return;
-    const uint64_t until = GET_TICK() + static_cast<uint64_t>(seconds) * 1000;
+void HubConnectPace::delayUntil(uint64_t tick) {
     uint64_t cur = nextAllowed.load(std::memory_order_relaxed);
-    while(cur < until && !nextAllowed.compare_exchange_weak(
-            cur, until, std::memory_order_relaxed, std::memory_order_relaxed))
+    while(cur < tick && !nextAllowed.compare_exchange_weak(
+            cur, tick, std::memory_order_relaxed, std::memory_order_relaxed))
     { }
 }
 
-void HubConnectPace::note(const string& message) {
+void HubConnectPace::delay(uint32_t seconds) {
+    if(!seconds)
+        return;
+    delayUntil(GET_TICK() + static_cast<uint64_t>(seconds) * 1000);
+}
+
+void HubConnectPace::ready(const string& hubUrl) {
+    const uint64_t now = GET_TICK();
+    readyAt.store(now, std::memory_order_relaxed);
+    const uint64_t floor = loadFloor(hubUrl);
+    floorMs.store(floor, std::memory_order_relaxed);
+    if(floor)
+        delayUntil(now + floor);
+}
+
+void HubConnectPace::note(const string& hubUrl, const string& message) {
     const uint32_t seconds = parsePauseSeconds(message);
-    if(seconds)
-        delay(seconds);
+    if(!seconds)
+        return;
+    delay(seconds);
+
+    // Remaining wait + time already online ≈ required min online time.
+    const uint64_t ra = readyAt.load(std::memory_order_relaxed);
+    if(!ra || !isPeerConnectWait(message))
+        return;
+    const uint64_t need = (GET_TICK() - ra) + static_cast<uint64_t>(seconds) * 1000;
+    uint64_t cur = floorMs.load(std::memory_order_relaxed);
+    if(need > cur) {
+        floorMs.store(need, std::memory_order_relaxed);
+        storeFloor(hubUrl, need);
+    }
 }
 
 } // namespace dcpp

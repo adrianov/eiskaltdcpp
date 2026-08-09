@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "MerkleTree.h"
+#include "../MerkleTree.h"
 
 namespace dcpp {
 
@@ -60,12 +60,16 @@ public:
     /** Hub guard: wait at least `seconds` from `now`; raise interval floor. */
     void delayNext(uint32_t seconds, uint64_t now);
 
-    uint64_t interval;     ///< ms; 0 = no minimum spacing
-    uint64_t nextAllowed;  ///< tick; 0 = send as soon as connected/queued
+    uint64_t getInterval() const;
+    void setInterval(uint64_t ms);
+    /** Raise spacing floor; never lowers an existing hub/cfg floor. */
+    void raiseInterval(uint64_t ms);
 
 private:
     void insertByPriority(const SearchCore& s);
 
+    uint64_t interval;     ///< ms; 0 = no minimum spacing
+    uint64_t nextAllowed;  ///< tick; 0 = send as soon as connected/queued
     deque<SearchCore> searchQueue;
     mutable CriticalSection cs;
 };

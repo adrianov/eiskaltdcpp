@@ -81,12 +81,14 @@ public:
 
     StringMap& escapeParams(StringMap& sm);
     void setSearchInterval(uint32_t aInterval);
-    uint32_t getSearchInterval() const { return searchQueue.interval; }
+    uint32_t getSearchInterval() const { return searchQueue.getInterval(); }
 
     /** False while this hub pauses further peer connects (CTM/RCM). */
     bool allowHubConnect() const { return connectPace.allow(); }
-    /** Honor hub search/connect rate-limit text from chat or status. */
+    /** Honor hub search/connect wait text from chat or status. */
     void noteHubLimits(const string& message);
+    /** Hub reached NORMAL — apply learned min online time before CTM. */
+    void hubReady();
 
     void reconnect();
     void shutdown();

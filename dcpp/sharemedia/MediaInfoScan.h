@@ -12,7 +12,7 @@
 #pragma once
 
 #include "MediaInfo.h"
-#include "MerkleTree.h"
+#include "../MerkleTree.h"
 
 #include <string>
 
