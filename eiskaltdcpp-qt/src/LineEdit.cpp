@@ -19,7 +19,7 @@ static const int margin = 3;
 LineEdit::LineEdit(QWidget *parent) :
         QLineEdit(parent), menu(nullptr), role(LineEdit::InsertText)
 {
-    pxm = WICON_SIZE(WulforUtil::eiEDITCLEAR, 16);
+    pxm = WICON_SIZE(AppIcons::eiEDITCLEAR, 16);
 
     setFrame(false);
     setAutoFillBackground(true);

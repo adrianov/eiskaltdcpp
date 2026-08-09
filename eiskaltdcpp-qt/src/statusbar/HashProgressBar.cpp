@@ -50,21 +50,21 @@ void HashProgressBar::update(QAction *refreshAction, HashProgress *dialog)
 
     switch (HashProgress::getHashStatus()) {
     case HashProgress::IDLE:
-        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiREFRLIST);
+        WulforUtil::bindActionIcon(refreshAction, AppIcons::eiREFRLIST);
         refreshAction->setText(QObject::tr("Refresh share"));
         if (dialog)
             dialog->resetProgress();
         bar->hide();
         break;
     case HashProgress::LISTUPDATE:
-        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, AppIcons::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         bar->setValue(100);
         bar->setFormat(QObject::tr("List update"));
         bar->show();
         break;
     case HashProgress::DELAYED:
-        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, AppIcons::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         {
             const int delay = SETTING(HASHING_START_DELAY);
@@ -79,7 +79,7 @@ void HashProgressBar::update(QAction *refreshAction, HashProgress *dialog)
         }
         break;
     case HashProgress::PAUSED:
-        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, AppIcons::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         if (SETTING(HASHING_START_DELAY) >= 0) {
             bar->setValue(100);
@@ -90,7 +90,7 @@ void HashProgressBar::update(QAction *refreshAction, HashProgress *dialog)
             bar->hide();
         break;
     case HashProgress::RUNNING:
-        WulforUtil::bindActionIcon(refreshAction, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(refreshAction, AppIcons::eiHASHING);
         refreshAction->setText(QObject::tr("Hash progress"));
         if (dialog) {
             bar->setFormat(QObject::tr("%p%"));

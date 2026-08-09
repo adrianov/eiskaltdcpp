@@ -10,6 +10,7 @@
 #pragma once
 
 #include "QtCompat.h"
+#include "appicon/AppIcons.h"
 
 #include <QObject>
 #include <QPixmap>
@@ -17,10 +18,6 @@
 #include <QMap>
 #include <QHash>
 #include <QTextCodec>
-#include <QTreeView>
-#include <QAbstractItemModel>
-//#include <QHttp>
-//#include <QHttpHeader>
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
@@ -33,14 +30,8 @@
 class QAction;
 class QHeaderView;
 class QAbstractItemView;
-
-// Logical (virtual) side length in the user list; physical pixels come from
-// scalePixmap(sourceCell, USERLIST_ICON_SIZE) using the screen devicePixelRatio.
-// Hi-res sheets (e.g. 85px cells in a 9×32 pack) stay sharp on 2x/3x/4x displays.
-#define USERLIST_ICON_SIZE      16
-#define USERLIST_XPM_COLUMNS    9
-#define USERLIST_XPM_ROWS       32
-#define THEME_ICON_SIZE         22
+class QTreeView;
+class QMenu;
 
 #define WICON(x)(WulforUtil::getInstance()->getPixmap((x)))
 #define WICON_SIZE(x, s)(WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmap((x)), (s)))
@@ -62,87 +53,8 @@ class WulforUtil :
 friend class dcpp::Singleton<WulforUtil>;
 
 public:
-    Q_ENUMS (Icons)
-
-    enum Icons {
-        eiADLS = 0,
-        eiAWAY,
-        eiBALL_GREEN,
-        eiBOOKMARK_ADD,
-        eiCHAT,
-        eiCLEAR,
-        eiCONFIGURE,
-        eiCONNECT,
-        eiCONNECT_NO,
-        eiCONSOLE,
-        eiDOWN,
-        eiDOWNLIST,
-        eiDOWNLOAD,
-        eiDOWNLOAD_AS,
-        eiEDIT,
-        eiEDITADD,
-        eiEDITCOPY,
-        eiEDITDELETE,
-        eiEDITCLEAR,
-        eiEMOTICON,
-        eiERASER,
-        eiEXIT,
-        eiFAV,
-        eiFAVADD,
-        eiFAVREM,
-        eiFAVSERVER,
-        eiFAVUSERS,
-        eiFILECLOSE,
-        eiFILEFIND,
-        eiFILTER,
-        eiFIND,
-        eiFOLDER_BLUE,
-        eiFREESPACE,
-        eiGUI,
-        eiGV,
-        eiHASHING,
-        eiHIDEWINDOW,
-        eiHUBMSG,
-        eiICON_APPL,
-        eiMAGNET,
-        eiMESSAGE,
-        eiMESSAGE_TRAY_ICON,
-        eiOPENLIST,
-        eiOPEN_LOG_FILE,
-        eiOWN_FILELIST,
-        eiPLUGIN,
-        eiPMMSG,
-        eiRECONNECT,
-        eiREFRLIST,
-        eiRELOAD,
-        eiSERVER,
-        eiSPAM,
-        eiSPY,
-        eiSPLASH,
-        eiSTATUS,
-        eiTRANSFER,
-        eiUP,
-        eiUPLIST,
-        eiUSERS,
-        eiZOOM_IN,
-        eiZOOM_OUT,
-        eiTOP,
-        eiNEXT,
-        eiPREVIOUS,
-        eiQT_LOGO,
-        eiSPEED_LIMIT_ON,
-        eiSPEED_LIMIT_OFF,
-
-        eiFILETYPE_APPLICATION,
-        eiFILETYPE_ARCHIVE,
-        eiFILETYPE_DOCUMENT,
-        eiFILETYPE_MP3,
-        eiFILETYPE_PICTURE,
-        eiFILETYPE_UNKNOWN,
-        eiFILETYPE_VIDEO
-    };
-
-    typedef QHash<qulonglong, QPixmap> PixmapMap;
+    /** Theme icon id (catalog lives in AppIcons). */
+    typedef AppIcons::Id Icons;
 
     bool loadUserIcons();
 
@@ -166,7 +78,6 @@ public Q_SLOTS:
     void textToHtml(QString&,bool=true);
 
     QTextCodec *codecForEncoding(const QString&);
-    //Convert Qt encoding name to internal DC++ representation
     QString qtEnc2DcEnc(QString);
     QString dcEnc2QtEnc(QString);
     QStringList encodings();
@@ -187,9 +98,12 @@ public Q_SLOTS:
 
     static void bindActionIcon(QAction *act, Icons icon);
 
-    static qreal iconDeviceRatio();
+    static qreal iconDeviceRatio() { return AppIcons::deviceRatio(); }
     static QPixmap scalePixmap(const QPixmap &source, int logicalSide,
-                               Qt::TransformationMode mode = Qt::SmoothTransformation);
+                               Qt::TransformationMode mode = Qt::SmoothTransformation)
+    {
+        return AppIcons::scale(source, logicalSide, mode);
+    }
 
     static void headerMenu(QTreeView*);
 
@@ -231,13 +145,7 @@ private:
     void clearUserIconCache();
     void initFileTypes();
 
-    QPixmap loadPixmap(const QString& file);
-
-    PixmapMap m_PixmapMap;
-    bool m_bError;
-
-    QPixmap FROMTHEME(const QString &name, bool resource);
-    QPixmap FROMTHEME_SIDE(const QString &name, bool resource, const int side);
+    AppIcons appIcons;
 
     QString findAppIconsPath() const;
     QString findUserIconsPath() const;

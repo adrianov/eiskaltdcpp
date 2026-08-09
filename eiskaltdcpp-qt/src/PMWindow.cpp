@@ -92,17 +92,17 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
         EmoticonFactory::getInstance()->addEmoticons(textEdit_CHAT->document());
 
     toolButton_SMILE->setVisible(WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance());
-    toolButton_SMILE->setIcon(WICON(WulforUtil::eiEMOTICON));
+    toolButton_SMILE->setIcon(WICON(AppIcons::eiEMOTICON));
     toolButton_SMILE->setContextMenuPolicy(Qt::CustomContextMenu);
     AppTheme::applyControlButton(toolButton_SMILE);
 
     toolButton_ALL->setCheckable(true);
 
-    toolButton_HIDE->setIcon(WICON(WulforUtil::eiEDITDELETE));
+    toolButton_HIDE->setIcon(WICON(AppIcons::eiEDITDELETE));
 
     arena_menu = new QMenu(tr("Private message"));
-    QAction *mark_spam = new QAction(WICON(WulforUtil::eiSPAM), tr("Mark as Spam"), arena_menu);
-    QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), arena_menu);
+    QAction *mark_spam = new QAction(WICON(AppIcons::eiSPAM), tr("Mark as Spam"), arena_menu);
+    QAction *close_wnd = new QAction(WICON(AppIcons::eiFILECLOSE), tr("Close"), arena_menu);
     arena_menu->addAction(mark_spam);
     arena_menu->addAction(close_wnd);
 
@@ -215,11 +215,11 @@ QMenu *PMWindow::getMenu(){
 
 const QPixmap &PMWindow::getPixmap(){
     if (hasHighlightMessages)
-        return WICON(WulforUtil::eiMESSAGE);
+        return WICON(AppIcons::eiMESSAGE);
     else if (hasMessages)
-        return WICON(WulforUtil::eiPMMSG);
+        return WICON(AppIcons::eiPMMSG);
     else
-        return WICON(WulforUtil::eiUSERS);
+        return WICON(AppIcons::eiUSERS);
 }
 
 ArenaWidget::Role PMWindow::role() const {

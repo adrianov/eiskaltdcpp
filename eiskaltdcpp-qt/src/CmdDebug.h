@@ -43,7 +43,7 @@ public:
     QString getArenaTitle();
     QString getArenaShortTitle();
     QMenu *getMenu();
-    const QPixmap &getPixmap(){ return WICON(WulforUtil::eiCONSOLE); }
+    const QPixmap &getPixmap(){ return WICON(AppIcons::eiCONSOLE); }
     void requestClear() { plainTextEdit_DEBUG->clear(); }
     void requestFilter() { slotShowSearchBar(); }
     void requestFocus() { pushButton_ClearLog->setFocus(); }

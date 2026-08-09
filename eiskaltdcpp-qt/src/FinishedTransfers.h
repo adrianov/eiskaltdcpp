@@ -98,9 +98,9 @@ public:
 
     const QPixmap &getPixmap() override {
         if (isUpload)
-            return WICON(WulforUtil::eiUPLIST);
+            return WICON(AppIcons::eiUPLIST);
         else
-            return WICON(WulforUtil::eiDOWNLIST);
+            return WICON(AppIcons::eiDOWNLIST);
     }
 
 protected:
@@ -174,3 +174,6 @@ inline ArenaWidget::Role FinishedTransfers<true>::role() const { return ArenaWid
 
 typedef FinishedTransfers<true>  FinishedUploads;
 typedef FinishedTransfers<false> FinishedDownloads;
+
+/** Resolve a finished-item TARGET to an on-disk path (legacy slash + name match). */
+QString finishedLocalPath(const QString &file);

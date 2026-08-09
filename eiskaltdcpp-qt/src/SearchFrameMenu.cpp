@@ -21,55 +21,55 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     magnet_menu = new QMenu(tr("Magnet"));
 
     QAction *down       = new QAction(tr("Download"), nullptr);
-    down->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
     down_to             = new QMenu(tr("Download to..."));
-    down_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
+    down_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
 
     QAction *down_wh    = new QAction(tr("Download Whole Directory"), nullptr);
-    down_wh->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    down_wh->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
     down_wh_to          = new QMenu(tr("Download Whole Directory to..."));
-    down_wh_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
+    down_wh_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
 
     QAction *open_file  = new QAction(tr("Open file"), nullptr);
-    open_file->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    open_file->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
     QAction *open_dir   = new QAction(tr("Open directory"), nullptr);
-    open_dir->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    open_dir->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
     QAction *sep        = new QAction(menu);
     sep->setSeparator(true);
 
     QAction *find_tth   = new QAction(tr("Search TTH"), nullptr);
-    find_tth->setIcon(WU->getPixmap(WulforUtil::eiFILEFIND));
+    find_tth->setIcon(WU->getPixmap(AppIcons::eiFILEFIND));
 
     QAction *copy_name  = new QAction(tr("Copy file name"), nullptr);
-    copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    copy_name->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
     QAction *magnet     = new QAction(tr("Copy magnet"), nullptr);
-    magnet->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    magnet->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
     QAction *magnet_web     = new QAction(tr("Copy web-magnet"), nullptr);
-    magnet_web->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    magnet_web->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
     QAction *magnet_info    = new QAction(tr("Properties of magnet"), nullptr);
-    magnet_info->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    magnet_info->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
     QAction *browse     = new QAction(tr("Browse files"), nullptr);
-    browse->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    browse->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
     QAction *match      = new QAction(tr("Match Queue"), nullptr);
-    match->setIcon(WU->getPixmap(WulforUtil::eiDOWN));
+    match->setIcon(WU->getPixmap(AppIcons::eiDOWN));
 
     QAction *send_pm    = new QAction(tr("Send Private Message"), nullptr);
-    send_pm->setIcon(WU->getPixmap(WulforUtil::eiMESSAGE));
+    send_pm->setIcon(WU->getPixmap(AppIcons::eiMESSAGE));
 
     QAction *add_to_fav = new QAction(tr("Add to favorites"), nullptr);
-    add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
+    add_to_fav->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
 
     QAction *grant      = new QAction(tr("Grant extra slot"), nullptr);
-    grant->setIcon(WU->getPixmap(WulforUtil::eiEDITADD));
+    grant->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
 
     QAction *sep1       = new QAction(menu);
     sep1->setSeparator(true);
@@ -81,19 +81,19 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     sep3->setSeparator(true);
 
     QAction *rem_queue  = new QAction(tr("Remove from Queue"), nullptr);
-    rem_queue->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
+    rem_queue->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
     QAction *rem        = new QAction(tr("Remove"), nullptr);
-    rem->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
+    rem->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
     black_list_menu     = new QMenu(tr("Blacklist..."));
-    black_list_menu->setIcon(WU->getPixmap(WulforUtil::eiFILTER));
+    black_list_menu->setIcon(WU->getPixmap(AppIcons::eiFILTER));
 
     QAction *blacklist = new QAction(tr("Blacklist"), nullptr);
-    blacklist->setIcon(WU->getPixmap(WulforUtil::eiFILTER));
+    blacklist->setIcon(WU->getPixmap(AppIcons::eiFILTER));
 
     QAction *add_to_blacklist = new QAction(tr("Add to Blacklist"), nullptr);
-    add_to_blacklist->setIcon(WU->getPixmap(WulforUtil::eiEDITADD));
+    add_to_blacklist->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
 
     black_list_menu->addActions(QList<QAction*>() << add_to_blacklist << blacklist);
     magnet_menu->addActions(QList<QAction*>() << magnet << magnet_web << sep3 << magnet_info);

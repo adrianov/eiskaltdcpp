@@ -9,16 +9,20 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "WulforUtil.h"
+#pragma once
 
-#include <QFileInfo>
+#include <QString>
+#include <QStringList>
 
-const QPixmap &WulforUtil::getPixmapForFile(const QString &file){
-    QString ext = QFileInfo(file).suffix().toUpper();
+/** UI helper: turn local FB2/FBD files into EPUB next to the source. */
+namespace Fb2EpubExport {
 
-    if (m_FileTypeMap.contains(ext))
-        return getPixmap(m_FileTypeMap[ext]);
-    else
-        return getPixmap(eiFILETYPE_UNKNOWN);
-}
+/** True when the path or file name ends with .fb2 / .fbd (no disk check). */
+bool isFb2Name(const QString &pathOrName);
+/** True when path is an existing FB2/FBD file. */
+bool isFb2File(const QString &path);
+QStringList existingFb2Files(const QStringList &paths);
+/** Convert each existing FB2; reveal each EPUB. Returns success count. */
+int convertAndReveal(const QStringList &paths);
 
+} // namespace Fb2EpubExport

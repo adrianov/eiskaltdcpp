@@ -24,7 +24,7 @@ CmdDebug::CmdDebug(QWidget *parent)
     setupUi(this);
     Q_D(CmdDebug);
 
-    toolButton_HIDE->setIcon(WICON(WulforUtil::eiEDITDELETE));
+    toolButton_HIDE->setIcon(WICON(AppIcons::eiEDITDELETE));
     searchFrame->hide();
 
     installEventFilter(this);

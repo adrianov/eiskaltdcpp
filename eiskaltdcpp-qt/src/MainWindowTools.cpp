@@ -40,7 +40,7 @@ using namespace dcpp;
 namespace {
 void bindSpeedLimitIcon(QAction *act, bool enabled)
 {
-    WulforUtil::bindActionIcon(act, enabled ? WulforUtil::eiSPEED_LIMIT_ON : WulforUtil::eiSPEED_LIMIT_OFF);
+    WulforUtil::bindActionIcon(act, enabled ? AppIcons::eiSPEED_LIMIT_ON : AppIcons::eiSPEED_LIMIT_OFF);
 }
 
 #ifdef USE_JS

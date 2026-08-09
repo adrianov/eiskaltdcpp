@@ -37,9 +37,9 @@ Magnet::Magnet(QWidget *parent) :
 {
     setupUi(this);
 
-    toolButton_COPY_MAGNET->setIcon(WICON(WulforUtil::eiMAGNET));
-    toolButton_COPY_SEARCH_LINK->setIcon(WICON(WulforUtil::eiMAGNET));
-    toolButton_BROWSE->setIcon(WICON(WulforUtil::eiFOLDER_BLUE));
+    toolButton_COPY_MAGNET->setIcon(WICON(AppIcons::eiMAGNET));
+    toolButton_COPY_SEARCH_LINK->setIcon(WICON(AppIcons::eiMAGNET));
+    toolButton_BROWSE->setIcon(WICON(AppIcons::eiFOLDER_BLUE));
 
     connect(pushButton_CANCEL,  SIGNAL(clicked()), this, SLOT(accept()));
     connect(pushButton_SEARCH,  SIGNAL(clicked()), this, SLOT(search()));
@@ -234,7 +234,7 @@ void Magnet::slotBrowse(){
         down_to = new QMenu();
 
         for (int i = 0; i < a.size(); i++){
-            QAction *act = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), a.at(i), down_to);
+            QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
             act->setData(p.at(i));
 
             down_to->addAction(act);
@@ -242,7 +242,7 @@ void Magnet::slotBrowse(){
 
         down_to->addSeparator();
 
-        QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), tr("Browse"), down_to);
+        QAction *browse = new QAction(WICON(AppIcons::eiFOLDER_BLUE), tr("Browse"), down_to);
         browse->setData("");
 
         down_to->addAction(browse);

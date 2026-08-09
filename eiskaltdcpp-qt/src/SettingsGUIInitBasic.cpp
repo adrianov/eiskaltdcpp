@@ -130,7 +130,7 @@ void SettingsGUI::initBasic()
 
         lineEdit_LANGFILE->setText(WSGET(WS_TRANSLATION_FILE));
 
-        toolButton_LANGBROWSE->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+        toolButton_LANGBROWSE->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
         if (WBGET(WB_MAINWINDOW_REMEMBER))
             radioButton_REMEMBER->setChecked(true);

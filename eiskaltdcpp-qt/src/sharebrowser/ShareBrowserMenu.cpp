@@ -74,32 +74,33 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     QMenu *magnet_menu = new QMenu(sbTr("Magnet"), menu);
 
     QAction *down    = new QAction(sbTr("Download"), menu);
-    down->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
     down_to = new QMenu(sbTr("Download to..."));
-    down_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
+    down_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
     QAction *down_wh = new QAction(wholeDirTr("Download Whole Directory"), menu);
-    down_wh->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    down_wh->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
     down_wh_to = new QMenu(wholeDirTr("Download Whole Directory to..."));
-    down_wh_to->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD_AS));
+    down_wh_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
     QAction *sep     = new QAction(menu);
     QAction *alter   = new QAction(sbTr("Search for alternates"), menu);
-    alter->setIcon(WU->getPixmap(WulforUtil::eiFILEFIND));
+    alter->setIcon(WU->getPixmap(AppIcons::eiFILEFIND));
     QAction *copy_name = new QAction(sbTr("Copy file name"), menu);
-    copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    copy_name->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *magnet  = new QAction(sbTr("Copy magnet"), menu);
-    magnet->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    magnet->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *magnet_web  = new QAction(sbTr("Copy web-magnet"), menu);
-    magnet_web->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    magnet_web->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
     QAction *magnet_info  = new QAction(sbTr("Properties of magnet"), menu);
-    magnet_info->setIcon(WU->getPixmap(WulforUtil::eiDOWNLOAD));
+    magnet_info->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
     QAction *sep1    = new QAction(menu);
     QAction *add_to_fav = new QAction(sbTr("Add to favorites"), menu);
-    add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
+    add_to_fav->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
     QAction *set_rest = new QAction(sbTr("Add restriction"), rest_menu);
     QAction *rem_rest = new QAction(sbTr("Remove restriction"), rest_menu);
-    open_file = new QAction(WU->getPixmap(WulforUtil::eiFILETYPE_UNKNOWN), sbTr("Open file"), menu);
-    open_url = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), sbTr("Open directory"), menu);
-    delete_file = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), sbTr("Delete File"), menu);
+    open_file = new QAction(WU->getPixmap(AppIcons::eiFILETYPE_UNKNOWN), sbTr("Open file"), menu);
+    open_url = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), sbTr("Open directory"), menu);
+    convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), sbTr("Convert to EPUB"), menu);
+    delete_file = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), sbTr("Delete File"), menu);
     QAction *sep2    = new QAction(menu);
     QAction *sep3    = new QAction(menu);
     QAction *sep4    = new QAction(menu);
@@ -116,6 +117,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     actions.insert(rem_rest, RemoveRestriction);
     actions.insert(open_file, OpenFile);
     actions.insert(open_url, OpenUrl);
+    actions.insert(convert_epub, ConvertEpub);
     actions.insert(delete_file, DeleteFile);
 
     magnet_menu->addActions(QList<QAction*>()
@@ -134,7 +136,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     menu->insertMenu(down_wh, down_to);
     menu->insertMenu(sep, down_wh_to);
     menu->addMenu(rest_menu);
-    menu->addActions(QList<QAction*>() << open_file << open_url << sep4 << delete_file);
+    menu->addActions(QList<QAction*>() << open_file << open_url << convert_epub << sep4 << delete_file);
 }
 
 ShareBrowserMenu::~ShareBrowserMenu(){
@@ -147,13 +149,13 @@ ShareBrowserMenu::~ShareBrowserMenu(){
 }
 
 ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool treePane,
-                                                    bool hasDeletable){
+                                                    bool hasDeletable, bool hasFb2){
     qDeleteAll(down_to->actions());
     qDeleteAll(down_wh_to->actions());
     down_to->clear();
     down_wh_to->clear();
 
-    const QPixmap &dir_px = WICON(WulforUtil::eiFOLDER_BLUE);
+    const QPixmap &dir_px = WICON(AppIcons::eiFOLDER_BLUE);
     const QString aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
     const QString paths   = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
     const QStringList a = aliases.split("\n", WULFOR_SKIP_EMPTY);
@@ -167,6 +169,7 @@ ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool 
     rest_menu->setEnabled(own && treePane);
     open_file->setEnabled(own);
     open_url->setEnabled(own);
+    convert_epub->setEnabled(own && hasFb2);
     delete_file->setEnabled(own && hasDeletable);
 
     QAction *ret = menu->exec(QCursor::pos());

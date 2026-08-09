@@ -20,33 +20,33 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     WulforUtil *WU = WulforUtil::getInstance();
 
     QAction *browse     = new QAction(TransferView::tr("Browse files"), menu);
-    browse->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    browse->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
-    QAction *open_file  = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), TransferView::tr("Open file"), menu);
-    QAction *open_dir   = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), TransferView::tr("Open directory"), menu);
+    QAction *open_file  = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), TransferView::tr("Open file"), menu);
+    QAction *open_dir   = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), TransferView::tr("Open directory"), menu);
     open_file->setEnabled(openEnabled);
     open_dir->setEnabled(openEnabled);
 
     QAction *search     = new QAction(TransferView::tr("Search Alternates"), menu);
-    search->setIcon(WU->getPixmap(WulforUtil::eiFIND));
+    search->setIcon(WU->getPixmap(AppIcons::eiFIND));
 
     QAction *match      = new QAction(TransferView::tr("Match Queue"), menu);
-    match->setIcon(WU->getPixmap(WulforUtil::eiDOWN));
+    match->setIcon(WU->getPixmap(AppIcons::eiDOWN));
 
     QAction *send_pm    = new QAction(TransferView::tr("Send Private Message"), menu);
-    send_pm->setIcon(WU->getPixmap(WulforUtil::eiMESSAGE));
+    send_pm->setIcon(WU->getPixmap(AppIcons::eiMESSAGE));
 
     QAction *add_to_fav = new QAction(TransferView::tr("Add to favorites"), menu);
-    add_to_fav->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
+    add_to_fav->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
 
     QAction *grant      = new QAction(TransferView::tr("Grant extra slot"), menu);
-    grant->setIcon(WU->getPixmap(WulforUtil::eiEDITADD));
+    grant->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
 
     QAction *copy_name  = new QAction(TransferView::tr("Copy file name"), menu);
-    copy_name->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    copy_name->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
     copy_column = new QMenu(TransferView::tr("Copy"), menu);
-    copy_column->setIcon(WU->getPixmap(WulforUtil::eiEDITCOPY));
+    copy_column->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
     copy_column->addAction(TransferView::tr("Users"));
     copy_column->addAction(TransferView::tr("Speed"));
@@ -65,20 +65,20 @@ TransferView::Menu::Menu(bool showTransferredFilesOnly, bool openEnabled, bool r
     sep1->setSeparator(true);
 
     QAction *rem_queue  = new QAction(TransferView::tr("Remove Source"), menu);
-    rem_queue->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
+    rem_queue->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
     QAction *remove     = new QAction(TransferView::tr("Delete File"), menu);
-    remove->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
+    remove->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
     remove->setEnabled(removeEnabled);
 
     QAction *sep3       = new QAction(menu);
     sep3->setSeparator(true);
 
     QAction *force    = new QAction(TransferView::tr("Force attempt"), menu);
-    force->setIcon(WU->getPixmap(WulforUtil::eiCONNECT));
+    force->setIcon(WU->getPixmap(AppIcons::eiCONNECT));
 
     QAction *close = new QAction(TransferView::tr("Close connection(s)"), menu);
-    close->setIcon(WU->getPixmap(WulforUtil::eiCONNECT_NO));
+    close->setIcon(WU->getPixmap(AppIcons::eiCONNECT_NO));
 
     QAction *show_only_transferred_files = new QAction(TransferView::tr("Show only transferred files"), menu);
     show_only_transferred_files->setCheckable(true);

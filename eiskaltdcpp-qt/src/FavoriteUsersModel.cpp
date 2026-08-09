@@ -63,7 +63,7 @@ QVariant FavoriteUsersModel::data(const QModelIndex &index, int role) const
 
                     if (_q(u.getUser()->getCID().toBase32()) == item->cid){
                         if (u.isSet(FavoriteUser::FLAG_GRANTSLOT))
-                            return WICON_SIZE(WulforUtil::eiBALL_GREEN, 16);
+                            return WICON_SIZE(AppIcons::eiBALL_GREEN, 16);
                     }
                 }
             }

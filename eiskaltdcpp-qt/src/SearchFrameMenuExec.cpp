@@ -42,12 +42,12 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
 
     if (!temp_pathes.isEmpty()){
         for (const auto &t : temp_pathes){
-            QAction *act = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
+            QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
             act->setToolTip(t);
             act->setData(t);
             down_to->addAction(act);
 
-            QAction *act1 = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
+            QAction *act1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
             act1->setToolTip(t);
             act1->setData(t);
             down_wh_to->addAction(act1);
@@ -59,11 +59,11 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
 
     if (a.size() == p.size() && !a.isEmpty()){
         for (int i = 0; i < a.size(); i++){
-            QAction *act = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), a.at(i), down_to);
+            QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
             act->setData(p.at(i));
             down_to->addAction(act);
 
-            QAction *act1 = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), a.at(i), down_to);
+            QAction *act1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
             act1->setData(p.at(i));
             down_wh_to->addAction(act1);
         }
@@ -72,10 +72,10 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
         down_wh_to->addSeparator();
     }
 
-    QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), tr("Browse"), down_to);
+    QAction *browse = new QAction(WICON(AppIcons::eiFOLDER_BLUE), tr("Browse"), down_to);
     browse->setData("");
 
-    QAction *browse1 = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), tr("Browse"), down_to);
+    QAction *browse1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), tr("Browse"), down_to);
     browse1->setData("");
 
     down_to->addAction(browse);

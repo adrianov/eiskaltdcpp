@@ -140,6 +140,7 @@ void ShareBrowser::contextMoreActions(ShareBrowserMenu::Action act, const QModel
         case ShareBrowserMenu::RemoveRestriction:
         case ShareBrowserMenu::OpenFile:
         case ShareBrowserMenu::OpenUrl:
+        case ShareBrowserMenu::ConvertEpub:
         case ShareBrowserMenu::DeleteFile:
             contextUserActions(act, list);
             break;

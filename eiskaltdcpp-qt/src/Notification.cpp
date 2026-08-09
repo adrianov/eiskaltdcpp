@@ -92,7 +92,7 @@ void Notification::enableTray(bool enable){
         checkSystemTrayCounter = 0;
 
         tray = new QSystemTrayIcon(this);
-        tray->setIcon(WICON(WulforUtil::eiICON_APPL));
+        tray->setIcon(WICON(AppIcons::eiICON_APPL));
 
         QMenu *menu = new QMenu(MainWindow::getInstance());
         menu->setTitle("EiskaltDC++");
@@ -115,9 +115,9 @@ void Notification::enableTray(bool enable){
         QAction *sep = new QAction(menu);
         sep->setSeparator(true);
 
-        setup_speed_lim->setIcon(WICON(WulforUtil::eiSPEED_LIMIT_ON));
-        show_hide->setIcon(WICON(WulforUtil::eiHIDEWINDOW));
-        close_app->setIcon(WICON(WulforUtil::eiEXIT));
+        setup_speed_lim->setIcon(WICON(AppIcons::eiSPEED_LIMIT_ON));
+        show_hide->setIcon(WICON(AppIcons::eiHIDEWINDOW));
+        close_app->setIcon(WICON(AppIcons::eiEXIT));
 
         connect(show_hide, SIGNAL(triggered()), this, SLOT(slotShowHide()));
         connect(close_app, SIGNAL(triggered()), this, SLOT(slotExit()));
@@ -173,11 +173,11 @@ void Notification::showMessage(int t, const QString &title, const QString &msg){
                 break;
 
 #if defined(Q_OS_MAC)
-            qApp->setWindowIcon(WICON(WulforUtil::eiMESSAGE_TRAY_ICON));
+            qApp->setWindowIcon(WICON(AppIcons::eiMESSAGE_TRAY_ICON));
             qApp->alert(MainWindow::getInstance(), 0);
 #else // defined(Q_OS_MAC)
             if (tray && t == PM && (!MainWindow::getInstance()->isVisible() || WBGET(WB_NOTIFY_CH_ICON_ALWAYS))){
-                tray->setIcon(WICON(WulforUtil::eiMESSAGE_TRAY_ICON));
+                tray->setIcon(WICON(AppIcons::eiMESSAGE_TRAY_ICON));
 
                 if (MainWindow::getInstance()->isVisible())
                     QApplication::alert(MainWindow::getInstance(), 0);
@@ -342,7 +342,7 @@ void Notification::slotSuppressSnd(){
 
 void Notification::resetTrayIcon(){
     if (tray)
-        tray->setIcon(WICON(WulforUtil::eiICON_APPL));
+        tray->setIcon(WICON(AppIcons::eiICON_APPL));
 }
 
 void QtNotifyModule::showMessage(const QString &title, const QString &msg, QObject *obj) {

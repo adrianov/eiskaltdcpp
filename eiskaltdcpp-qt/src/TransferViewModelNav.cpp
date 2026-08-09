@@ -40,9 +40,9 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
                 break;
 
             if (item->download && index.column() == COLUMN_TRANSFER_USERS)
-                return WICON_SIZE(WulforUtil::eiDOWN, 18);
+                return WICON_SIZE(AppIcons::eiDOWN, 18);
             else if (index.column() != COLUMN_TRANSFER_FNAME)
-                return WICON_SIZE(WulforUtil::eiUP, 18);
+                return WICON_SIZE(AppIcons::eiUP, 18);
             else
                 return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_TRANSFER_FNAME).toString()), 16);
         }

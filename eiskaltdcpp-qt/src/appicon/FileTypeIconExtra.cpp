@@ -15,13 +15,13 @@
 #include <QString>
 
 using Icons = WulforUtil::Icons;
-static const Icons eiFILETYPE_DOCUMENT = WulforUtil::eiFILETYPE_DOCUMENT;
-static const Icons eiFILETYPE_APPLICATION = WulforUtil::eiFILETYPE_APPLICATION;
-static const Icons eiFILETYPE_ARCHIVE = WulforUtil::eiFILETYPE_ARCHIVE;
-static const Icons eiFILETYPE_PICTURE = WulforUtil::eiFILETYPE_PICTURE;
-static const Icons eiFILETYPE_VIDEO = WulforUtil::eiFILETYPE_VIDEO;
-static const Icons eiFILETYPE_MP3 = WulforUtil::eiFILETYPE_MP3;
-static const Icons eiFILETYPE_UNKNOWN = WulforUtil::eiFILETYPE_UNKNOWN;
+static const Icons eiFILETYPE_DOCUMENT = AppIcons::eiFILETYPE_DOCUMENT;
+static const Icons eiFILETYPE_APPLICATION = AppIcons::eiFILETYPE_APPLICATION;
+static const Icons eiFILETYPE_ARCHIVE = AppIcons::eiFILETYPE_ARCHIVE;
+static const Icons eiFILETYPE_PICTURE = AppIcons::eiFILETYPE_PICTURE;
+static const Icons eiFILETYPE_VIDEO = AppIcons::eiFILETYPE_VIDEO;
+static const Icons eiFILETYPE_MP3 = AppIcons::eiFILETYPE_MP3;
+static const Icons eiFILETYPE_UNKNOWN = AppIcons::eiFILETYPE_UNKNOWN;
 
 void wulforRegisterExtraFileTypes(QMap<QString, WulforUtil::Icons> &map)
 {

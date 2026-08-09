@@ -90,7 +90,7 @@ public:
     QString  getArenaShortTitle(){ return getArenaTitle(); }
     QWidget *getWidget(){ return this; }
     QMenu   *getMenu(){ return nullptr; }
-    const QPixmap &getPixmap(){ return WICON(WulforUtil::eiDOWNLOAD); }
+    const QPixmap &getPixmap(){ return WICON(AppIcons::eiDOWNLOAD); }
 
     ArenaWidget::Role role() const { return ArenaWidget::Downloads; }
 

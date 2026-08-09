@@ -12,6 +12,7 @@
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
 #include "DownloadToHistory.h"
+#include "fb2epub/Fb2EpubExport.h"
 
 #include "dcpp/SettingsManager.h"
 
@@ -85,22 +86,23 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         ShareBrowserMenu::newInstance();
 
     bool hasDeletable = false;
+    bool hasFb2 = false;
     for (const auto &index : list) {
         FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
         if (!item)
             continue;
         if (item->file) {
             hasDeletable = true;
-            break;
+            if (Fb2EpubExport::isFb2Name(_q(item->file->getName())))
+                hasFb2 = true;
         }
         if (item->dir && item->dir != listing.getRoot()
                 && !dynamic_cast<dcpp::DirectoryListing::AdlDirectory*>(item->dir)) {
             hasDeletable = true;
-            break;
         }
     }
 
-    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable);
+    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable, hasFb2);
     QString target = _q(SETTING(DOWNLOAD_DIRECTORY));
 
     switch (act){
@@ -164,6 +166,7 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         case ShareBrowserMenu::RemoveRestriction:
         case ShareBrowserMenu::OpenFile:
         case ShareBrowserMenu::OpenUrl:
+        case ShareBrowserMenu::ConvertEpub:
         case ShareBrowserMenu::DeleteFile:
             contextMoreActions(act, list);
             break;

@@ -54,9 +54,9 @@ void ShareBrowser::init(){
 
     setAttribute(Qt::WA_DeleteOnClose);
 
-    toolButton_UP->setIcon(WICON(WulforUtil::eiTOP));
-    toolButton_FORWARD->setIcon(WICON(WulforUtil::eiNEXT));
-    toolButton_BACK->setIcon(WICON(WulforUtil::eiPREVIOUS));
+    toolButton_UP->setIcon(WICON(AppIcons::eiTOP));
+    toolButton_FORWARD->setIcon(WICON(AppIcons::eiNEXT));
+    toolButton_BACK->setIcon(WICON(AppIcons::eiPREVIOUS));
 
     initModels();
 
@@ -90,9 +90,9 @@ void ShareBrowser::init(){
 
     arena_menu = new QMenu(tr("Filebrowser"));
 
-    QAction *add_fav = new QAction(WICON(WulforUtil::eiFAVADD), tr("Add User to Favorites"), arena_menu);
+    QAction *add_fav = new QAction(WICON(AppIcons::eiFAVADD), tr("Add User to Favorites"), arena_menu);
     add_fav->setEnabled(user && user != ClientManager::getInstance()->getMe());
-    QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), arena_menu);
+    QAction *close_wnd = new QAction(WICON(AppIcons::eiFILECLOSE), tr("Close"), arena_menu);
     arena_menu->addAction(add_fav);
     arena_menu->addSeparator();
     arena_menu->addAction(close_wnd);

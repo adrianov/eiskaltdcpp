@@ -34,7 +34,7 @@ void SettingsAdvanced::ok() {
 
 void SettingsAdvanced::init() {
     lineEdit_MIME->setText(_q(SETTING(MIME_HANDLER)));
-    toolButton_BROWSE->setIcon(WICON(WulforUtil::eiFOLDER_BLUE));
+    toolButton_BROWSE->setIcon(WICON(AppIcons::eiFOLDER_BLUE));
 
     connect(toolButton_BROWSE, SIGNAL(clicked()), SLOT(slotBrowse()));
 }

@@ -62,7 +62,7 @@ void SettingsLog::init(){
     lineEdit_CMD_DEBUGFMT->setText(_q(SETTING(LOG_FORMAT_CMD_DEBUG)));
     lineEdit_FILE_CMD_DEBUGFMT->setText(_q(SETTING(LOG_FILE_CMD_DEBUG)));
 
-    toolButton_BROWSE->setIcon(WulforUtil::getInstance()->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    toolButton_BROWSE->setIcon(WulforUtil::getInstance()->getPixmap(AppIcons::eiFOLDER_BLUE));
 
     connect(toolButton_BROWSE, SIGNAL(clicked()), this, SLOT(slotBrowse()));
 }

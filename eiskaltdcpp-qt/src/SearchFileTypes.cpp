@@ -38,21 +38,21 @@ static QStringList toExtList(const StringList &exts) {
 
 static WulforUtil::Icons iconForType(int type) {
     static const WulforUtil::Icons icons[SearchManager::TYPE_LAST] = {
-        WulforUtil::eiFILETYPE_UNKNOWN,
-        WulforUtil::eiFILETYPE_MP3,
-        WulforUtil::eiFILETYPE_ARCHIVE,
-        WulforUtil::eiFILETYPE_DOCUMENT,
-        WulforUtil::eiFILETYPE_APPLICATION,
-        WulforUtil::eiFILETYPE_PICTURE,
-        WulforUtil::eiFILETYPE_VIDEO,
-        WulforUtil::eiFOLDER_BLUE,
-        WulforUtil::eiFIND,
-        WulforUtil::eiFILETYPE_ARCHIVE,
-        WulforUtil::eiFILETYPE_VIDEO
+        AppIcons::eiFILETYPE_UNKNOWN,
+        AppIcons::eiFILETYPE_MP3,
+        AppIcons::eiFILETYPE_ARCHIVE,
+        AppIcons::eiFILETYPE_DOCUMENT,
+        AppIcons::eiFILETYPE_APPLICATION,
+        AppIcons::eiFILETYPE_PICTURE,
+        AppIcons::eiFILETYPE_VIDEO,
+        AppIcons::eiFOLDER_BLUE,
+        AppIcons::eiFIND,
+        AppIcons::eiFILETYPE_ARCHIVE,
+        AppIcons::eiFILETYPE_VIDEO
     };
     if (type >= 0 && type < SearchManager::TYPE_LAST)
         return icons[type];
-    return WulforUtil::eiFILETYPE_UNKNOWN;
+    return AppIcons::eiFILETYPE_UNKNOWN;
 }
 
 void fillCombo(QComboBox *combo, bool forSearch) {

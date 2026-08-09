@@ -32,7 +32,7 @@ Secretary::Secretary(QWidget *parent)
     setupUi(this);
     Q_D(Secretary);
 
-    toolButton_HIDE->setIcon(WICON(WulforUtil::eiEDITDELETE));
+    toolButton_HIDE->setIcon(WICON(AppIcons::eiEDITDELETE));
     searchFrame->hide();
 
     installEventFilter(this);
@@ -306,17 +306,17 @@ void Secretary::slotChatMenu(const QPoint &){
     title->setEnabled(false);
 
     WulforUtil *WU = WulforUtil::getInstance();
-    QAction *copy_text    = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy"), menu);
-    QAction *search_text  = new QAction(WU->getPixmap(WulforUtil::eiFIND), tr("Search text"), menu);
-    QAction *copy_nick    = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy nick"), menu);
+    QAction *copy_text    = new QAction(WU->getPixmap(AppIcons::eiEDITCOPY), tr("Copy"), menu);
+    QAction *search_text  = new QAction(WU->getPixmap(AppIcons::eiFIND), tr("Search text"), menu);
+    QAction *copy_nick    = new QAction(WU->getPixmap(AppIcons::eiEDITCOPY), tr("Copy nick"), menu);
     QAction *sep1         = new QAction(menu);
-    QAction *clear_notes  = new QAction(WU->getPixmap(WulforUtil::eiCLEAR), tr("Clear notes"), menu);
-    QAction *find_in_notes= new QAction(WU->getPixmap(WulforUtil::eiFIND), tr("Find in notes"), menu);
+    QAction *clear_notes  = new QAction(WU->getPixmap(AppIcons::eiCLEAR), tr("Clear notes"), menu);
+    QAction *find_in_notes= new QAction(WU->getPixmap(AppIcons::eiFIND), tr("Find in notes"), menu);
     QAction *sep2         = new QAction(menu);
     QAction *select_all   = new QAction(tr("Select all"), menu);
     QAction *sep3         = new QAction(menu);
-    QAction *zoom_in      = new QAction(WU->getPixmap(WulforUtil::eiZOOM_IN), tr("Zoom In"), menu);
-    QAction *zoom_out     = new QAction(WU->getPixmap(WulforUtil::eiZOOM_OUT), tr("Zoom Out"), menu);
+    QAction *zoom_in      = new QAction(WU->getPixmap(AppIcons::eiZOOM_IN), tr("Zoom In"), menu);
+    QAction *zoom_out     = new QAction(WU->getPixmap(AppIcons::eiZOOM_OUT), tr("Zoom Out"), menu);
 
     copy_text->setData(static_cast<int>(CopyText));
     search_text->setData(static_cast<int>(SearchText));

@@ -14,7 +14,7 @@
 #define CREATE_ROOT_EL(a, b, c, d, e) \
     do { \
     SideBarItem *root = new SideBarItem(nullptr, (a)); \
-    root->pixmap = WU->getPixmap(WulforUtil::b); \
+    root->pixmap = WU->getPixmap(AppIcons::b); \
     root->title  = (c); \
     (d).insert(ArenaWidget::e, root); \
     (a)->appendChild(root); \

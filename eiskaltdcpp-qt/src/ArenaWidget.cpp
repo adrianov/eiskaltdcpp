@@ -98,6 +98,6 @@ QMenu *DeclarativeWidget::getMenu(){
 }
 
 const QPixmap &DeclarativeWidget::getPixmap(){
-    return WICON(WulforUtil::eiFILETYPE_APPLICATION);
+    return WICON(AppIcons::eiFILETYPE_APPLICATION);
 }
 #endif

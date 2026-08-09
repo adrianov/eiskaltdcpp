@@ -101,8 +101,8 @@ void SettingsDownloads::init(){
         spinBox_MAXDL->setValue(SETTING(DOWNLOAD_SLOTS));
         spinBox_NONEWDL->setValue(SETTING(MAX_DOWNLOAD_SPEED));
 
-        toolButton_BROWSE->setIcon(WICON(WulforUtil::eiFOLDER_BLUE));
-        toolButton_BROWSE1->setIcon(WICON(WulforUtil::eiFOLDER_BLUE));
+        toolButton_BROWSE->setIcon(WICON(AppIcons::eiFOLDER_BLUE));
+        toolButton_BROWSE1->setIcon(WICON(AppIcons::eiFOLDER_BLUE));
 
         connect(toolButton_BROWSE, SIGNAL(clicked()), SLOT(slotBrowse()));
         connect(toolButton_BROWSE1, SIGNAL(clicked()), SLOT(slotBrowse()));
@@ -173,12 +173,12 @@ void SettingsDownloads::slotDownloadTo(){
 
     QMenu *m = new QMenu(this);
     QAction *new_alias = new QAction(tr("New"), m);
-    new_alias->setIcon(WICON(WulforUtil::eiEDITADD));
+    new_alias->setIcon(WICON(AppIcons::eiEDITADD));
 
     m->addAction(new_alias);
 
     if (!selected.isEmpty())
-        m->addAction(WICON(WulforUtil::eiEDITDELETE), tr("Delete"));
+        m->addAction(WICON(AppIcons::eiEDITDELETE), tr("Delete"));
 
     QAction *ret = m->exec(QCursor::pos());
 

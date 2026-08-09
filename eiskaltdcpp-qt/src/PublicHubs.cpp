@@ -62,7 +62,7 @@ PublicHubs::PublicHubs(QWidget *parent) :
     treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    toolButton_CLOSEFILTER->setIcon(WICON(WulforUtil::eiEDITDELETE));
+    toolButton_CLOSEFILTER->setIcon(WICON(AppIcons::eiEDITDELETE));
 
     connect(this, SIGNAL(coreDownloadStarted(QString)),  this, SLOT(setStatus(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDownloadFailed(QString)),   this, SLOT(setStatus(QString)), Qt::QueuedConnection);

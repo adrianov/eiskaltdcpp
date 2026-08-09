@@ -43,7 +43,7 @@ public:
     QString  getArenaShortTitle(){ return getArenaTitle(); }
     QWidget *getWidget(){ return this; }
     QMenu   *getMenu(){ return nullptr; }
-    const QPixmap &getPixmap(){ return WICON(WulforUtil::eiSERVER); }
+    const QPixmap &getPixmap(){ return WICON(AppIcons::eiSERVER); }
     void requestFilter() { slotFilter(); }
     ArenaWidget::Role role() const { return ArenaWidget::PublicHubs; }
 

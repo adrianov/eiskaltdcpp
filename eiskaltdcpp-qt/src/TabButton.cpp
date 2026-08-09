@@ -47,7 +47,7 @@ TabButton::TabButton(QWidget *parent) :
     parentHeight = QPushButton::sizeHint().height();
 
     label = new QLabel(this);
-    label->setPixmap(WICON_SIZE(WulforUtil::eiEDITDELETE, CLOSEPXWIDTH));
+    label->setPixmap(WICON_SIZE(AppIcons::eiEDITDELETE, CLOSEPXWIDTH));
     label->setFixedSize(QSize(LABELWIDTH, LABELWIDTH));
     label->setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
 

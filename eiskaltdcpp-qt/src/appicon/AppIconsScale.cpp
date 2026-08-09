@@ -9,26 +9,15 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "WulforUtil.h"
-#include "WulforSettings.h"
+#include "appicon/AppIcons.h"
 
-#include <QFile>
-#include <QIcon>
-#include <QImage>
-#include <QPixmap>
-#include <QDir>
-#include <QResource>
 #include <QGuiApplication>
+#include <QImage>
 #include <QScreen>
 
-#include "icons/gv.xpm"
+namespace {
 
-static const int PXMTHEMESIDE = THEME_ICON_SIZE;
-
-// Smooth path: premultiplied ARGB + progressive halving before the final scale.
-// Much cleaner than one-shot downscale for large emoticon packs (e.g. 72→24).
-// FastTransformation skips this so tiny pixel-art upscales stay crisp.
-static QImage scaleImage(const QImage &source, int pixelSide, Qt::TransformationMode mode)
+QImage scaleImage(const QImage &source, int pixelSide, Qt::TransformationMode mode)
 {
     if (mode != Qt::SmoothTransformation)
         return source.scaled(pixelSide, pixelSide, Qt::KeepAspectRatio, mode);
@@ -47,7 +36,9 @@ static QImage scaleImage(const QImage &source, int pixelSide, Qt::Transformation
     return img.scaled(target, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
-qreal WulforUtil::iconDeviceRatio()
+} // namespace
+
+qreal AppIcons::deviceRatio()
 {
     qreal dpr = 1.0;
     const auto screens = QGuiApplication::screens();
@@ -58,15 +49,12 @@ qreal WulforUtil::iconDeviceRatio()
     return dpr;
 }
 
-// Render a pixmap at the physical resolution of the screen so icons stay sharp on Retina.
-// Prefer SmoothTransformation when the source has enough pixels (theme icons, hi-res
-// emoticon packs). FastTransformation remains available for tiny pixel-art upscales.
-QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide, Qt::TransformationMode mode)
+QPixmap AppIcons::scale(const QPixmap &source, int logicalSide, Qt::TransformationMode mode)
 {
     if (source.isNull() || logicalSide <= 0)
         return source;
 
-    const qreal dpr = iconDeviceRatio();
+    const qreal dpr = deviceRatio();
     const int pixelSide = qMax(1, qRound(logicalSide * dpr));
 
     if (source.width() == pixelSide && source.height() == pixelSide
@@ -76,14 +64,4 @@ QPixmap WulforUtil::scalePixmap(const QPixmap &source, int logicalSide, Qt::Tran
     QPixmap result = QPixmap::fromImage(scaleImage(source.toImage(), pixelSide, mode));
     result.setDevicePixelRatio(dpr);
     return result;
-}
-
-QPixmap WulforUtil::FROMTHEME(const QString &name, bool resource){
-    const QPixmap source = resource ? QPixmap(":/" + name + ".png") : loadPixmap(name + ".png");
-    return scalePixmap(source, PXMTHEMESIDE);
-}
-
-QPixmap WulforUtil::FROMTHEME_SIDE(const QString &name, bool resource, const int side){
-    const QPixmap source = resource ? QPixmap(":/" + name + ".png") : loadPixmap(name + ".png");
-    return scalePixmap(source, side);
 }

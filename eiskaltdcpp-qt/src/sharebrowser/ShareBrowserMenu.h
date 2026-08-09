@@ -20,7 +20,7 @@
 #include "dcpp/User.h"
 #include "dcpp/Singleton.h"
 
-/** Context menu for ShareBrowser list/tree panes (download, magnets, own-list actions). */
+/** Context menu for ShareBrowser panes: download, magnets, open, EPUB export, delete. */
 class ShareBrowserMenu : public dcpp::Singleton<ShareBrowserMenu> {
     friend class dcpp::Singleton<ShareBrowserMenu>;
 
@@ -40,12 +40,13 @@ public:
         RemoveRestriction,
         OpenFile,
         OpenUrl,
+        ConvertEpub,
         DeleteFile,
         None
     };
 
     Action exec(const dcpp::UserPtr &user = dcpp::UserPtr(nullptr), bool treePane = false,
-                bool hasDeletable = false);
+                bool hasDeletable = false, bool hasFb2 = false);
     QString getTarget() { return target; }
 
 private:
@@ -60,5 +61,6 @@ private:
     QString target;
     QAction *open_file;
     QAction *open_url;
+    QAction *convert_epub;
     QAction *delete_file;
 };

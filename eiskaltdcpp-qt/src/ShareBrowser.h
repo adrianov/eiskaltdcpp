@@ -47,7 +47,7 @@ public:
     QString  getArenaShortTitle() override;
     QWidget *getWidget() override;
     QMenu   *getMenu() override;
-    const QPixmap &getPixmap() override { return WICON(WulforUtil::eiOWN_FILELIST); }
+    const QPixmap &getPixmap() override { return WICON(AppIcons::eiOWN_FILELIST); }
     ArenaWidget::Role role() const override { return ArenaWidget::ShareBrowser; }
 
 protected:

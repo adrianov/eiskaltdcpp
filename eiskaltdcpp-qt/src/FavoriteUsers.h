@@ -46,7 +46,7 @@ public:
     virtual QString getArenaTitle() { return tr("Favourite users"); }
     virtual QString getArenaShortTitle() { return getArenaTitle(); }
     virtual QMenu *getMenu() { return nullptr; }
-    const QPixmap &getPixmap(){ return WICON(WulforUtil::eiFAVUSERS); }
+    const QPixmap &getPixmap(){ return WICON(AppIcons::eiFAVUSERS); }
     ArenaWidget::Role role() const { return ArenaWidget::FavoriteUsers; }
 
 Q_SIGNALS:

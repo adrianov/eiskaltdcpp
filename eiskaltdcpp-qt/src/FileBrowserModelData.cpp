@@ -39,7 +39,7 @@ QVariant FileBrowserModel::data(const QModelIndex &index, int role) const
         case Qt::DecorationRole:
         {
             if (item->dir && index.column() == COLUMN_FILEBROWSER_NAME)
-                return WICON_SIZE(WulforUtil::eiFOLDER_BLUE, 16);
+                return WICON_SIZE(AppIcons::eiFOLDER_BLUE, 16);
             else if (index.column() == COLUMN_FILEBROWSER_NAME)
                 return WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmapForFile(item->data(COLUMN_FILEBROWSER_NAME).toString()), 16);
             break;

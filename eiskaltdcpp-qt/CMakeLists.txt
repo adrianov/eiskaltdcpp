@@ -175,11 +175,12 @@ set(QT_EXTRA_SOURCES
     src/SideBarModelHistory.cpp
     src/SideBarModelData.cpp
     src/TransferViewModelParents.cpp
-    src/WulforUtilFileTypes.cpp
-    src/WulforUtilFileTypesExtra.cpp
-    src/WulforUtilFilePixmap.cpp
-    src/WulforUtilIcons.cpp
-    src/WulforUtilLoadIcons.cpp
+    src/appicon/AppIconsLoad.cpp
+    src/appicon/AppIconsScale.cpp
+    src/appicon/FileTypeIcon.cpp
+    src/appicon/FileTypeIconMap.cpp
+    src/appicon/FileTypeIconExtra.cpp
+    src/appicon/WulforUtilAppIcons.cpp
     src/WulforUtilPaths.cpp
     src/WulforUtilUserIcon.cpp
     src/WulforUtilUrl.cpp
@@ -232,6 +233,26 @@ set(QT_EXTRA_SOURCES
     src/sharebrowser/ShareBrowserMedia.cpp
     src/sharebrowser/ShareBrowserMenu.cpp
     src/sharebrowser/AsyncRunner.cpp
+    src/fb2epub/EpubPack.cpp
+    src/fb2epub/Fb2EpubExport.cpp
+    src/fb2epub/Fb2EpubConverter.cpp
+    src/fb2epub/Fb2EpubMetaParse.cpp
+    src/fb2epub/Fb2EpubNav.cpp
+    src/fb2epub/Fb2EpubOpf.cpp
+    src/fb2epub/Fb2EpubParser.cpp
+    src/fb2epub/Fb2EpubParserBody.cpp
+    src/fb2epub/Fb2EpubParserBodyExtra.cpp
+    src/fb2epub/Fb2EpubParserBodyStart.cpp
+    src/fb2epub/Fb2EpubParserEnd.cpp
+    src/fb2epub/Fb2EpubParserFootnotes.cpp
+    src/fb2epub/Fb2EpubParserImages.cpp
+    src/fb2epub/Fb2EpubParserMetaEnd.cpp
+    src/fb2epub/Fb2EpubParserMetaStart.cpp
+    src/fb2epub/Fb2EpubParserStart.cpp
+    src/fb2epub/Fb2EpubText.cpp
+    src/fb2epub/Fb2EpubWriter.cpp
+    src/fb2epub/Fb2Format.cpp
+    src/fb2epub/xml/SaxParser.cpp
     src/ShareBrowserActions.cpp
     src/ShareBrowserFilter.cpp
     src/ShareBrowserInit.cpp
@@ -484,9 +505,11 @@ endif ()
 
 include_directories (${PROJECT_SOURCE_DIR}
                      ${PROJECT_SOURCE_DIR}/src
+                     ${PROJECT_SOURCE_DIR}/src/fb2epub
                      ${PROJECT_SOURCE_DIR}/scriptengine
                      ${PROJECT_SOURCE_DIR}/..
-                     ${GETTEXT_INCLUDE_DIR})
+                     ${GETTEXT_INCLUDE_DIR}
+                     ${ZLIB_INCLUDE_DIR})
 if (NOT APPLE)
     list (APPEND LIBS ${ICONV_LIBRARIES})
 endif ()
@@ -696,11 +719,11 @@ else ()
 endif ()
 
 if (APPLE)
-    target_link_libraries (${PROJECT_NAME} ${LIBS} dcpp extra)
+    target_link_libraries (${PROJECT_NAME} ${LIBS} dcpp extra ${ZLIB_LIBRARIES})
 elseif (HAIKU)
-    target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp be)
+    target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp be ${ZLIB_LIBRARIES})
 else (APPLE)
-    target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp)
+    target_link_libraries (${PROJECT_NAME} ${LIBS} extra dcpp ${ZLIB_LIBRARIES})
 endif (APPLE)
 
 if (WIN32 OR APPLE OR HAIKU)

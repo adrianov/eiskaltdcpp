@@ -79,10 +79,10 @@ void SettingsNotification::init(){
         checkBox_ACTIVEPM->setChecked(WBGET("notification/play-sound-with-active-pm", true));
     }
 
-    toolButton_BRWNICK->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
-    toolButton_BRWPM->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
-    toolButton_BRWTR->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
-    toolButton_BRWFAV->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    toolButton_BRWNICK->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
+    toolButton_BRWPM->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
+    toolButton_BRWTR->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
+    toolButton_BRWFAV->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
     connect(toolButton_BRWNICK, SIGNAL(clicked()), this, SLOT(slotBrowseFile()));
     connect(toolButton_BRWPM,   SIGNAL(clicked()), this, SLOT(slotBrowseFile()));

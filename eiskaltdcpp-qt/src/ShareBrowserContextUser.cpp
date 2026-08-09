@@ -11,6 +11,7 @@
 
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
+#include "fb2epub/Fb2EpubExport.h"
 #include "search/SearchLocalPath.h"
 
 #include "dcpp/FavoriteManager.h"
@@ -18,6 +19,7 @@
 #include "dcpp/ShareManager.h"
 
 #include <QInputDialog>
+#include <QStringList>
 
 using namespace dcpp;
 
@@ -102,6 +104,19 @@ void ShareBrowser::contextUserActions(ShareBrowserMenu::Action act, const QModel
                         SearchLocalPath::openFile(local);
                 }
             }
+            break;
+        }
+        case ShareBrowserMenu::ConvertEpub:
+        {
+            QStringList paths;
+            for (const auto &index : list) {
+                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+                if (!item || !item->file)
+                    continue;
+                for (const auto &path : localPaths(listing, item))
+                    paths.push_back(_q(path));
+            }
+            Fb2EpubExport::convertAndReveal(paths);
             break;
         }
         case ShareBrowserMenu::DeleteFile:

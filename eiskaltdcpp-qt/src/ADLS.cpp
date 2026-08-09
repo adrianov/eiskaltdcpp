@@ -91,11 +91,11 @@ void ADLS::init(){
 
     WulforUtil *WU = WulforUtil::getInstance();
 
-    add_newButton->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-    changeButton->setIcon(WU->getPixmap(WulforUtil::eiEDIT));
-    removeButton->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
-    upButton->setIcon(WU->getPixmap(WulforUtil::eiUP));
-    downButton->setIcon(WU->getPixmap(WulforUtil::eiDOWN));
+    add_newButton->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
+    changeButton->setIcon(WU->getPixmap(AppIcons::eiEDIT));
+    removeButton->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
+    upButton->setIcon(WU->getPixmap(AppIcons::eiUP));
+    downButton->setIcon(WU->getPixmap(AppIcons::eiDOWN));
     line_2->hide();
     upButton->hide();
     downButton->hide();
@@ -135,7 +135,7 @@ void ADLS::slotContexMenu(const QPoint &){
     QMenu *menu = new QMenu(this);
 
     if (empty){
-        QAction *add_new = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add new"), menu);
+        QAction *add_new = new QAction(WU->getPixmap(AppIcons::eiBOOKMARK_ADD), tr("Add new"), menu);
         menu->addAction(add_new);
 
         QAction *res = menu->exec(QCursor::pos());
@@ -152,9 +152,9 @@ void ADLS::slotContexMenu(const QPoint &){
             return;
         }
 
-        QAction *add_new = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add new"), menu);
-        QAction *change  = new QAction(WU->getPixmap(WulforUtil::eiEDIT), tr("Change"), menu);
-        QAction *remove  = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete"), menu);
+        QAction *add_new = new QAction(WU->getPixmap(AppIcons::eiBOOKMARK_ADD), tr("Add new"), menu);
+        QAction *change  = new QAction(WU->getPixmap(AppIcons::eiEDIT), tr("Change"), menu);
+        QAction *remove  = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Delete"), menu);
         QAction *sep1    = new QAction(menu);
         sep1->setSeparator(true);
 

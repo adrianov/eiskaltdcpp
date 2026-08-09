@@ -47,7 +47,7 @@ QMenu *HubFrameMenu::buildAntispamMenu(bool showIcon){
     antispam_menu->setTitle(QObject::tr("AntiSpam"));
 
     if (showIcon) {
-        antispam_menu->menuAction()->setIcon(WICON(WulforUtil::eiSPAM));
+        antispam_menu->menuAction()->setIcon(WICON(AppIcons::eiSPAM));
         antispam_menu->setProperty("iconVisibleInMenu", true);
     }
 

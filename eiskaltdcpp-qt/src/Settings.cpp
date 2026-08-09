@@ -46,57 +46,57 @@ Settings::~Settings(){
 void Settings::init(){
     WulforUtil *WU = WulforUtil::getInstance();
 
-    QListWidgetItem *item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiUSERS), tr("Personal"), listWidget);
+    QListWidgetItem *item = new QListWidgetItem(WU->getPixmap(AppIcons::eiUSERS), tr("Personal"), listWidget);
     SettingsPersonal *personal = new SettingsPersonal(this);
     connect(this, SIGNAL(timeToDie()), personal, SLOT(ok()));
     widgets.insert(item, (int)Page::Personal);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiCONNECT), tr("Connection"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiCONNECT), tr("Connection"), listWidget);
     SettingsConnection *connection = new SettingsConnection(this);
     connect(this, SIGNAL(timeToDie()), connection, SLOT(ok()));
     widgets.insert(item, (int)Page::Connection);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiDOWNLOAD), tr("Downloads"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiDOWNLOAD), tr("Downloads"), listWidget);
     SettingsDownloads *downloads = new SettingsDownloads(this);
     connect(this, SIGNAL(timeToDie()), downloads, SLOT(ok()));
     widgets.insert(item, (int)Page::Downloads);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Sharing"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiFOLDER_BLUE), tr("Sharing"), listWidget);
     SettingsSharing *sharing = new SettingsSharing(this);
     connect(this, SIGNAL(timeToDie()), sharing, SLOT(ok()));
     widgets.insert(item, (int)Page::Sharing);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiGUI), tr("GUI"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiGUI), tr("GUI"), listWidget);
     SettingsGUI *gui = new SettingsGUI(this);
     connect(this, SIGNAL(timeToDie()), gui, SLOT(ok()));
     widgets.insert(item, (int)Page::GUI);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiMESSAGE), tr("Notifications"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiMESSAGE), tr("Notifications"), listWidget);
     SettingsNotification *notify = new SettingsNotification(this);
     connect(this, SIGNAL(timeToDie()), notify, SLOT(ok()));
     widgets.insert(item, (int)Page::Notifications);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiOPEN_LOG_FILE), tr("Logs"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiOPEN_LOG_FILE), tr("Logs"), listWidget);
     SettingsLog *logs = new SettingsLog(this);
     connect(this, SIGNAL(timeToDie()), logs, SLOT(ok()));
     widgets.insert(item, (int)Page::Logs);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiUSERS), tr("User Commands"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiUSERS), tr("User Commands"), listWidget);
     SettingsUC *ucs = new SettingsUC(this);
     connect(this, SIGNAL(timeToDie()), ucs, SLOT(ok()));
     widgets.insert(item, (int)Page::UserCommands);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiEDIT), tr("Shortcuts"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiEDIT), tr("Shortcuts"), listWidget);
     SettingsShortcuts *sshs = new SettingsShortcuts(this);
     connect(this, SIGNAL(timeToDie()), sshs, SLOT(ok()));
     widgets.insert(item, (int)Page::Shortcuts);
     
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiEDIT), tr("History"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiEDIT), tr("History"), listWidget);
     SettingsHistory *shist = new SettingsHistory(this);
     connect(this, SIGNAL(timeToDie()), shist, SLOT(ok()));
     widgets.insert(item, (int)Page::History);
 
-    item = new QListWidgetItem(WU->getPixmap(WulforUtil::eiCONSOLE), tr("Advanced"), listWidget);
+    item = new QListWidgetItem(WU->getPixmap(AppIcons::eiCONSOLE), tr("Advanced"), listWidget);
     SettingsAdvanced *sadv = new SettingsAdvanced(this);
     connect(this, SIGNAL(timeToDie()), sadv, SLOT(ok()));
     widgets.insert(item, (int)Page::Advanced);

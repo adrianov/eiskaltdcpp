@@ -102,7 +102,7 @@ int runApplication(EiskaltApp &app)
     if (WulforUtil::getInstance()->loadIcons())
         std::cout << QObject::tr("Application icons has been loaded").toStdString() << std::endl;
 
-    app.setWindowIcon(WICON(WulforUtil::eiICON_APPL));
+    app.setWindowIcon(WICON(AppIcons::eiICON_APPL));
     app.setAttribute(Qt::AA_DisableWindowContextHelpButton);
 
     ArenaWidgetManager::newInstance();

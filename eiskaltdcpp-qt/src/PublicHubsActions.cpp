@@ -32,9 +32,9 @@ void PublicHubs::slotContextMenu(){
     WulforUtil *WU = WulforUtil::getInstance();
 
     QMenu *m = new QMenu();
-    QAction *connect = new QAction(WU->getPixmap(WulforUtil::eiCONNECT), tr("Connect"), m);
-    QAction *add_fav = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add to favorites"), m);
-    QAction *copy    = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy &address to clipboard"), m);
+    QAction *connect = new QAction(WU->getPixmap(AppIcons::eiCONNECT), tr("Connect"), m);
+    QAction *add_fav = new QAction(WU->getPixmap(AppIcons::eiBOOKMARK_ADD), tr("Add to favorites"), m);
+    QAction *copy    = new QAction(WU->getPixmap(AppIcons::eiEDITCOPY), tr("Copy &address to clipboard"), m);
 
     m->addActions(QList<QAction*>() << connect << add_fav << copy);
 

@@ -52,9 +52,9 @@ void MainWindow::redrawToolPanel(){
         Notification::getInstance()->resetTrayIcon();
 #else
     if (has_unread)
-        qApp->setWindowIcon(WICON(WulforUtil::eiMESSAGE_TRAY_ICON));
+        qApp->setWindowIcon(WICON(AppIcons::eiMESSAGE_TRAY_ICON));
     else
-        qApp->setWindowIcon(WICON(WulforUtil::eiICON_APPL));
+        qApp->setWindowIcon(WICON(AppIcons::eiICON_APPL));
 #endif
 
     emit redrawWidgetPanels();

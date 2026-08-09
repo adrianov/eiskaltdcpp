@@ -495,10 +495,10 @@ void HubFrame::init(){
 
     toolButton_SMILE->setVisible(WBGET(WB_APP_ENABLE_EMOTICON) && EmoticonFactory::getInstance());
     toolButton_SMILE->setContextMenuPolicy(Qt::CustomContextMenu);
-    toolButton_SMILE->setIcon(WICON(WulforUtil::eiEMOTICON));
+    toolButton_SMILE->setIcon(WICON(AppIcons::eiEMOTICON));
     AppTheme::applyControlButton(toolButton_SMILE);
 
-    toolButton_HIDE->setIcon(WICON(WulforUtil::eiEDITDELETE));
+    toolButton_HIDE->setIcon(WICON(AppIcons::eiEDITDELETE));
 
     frame_SMILES->setLayout(new FlowLayout(frame_SMILES));
     frame_SMILES->setVisible(false);
@@ -588,9 +588,9 @@ void HubFrame::initMenu(){
 
     d->arenaMenu = new QMenu(tr("Hub menu"), this);
 
-    QAction *reconnect = new QAction(WU->getPixmap(WulforUtil::eiRECONNECT), tr("Reconnect"), d->arenaMenu);
-    QAction *show_wnd  = new QAction(WU->getPixmap(WulforUtil::eiCHAT), tr("Show widget"), d->arenaMenu);
-    QAction *addToFav  = new QAction(WU->getPixmap(WulforUtil::eiFAVSERVER), tr("Add to Favorites"), d->arenaMenu);
+    QAction *reconnect = new QAction(WU->getPixmap(AppIcons::eiRECONNECT), tr("Reconnect"), d->arenaMenu);
+    QAction *show_wnd  = new QAction(WU->getPixmap(AppIcons::eiCHAT), tr("Show widget"), d->arenaMenu);
+    QAction *addToFav  = new QAction(WU->getPixmap(AppIcons::eiFAVSERVER), tr("Add to Favorites"), d->arenaMenu);
     QMenu   *copyInfo  = new QMenu(tr("Copy"), d->arenaMenu);
     QAction *copyIP    = copyInfo->addAction(tr("Hub IP"));
     QAction *copyURL   = copyInfo->addAction(tr("Hub URL"));
@@ -598,7 +598,7 @@ void HubFrame::initMenu(){
 
     QAction *sep       = new QAction(d->arenaMenu);
     sep->setSeparator(true);
-    QAction *close_wnd = new QAction(WU->getPixmap(WulforUtil::eiEXIT), tr("Close"), d->arenaMenu);
+    QAction *close_wnd = new QAction(WU->getPixmap(AppIcons::eiEXIT), tr("Close"), d->arenaMenu);
 
     d->arenaMenu->addActions(QList<QAction*>() << reconnect
                                             << show_wnd
@@ -731,11 +731,11 @@ const QPixmap &HubFrame::getPixmap(){
     Q_D(HubFrame);
 
     if (d->hasHighlightMessages)
-        return WICON(WulforUtil::eiMESSAGE);
+        return WICON(AppIcons::eiMESSAGE);
     else if (d->hasMessages)
-        return WICON(WulforUtil::eiHUBMSG);
+        return WICON(AppIcons::eiHUBMSG);
     else
-        return WICON(WulforUtil::eiSERVER);
+        return WICON(AppIcons::eiSERVER);
 }
 
 void HubFrame::clearChat(){

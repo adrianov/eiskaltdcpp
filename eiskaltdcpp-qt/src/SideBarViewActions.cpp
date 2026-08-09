@@ -43,7 +43,7 @@ void SideBarView::slotSidebarContextMenu(){
     
     if (item && item->childCount() > 0){
         menu = new QMenu(this);
-        menu->addAction(WICON(WulforUtil::eiEDITDELETE), tr("Close all"));
+        menu->addAction(WICON(AppIcons::eiEDITDELETE), tr("Close all"));
 
         if (menu->exec(QCursor::pos())){
             QList<SideBarItem*> children = item->childItems;
@@ -64,7 +64,7 @@ void SideBarView::slotSidebarContextMenu(){
 
         if(!menu){
             menu = new QMenu(this);
-            menu->addAction(WICON(WulforUtil::eiEDITDELETE), tr("Close"));
+            menu->addAction(WICON(AppIcons::eiEDITDELETE), tr("Close"));
 
             if (menu->exec(QCursor::pos()))
                 ArenaWidgetManager::getInstance()->rem(item->getWidget());

@@ -45,8 +45,8 @@ void SearchBlackListDialog::slotContextMenu(){
     QModelIndexList indexes = s_m->selectedRows(0);
 
     QMenu *menu = new QMenu(this);
-    QAction *add = new QAction(WICON(WulforUtil::eiEDITADD), tr("Add new"), nullptr);
-    QAction *rem = new QAction(WICON(WulforUtil::eiEDITDELETE), tr("Remove"), nullptr);
+    QAction *add = new QAction(WICON(AppIcons::eiEDITADD), tr("Add new"), nullptr);
+    QAction *rem = new QAction(WICON(AppIcons::eiEDITDELETE), tr("Remove"), nullptr);
 
     menu->addActions(QList<QAction*>() << add << rem);
 

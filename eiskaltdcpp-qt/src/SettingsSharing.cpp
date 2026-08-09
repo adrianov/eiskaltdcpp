@@ -90,12 +90,12 @@ void SettingsSharing::ok(){
 void SettingsSharing::init(){
     WulforUtil *WU = WulforUtil::getInstance();
 
-    toolButton_ADD->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-    toolButton_EDIT->setIcon(WU->getPixmap(WulforUtil::eiEDIT));
-    toolButton_DELETE->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
-    toolButton_BROWSE->setIcon(WU->getPixmap(WulforUtil::eiFOLDER_BLUE));
+    toolButton_ADD->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
+    toolButton_EDIT->setIcon(WU->getPixmap(AppIcons::eiEDIT));
+    toolButton_DELETE->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
+    toolButton_BROWSE->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
-    toolButton_RECREATE->setIcon(WU->getPixmap(WulforUtil::eiRELOAD));
+    toolButton_RECREATE->setIcon(WU->getPixmap(AppIcons::eiRELOAD));
 
     checkBox_SHAREHIDDEN->setChecked(BOOLSETTING(SHARE_HIDDEN));
     checkBox_SHARE_TEMP_FILES->setChecked(BOOLSETTING(SHARE_TEMP_FILES));
@@ -285,16 +285,16 @@ void SettingsSharing::slotContextMenu(const QPoint &){
     QAction *add_new = nullptr, *rem = nullptr, *rename = nullptr;
     WulforUtil *WU = WulforUtil::getInstance();
 
-    add_new = new QAction(WU->getPixmap(WulforUtil::eiEDITADD), tr("Add"), menu);
+    add_new = new QAction(WU->getPixmap(AppIcons::eiEDITADD), tr("Add"), menu);
     menu->addAction(add_new);
 
     if (selected.size() == 1){
-        rename = new QAction(WU->getPixmap(WulforUtil::eiEDIT), tr("Rename"), menu);
+        rename = new QAction(WU->getPixmap(AppIcons::eiEDIT), tr("Rename"), menu);
         menu->addAction(rename);
     }
 
     if (!selected.isEmpty()){
-        rem = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Remove"), menu);
+        rem = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Remove"), menu);
         menu->addAction(rem);
     }
 

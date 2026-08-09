@@ -184,7 +184,7 @@ void IPFilterFrame::slotTreeViewContextMenu(QPoint){
 
     m->addMenu(ch_d);
     QAction *ch  = m->addAction(QIcon(), tr("Change IP/Mask"));
-    QAction *del = m->addAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete rule"));
+    QAction *del = m->addAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Delete rule"));
 
     QAction *result = m->exec(QCursor::pos());
 

@@ -10,6 +10,7 @@
 ***************************************************************************/
 
 #include "FinishedTransfers.h"
+#include "fb2epub/Fb2EpubExport.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -98,19 +99,44 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     }
 
     QMenu *m = new QMenu();
-    QAction *open_f   = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open file"), m);
-    QAction *open_dir = new QAction(WU->getPixmap(WulforUtil::eiFOLDER_BLUE), tr("Open directory"), m);
+    QAction *open_f   = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), tr("Open file"), m);
+    QAction *open_dir = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), tr("Open directory"), m);
+    QAction *convert_epub = nullptr;
     QAction *copy_name = nullptr;
     QAction *delete_f = nullptr;
 
     m->addAction(open_f);
     m->addAction(open_dir);
 
+    if (!isUpload) {
+        // Gate on name/suffix; TARGET may not match the on-disk Unicode form until resolved.
+        bool hasFb2 = false;
+        for (const auto &f : files) {
+            if (Fb2EpubExport::isFb2Name(f)) {
+                hasFb2 = true;
+                break;
+            }
+        }
+        if (!hasFb2 && comboBox->currentIndex() == 0) {
+            for (const auto &i : indexes) {
+                auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+                if (item && Fb2EpubExport::isFb2Name(item->data(COLUMN_FINISHED_NAME).toString())) {
+                    hasFb2 = true;
+                    break;
+                }
+            }
+        }
+        if (hasFb2) {
+            convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), tr("Convert to EPUB"), m);
+            m->addAction(convert_epub);
+        }
+    }
+
     if (comboBox->currentIndex() == 0){
-        copy_name = new QAction(WU->getPixmap(WulforUtil::eiEDITCOPY), tr("Copy file name"), m);
+        copy_name = new QAction(WU->getPixmap(AppIcons::eiEDITCOPY), tr("Copy file name"), m);
         m->addAction(copy_name);
 
-        delete_f = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete File"), m);
+        delete_f = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Delete File"), m);
         m->addSeparator();
         m->addAction(delete_f);
     }
@@ -126,6 +152,13 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     else if (ret == open_dir){
         for (const auto &f : files)
             WulforUtil::revealPath(f);
+    }
+    else if (convert_epub && ret == convert_epub){
+        QStringList resolved;
+        resolved.reserve(files.size());
+        for (const auto &f : files)
+            resolved.push_back(finishedLocalPath(f));
+        Fb2EpubExport::convertAndReveal(resolved);
     }
     else if (copy_name && ret == copy_name){
         QString names;

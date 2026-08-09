@@ -40,9 +40,9 @@ FileHasher::FileHasher(QWidget *parent) :
     setupUi(this);
     hasher = new HashThread();
 
-    toolButton_COPY_MAGNET->setIcon(WICON(WulforUtil::eiMAGNET));
-    toolButton_COPY_SEARCH_LINK->setIcon(WICON(WulforUtil::eiMAGNET));
-    toolButton_BROWSE->setIcon(WICON(WulforUtil::eiFOLDER_BLUE));
+    toolButton_COPY_MAGNET->setIcon(WICON(AppIcons::eiMAGNET));
+    toolButton_COPY_SEARCH_LINK->setIcon(WICON(AppIcons::eiMAGNET));
+    toolButton_BROWSE->setIcon(WICON(AppIcons::eiFOLDER_BLUE));
 
     connect(hasher, SIGNAL(finished()), this, SLOT(slotDone()));
     connect(pushButton_SEARCH, SIGNAL(clicked()), this, SLOT(search()));

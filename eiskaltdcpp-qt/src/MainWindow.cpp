@@ -93,7 +93,7 @@
 
 static void bindSpeedLimitIcon(QAction *act, bool enabled)
 {
-    WulforUtil::bindActionIcon(act, enabled ? WulforUtil::eiSPEED_LIMIT_ON : WulforUtil::eiSPEED_LIMIT_OFF);
+    WulforUtil::bindActionIcon(act, enabled ? AppIcons::eiSPEED_LIMIT_ON : AppIcons::eiSPEED_LIMIT_OFF);
 }
 
 using namespace std;
@@ -450,7 +450,7 @@ void MainWindow::init(){
 
     d->transfer_dock->hide();
 
-    this->setWindowIcon(WICON(WulforUtil::eiICON_APPL));
+    this->setWindowIcon(WICON(AppIcons::eiICON_APPL));
 
     setWindowTitle(QString::fromStdString(eiskaltdcppAppNameString));
 
@@ -593,125 +593,125 @@ void MainWindow::initActions(){
         d->fileOpenMagnet = new QAction("", this);
         d->fileOpenMagnet->setObjectName("fileOpenMagnet");
         SM->registerShortcut(d->fileOpenMagnet, QString("Ctrl+I"));
-        WulforUtil::bindActionIcon(d->fileOpenMagnet, WulforUtil::eiDOWNLOAD);
+        WulforUtil::bindActionIcon(d->fileOpenMagnet, AppIcons::eiDOWNLOAD);
         connect(d->fileOpenMagnet, SIGNAL(triggered()), this, SLOT(slotOpenMagnet()));
 
         d->fileFileListBrowserLocal = new QAction("", this);
         d->fileFileListBrowserLocal->setObjectName("fileFileListBrowserLocal");
         SM->registerShortcut(d->fileFileListBrowserLocal, QString("Ctrl+L"));
-        WulforUtil::bindActionIcon(d->fileFileListBrowserLocal, WulforUtil::eiOWN_FILELIST);
+        WulforUtil::bindActionIcon(d->fileFileListBrowserLocal, AppIcons::eiOWN_FILELIST);
         connect(d->fileFileListBrowserLocal, SIGNAL(triggered()), this, SLOT(slotFileBrowseOwnFilelist()));
 
         d->fileFileListBrowser = new QAction("", this);
         d->fileFileListBrowser->setObjectName("fileFileListBrowser");
-        WulforUtil::bindActionIcon(d->fileFileListBrowser, WulforUtil::eiOPENLIST);
+        WulforUtil::bindActionIcon(d->fileFileListBrowser, AppIcons::eiOPENLIST);
         connect(d->fileFileListBrowser, SIGNAL(triggered()), this, SLOT(slotFileBrowseFilelist()));
 
         d->fileFileListMatchAll = new QAction("", this);
         d->fileFileListMatchAll->setObjectName("fileFileListMatchAll");
-        //WulforUtil::bindActionIcon(d->fileFileListMatchAll, WulforUtil::eiOPENLIST);
+        //WulforUtil::bindActionIcon(d->fileFileListMatchAll, AppIcons::eiOPENLIST);
         connect(d->fileFileListMatchAll, SIGNAL(triggered()), this, SLOT(slotFileMatchAllList()));
 
         d->fileFileHasher = new QAction("", this);
         d->fileFileHasher->setObjectName("fileFileHasher");
-        WulforUtil::bindActionIcon(d->fileFileHasher, WulforUtil::eiOPENLIST);
+        WulforUtil::bindActionIcon(d->fileFileHasher, AppIcons::eiOPENLIST);
         connect(d->fileFileHasher, SIGNAL(triggered()), this, SLOT(slotFileHasher()));
 
         d->fileOpenLogFile = new QAction("", this);
         d->fileOpenLogFile->setObjectName("fileOpenLogFile");
-        WulforUtil::bindActionIcon(d->fileOpenLogFile, WulforUtil::eiOPEN_LOG_FILE);
+        WulforUtil::bindActionIcon(d->fileOpenLogFile, AppIcons::eiOPEN_LOG_FILE);
         connect(d->fileOpenLogFile, SIGNAL(triggered()), this, SLOT(slotFileOpenLogFile()));
 
         d->fileOpenDownloadDirectory = new QAction("", this);
         d->fileOpenDownloadDirectory->setObjectName("fileOpenDownloadDirectory");
-        WulforUtil::bindActionIcon(d->fileOpenDownloadDirectory, WulforUtil::eiFOLDER_BLUE);
+        WulforUtil::bindActionIcon(d->fileOpenDownloadDirectory, AppIcons::eiFOLDER_BLUE);
         connect(d->fileOpenDownloadDirectory, SIGNAL(triggered()), this, SLOT(slotFileOpenDownloadDirectory()));
 
         d->fileRefreshShareHashProgress = new QAction("", this);
         d->fileRefreshShareHashProgress->setObjectName("fileRefreshShareHashProgress");
         SM->registerShortcut(d->fileRefreshShareHashProgress, QString("Ctrl+E"));
-        WulforUtil::bindActionIcon(d->fileRefreshShareHashProgress, WulforUtil::eiHASHING);
+        WulforUtil::bindActionIcon(d->fileRefreshShareHashProgress, AppIcons::eiHASHING);
         connect(d->fileRefreshShareHashProgress, SIGNAL(triggered()), this, SLOT(slotFileRefreshShareHashProgress()));
 
         d->fileHideWindow = new QAction("", this);
         d->fileHideWindow->setObjectName("fileHideWindow");
         SM->registerShortcut(d->fileHideWindow, QString("Ctrl+Alt+H"));
-        WulforUtil::bindActionIcon(d->fileHideWindow, WulforUtil::eiHIDEWINDOW);
+        WulforUtil::bindActionIcon(d->fileHideWindow, AppIcons::eiHIDEWINDOW);
         connect(d->fileHideWindow, SIGNAL(triggered()), this, SLOT(slotHideWindow()));
 
         d->fileQuit = new QAction("", this);
         d->fileQuit->setObjectName("fileQuit");
         SM->registerShortcut(d->fileQuit, QString("Ctrl+Q"));
         d->fileQuit->setMenuRole(QAction::QuitRole);
-        WulforUtil::bindActionIcon(d->fileQuit, WulforUtil::eiEXIT);
+        WulforUtil::bindActionIcon(d->fileQuit, AppIcons::eiEXIT);
         connect(d->fileQuit, SIGNAL(triggered()), this, SLOT(slotExit()));
 
         d->hubsHubReconnect = new QAction("", this);
         d->hubsHubReconnect->setObjectName("hubsHubReconnect");
         SM->registerShortcut(d->hubsHubReconnect, QString("Ctrl+R"));
-        WulforUtil::bindActionIcon(d->hubsHubReconnect, WulforUtil::eiRECONNECT);
+        WulforUtil::bindActionIcon(d->hubsHubReconnect, AppIcons::eiRECONNECT);
         connect(d->hubsHubReconnect, SIGNAL(triggered()), this, SLOT(slotHubsReconnect()));
 
         d->hubsQuickConnect = new QAction("", this);
         d->hubsQuickConnect->setObjectName("hubsQuickConnect");
         SM->registerShortcut(d->hubsQuickConnect, QString("Ctrl+N"));
-        WulforUtil::bindActionIcon(d->hubsQuickConnect, WulforUtil::eiCONNECT);
+        WulforUtil::bindActionIcon(d->hubsQuickConnect, AppIcons::eiCONNECT);
         connect(d->hubsQuickConnect, SIGNAL(triggered()), this, SLOT(slotQC()));
 
         d->hubsFavoriteHubs = new QAction("", this);
         d->hubsFavoriteHubs->setObjectName("hubsFavoriteHubs");
         SM->registerShortcut(d->hubsFavoriteHubs, QString("Ctrl+H"));
-        WulforUtil::bindActionIcon(d->hubsFavoriteHubs, WulforUtil::eiFAVSERVER);
+        WulforUtil::bindActionIcon(d->hubsFavoriteHubs, AppIcons::eiFAVSERVER);
         connect(d->hubsFavoriteHubs, SIGNAL(triggered()), this, SLOT(slotHubsFavoriteHubs()));
 
         d->hubsPublicHubs = new QAction("", this);
         d->hubsPublicHubs->setObjectName("hubsPublicHubs");
         SM->registerShortcut(d->hubsPublicHubs, QString("Ctrl+P"));
-        WulforUtil::bindActionIcon(d->hubsPublicHubs, WulforUtil::eiSERVER);
+        WulforUtil::bindActionIcon(d->hubsPublicHubs, AppIcons::eiSERVER);
         connect(d->hubsPublicHubs, SIGNAL(triggered()), this, SLOT(slotHubsPublicHubs()));
 
         d->hubsFavoriteUsers = new QAction("", this);
         d->hubsFavoriteUsers->setObjectName("hubsFavoriteUsers");
         SM->registerShortcut(d->hubsFavoriteUsers, QString("Ctrl+U"));
-        WulforUtil::bindActionIcon(d->hubsFavoriteUsers, WulforUtil::eiFAVUSERS);
+        WulforUtil::bindActionIcon(d->hubsFavoriteUsers, AppIcons::eiFAVUSERS);
         connect(d->hubsFavoriteUsers, SIGNAL(triggered()), this, SLOT(slotHubsFavoriteUsers()));
 
         d->toolsHubManager = new QAction("", this);
         d->toolsHubManager->setObjectName("toolsHubManager");
-        WulforUtil::bindActionIcon(d->toolsHubManager, WulforUtil::eiSERVER);
+        WulforUtil::bindActionIcon(d->toolsHubManager, AppIcons::eiSERVER);
         connect(d->toolsHubManager, SIGNAL(triggered()), this, SLOT(slotToolsHubManager()));
 
         d->toolsCopyWindowTitle = new QAction("", this);
         d->toolsCopyWindowTitle->setObjectName("toolsCopyWindowTitle");
-        WulforUtil::bindActionIcon(d->toolsCopyWindowTitle, WulforUtil::eiEDITCOPY);
+        WulforUtil::bindActionIcon(d->toolsCopyWindowTitle, AppIcons::eiEDITCOPY);
         connect(d->toolsCopyWindowTitle, SIGNAL(triggered()), this, SLOT(slotToolsCopyWindowTitle()));
 
         d->toolsOptions = new QAction("", this);
         d->toolsOptions->setObjectName("toolsOptions");
         SM->registerShortcut(d->toolsOptions, QString("Ctrl+O"));
         d->toolsOptions->setMenuRole(QAction::PreferencesRole);
-        WulforUtil::bindActionIcon(d->toolsOptions, WulforUtil::eiCONFIGURE);
+        WulforUtil::bindActionIcon(d->toolsOptions, AppIcons::eiCONFIGURE);
         connect(d->toolsOptions, SIGNAL(triggered()), this, SLOT(slotToolsSettings()));
 
         d->toolsADLS = new QAction("", this);
         d->toolsADLS->setObjectName("toolsADLS");
-        WulforUtil::bindActionIcon(d->toolsADLS, WulforUtil::eiADLS);
+        WulforUtil::bindActionIcon(d->toolsADLS, AppIcons::eiADLS);
         connect(d->toolsADLS, SIGNAL(triggered()), this, SLOT(slotToolsADLS()));
 
         d->toolsCmdDebug = new QAction("", this);
         d->toolsCmdDebug->setObjectName("toolsCmdDebug");
-        WulforUtil::bindActionIcon(d->toolsCmdDebug, WulforUtil::eiCONSOLE);
+        WulforUtil::bindActionIcon(d->toolsCmdDebug, AppIcons::eiCONSOLE);
         connect(d->toolsCmdDebug, SIGNAL(triggered()), this, SLOT(slotToolsCmdDebug()));
 
         d->toolsSecretary = new QAction("", this);
         d->toolsSecretary->setObjectName("toolsSecretary");
-        WulforUtil::bindActionIcon(d->toolsSecretary, WulforUtil::eiMAGNET);
+        WulforUtil::bindActionIcon(d->toolsSecretary, AppIcons::eiMAGNET);
         connect(d->toolsSecretary, SIGNAL(triggered()), this, SLOT(slotToolsSecretary()));
 
         d->toolsTransfers = new QAction("", this);
         d->toolsTransfers->setObjectName("toolsTransfers");
         SM->registerShortcut(d->toolsTransfers, QString("Ctrl+T"));
-        WulforUtil::bindActionIcon(d->toolsTransfers, WulforUtil::eiTRANSFER);
+        WulforUtil::bindActionIcon(d->toolsTransfers, AppIcons::eiTRANSFER);
         d->toolsTransfers->setCheckable(true);
         connect(d->toolsTransfers, SIGNAL(toggled(bool)), this, SLOT(slotToolsTransfer(bool)));
         //transfer_dock->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
@@ -719,42 +719,42 @@ void MainWindow::initActions(){
         d->toolsDownloadQueue = new QAction("", this);
         d->toolsDownloadQueue->setObjectName("toolsDownloadQueue");
         SM->registerShortcut(d->toolsDownloadQueue, QString("Ctrl+D"));
-        WulforUtil::bindActionIcon(d->toolsDownloadQueue, WulforUtil::eiDOWNLOAD);
+        WulforUtil::bindActionIcon(d->toolsDownloadQueue, AppIcons::eiDOWNLOAD);
         connect(d->toolsDownloadQueue, SIGNAL(triggered()), this, SLOT(slotToolsDownloadQueue()));
 
         d->toolsQueuedUsers = new QAction("", this);
         d->toolsQueuedUsers->setObjectName("toolsQueuedUsers");
         SM->registerShortcut(d->toolsQueuedUsers, QString("Ctrl+Shift+U"));
-        WulforUtil::bindActionIcon(d->toolsQueuedUsers, WulforUtil::eiUSERS);
+        WulforUtil::bindActionIcon(d->toolsQueuedUsers, AppIcons::eiUSERS);
         connect(d->toolsQueuedUsers, SIGNAL(triggered()), this, SLOT(slotToolsQueuedUsers()));
 
         d->toolsFinishedDownloads = new QAction("", this);
         d->toolsFinishedDownloads->setObjectName("toolsFinishedDownloads");
         SM->registerShortcut(d->toolsFinishedDownloads, QString("Ctrl+["));
-        WulforUtil::bindActionIcon(d->toolsFinishedDownloads, WulforUtil::eiDOWNLIST);
+        WulforUtil::bindActionIcon(d->toolsFinishedDownloads, AppIcons::eiDOWNLIST);
         connect(d->toolsFinishedDownloads, SIGNAL(triggered()), this, SLOT(slotToolsFinishedDownloads()));
 
         d->toolsFinishedUploads = new QAction("", this);
         d->toolsFinishedUploads->setObjectName("toolsFinishedUploads");
         SM->registerShortcut(d->toolsFinishedUploads, QString("Ctrl+]"));
-        WulforUtil::bindActionIcon(d->toolsFinishedUploads, WulforUtil::eiUPLIST);
+        WulforUtil::bindActionIcon(d->toolsFinishedUploads, AppIcons::eiUPLIST);
         connect(d->toolsFinishedUploads, SIGNAL(triggered()), this, SLOT(slotToolsFinishedUploads()));
 
         d->toolsSearchSpy = new QAction("", this);
         d->toolsSearchSpy->setObjectName("toolsSpy");
-        WulforUtil::bindActionIcon(d->toolsSearchSpy, WulforUtil::eiSPY);
+        WulforUtil::bindActionIcon(d->toolsSearchSpy, AppIcons::eiSPY);
         connect(d->toolsSearchSpy, SIGNAL(triggered()), this, SLOT(slotToolsSpy()));
 
         d->toolsAntiSpam = new QAction("", this);
         d->toolsAntiSpam->setObjectName("toolsAntiSpam");
-        WulforUtil::bindActionIcon(d->toolsAntiSpam, WulforUtil::eiSPAM);
+        WulforUtil::bindActionIcon(d->toolsAntiSpam, AppIcons::eiSPAM);
         d->toolsAntiSpam->setCheckable(true);
         d->toolsAntiSpam->setChecked(AntiSpam::getInstance() != nullptr);
         connect(d->toolsAntiSpam, SIGNAL(triggered()), this, SLOT(slotToolsAntiSpam()));
 
         d->toolsIPFilter = new QAction("", this);
         d->toolsIPFilter->setObjectName("toolsIPFilter");
-        WulforUtil::bindActionIcon(d->toolsIPFilter, WulforUtil::eiFILTER);
+        WulforUtil::bindActionIcon(d->toolsIPFilter, AppIcons::eiFILTER);
         d->toolsIPFilter->setCheckable(true);
         d->toolsIPFilter->setChecked(BOOLSETTING(SettingsManager::IPFILTER));
         connect(d->toolsIPFilter, SIGNAL(triggered()), this, SLOT(slotToolsIPFilter()));
@@ -777,13 +777,13 @@ void MainWindow::initActions(){
 #ifdef USE_JS
         d->toolsJS = new QAction("", this);
         d->toolsJS->setObjectName("toolsJS");
-        WulforUtil::bindActionIcon(d->toolsJS, WulforUtil::eiPLUGIN);
+        WulforUtil::bindActionIcon(d->toolsJS, AppIcons::eiPLUGIN);
         connect(d->toolsJS, SIGNAL(triggered()), this, SLOT(slotToolsJS()));
 
         d->toolsJSConsole = new QAction("", this);
         d->toolsJSConsole->setObjectName("toolsJSConsole");
         SM->registerShortcut(d->toolsJSConsole, QString("Ctrl+Alt+J"));
-        WulforUtil::bindActionIcon(d->toolsJSConsole, WulforUtil::eiCONSOLE);
+        WulforUtil::bindActionIcon(d->toolsJSConsole, AppIcons::eiCONSOLE);
         connect(d->toolsJSConsole, SIGNAL(triggered()), this, SLOT(slotToolsJSConsole()));
 #endif
 
@@ -804,12 +804,12 @@ void MainWindow::initActions(){
         }
         // end
         d->menuAwayAction->setMenu(d->menuAway);
-        d->menuAwayAction->setIcon(WU->getIcon(WulforUtil::eiAWAY));
+        d->menuAwayAction->setIcon(WU->getIcon(AppIcons::eiAWAY));
 
         d->toolsSearch = new QAction("", this);
         d->toolsSearch->setObjectName("toolsSearch");
         SM->registerShortcut(d->toolsSearch, QString("Ctrl+S"));
-        WulforUtil::bindActionIcon(d->toolsSearch, WulforUtil::eiFILEFIND);
+        WulforUtil::bindActionIcon(d->toolsSearch, AppIcons::eiFILEFIND);
         connect(d->toolsSearch, SIGNAL(triggered()), this, SLOT(slotToolsSearch()));
 
         d->toolsHideProgressSpace = new QAction("", this);
@@ -818,17 +818,17 @@ void MainWindow::initActions(){
 #if (!defined FREE_SPACE_BAR_C)
         d->toolsHideProgressSpace->setVisible(false);
 #endif
-        WulforUtil::bindActionIcon(d->toolsHideProgressSpace, WulforUtil::eiFREESPACE);
+        WulforUtil::bindActionIcon(d->toolsHideProgressSpace, AppIcons::eiFREESPACE);
         connect(d->toolsHideProgressSpace, SIGNAL(triggered()), this, SLOT(slotHideProgressSpace()));
 
         d->toolsHideLastStatus = new QAction("", this);
         d->toolsHideLastStatus->setObjectName("toolsHideLastStatus");
-        WulforUtil::bindActionIcon(d->toolsHideLastStatus, WulforUtil::eiSTATUS);
+        WulforUtil::bindActionIcon(d->toolsHideLastStatus, AppIcons::eiSTATUS);
         connect(d->toolsHideLastStatus, SIGNAL(triggered()), this, SLOT(slotHideLastStatus()));
 
         d->toolsHideUsersStatisctics = new QAction("", this);
         d->toolsHideUsersStatisctics->setObjectName("toolsHideUsersStatisctics");
-        WulforUtil::bindActionIcon(d->toolsHideUsersStatisctics, WulforUtil::eiUSERS);
+        WulforUtil::bindActionIcon(d->toolsHideUsersStatisctics, AppIcons::eiUSERS);
         connect(d->toolsHideUsersStatisctics, SIGNAL(triggered()), this, SLOT(slotHideUsersStatistics()));
 
         d->toolsSwitchSpeedLimit = new QAction("", this);
@@ -841,18 +841,18 @@ void MainWindow::initActions(){
 
         d->chatClear = new QAction("", this);
         d->chatClear->setObjectName("chatClear");
-        WulforUtil::bindActionIcon(d->chatClear, WulforUtil::eiCLEAR);
+        WulforUtil::bindActionIcon(d->chatClear, AppIcons::eiCLEAR);
         connect(d->chatClear, SIGNAL(triggered()), this, SLOT(slotChatClear()));
 
         d->findInWidget = new QAction("", this);
         d->findInWidget->setObjectName("findInWidget");
         SM->registerShortcut(d->findInWidget, QString("Ctrl+F"));
-        WulforUtil::bindActionIcon(d->findInWidget, WulforUtil::eiFIND);
+        WulforUtil::bindActionIcon(d->findInWidget, AppIcons::eiFIND);
         connect(d->findInWidget, SIGNAL(triggered()), this, SLOT(slotFind()));
 
         d->chatDisable = new QAction("", this);
         d->chatDisable->setObjectName("chatDisable");
-        WulforUtil::bindActionIcon(d->chatDisable, WulforUtil::eiEDITDELETE);
+        WulforUtil::bindActionIcon(d->chatDisable, AppIcons::eiEDITDELETE);
         connect(d->chatDisable, SIGNAL(triggered()), this, SLOT(slotChatDisable()));
 
         QAction *separator0 = new QAction("", this);
@@ -1051,12 +1051,12 @@ void MainWindow::initActions(){
 
         d->aboutClient = new QAction("", this);
         d->aboutClient->setMenuRole(QAction::AboutRole);
-        WulforUtil::bindActionIcon(d->aboutClient, WulforUtil::eiICON_APPL);
+        WulforUtil::bindActionIcon(d->aboutClient, AppIcons::eiICON_APPL);
         connect(d->aboutClient, SIGNAL(triggered()), this, SLOT(slotAboutClient()));
 
         d->aboutQt = new QAction("", this);
         d->aboutQt->setMenuRole(QAction::AboutQtRole);
-        WulforUtil::bindActionIcon(d->aboutQt, WulforUtil::eiQT_LOGO);
+        WulforUtil::bindActionIcon(d->aboutQt, AppIcons::eiQT_LOGO);
         connect(d->aboutQt, SIGNAL(triggered()), this, SLOT(slotAboutQt()));
     }
 }
@@ -1583,7 +1583,7 @@ void MainWindow::toggleMainMenu(bool showMenu){
             if (!compactMenus){
                 compactMenus = new QAction(tr("Menu"), this);
                 compactMenus->setObjectName("compactMenus");
-                compactMenus->setIcon(WICON(WulforUtil::eiEDIT));
+                compactMenus->setIcon(WICON(AppIcons::eiEDIT));
             }
             else {
                 compactMenus->menu()->deleteLater();
@@ -2138,7 +2138,7 @@ void MainWindow::initDockMenuBar(){
     QMenu *menu = new QMenu(this);
     QAction *setup_speed_lim = new QAction(tr("Setup speed limits"), menu);
 
-    setup_speed_lim->setIcon(WICON(WulforUtil::eiSPEED_LIMIT_ON));
+    setup_speed_lim->setIcon(WICON(AppIcons::eiSPEED_LIMIT_ON));
 
     QMenu *menuAdditional = new QMenu(tr("Additional"), this);
     QAction *actSuppressSnd = new QAction(tr("Suppress sound notifications"), menuAdditional);

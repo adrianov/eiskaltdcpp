@@ -104,7 +104,7 @@ void TabFrame::slotContextMenu() {
             widget_menu->exec(btn->mapToGlobal(btn->rect().bottomLeft()));
         } else {
             widget_menu = new QMenu(this);
-            widget_menu->addAction(WulforUtil::getInstance()->getPixmap(WulforUtil::eiEDITDELETE), tr("Close"));
+            widget_menu->addAction(WulforUtil::getInstance()->getPixmap(AppIcons::eiEDITDELETE), tr("Close"));
 
             if (widget_menu->exec(QCursor::pos()))
                 ArenaWidgetManager::getInstance()->rem(awgt);

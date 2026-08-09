@@ -146,10 +146,10 @@ void FavoriteHubs::init(){
 
     WulforUtil *WU = WulforUtil::getInstance();
 
-    add_newButton->setIcon(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD));
-    changeButton->setIcon(WU->getPixmap(WulforUtil::eiEDIT));
-    removeButton->setIcon(WU->getPixmap(WulforUtil::eiEDITDELETE));
-    connectButton->setIcon(WU->getPixmap(WulforUtil::eiCONNECT));
+    add_newButton->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
+    changeButton->setIcon(WU->getPixmap(AppIcons::eiEDIT));
+    removeButton->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
+    connectButton->setIcon(WU->getPixmap(AppIcons::eiCONNECT));
 
     load();
 
@@ -378,7 +378,7 @@ void FavoriteHubs::slotContexMenu(const QPoint &){
     QMenu *menu = new QMenu(this);
 
     if (empty){
-        QAction *add_new = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add new"), menu);
+        QAction *add_new = new QAction(WU->getPixmap(AppIcons::eiBOOKMARK_ADD), tr("Add new"), menu);
         menu->addAction(add_new);
 
         QAction *res = menu->exec(QCursor::pos());
@@ -408,10 +408,10 @@ void FavoriteHubs::slotContexMenu(const QPoint &){
             return;
         }
 
-        QAction *add_new = new QAction(WU->getPixmap(WulforUtil::eiBOOKMARK_ADD), tr("Add new"), menu);
-        QAction *change  = new QAction(WU->getPixmap(WulforUtil::eiEDIT), tr("Change"), menu);
-        QAction *remove  = new QAction(WU->getPixmap(WulforUtil::eiEDITDELETE), tr("Delete"), menu);
-        QAction *conn    = new QAction(WU->getPixmap(WulforUtil::eiCONNECT), tr("Connect"), menu);
+        QAction *add_new = new QAction(WU->getPixmap(AppIcons::eiBOOKMARK_ADD), tr("Add new"), menu);
+        QAction *change  = new QAction(WU->getPixmap(AppIcons::eiEDIT), tr("Change"), menu);
+        QAction *remove  = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), tr("Delete"), menu);
+        QAction *conn    = new QAction(WU->getPixmap(AppIcons::eiCONNECT), tr("Connect"), menu);
         QAction *sep1    = new QAction(menu);
         QAction *sep2    = new QAction(menu);
         sep1->setSeparator(true);

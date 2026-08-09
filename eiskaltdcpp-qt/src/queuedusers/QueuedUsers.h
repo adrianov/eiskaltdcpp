@@ -40,7 +40,7 @@ public:
     QString getArenaTitle() { return tr("Queued Users"); }
     QString getArenaShortTitle() { return getArenaTitle(); }
     QMenu *getMenu() { return nullptr; }
-    const QPixmap &getPixmap(){ return WulforUtil::getInstance()->getPixmap(WulforUtil::eiUSERS); }
+    const QPixmap &getPixmap(){ return WulforUtil::getInstance()->getPixmap(AppIcons::eiUSERS); }
     ArenaWidget::Role role() const { return ArenaWidget::QueuedUsers; }
 
 Q_SIGNALS:

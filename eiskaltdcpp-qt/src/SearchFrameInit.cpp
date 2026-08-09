@@ -54,7 +54,7 @@ void SearchFrame::init(){
     treeView_HUBS->setModel(d->str_model);
 
     d->arena_menu = new QMenu(this->windowTitle());
-    QAction *close_wnd = new QAction(WICON(WulforUtil::eiFILECLOSE), tr("Close"), d->arena_menu);
+    QAction *close_wnd = new QAction(WICON(AppIcons::eiFILECLOSE), tr("Close"), d->arena_menu);
     d->arena_menu->addAction(close_wnd);
     SearchFileTypes::fillCombo(comboBox_FILETYPES);
 
@@ -70,7 +70,7 @@ void SearchFrame::init(){
     d->focusShortcut->setContext(Qt::WidgetWithChildrenShortcut);
 
     lineEdit_SEARCHSTR->setMenu(m);
-    lineEdit_SEARCHSTR->setPixmap(WICON_SIZE(WulforUtil::eiEDITADD, 16));
+    lineEdit_SEARCHSTR->setPixmap(WICON_SIZE(AppIcons::eiEDITADD, 16));
 
     connect(this, SIGNAL(coreClientConnected(QString)),    this, SLOT(onHubAdded(QString)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreClientDisconnected(QString)), this, SLOT(onHubRemoved(QString)),Qt::QueuedConnection);
@@ -141,6 +141,6 @@ QMenu *SearchFrame::getMenu(){
 }
 
 const QPixmap &SearchFrame::getPixmap(){
-    return WICON(WulforUtil::eiFILEFIND);
+    return WICON(AppIcons::eiFILEFIND);
 }
 
