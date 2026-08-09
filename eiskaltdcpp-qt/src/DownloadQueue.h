@@ -142,6 +142,8 @@ private:
     void init();
     void load();
     void save();
+    /** Columns kept out of the queue header (and its column menu). */
+    static QList<int> hiddenHeaderColumns();
 
     void getParams(VarMap&, const dcpp::QueueItem*);
     /** Fill USERS/STATUS from ShareIndex; attach online holders when needed. */

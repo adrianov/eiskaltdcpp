@@ -139,8 +139,16 @@ void DownloadQueue::init(){
     ArenaWidget::setState( ArenaWidget::Flags(ArenaWidget::state() | ArenaWidget::Singleton | ArenaWidget::Hidden) );
 }
 
+QList<int> DownloadQueue::hiddenHeaderColumns()
+{
+    return { COLUMN_DOWNLOADQUEUE_TTH };
+}
+
 void DownloadQueue::load(){
     WulforUtil::restoreTreeHeader(treeView_TARGET->header(), WVGET(WS_DQUEUE_STATE, QByteArray()).toByteArray());
+    for (int col : hiddenHeaderColumns())
+        treeView_TARGET->header()->hideSection(col);
+    WulforUtil::ensureTreeHeaderAutosized(treeView_TARGET);
     treeView_TARGET->setSortingEnabled(true);
 }
 

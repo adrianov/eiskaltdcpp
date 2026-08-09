@@ -108,7 +108,7 @@ void DownloadQueue::slotCollapseRow(const QModelIndex &row){
 }
 
 void DownloadQueue::slotHeaderMenu(const QPoint&){
-    WulforUtil::headerMenu(treeView_TARGET);
+    WulforUtil::headerMenu(treeView_TARGET, hiddenHeaderColumns());
 }
 
 void DownloadQueue::slotUpdateStats(quint64 files, quint64 size){
