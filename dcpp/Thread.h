@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2001-2019 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +23,10 @@
 #else
 #include <pthread.h>
 #include <sched.h>
-#include <sys/resource.h>
 #include <unistd.h>
 #endif
 
+#include <atomic>
 #include <cstdint>
 
 #include "NonCopyable.h"
@@ -38,14 +39,14 @@ STANDARD_EXCEPTION(ThreadException);
 class Thread : private NonCopyable
 {
 public:
-#ifdef _WIN32
     enum Priority {
-        IDLE = THREAD_PRIORITY_IDLE,
-        LOW = THREAD_PRIORITY_BELOW_NORMAL,
-        NORMAL = THREAD_PRIORITY_NORMAL,
-        HIGH = THREAD_PRIORITY_ABOVE_NORMAL
+        IDLE,
+        LOW,
+        NORMAL,
+        HIGH
     };
 
+#ifdef _WIN32
     Thread(): threadHandle(INVALID_HANDLE_VALUE), threadId(0){ }
     virtual ~Thread() {
         if(threadHandle != INVALID_HANDLE_VALUE)
@@ -63,19 +64,10 @@ public:
         threadHandle = INVALID_HANDLE_VALUE;
     }
 
-    void setThreadPriority(Priority p) { ::SetThreadPriority(threadHandle, p); }
-
     static void sleep(uint32_t millis) { ::Sleep(millis); }
     static void yield() { ::Sleep(0); }
 
 #else
-
-    enum Priority {
-        IDLE = 1,
-        LOW = 1,
-        NORMAL = 0,
-        HIGH = -1
-    };
     Thread(): threadHandle(0) { }
     virtual ~Thread() {
         if(threadHandle != 0) {
@@ -90,32 +82,32 @@ public:
         }
     }
 
-#ifndef __HAIKU__
-    void setThreadPriority(Priority p) { setpriority(PRIO_PROCESS, 0, p); }
-#else
-    void setThreadPriority(Priority p) { }
-#endif
-
     static void sleep(uint32_t millis) { ::usleep(millis*1000); }
     static void yield() { ::sched_yield(); }
 
 #endif
 
+    /** Store priority; apply now when possible (self, or Win32 handle). */
+    void setThreadPriority(Priority p);
+    Priority getThreadPriority() const { return threadPriority.load(std::memory_order_relaxed); }
+
 protected:
     virtual int run() = 0;
+
+    /** Apply getThreadPriority() to the calling thread (CPU + I/O class). */
+    void applyThreadPriority();
 
 #ifdef _WIN32
     HANDLE threadHandle;
     DWORD threadId;
-    static DWORD WINAPI starter(void* p) {
-        Thread* t = (Thread*)p;
-        t->run();
-        return 0;
-    }
+    static DWORD WINAPI starter(void* p);
 #else
     pthread_t threadHandle;
     static void* starter(void* p);
 #endif
+
+private:
+    std::atomic<Priority> threadPriority{NORMAL};
 };
 
 } // namespace dcpp

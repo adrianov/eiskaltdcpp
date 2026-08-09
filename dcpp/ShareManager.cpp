@@ -769,11 +769,10 @@ void ShareManager::refresh(bool dirs /* = false */, bool aUpdate /* = true */, b
         initial = false;
     }
     try {
+        setThreadPriority(Thread::LOW);
         start();
         if(block && !cached) {
             join();
-        } else {
-            setThreadPriority(Thread::LOW);
         }
     } catch(const ThreadException& e) {
         LogManager::getInstance()->message(str(F_("File list refresh failed: %1%") % e.getError()));
