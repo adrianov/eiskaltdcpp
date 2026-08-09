@@ -19,38 +19,39 @@
 class QAbstractItemView;
 class QEvent;
 class QHeaderView;
+class QTimer;
 
 /**
- * Defers header column fitting until the view is ready. One content fit runs
- * after rows exist; later inserts do not keep rewriting widths.
- * Columns the user has dragged stay at that width (no further autosize).
- * Does not watch ancestor widgets — dock/window drags must stay fluid.
+ * Debounced column autosize for tree/table headers:
+ * - width = max(header title, p80 or p100 if within 20% of p80); scroll OK
+ * - user-dragged columns stay fixed; cell value updates alone do not refit
+ * - refit when the row count changes (1s debounce after the last change)
+ * - saved header state is kept on load until a later row-count fit
  */
 class TreeHeaderAutosize : public QObject
 {
 public:
     static void restore(QHeaderView *header, const QByteArray &state);
     static void ensure(QAbstractItemView *view);
-    /** Logical column that grows/shrinks to fit the viewport; -1 = first visible. */
-    static void setStretchColumn(QAbstractItemView *view, int logicalColumn);
 
 private:
     explicit TreeHeaderAutosize(QAbstractItemView *view);
 
     static TreeHeaderAutosize *attached(QAbstractItemView *view);
+    static QHeaderView *headerOf(QAbstractItemView *view);
+
     void hookHeader();
     void requestFit();
     void hookModel();
     void scheduleCheck();
     void checkLayout();
+    void applyFit();
     bool eventFilter(QObject *obj, QEvent *ev) override;
 
     QPointer<QAbstractItemView> view_;
-    int stretchColumn_ = -1;
+    QTimer *debounce_ = nullptr;
     bool done_ = false;
-    bool pending_ = false;
     bool modelHooked_ = false;
-    bool contentFit_ = false; // one content fit after the model has rows
-    bool fitting_ = false;    // ignore sectionResized from our own fits
+    bool fitting_ = false;
     QSet<int> manual_;
 };

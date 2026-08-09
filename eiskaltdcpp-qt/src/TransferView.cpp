@@ -12,7 +12,6 @@
 #include "TransferViewModel.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
-#include "treeheader/TreeHeaderAutosize.h"
 
 #include "dcpp/QueueManager.h"
 #include "dcpp/DownloadManager.h"
@@ -100,9 +99,6 @@ void TransferView::init(){
     connect(treeView_TRANSFERS, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotContextMenu(QPoint)));
     connect(treeView_TRANSFERS, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotDoubleClicked(QModelIndex)));
     connect(treeView_TRANSFERS->header(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotHeaderMenu(QPoint)));
-
-    // Filename absorbs leftover/overflow; default stretch is column 0 (Users) and collapses nicks.
-    TreeHeaderAutosize::setStretchColumn(treeView_TRANSFERS, COLUMN_TRANSFER_FNAME);
 
     connect(this, SIGNAL(coreDMRequesting(VarMap)),     model, SLOT(initTransfer(VarMap)), Qt::QueuedConnection);
     connect(this, SIGNAL(coreDMQueued(VarMap)),         model, SLOT(updateTransfer(VarMap)), Qt::QueuedConnection);

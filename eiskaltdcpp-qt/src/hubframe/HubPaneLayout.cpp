@@ -8,9 +8,7 @@
 
 #include "hubframe/HubPaneLayout.h"
 
-#include "UserListModel.h"
 #include "WulforSettings.h"
-#include "treeheader/TreeHeaderAutosize.h"
 
 #include <QAbstractButton>
 #include <QColor>
@@ -45,7 +43,6 @@ void HubPaneLayout::bind(QSplitter *split, QTreeView *users, QTextEdit *chat)
     split_->setStretchFactor(0, 1);
     split_->setStretchFactor(1, 0);
     loosenListSize();
-    TreeHeaderAutosize::setStretchColumn(users_, COLUMN_COMMENT);
     split_->installEventFilter(this);
 }
 

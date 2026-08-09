@@ -10,16 +10,20 @@
  ***************************************************************************/
 
 #include "treeheader/TreeHeaderAutosize.h"
-#include "treeheader/HeaderColumnFit.h"
+#include "treeheader/ColumnContentSpan.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QHeaderView>
-#include <QMetaObject>
+#include <QTableView>
+#include <QTimer>
+#include <QTreeView>
+#include <QTreeWidget>
 
 namespace {
 const char kObjectName[] = "TreeHeaderAutosize";
+constexpr int kDebounceMs = 1000;
 }
 
 TreeHeaderAutosize *TreeHeaderAutosize::attached(QAbstractItemView *view)
@@ -32,12 +36,26 @@ TreeHeaderAutosize *TreeHeaderAutosize::attached(QAbstractItemView *view)
     return new TreeHeaderAutosize(view);
 }
 
+QHeaderView *TreeHeaderAutosize::headerOf(QAbstractItemView *view)
+{
+    if (QTableView *table = qobject_cast<QTableView*>(view))
+        return table->horizontalHeader();
+    if (QTreeWidget *tw = qobject_cast<QTreeWidget*>(view))
+        return tw->header();
+    if (QTreeView *tree = qobject_cast<QTreeView*>(view))
+        return tree->header();
+    return nullptr;
+}
+
 TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
     : QObject(view)
     , view_(view)
+    , debounce_(new QTimer(this))
 {
     setObjectName(QLatin1String(kObjectName));
-    // View only — ancestor Resize (MainWindow / side dock) must not fit columns.
+    debounce_->setSingleShot(true);
+    debounce_->setInterval(kDebounceMs);
+    connect(debounce_, &QTimer::timeout, this, [this]() { checkLayout(); });
     view->installEventFilter(this);
     hookHeader();
     hookModel();
@@ -45,23 +63,13 @@ TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
 
 void TreeHeaderAutosize::hookHeader()
 {
-    QHeaderView *header = HeaderColumnFit::headerOf(view_);
+    QHeaderView *header = headerOf(view_);
     if (!header)
         return;
     connect(header, &QHeaderView::sectionResized, this, [this](int logical, int, int) {
         if (!fitting_)
             manual_.insert(logical);
     });
-}
-
-void TreeHeaderAutosize::setStretchColumn(QAbstractItemView *view, int logicalColumn)
-{
-    TreeHeaderAutosize *a = attached(view);
-    if (!a || a->stretchColumn_ == logicalColumn)
-        return;
-    a->stretchColumn_ = logicalColumn;
-    a->contentFit_ = false;
-    a->requestFit();
 }
 
 void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
@@ -71,24 +79,28 @@ void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
     QAbstractItemView *view = qobject_cast<QAbstractItemView*>(header->parentWidget());
     if (!view)
         return;
-    header->setStretchLastSection(false);
     TreeHeaderAutosize *a = attached(view);
     a->fitting_ = true;
     if (!state.isEmpty())
         header->restoreState(state);
+    // After restore: saved state may re-enable stretchLastSection (QTreeView default).
+    header->setStretchLastSection(false);
     a->fitting_ = false;
     a->manual_.clear();
-    a->contentFit_ = false;
-    a->requestFit();
+    a->hookModel();
+    if (state.isEmpty()) {
+        a->requestFit();
+    } else {
+        // Keep saved widths; a later row-count change may refit non-manual columns.
+        a->done_ = true;
+    }
 }
 
 void TreeHeaderAutosize::ensure(QAbstractItemView *view)
 {
     if (!view)
         return;
-    TreeHeaderAutosize *a = attached(view);
-    a->contentFit_ = false;
-    a->requestFit();
+    attached(view)->requestFit();
 }
 
 void TreeHeaderAutosize::requestFit()
@@ -107,54 +119,50 @@ void TreeHeaderAutosize::hookModel()
         return;
     modelHooked_ = true;
     connect(model, &QAbstractItemModel::rowsInserted, this, [this]() { requestFit(); });
+    connect(model, &QAbstractItemModel::rowsRemoved, this, [this]() { requestFit(); });
     connect(model, &QAbstractItemModel::columnsInserted, this, [this]() { requestFit(); });
-    connect(model, &QAbstractItemModel::modelReset, this, [this]() {
-        contentFit_ = false;
-        requestFit();
-    });
+    connect(model, &QAbstractItemModel::modelReset, this, [this]() { requestFit(); });
 }
 
 void TreeHeaderAutosize::scheduleCheck()
 {
-    if (pending_)
-        return;
-    pending_ = true;
-    QMetaObject::invokeMethod(this, [this]() {
-        pending_ = false;
-        checkLayout();
-    }, Qt::QueuedConnection);
+    debounce_->start();
 }
 
 bool TreeHeaderAutosize::eventFilter(QObject *obj, QEvent *ev)
 {
     Q_UNUSED(obj);
-    if (!view_ || done_)
+    if (!view_)
         return false;
-    // Resize only until the first successful fit — later dock drags stay free.
-    if (ev->type() == QEvent::Show || ev->type() == QEvent::Resize)
+    if ((ev->type() == QEvent::Show || ev->type() == QEvent::Resize) && !done_)
         scheduleCheck();
     return false;
 }
 
+void TreeHeaderAutosize::applyFit()
+{
+    QHeaderView *header = headerOf(view_);
+    if (!header || header->count() < 1)
+        return;
+    header->setStretchLastSection(false);
+    ColumnContentSpan span(view_);
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (header->isSectionHidden(col) || manual_.contains(col))
+            continue;
+        header->resizeSection(col, span.cells(col));
+    }
+}
+
 void TreeHeaderAutosize::checkLayout()
 {
-    if (!view_)
-        return;
-    HeaderColumnFit fit(view_, stretchColumn_, manual_);
-    const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
-    // Viewport fill alone is not enough before the first content fit — empty
-    // fits leave title-sized columns that stay narrow after rows arrive.
-    if (fit.fillsView() && (!hasRows || contentFit_)) {
-        done_ = true;
+    if (!view_ || !view_->isVisible() || !view_->viewport()
+        || view_->viewport()->width() < 40 || !headerOf(view_)) {
+        // Not mapped yet — Show/Resize while !done_ will schedule again.
         return;
     }
-    done_ = false;
-    if (!fit.ready())
-        return;
     fitting_ = true;
-    fit.apply();
+    applyFit();
     fitting_ = false;
-    done_ = fit.fillsView();
-    if (hasRows && done_)
-        contentFit_ = true;
+    done_ = true;
 }

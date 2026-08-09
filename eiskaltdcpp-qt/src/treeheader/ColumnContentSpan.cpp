@@ -10,18 +10,23 @@
  ***************************************************************************/
 
 #include "treeheader/ColumnContentSpan.h"
-#include "treeheader/HeaderColumnFit.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
 #include <QFontMetrics>
-#include <QHeaderView>
 #include <QIcon>
 #include <QPixmap>
-#include <QTableView>
 #include <QTreeView>
+#include <QVector>
+
+#include <algorithm>
 
 namespace {
+
+constexpr int kSampleRows = 300;
+constexpr int kPercentile = 80;
+/** Prefer p100 when it is within this fraction of p80 (no tall outliers). */
+constexpr int kNearMaxPct = 20;
 
 int iconPad(const QVariant &deco)
 {
@@ -33,21 +38,41 @@ int iconPad(const QVariant &deco)
     return icon.isNull() ? 0 : icon.actualSize(QSize(16, 16)).width() + 4;
 }
 
-void walkCells(QAbstractItemModel *model, const QModelIndex &parent,
-               int column, const QFontMetrics &fm, int depth, int &w)
+void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
+                   int column, const QFontMetrics &fm, int depth, int indent,
+                   QVector<int> &out)
 {
     if (!model || depth > 24)
         return;
-    const int rows = qMin(model->rowCount(parent), 300);
+    const int rows = qMin(model->rowCount(parent), kSampleRows);
     for (int r = 0; r < rows; ++r) {
         const QModelIndex idx = model->index(r, column, parent);
         if (!idx.isValid())
             continue;
-        w = qMax(w, fm.horizontalAdvance(idx.data(Qt::DisplayRole).toString())
-                 + 20 + iconPad(idx.data(Qt::DecorationRole)));
+        const QString text = idx.data(Qt::DisplayRole).toString();
+        // Empty cells are not samples — they must not pull p80/p100 down.
+        if (!text.isEmpty()) {
+            out.append(fm.horizontalAdvance(text)
+                       + 20 + iconPad(idx.data(Qt::DecorationRole))
+                       + (column == 0 ? depth * indent : 0));
+        }
         if (model->hasChildren(idx))
-            walkCells(model, idx, column, fm, depth + 1, w);
+            collectWidths(model, idx, column, fm, depth + 1, indent, out);
     }
+}
+
+int contentWidth(QVector<int> &widths)
+{
+    if (widths.isEmpty())
+        return 0;
+    std::sort(widths.begin(), widths.end());
+    const int p80 = widths.at(qBound(0, (widths.size() * kPercentile + 99) / 100 - 1,
+                                     widths.size() - 1));
+    const int p100 = widths.last();
+    // p100 if at most 20% wider than p80 (p100 / p80 <= 1.2).
+    if (p100 * 100LL <= p80 * (100LL + kNearMaxPct))
+        return p100;
+    return p80;
 }
 
 } // namespace
@@ -68,17 +93,18 @@ int ColumnContentSpan::title(int column) const
 
 int ColumnContentSpan::cells(int column) const
 {
-    QHeaderView *header = HeaderColumnFit::headerOf(view_);
-    int w = title(column);
+    const int floor = title(column);
+    QAbstractItemModel *model = view_ ? view_->model() : nullptr;
+    if (!model || model->rowCount() < 1)
+        return floor;
+
+    int indent = 0;
     if (QTreeView *tree = qobject_cast<QTreeView*>(view_))
-        tree->resizeColumnToContents(column);
-    else if (QTableView *table = qobject_cast<QTableView*>(view_))
-        table->resizeColumnToContents(column);
-    if (header) {
-        w = qMax(w, header->sectionSize(column));
-        w = qMax(w, header->sectionSizeHint(column) + 16);
-    }
-    if (QAbstractItemModel *model = view_->model())
-        walkCells(model, QModelIndex(), column, QFontMetrics(view_->font()), 0, w);
-    return w;
+        indent = tree->indentation();
+
+    QVector<int> widths;
+    widths.reserve(qMin(model->rowCount(), kSampleRows));
+    collectWidths(model, QModelIndex(), column, QFontMetrics(view_->font()),
+                  0, indent, widths);
+    return qMax(floor, contentWidth(widths));
 }

@@ -14,8 +14,8 @@
 class QAbstractItemView;
 
 /**
- * How wide a tree/table column must be for its header title and cell text
- * (including icons). May briefly resize the section while probing.
+ * Column width from header title and cell text (with icons). Uses p80 of
+ * non-empty sampled cells, or p100 when it is at most 20% wider than p80.
  */
 class ColumnContentSpan
 {
@@ -23,6 +23,7 @@ public:
     explicit ColumnContentSpan(QAbstractItemView *view);
 
     int title(int column) const;
+    /** max(title, p80 or near p100); title alone when the column has no rows. */
     int cells(int column) const;
 
 private:

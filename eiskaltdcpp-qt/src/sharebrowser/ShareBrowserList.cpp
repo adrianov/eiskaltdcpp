@@ -15,7 +15,6 @@
 #include "WulforSettings.h"
 #include "WulforUtil.h"
 #include "sharebrowser/ShareFolderList.h"
-#include "treeheader/TreeHeaderAutosize.h"
 
 #include <QHeaderView>
 
@@ -181,7 +180,7 @@ void ShareBrowser::applyFlatMode(bool on)
     updateUpButton();
 
     treeView_RPANE->header()->setSectionHidden(COLUMN_FILEBROWSER_PATH, !on);
-    TreeHeaderAutosize::setStretchColumn(treeView_RPANE, on ? COLUMN_FILEBROWSER_PATH : -1);
+    WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
 
     // Flat default is Path; folder default is Name. Keep Size/etc. if the user chose it.
     const int cur = list_model->getSortColumn();
