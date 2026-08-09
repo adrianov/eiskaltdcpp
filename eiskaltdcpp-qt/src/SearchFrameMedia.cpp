@@ -13,8 +13,8 @@
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
 #include "MediaEnrichQueue.h"
+#include "search/SearchListColumns.h"
 
-#include <QHeaderView>
 #include <QHash>
 #include <QVariant>
 #include <QVariantMap>
@@ -41,11 +41,7 @@ void SearchFrame::applyOptionalColumns()
     Q_D(SearchFrame);
     if (!d->model || !treeView_RESULTS)
         return;
-    QHeaderView *h = treeView_RESULTS->header();
-    h->setSectionHidden(COLUMN_SF_BR, !d->model->hasBitrate());
-    h->setSectionHidden(COLUMN_SF_WH, !d->model->hasResolution());
-    h->setSectionHidden(COLUMN_SF_MVIDEO, !d->model->hasVideo());
-    h->setSectionHidden(COLUMN_SF_MAUDIO, !d->model->hasAudio());
+    SearchListColumns(treeView_RESULTS->header()).apply(*d->model);
 }
 
 void SearchFrame::requeueMissingMedia()

@@ -150,14 +150,15 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameFilter.cpp
     src/SearchFrameQueue.cpp
     src/SearchFrameLocal.cpp
-    src/SearchFrameMenu.cpp
+    src/search/SearchResultsMenu.cpp
     src/SearchFrameStart.cpp
     src/SearchFrameUi.cpp
     src/SearchFrameTimer.cpp
-    src/SearchFrameMenuExec.cpp
+    src/search/SearchResultsMenuExec.cpp
     src/SearchFrameParams.cpp
     src/SearchFrameMedia.cpp
     src/search/SearchLocalPath.cpp
+    src/search/SearchListColumns.cpp
     src/SearchFileTypes.cpp
     src/search/SearchItemSort.cpp
     src/SearchModelAdd.cpp
@@ -209,8 +210,8 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilMagnet.cpp
     src/WulforUtilText.cpp
     src/treeheader/ColumnContentSpan.cpp
+    src/treeheader/ColumnPeakWatch.cpp
     src/treeheader/HeaderContentFit.cpp
-    src/treeheader/HeaderWidthPlan.cpp
     src/treeheader/TreeHeaderAutosize.cpp
     src/treeheader/WulforTreeHeader.cpp
     src/WulforSettingsDefaults.cpp

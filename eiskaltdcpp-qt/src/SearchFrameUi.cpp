@@ -12,6 +12,7 @@
 #include "SearchFrame.h"
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
+#include "search/SearchListColumns.h"
 #include "search/SearchLocalPath.h"
 #include "ShareIndex.h"
 #include "WulforUtil.h"
@@ -134,7 +135,7 @@ void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){
 }
 
 void SearchFrame::slotHeaderMenu(const QPoint&){
-    WulforUtil::headerMenu(treeView_RESULTS);
+    WulforUtil::headerMenu(treeView_RESULTS, SearchListColumns::menuSkip());
 }
 
 void SearchFrame::slotToggleSidePanel(){

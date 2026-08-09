@@ -9,7 +9,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchFrame.h"
+#include "search/SearchResultsMenu.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "DownloadToHistory.h"
@@ -17,13 +17,24 @@
 #include "dcpp/UserCommand.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QDir>
 #include <QScopedPointer>
 
 using namespace dcpp;
 
-SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool canOpenLocal){
+namespace {
+
+QString sfTr(const char *s)
+{
+    return QCoreApplication::translate("SearchFrame", s);
+}
+
+} // namespace
+
+SearchResultsMenu::Action SearchResultsMenu::exec(const QStringList &list, bool canOpenLocal)
+{
     for (const auto &a : action_list)
         a->setParent(nullptr);
 
@@ -40,8 +51,8 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
 
     QStringList temp_pathes = DownloadToDirHistory::get();
 
-    if (!temp_pathes.isEmpty()){
-        for (const auto &t : temp_pathes){
+    if (!temp_pathes.isEmpty()) {
+        for (const auto &t : temp_pathes) {
             QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
             act->setToolTip(t);
             act->setData(t);
@@ -57,8 +68,8 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
         down_wh_to->addSeparator();
     }
 
-    if (a.size() == p.size() && !a.isEmpty()){
-        for (int i = 0; i < a.size(); i++){
+    if (a.size() == p.size() && !a.isEmpty()) {
+        for (int i = 0; i < a.size(); i++) {
             QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
             act->setData(p.at(i));
             down_to->addAction(act);
@@ -72,10 +83,10 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
         down_wh_to->addSeparator();
     }
 
-    QAction *browse = new QAction(WICON(AppIcons::eiFOLDER_BLUE), tr("Browse"), down_to);
+    QAction *browse = new QAction(WICON(AppIcons::eiFOLDER_BLUE), sfTr("Browse"), down_to);
     browse->setData("");
 
-    QAction *browse1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), tr("Browse"), down_to);
+    QAction *browse1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), sfTr("Browse"), down_to);
     browse1->setData("");
 
     down_to->addAction(browse);
@@ -115,14 +126,16 @@ SearchFrame::Menu::Action SearchFrame::Menu::exec(const QStringList &list, bool 
     }
 }
 
-QMenu *SearchFrame::Menu::buildUserCmdMenu(QList<QString> hub_list){
+QMenu *SearchResultsMenu::buildUserCmdMenu(QList<QString> hub_list)
+{
     if (hub_list.empty())
         return nullptr;
 
     return WulforUtil::getInstance()->buildUserCmdMenu(hub_list, UserCommand::CONTEXT_SEARCH);
 }
 
-void SearchFrame::Menu::addTempPath(const QString &path){
+void SearchResultsMenu::addTempPath(const QString &path)
+{
     QStringList temp_pathes = DownloadToDirHistory::get();
     temp_pathes.push_front(path);
 

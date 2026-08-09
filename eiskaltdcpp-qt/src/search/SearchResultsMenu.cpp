@@ -9,95 +9,106 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "SearchFrame.h"
+#include "search/SearchResultsMenu.h"
 #include "WulforUtil.h"
 
 #include <QAction>
+#include <QCoreApplication>
 
-SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
+namespace {
+
+QString sfTr(const char *s)
+{
+    return QCoreApplication::translate("SearchFrame", s);
+}
+
+} // namespace
+
+SearchResultsMenu::SearchResultsMenu()
+    : menu(new QMenu(nullptr))
 {
     WulforUtil *WU = WulforUtil::getInstance();
 
-    magnet_menu = new QMenu(tr("Magnet"));
+    magnet_menu = new QMenu(sfTr("Magnet"));
     magnet_menu->setIcon(WU->getPixmap(AppIcons::eiMAGNET));
 
-    QAction *down       = new QAction(tr("Download"), nullptr);
+    QAction *down = new QAction(sfTr("Download"), nullptr);
     down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
-    down_to             = new QMenu(tr("Download to..."));
+    down_to = new QMenu(sfTr("Download to..."));
     down_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
 
-    QAction *down_wh    = new QAction(tr("Download Whole Directory"), nullptr);
+    QAction *down_wh = new QAction(sfTr("Download Whole Directory"), nullptr);
     down_wh->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
-    down_wh_to          = new QMenu(tr("Download Whole Directory to..."));
+    down_wh_to = new QMenu(sfTr("Download Whole Directory to..."));
     down_wh_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
 
-    QAction *open_file  = new QAction(tr("Open file"), nullptr);
+    QAction *open_file = new QAction(sfTr("Open file"), nullptr);
     open_file->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
-    QAction *open_dir   = new QAction(tr("Open directory"), nullptr);
+    QAction *open_dir = new QAction(sfTr("Open directory"), nullptr);
     open_dir->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
-    QAction *sep        = new QAction(menu);
+    QAction *sep = new QAction(menu);
     sep->setSeparator(true);
 
-    QAction *find_tth   = new QAction(tr("Search TTH"), nullptr);
+    QAction *find_tth = new QAction(sfTr("Search TTH"), nullptr);
     find_tth->setIcon(WU->getPixmap(AppIcons::eiFILEFIND));
 
-    QAction *copy_name  = new QAction(tr("Copy file name"), nullptr);
+    QAction *copy_name = new QAction(sfTr("Copy file name"), nullptr);
     copy_name->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
-    QAction *magnet     = new QAction(tr("Copy magnet"), nullptr);
+    QAction *magnet = new QAction(sfTr("Copy magnet"), nullptr);
     magnet->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
-    QAction *magnet_web     = new QAction(tr("Copy web-magnet"), nullptr);
+    QAction *magnet_web = new QAction(sfTr("Copy web-magnet"), nullptr);
     magnet_web->setIcon(WU->getPixmap(AppIcons::eiEDITCOPY));
 
-    QAction *magnet_info    = new QAction(tr("Properties of magnet"), nullptr);
+    QAction *magnet_info = new QAction(sfTr("Properties of magnet"), nullptr);
     magnet_info->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
-    QAction *browse     = new QAction(tr("Browse files"), nullptr);
+    QAction *browse = new QAction(sfTr("Browse files"), nullptr);
     browse->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));
 
-    QAction *match      = new QAction(tr("Match Queue"), nullptr);
+    QAction *match = new QAction(sfTr("Match Queue"), nullptr);
     match->setIcon(WU->getPixmap(AppIcons::eiDOWN));
 
-    QAction *send_pm    = new QAction(tr("Send Private Message"), nullptr);
+    QAction *send_pm = new QAction(sfTr("Send Private Message"), nullptr);
     send_pm->setIcon(WU->getPixmap(AppIcons::eiMESSAGE));
 
-    QAction *add_to_fav = new QAction(tr("Add to favorites"), nullptr);
+    QAction *add_to_fav = new QAction(sfTr("Add to favorites"), nullptr);
     add_to_fav->setIcon(WU->getPixmap(AppIcons::eiBOOKMARK_ADD));
 
-    QAction *grant      = new QAction(tr("Grant extra slot"), nullptr);
+    QAction *grant = new QAction(sfTr("Grant extra slot"), nullptr);
     grant->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
 
-    QAction *sep1       = new QAction(menu);
+    QAction *sep1 = new QAction(menu);
     sep1->setSeparator(true);
 
-    QAction *sep2       = new QAction(menu);
+    QAction *sep2 = new QAction(menu);
     sep2->setSeparator(true);
 
-    QAction *sep3       = new QAction(menu);
+    QAction *sep3 = new QAction(menu);
     sep3->setSeparator(true);
 
-    QAction *rem_queue  = new QAction(tr("Remove from Queue"), nullptr);
+    QAction *rem_queue = new QAction(sfTr("Remove from Queue"), nullptr);
     rem_queue->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
-    QAction *rem        = new QAction(tr("Remove"), nullptr);
+    QAction *rem = new QAction(sfTr("Remove"), nullptr);
     rem->setIcon(WU->getPixmap(AppIcons::eiEDITDELETE));
 
-    black_list_menu     = new QMenu(tr("Blacklist..."));
+    black_list_menu = new QMenu(sfTr("Blacklist..."));
     black_list_menu->setIcon(WU->getPixmap(AppIcons::eiFILTER));
 
-    QAction *blacklist = new QAction(tr("Blacklist"), nullptr);
+    QAction *blacklist = new QAction(sfTr("Blacklist"), nullptr);
     blacklist->setIcon(WU->getPixmap(AppIcons::eiFILTER));
 
-    QAction *add_to_blacklist = new QAction(tr("Add to Blacklist"), nullptr);
+    QAction *add_to_blacklist = new QAction(sfTr("Add to Blacklist"), nullptr);
     add_to_blacklist->setIcon(WU->getPixmap(AppIcons::eiEDITADD));
 
-    black_list_menu->addActions(QList<QAction*>() << add_to_blacklist << blacklist);
-    magnet_menu->addActions(QList<QAction*>() << magnet << magnet_web << sep3 << magnet_info);
+    black_list_menu->addActions(QList<QAction *>() << add_to_blacklist << blacklist);
+    magnet_menu->addActions(QList<QAction *>() << magnet << magnet_web << sep3 << magnet_info);
 
     actions.insert(down, Download);
     actions.insert(down_wh, DownloadWholeDir);
@@ -118,11 +129,13 @@ SearchFrame::Menu::Menu() : menu(new QMenu(nullptr))
     actions.insert(blacklist, Blacklist);
     actions.insert(add_to_blacklist, AddToBlacklist);
 
-    action_list << down << down_wh << open_file << open_dir << sep << find_tth << copy_name << browse << match
-                << send_pm << add_to_fav << grant << sep1 << rem_queue << rem << sep2;
+    action_list << down << down_wh << open_file << open_dir << sep << find_tth << copy_name
+                << browse << match << send_pm << add_to_fav << grant << sep1 << rem_queue
+                << rem << sep2;
 }
 
-SearchFrame::Menu::~Menu(){
+SearchResultsMenu::~SearchResultsMenu()
+{
     qDeleteAll(action_list);
     action_list.clear();
 

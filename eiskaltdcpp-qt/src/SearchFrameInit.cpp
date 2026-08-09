@@ -15,6 +15,7 @@
 #include "SearchFileTypes.h"
 #include "SearchModel.h"
 #include "SearchProxyModel.h"
+#include "AutoToolTip.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "MainWindow.h"
@@ -50,6 +51,10 @@ void SearchFrame::init(){
     treeView_RESULTS->setUniformRowHeights(true);
     treeView_RESULTS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RESULTS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    AutoToolTipDelegate *resultsTip = new AutoToolTipDelegate(treeView_RESULTS);
+    resultsTip->setElideLeftColumns({COLUMN_SF_PATH});
+    treeView_RESULTS->setItemDelegate(resultsTip);
 
     treeView_HUBS->setModel(d->str_model);
 

@@ -11,7 +11,6 @@
 
 #include <QWidget>
 #include <QModelIndex>
-#include <QMap>
 #include <QList>
 #include <QMenu>
 #include <QCloseEvent>
@@ -20,14 +19,13 @@
 #include "ui_UISearchFrame.h"
 #include "ArenaWidget.h"
 #include "SearchStringListModel.h"
+#include "search/SearchResultsMenu.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/SearchResult.h"
 #include "dcpp/SearchManager.h"
-#include "dcpp/SettingsManager.h"
 #include "dcpp/ClientManagerListener.h"
 #include "dcpp/QueueManagerListener.h"
-#include "dcpp/Singleton.h"
 
 using namespace dcpp;
 
@@ -45,58 +43,7 @@ class SearchFrame : public QWidget,
     Q_INTERFACES(ArenaWidget)
 
     typedef QVariantMap VarMap;
-
-    class Menu : public dcpp::Singleton<Menu> {
-        friend class dcpp::Singleton<Menu>;
-    public:
-        enum Action {
-            Download=0,
-            DownloadTo,
-            DownloadWholeDir,
-            DownloadWholeDirTo,
-            OpenFile,
-            OpenDirectory,
-            SearchTTH,
-            CopyFileName,
-            Magnet,
-            MagnetWeb,
-            MagnetInfo,
-            Browse,
-            MatchQueue,
-            SendPM,
-            AddToFav,
-            GrantExtraSlot,
-            RemoveFromQueue,
-            Remove,
-            UserCommands,
-            Blacklist,
-            AddToBlacklist,
-            None
-        };
-
-        Action exec(const QStringList &, bool canOpenLocal = false);
-        QMenu *buildUserCmdMenu(QList<QString> hubs);
-        QString getDownloadToPath() { return downToPath; }
-        int getCommandId() { return uc_cmd_id; }
-        void addTempPath(const QString &path);
-
-    private:
-        Menu();
-        virtual ~Menu();
-
-        QMap<QAction*, Action> actions;
-        QList<QAction*> action_list;
-
-        QString downToPath;
-
-        int uc_cmd_id;
-
-        QMenu *menu;
-        QMenu *magnet_menu;
-        QMenu *down_to;
-        QMenu *down_wh_to;
-        QMenu *black_list_menu;
-    };
+    using Menu = SearchResultsMenu;
 
 public:
     enum AlreadySharedAction{
@@ -173,7 +120,7 @@ private:
     bool getWholeDirParams(VarMap&, SearchItem*);
     void rememberSearch(const QString &s);
     void download(const VarMap&);
-    /** Hide Bitrate/Resolution/Video/Audio when no result has that field. */
+    /** Hide TTH always; hide Bitrate/Resolution/Video/Audio when unused. */
     void applyOptionalColumns();
     /** Second ShareIndex media pass after the search progress window ends. */
     void requeueMissingMedia();
