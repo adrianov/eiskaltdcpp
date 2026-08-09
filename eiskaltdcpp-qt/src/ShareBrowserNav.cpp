@@ -11,10 +11,10 @@
 
 #include "ShareBrowser.h"
 #include "sharebrowser/AsyncRunner.h"
+#include "fb2epub/Fb2EpubExport.h"
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "MainWindow.h"
-#include "search/SearchLocalPath.h"
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/Exception.h"
@@ -142,8 +142,10 @@ void ShareBrowser::slotRightPaneClicked(const QModelIndex &index){
 
     if (item->file){
         if (user == ClientManager::getInstance()->getMe()) {
+            QStringList paths;
             for (const auto &path : listing.getLocalPaths(item->file))
-                SearchLocalPath::openFile(_q(path));
+                paths.push_back(_q(path));
+            Fb2EpubExport::activateFiles(paths);
         } else {
             download(item->file, _q(SETTING(DOWNLOAD_DIRECTORY)));
         }

@@ -25,4 +25,9 @@ QStringList existingFb2Files(const QStringList &paths);
 /** Convert each existing FB2; reveal each EPUB. Returns success count. */
 int convertAndReveal(const QStringList &paths);
 
+/** On macOS, FB2/FBD default activation is Convert to EPUB (not Open). */
+bool convertIsDefaultOpen();
+/** Open each path; on macOS FB2/FBD files are converted and revealed instead. */
+void activateFiles(const QStringList &paths);
+
 } // namespace Fb2EpubExport

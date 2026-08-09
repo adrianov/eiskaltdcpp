@@ -50,8 +50,13 @@ void FinishedTransfers<isUpload>::slotItemDoubleClicked(const QModelIndex &proxy
             files.push_back(file);
     }
 
-    for (const auto &f : files)
-        openOrReveal(f);
+    for (const auto &f : files) {
+        const QString path = finishedLocalPath(f);
+        if (Fb2EpubExport::convertIsDefaultOpen() && Fb2EpubExport::isFb2Name(path))
+            Fb2EpubExport::convertAndReveal(QStringList{path});
+        else
+            openOrReveal(f);
+    }
 }
 
 template <bool isUpload>
@@ -121,7 +126,11 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     if (!isUpload && hasFb2) {
         convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), tr("Convert to EPUB"), m);
         m->addAction(convert_epub);
+        if (Fb2EpubExport::convertIsDefaultOpen())
+            m->setDefaultAction(convert_epub);
     }
+    if (!m->defaultAction())
+        m->setDefaultAction(open_f);
 
     if (comboBox->currentIndex() == 0){
         copy_name = new QAction(WU->getPixmap(AppIcons::eiEDITCOPY), tr("Copy file name"), m);

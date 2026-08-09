@@ -15,7 +15,9 @@
 #include "Fb2Format.h"
 #include "WulforUtil.h"
 
+#include <QDesktopServices>
 #include <QFileInfo>
+#include <QUrl>
 
 namespace Fb2EpubExport {
 
@@ -50,6 +52,30 @@ int convertAndReveal(const QStringList &paths)
         ++ok;
     }
     return ok;
+}
+
+bool convertIsDefaultOpen()
+{
+#ifdef Q_OS_MACOS
+    return true;
+#else
+    return false;
+#endif
+}
+
+void activateFiles(const QStringList &paths)
+{
+    QStringList fb2;
+    for (const auto &path : paths) {
+        if (path.isEmpty())
+            continue;
+        if (convertIsDefaultOpen() && isFb2Name(path))
+            fb2.append(path);
+        else
+            QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+    }
+    if (!fb2.isEmpty())
+        convertAndReveal(fb2);
 }
 
 } // namespace Fb2EpubExport

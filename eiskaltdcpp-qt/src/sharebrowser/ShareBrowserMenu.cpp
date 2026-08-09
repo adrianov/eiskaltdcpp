@@ -10,6 +10,7 @@
 ***************************************************************************/
 
 #include "sharebrowser/ShareBrowserMenu.h"
+#include "fb2epub/Fb2EpubExport.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 #include "DownloadToHistory.h"
@@ -175,6 +176,13 @@ ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool 
     open_url->setEnabled(own);
     convert_epub->setEnabled(own && hasFb2);
     delete_file->setEnabled(own && hasDeletable);
+
+    if (own && hasFb2 && Fb2EpubExport::convertIsDefaultOpen())
+        menu->setDefaultAction(convert_epub);
+    else if (own)
+        menu->setDefaultAction(open_file);
+    else
+        menu->setDefaultAction(nullptr);
 
     QAction *ret = menu->exec(QCursor::pos());
 
