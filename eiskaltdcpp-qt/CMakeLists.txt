@@ -189,6 +189,7 @@ set(QT_EXTRA_SOURCES
     src/WulforUtilHeader.cpp
     src/WulforUtilMagnet.cpp
     src/WulforUtilText.cpp
+    src/treeheader/HeaderColumnFit.cpp
     src/treeheader/TreeHeaderAutosize.cpp
     src/treeheader/WulforTreeHeader.cpp
     src/WulforSettingsDefaults.cpp

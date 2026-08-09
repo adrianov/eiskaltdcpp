@@ -76,15 +76,24 @@ void ShareBrowser::applyOptionalColumns()
     if (!folderList || !treeView_RPANE)
         return;
     QHeaderView *h = treeView_RPANE->header();
-    h->setSectionHidden(COLUMN_FILEBROWSER_BR, !folderList->hasBitrate());
-    h->setSectionHidden(COLUMN_FILEBROWSER_WH, !folderList->hasResolution());
-    h->setSectionHidden(COLUMN_FILEBROWSER_MVIDEO, !folderList->hasVideo());
-    h->setSectionHidden(COLUMN_FILEBROWSER_MAUDIO, !folderList->hasAudio());
-    h->setSectionHidden(COLUMN_FILEBROWSER_HIT, !folderList->hasDownloaded());
-    h->setSectionHidden(COLUMN_FILEBROWSER_TS, !folderList->hasShared());
+    bool changed = false;
+    const auto setHidden = [&](int col, bool hidden) {
+        if (h->isSectionHidden(col) != hidden) {
+            h->setSectionHidden(col, hidden);
+            changed = true;
+        }
+    };
+    setHidden(COLUMN_FILEBROWSER_BR, !folderList->hasBitrate());
+    setHidden(COLUMN_FILEBROWSER_WH, !folderList->hasResolution());
+    setHidden(COLUMN_FILEBROWSER_MVIDEO, !folderList->hasVideo());
+    setHidden(COLUMN_FILEBROWSER_MAUDIO, !folderList->hasAudio());
+    setHidden(COLUMN_FILEBROWSER_HIT, !folderList->hasDownloaded());
+    setHidden(COLUMN_FILEBROWSER_TS, !folderList->hasShared());
     applyColumnOrder(h);
-    // modelReset autosizes before optional columns are shown; re-fit after.
-    WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
+    // Re-fit only when optional columns appear/disappear — not on every media batch
+    // (that kept TreeHeaderAutosize dirty and stalled main side-dock resizing).
+    if (changed)
+        WulforUtil::ensureTreeHeaderAutosized(treeView_RPANE);
 }
 
 QString ShareBrowser::totalStatusText() const

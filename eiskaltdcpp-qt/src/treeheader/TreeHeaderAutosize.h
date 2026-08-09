@@ -12,7 +12,6 @@
 #pragma once
 
 #include <QByteArray>
-#include <QList>
 #include <QObject>
 #include <QPointer>
 
@@ -21,8 +20,8 @@ class QEvent;
 class QHeaderView;
 
 /**
- * Fits a tree/table header to content and viewport width.
- * Optionally one logical column absorbs leftover or deficit width (fit-to-width).
+ * Defers header column fitting until the view is ready, then runs once.
+ * Does not watch ancestor widgets — dock/window drags must stay fluid.
  */
 class TreeHeaderAutosize : public QObject
 {
@@ -36,20 +35,15 @@ private:
     explicit TreeHeaderAutosize(QAbstractItemView *view);
 
     static TreeHeaderAutosize *attached(QAbstractItemView *view);
-    static QHeaderView *viewHeader(QAbstractItemView *view);
-
-    bool eventFilter(QObject *obj, QEvent *ev) override;
+    void requestFit();
     void hookModel();
+    void scheduleCheck();
     void checkLayout();
-    void autosizeColumns();
-    bool layoutOk() const;
-    QList<int> visibleColumns() const;
-    int headerLabelWidth(int column) const;
-    int columnContentWidth(int column) const;
-    int stretchIndex(const QList<int> &visible) const;
+    bool eventFilter(QObject *obj, QEvent *ev) override;
 
     QPointer<QAbstractItemView> view_;
     int stretchColumn_ = -1;
     bool done_ = false;
+    bool pending_ = false;
     bool modelHooked_ = false;
 };
