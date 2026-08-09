@@ -51,9 +51,9 @@ struct ShareIndexModels {
         }
     };
 
-    /** Fast index HUD: entry_count meta + on-disk DB size. */
+    /** Fast index HUD: unique-TTH file count + on-disk DB size. */
     struct IndexStats {
-        qint64 files = 0; // share_index_meta.entry_count (files + dirs)
+        qint64 files = 0; // share_index_meta.file_count (share_files rows)
         qint64 dbBytes = 0;
     };
 };

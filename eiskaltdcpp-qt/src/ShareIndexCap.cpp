@@ -74,16 +74,17 @@ bool pruneHubLocations(duckdb::Connection &con, QString *err)
 
 } // namespace
 
-void ShareIndex::refreshEntryCount(duckdb::Connection &con)
+bool ShareIndex::refreshEntryCount(duckdb::Connection &con)
 {
     QString err;
     qint64 n = 0;
-    if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_locations", &n, &err)) {
+    // HUD "files indexed" = unique TTH rows (share_files), not location fan-out.
+    if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_files", &n, &err)
+            || !upsertMeta(con, QStringLiteral("file_count"), n, &err)) {
         setLastError(err);
-        return;
+        return false;
     }
-    if (!upsertMeta(con, QStringLiteral("entry_count"), n, &err))
-        setLastError(err);
+    return true;
 }
 
 bool ShareIndex::ensureCap(duckdb::Connection &con)
@@ -97,16 +98,9 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
         return false;
     }
 
-    // Recount when missing or stuck at 0 (stale meta after a partial migrate).
-    if (metaValue(con, QStringLiteral("entry_count")) <= 0) {
-        qint64 n = 0;
-        if (!ShareIndexDb::scalarI64(con, "SELECT count(*)::BIGINT FROM share_locations",
-                                     &n, &err)
-                || !upsertMeta(con, QStringLiteral("entry_count"), n, &err)) {
-            setLastError(err);
-            return false;
-        }
-    }
+    // Missing file_count: first open after upgrade from location-based entry_count.
+    if (metaValue(con, QStringLiteral("file_count")) < 0 && !refreshEntryCount(con))
+        return false;
     if (!upsertMeta(con, QStringLiteral("schema_files_tth"), 1, &err)) {
         setLastError(err);
         return false;
@@ -135,14 +129,13 @@ bool ShareIndex::pruneExcess(duckdb::Connection &con)
         setLastError(err);
         return false;
     }
-    // Under the cap: keep existing entry_count meta (no full-table recount on open).
     if (hubCount <= kMaxHubEntries)
         return true;
+    // Orphan share_files cleanup stays on write paths (too heavy for open).
     if (!pruneHubLocations(con, &err)) {
         setLastError(err.isEmpty() ? QStringLiteral("prune locations") : err);
         return false;
     }
-    refreshEntryCount(con);
     return true;
 }
 

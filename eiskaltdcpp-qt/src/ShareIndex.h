@@ -154,7 +154,7 @@ private:
     /** Open-time hub-hit cap; orphan sweeps stay on write paths. */
     bool pruneExcess(duckdb::Connection &con);
     bool removeOrphans(duckdb::Connection &con);
-    void refreshEntryCount(duckdb::Connection &con);
+    bool refreshEntryCount(duckdb::Connection &con);
     void reclaimFreePages(duckdb::Connection &con);
     void drainWriteQueue();
     void closeDb();

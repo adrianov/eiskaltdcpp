@@ -48,18 +48,15 @@ ShareIndex::IndexStats ShareIndex::indexStats()
         return stats;
 
     try {
-        auto res = con->Query("SELECT value FROM share_index_meta WHERE key = 'entry_count'");
+        auto res = con->Query("SELECT value FROM share_index_meta WHERE key = 'file_count'");
         if (res && !res->HasError() && res->RowCount() > 0)
             stats.files = ShareIndexDb::qi64(res->GetValue(0, 0));
 
-        // Meta can read 0 while rows exist (failed refresh / interrupted migrate).
+        // Meta missing/0 while rows exist (failed refresh / interrupted migrate).
         if (stats.files <= 0) {
-            auto any = con->Query("SELECT 1 FROM share_locations LIMIT 1");
-            if (any && !any->HasError() && any->RowCount() > 0) {
-                auto cnt = con->Query("SELECT count(*)::BIGINT FROM share_locations");
-                if (cnt && !cnt->HasError() && cnt->RowCount() > 0)
-                    stats.files = ShareIndexDb::qi64(cnt->GetValue(0, 0));
-            }
+            auto cnt = con->Query("SELECT count(*)::BIGINT FROM share_files");
+            if (cnt && !cnt->HasError() && cnt->RowCount() > 0)
+                stats.files = ShareIndexDb::qi64(cnt->GetValue(0, 0));
         }
     } catch (const std::exception &) {
         return stats;
