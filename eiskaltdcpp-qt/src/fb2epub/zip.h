@@ -13,6 +13,6 @@ namespace HomeCompa
 {
 
 /** Pack EPUB members; first entry must be uncompressed "mimetype". */
-[[nodiscard]] QByteArray PackEpubMembers(const std::vector<std::pair<QString, QByteArray>>& members);
+QByteArray PackEpubMembers(const std::vector<std::pair<QString, QByteArray>>& members);
 
 } // namespace HomeCompa

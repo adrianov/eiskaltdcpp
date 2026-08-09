@@ -9,7 +9,8 @@
 #include <QByteArray>
 #include <QString>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 struct EpubCover
@@ -23,15 +24,16 @@ struct Fb2ToEpubOptions
     const EpubCover* coverOverride { nullptr };
 };
 
-[[nodiscard]] UTIL_EXPORT bool ConvertFb2ToEpub(const QString& fb2Path, const QString& epubPath, const Fb2ToEpubOptions* options = nullptr);
+UTIL_EXPORT bool ConvertFb2ToEpub(const QString& fb2Path, const QString& epubPath, const Fb2ToEpubOptions* options = nullptr);
 
-[[nodiscard]] UTIL_EXPORT bool ConvertFb2BytesToEpub(
+UTIL_EXPORT bool ConvertFb2BytesToEpub(
     const QByteArray&       fb2Bytes,
     const QString&          fb2FileName,
     const QString&          epubPath,
     const Fb2ToEpubOptions* options = nullptr
 );
 
-[[nodiscard]] UTIL_EXPORT QString EpubPathForFb2(const QString& fb2Path);
+UTIL_EXPORT QString EpubPathForFb2(const QString& fb2Path);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

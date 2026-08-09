@@ -7,7 +7,8 @@
 #include "Fb2EpubImages.h"
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 bool Fb2Parser::OnBodyStartElement(const QString& name, const XmlAttributes& attributes)
@@ -162,4 +163,5 @@ bool Fb2Parser::OnBodyStartElement(const QString& name, const XmlAttributes& att
 	return true;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

@@ -13,13 +13,15 @@
 #include <utility>
 #include <vector>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 using EpubMember = std::pair<QString, QByteArray>;
 
-[[nodiscard]] std::vector<EpubMember> BuildEpubMembers(const ParsedFb2& parsed, const QString& title);
-[[nodiscard]] QByteArray              BuildEpubBytes(const ParsedFb2& parsed, const QString& title);
-[[nodiscard]] bool                    WriteEpubBytesToFile(const QByteArray& epubBytes, const QString& epubPath);
+std::vector<EpubMember> BuildEpubMembers(const ParsedFb2& parsed, const QString& title);
+QByteArray              BuildEpubBytes(const ParsedFb2& parsed, const QString& title);
+bool                    WriteEpubBytesToFile(const QByteArray& epubBytes, const QString& epubPath);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

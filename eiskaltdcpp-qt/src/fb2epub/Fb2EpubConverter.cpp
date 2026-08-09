@@ -12,7 +12,8 @@
 #include "Fb2EpubText.h"
 #include "Fb2EpubWriter.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -81,4 +82,5 @@ bool ConvertFb2BytesToEpub(const QByteArray& fb2Bytes, const QString& fb2FileNam
     return ConvertFb2StreamToEpub(stream, QFileInfo(fb2FileName).completeBaseName(), epubPath, options);
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

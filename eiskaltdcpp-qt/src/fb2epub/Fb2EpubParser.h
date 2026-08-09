@@ -13,7 +13,8 @@
 
 class QIODevice;
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 struct Fb2TocItem
@@ -38,4 +39,5 @@ struct ParsedFb2
 
 bool ParseFb2(QIODevice& stream, ParsedFb2& result);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

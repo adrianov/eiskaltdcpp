@@ -4,7 +4,8 @@
 //
 #include "Fb2EpubParserImpl.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -81,4 +82,5 @@ void Fb2Parser::CommitBodyImage()
 	inImageDescription  = false;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

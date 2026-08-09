@@ -6,7 +6,8 @@
 
 #include <QDateTime>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -222,4 +223,5 @@ QString CoverMimeFromData(const QByteArray& data)
 	return QStringLiteral("image/jpeg");
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

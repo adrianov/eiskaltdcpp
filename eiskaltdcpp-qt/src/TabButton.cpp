@@ -73,7 +73,7 @@ bool TabButton::eventFilter(QObject *obj, QEvent *e){
     if (e->type() == QEvent::MouseButtonRelease){
         QMouseEvent *m_e = reinterpret_cast<QMouseEvent*>(e);
 
-        if ((m_e->button() == Qt::MidButton) || (childAt(m_e->pos()) == static_cast<QWidget*>(label)))
+        if ((m_e->button() == Qt::MiddleButton) || (childAt(m_e->pos()) == static_cast<QWidget*>(label)))
             emit closeRequest();
     }
 

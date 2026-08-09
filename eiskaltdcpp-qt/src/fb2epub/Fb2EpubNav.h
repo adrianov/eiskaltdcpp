@@ -8,10 +8,12 @@
 
 #include "Fb2EpubParser.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 QString CoverExtension(const QString& mime);
 QString NavItemsHtml(const ParsedFb2& parsed, bool includeCover, const QString& fallbackTitle);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

@@ -19,7 +19,8 @@
 #include "xml/SaxParser.h"
 #include "xml/XmlAttributes.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 inline QString FirstAttr(const XmlAttributes& attributes, std::initializer_list<const char*> keys)
@@ -38,7 +39,7 @@ class Fb2Parser final : public SaxParser
 public:
 	explicit Fb2Parser(QIODevice& stream);
 
-	[[nodiscard]] ParsedFb2 TakeResult();
+	ParsedFb2 TakeResult();
 
 private:
 	bool OnStartElement(const QString& name, const QString& path, const XmlAttributes& attributes) override;
@@ -50,9 +51,9 @@ private:
 	bool OnMetaCharacters(const QString& value);
 	void AddTocItem();
 
-	[[nodiscard]] bool     InContent() const;
-	[[nodiscard]] bool     InTextContent() const;
-	[[nodiscard]] QString& ActiveBuffer();
+	bool     InContent() const;
+	bool     InTextContent() const;
+	QString& ActiveBuffer();
 	void                   AppendBlockHtml(const QString& html);
 	void                   OpenInlineTag(const QString& openTag, bool& flag, bool tight = false);
 	void                   CloseInlineTag(const QString& closeTag, bool& flag, bool tight = false);
@@ -68,8 +69,8 @@ private:
 	void                   FixFootnoteReferences();
 	void                   FixFootnoteLinkMarkers();
 	void                   RegisterFootnoteAliases(const QString& id, const QString& title);
-	[[nodiscard]] QString  ResolveFootnoteKey(const QString& fragment) const;
-	[[nodiscard]] QString  FootnoteLink(const XmlAttributes& attributes) const;
+	QString  ResolveFootnoteKey(const QString& fragment) const;
+	QString  FootnoteLink(const XmlAttributes& attributes) const;
 
 	QString                 titleBuffer;
 	QString                 languageBuffer;
@@ -161,4 +162,5 @@ private:
 	int     inlineWordChars { 0 };
 };
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

@@ -8,7 +8,8 @@
 #include <QStringList>
 #include <vector>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 struct Fb2Person
@@ -50,14 +51,15 @@ struct Fb2Metadata
 	QString                documentDate;
 };
 
-[[nodiscard]] QString FormatFb2PersonName(const Fb2Person& person);
-[[nodiscard]] QString FormatFb2PersonFileAs(const Fb2Person& person);
-[[nodiscard]] QString PrimaryAuthorName(const Fb2Metadata& metadata);
-[[nodiscard]] QString BuildOpfMetadata(
+QString FormatFb2PersonName(const Fb2Person& person);
+QString FormatFb2PersonFileAs(const Fb2Person& person);
+QString PrimaryAuthorName(const Fb2Metadata& metadata);
+QString BuildOpfMetadata(
 	const Fb2Metadata& metadata,
 	const QString&     title,
 	const QString&     language,
 	bool               hasCover
 );
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

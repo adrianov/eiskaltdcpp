@@ -11,7 +11,8 @@
 
 #include "xml/XmlAttributes.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 struct Fb2EmbeddedImage
@@ -52,4 +53,5 @@ void    ResolveBodyImagePlaceholders(
 	const QString&                        coverId
 );
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

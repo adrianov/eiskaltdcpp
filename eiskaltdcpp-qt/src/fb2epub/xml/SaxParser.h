@@ -15,7 +15,8 @@
 
 class QIODevice;
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 class XmlAttributes;
@@ -53,4 +54,5 @@ protected:
     bool m_processed { true };
 };
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

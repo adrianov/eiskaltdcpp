@@ -7,7 +7,8 @@
 #include "Fb2EpubMetaParse.h"
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 bool Fb2Parser::OnMetaEndElement(const QString& name)
@@ -251,4 +252,5 @@ bool Fb2Parser::OnMetaCharacters(const QString& value)
 	return false;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

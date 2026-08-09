@@ -12,7 +12,8 @@
 #include "Fb2EpubText.h"
 #include "zip.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -157,4 +158,5 @@ bool WriteEpubBytesToFile(const QByteArray& epubBytes, const QString& epubPath)
 	return true;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

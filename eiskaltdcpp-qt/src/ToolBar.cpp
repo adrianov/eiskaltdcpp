@@ -37,7 +37,7 @@ bool ToolBar::eventFilter(QObject *obj, QEvent *e){
     if (e->type() == QEvent::MouseButtonRelease){
         QMouseEvent *m_e = reinterpret_cast<QMouseEvent*>(e);
 
-        if (reinterpret_cast<QTabBar*>(obj) == tabbar && m_e->button() == Qt::MidButton){
+        if (reinterpret_cast<QTabBar*>(obj) == tabbar && m_e->button() == Qt::MiddleButton){
             QPoint p = tabbar->mapFromGlobal(QCursor::pos());
             int index = tabbar->tabAt(p);
 

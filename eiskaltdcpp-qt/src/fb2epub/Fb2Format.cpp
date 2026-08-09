@@ -7,7 +7,8 @@
 #include <QFile>
 #include <QFileInfo>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 bool IsFb2Suffix(const QString& suffix)
@@ -76,4 +77,5 @@ QString ResolveArchiveBookFile(const QStringList& archiveFiles, const QString& b
 	return {};
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

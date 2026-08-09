@@ -85,7 +85,7 @@ QVariant DownloadQueueModel::data(const QModelIndex &index, int role) const
 
             break;
         }
-        case Qt::BackgroundColorRole:
+        case Qt::BackgroundRole:
             break;
         case Qt::ToolTipRole:
         {

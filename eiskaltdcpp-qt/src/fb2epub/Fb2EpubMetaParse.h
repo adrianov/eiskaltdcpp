@@ -6,10 +6,12 @@
 
 #include "Fb2EpubMeta.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 void AppendFb2Genre(Fb2Metadata& metadata, const QString& value);
 void SplitFb2Keywords(Fb2Metadata& metadata, const QString& value);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

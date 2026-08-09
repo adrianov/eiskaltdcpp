@@ -8,7 +8,8 @@
 
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -167,4 +168,5 @@ QString BuildOpfMetadata(const Fb2Metadata& metadata, const QString& title, cons
 	return opf;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

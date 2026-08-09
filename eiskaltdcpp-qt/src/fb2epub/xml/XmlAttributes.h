@@ -2,7 +2,8 @@
 
 class QString;
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 class XmlAttributes // NOLINT(cppcoreguidelines-special-member-functions)
@@ -15,4 +16,5 @@ public:
 	virtual QString GetValue(size_t index) const           = 0;
 };
 
-}
+} // namespace Util
+} // namespace HomeCompa

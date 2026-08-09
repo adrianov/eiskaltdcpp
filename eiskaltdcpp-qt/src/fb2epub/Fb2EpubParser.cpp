@@ -8,7 +8,8 @@
 #include "Fb2EpubMeta.h"
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 Fb2Parser::Fb2Parser(QIODevice& stream)
@@ -80,4 +81,5 @@ bool Fb2Parser::OnCharacters(const QString& /*path*/, const QString& value)
 	return true;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

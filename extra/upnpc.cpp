@@ -35,7 +35,7 @@
 #include <algorithm>
 
 static UPNPUrls urls;
-static IGDdatas data;
+static IGDdatas igdData;
 static char lanaddr[64];
 static bool haveUrls = false;
 const std::string UPnPc::name = "MiniUPnP";
@@ -77,10 +77,10 @@ bool UPnPc::init()
 
     lanaddr[0] = 0;
 #if (MINIUPNPC_API_VERSION >= 18)
-    int ret = UPNP_GetValidIGD(devices, &urls, &data, lanaddr, sizeof(lanaddr), nullptr, 0);
+    int ret = UPNP_GetValidIGD(devices, &urls, &igdData, lanaddr, sizeof(lanaddr), nullptr, 0);
     const int worstUsable = 3; // 2 = private-IP IGD, 3 = disconnected IGD
 #else
-    int ret = UPNP_GetValidIGD(devices, &urls, &data, lanaddr, sizeof(lanaddr));
+    int ret = UPNP_GetValidIGD(devices, &urls, &igdData, lanaddr, sizeof(lanaddr));
     const int worstUsable = 2; // 2 = IGD not connected; 3 = not an IGD
 #endif
 
@@ -95,26 +95,26 @@ bool UPnPc::add(const string& port, const UPnP::Protocol protocol, const string&
     // The IGD reports which of our addresses routes to it; trust that over guessing.
     const string local = lanaddr[0] ? lanaddr : Util::getLocalIp(AF_INET);
 
-    if (UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, port.c_str(), port.c_str(),
+    if (UPNP_AddPortMapping(urls.controlURL, igdData.first.servicetype, port.c_str(), port.c_str(),
             local.c_str(), description.c_str(), protocols[protocol], nullptr, nullptr) == UPNPCOMMAND_SUCCESS)
         return true;
 
     // A stale mapping left by an unclean shutdown blocks the port; drop it and retry.
-    UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(), protocols[protocol], nullptr);
-    return UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, port.c_str(), port.c_str(),
+    UPNP_DeletePortMapping(urls.controlURL, igdData.first.servicetype, port.c_str(), protocols[protocol], nullptr);
+    return UPNP_AddPortMapping(urls.controlURL, igdData.first.servicetype, port.c_str(), port.c_str(),
         local.c_str(), description.c_str(), protocols[protocol], nullptr, nullptr) == UPNPCOMMAND_SUCCESS;
 }
 
 bool UPnPc::remove(const string& port, const UPnP::Protocol protocol)
 {
-    return UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(),
+    return UPNP_DeletePortMapping(urls.controlURL, igdData.first.servicetype, port.c_str(),
         protocols[protocol], nullptr) == UPNPCOMMAND_SUCCESS;
 }
 
 string UPnPc::getExternalIP()
 {
     char buf[16] = { 0 };
-    if (UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, buf) == UPNPCOMMAND_SUCCESS)
+    if (UPNP_GetExternalIPAddress(urls.controlURL, igdData.first.servicetype, buf) == UPNPCOMMAND_SUCCESS)
         return string(buf);
     return Util::emptyString;
 }

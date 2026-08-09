@@ -6,7 +6,8 @@
 
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -139,4 +140,5 @@ void Fb2Parser::AppendBodyText(const QString& value)
 		AppendCollapsedText(headingBuffer, value);
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

@@ -8,7 +8,8 @@
 
 #include <QRegularExpression>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 void Fb2Parser::RegisterFootnoteAliases(const QString& id, const QString& title)
@@ -146,4 +147,5 @@ QString Fb2Parser::FootnoteLink(const XmlAttributes& attributes) const
 	return QStringLiteral("#fn-%1").arg(href.mid(1));
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

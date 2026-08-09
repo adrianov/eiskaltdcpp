@@ -6,7 +6,8 @@
 
 #include "Fb2EpubText.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -261,4 +262,5 @@ bool Fb2Parser::TryBodyExtraEnd(const QString& name)
 	return false;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

@@ -6,7 +6,8 @@
 
 #include <QString>
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 QString CollapseWhitespace(const QString& text);
@@ -23,4 +24,5 @@ QString EpubContentStyles();
 QString PrependBookAnnotation(const QString& bodyHtml, const QString& annotation);
 QString CoverMimeFromData(const QByteArray& data);
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

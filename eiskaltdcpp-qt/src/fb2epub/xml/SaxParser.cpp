@@ -10,7 +10,8 @@
 
 #include "XmlAttributes.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -229,4 +230,5 @@ bool SaxParser::OnFatalError(size_t, size_t, const QString&)
     return false;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

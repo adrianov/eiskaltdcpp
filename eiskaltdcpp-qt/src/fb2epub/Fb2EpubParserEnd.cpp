@@ -6,7 +6,8 @@
 
 #include "Fb2EpubMeta.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 bool Fb2Parser::OnEndElement(const QString& name, const QString& /*path*/)
@@ -167,4 +168,5 @@ bool ParseFb2(QIODevice& stream, ParsedFb2& result)
 	return !result.bodyHtml.isEmpty();
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

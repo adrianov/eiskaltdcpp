@@ -7,7 +7,8 @@
 #include "Fb2EpubImages.h"
 #include "Fb2EpubMetaParse.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 namespace
@@ -154,4 +155,5 @@ bool Fb2Parser::OnMetaStartElement(const QString& name, const QString& path, con
 	return true;
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa

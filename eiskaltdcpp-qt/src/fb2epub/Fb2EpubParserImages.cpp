@@ -10,7 +10,8 @@
 #include "Fb2EpubText.h"
 #include "xml/XmlAttributes.h"
 
-namespace HomeCompa::Util
+namespace HomeCompa {
+namespace Util
 {
 
 QString InlineImageFileName(const QString& id, const QString& mime)
@@ -65,4 +66,5 @@ void ResolveBodyImagePlaceholders(
 	}
 }
 
-} // namespace HomeCompa::Util
+} // namespace Util
+} // namespace HomeCompa
