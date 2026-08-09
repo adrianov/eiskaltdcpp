@@ -37,7 +37,8 @@ static const QString & WS_QCONNECT_HISTORY        = "qc-history";
 static const QString & WS_DEFAULT_LOCALE          = "default_locale";
 static const QString & WS_DOWNLOAD_DIR_HISTORY    = "download-directory-history";
 static const QString & WS_DQUEUE_STATE            = "dqueue-state";
-static const QString & WS_SEARCH_STATE            = "search-state";
+/** Bumped when Search column logical order changes (Path after Size). */
+static const QString & WS_SEARCH_STATE            = "search-state-v2";
 static const QString & WS_SEARCH_HISTORY          = "search-history";
 static const QString & WS_TRANSLATION_FILE        = "translation-file";
 static const QString & WS_TRANSFERS_STATE         = "transfer-state";

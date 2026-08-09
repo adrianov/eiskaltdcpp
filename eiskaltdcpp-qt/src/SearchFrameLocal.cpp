@@ -112,11 +112,19 @@ void refreshIndexStats(SearchFrame *frame)
     QPointer<SearchFrame> guard(frame);
     startDetached([guard]() {
         ShareIndex *idx = ShareIndex::getInstance();
-        QString text = statsText(idx->indexStats());
-        if (text.isEmpty() && !idx->isOpen()) {
+        const ShareIndex::IndexStats stats = idx->indexStats();
+        QString text;
+        if (idx->isOpen()) {
+            text = statsText(stats);
+        } else {
             const QString err = idx->lastError();
             if (!err.isEmpty())
                 text = QObject::tr("Share index unavailable:\n%1").arg(err);
+            else if (stats.dbBytes > 0)
+                text = QObject::tr("Share index opening…\nDB size: %1")
+                        .arg(WulforUtil::formatBytes(stats.dbBytes));
+            else
+                text = QObject::tr("Share index opening…");
         }
         idx->releaseThreadDb();
         if (!guard)

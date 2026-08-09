@@ -129,15 +129,14 @@ int SearchItem::row() const {
     return 0;
 }
 
-bool SearchItem::exists(const QString &user_cid) const {
+SearchItem *SearchItem::findSource(const QString &user_cid) {
     if (cid == user_cid)
-        return true;
-
-    for (const auto &child : childItems) {
+        return this;
+    for (SearchItem *child : childItems) {
         if (child->cid == user_cid)
-            return true;
+            return child;
     }
-    return false;
+    return nullptr;
 }
 
 QString SearchItem::localPath() const {

@@ -19,9 +19,9 @@ static const unsigned COLUMN_SF_COUNT          = 0;
 static const unsigned COLUMN_SF_FILENAME       = 1;
 static const unsigned COLUMN_SF_EXTENSION      = 2;
 static const unsigned COLUMN_SF_SIZE           = 3;
-static const unsigned COLUMN_SF_ESIZE          = 4;
-static const unsigned COLUMN_SF_TTH            = 5;
-static const unsigned COLUMN_SF_PATH           = 6;
+static const unsigned COLUMN_SF_PATH           = 4;
+static const unsigned COLUMN_SF_ESIZE          = 5;
+static const unsigned COLUMN_SF_TTH            = 6;
 static const unsigned COLUMN_SF_NICK           = 7;
 static const unsigned COLUMN_SF_FREESLOTS      = 8;
 static const unsigned COLUMN_SF_ALLSLOTS       = 9;
@@ -76,7 +76,8 @@ public:
     void updateColumn(int column, const QVariant &value);
     int row() const;
     SearchItem *parent() const;
-    bool exists(const QString &user_cid) const;
+    /** Self or child with this CID; nullptr if absent. */
+    SearchItem *findSource(const QString &user_cid);
     const QList<SearchItem*> &children() const { return childItems; }
     /** Cached share/finished path for this TTH; empty if not local. */
     QString localPath() const;
@@ -86,9 +87,9 @@ public:
     bool isQueued() const;
     /** Drop cached queue flag so the next isQueued() lookup runs again. */
     void clearQueued();
-    /** Cached offline wash; SearchModel refreshes on membership / SR updates. */
-    bool offlineTint() const { return offlineTint_; }
-    void setOfflineTint(bool on) { offlineTint_ = on; }
+    /** Gray wash: all sources offline. */
+    bool mutedTint() const { return mutedTint_; }
+    void setMutedTint(bool on) { mutedTint_ = on; }
 
     QString cid;
     bool isDir;
@@ -103,5 +104,5 @@ private:
     mutable bool queuedCached = false;
     /** Unique source count; -1 means dirty. */
     mutable int countCached = -1;
-    bool offlineTint_ = false;
+    bool mutedTint_ = false;
 };

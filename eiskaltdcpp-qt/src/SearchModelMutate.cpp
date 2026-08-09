@@ -69,7 +69,7 @@ void SearchModel::removeItem(const SearchItem *item){
 
     // Flags before endRemoveRows so the parent is not painted with a stale wash.
     if (p != rootItem)
-        refreshOfflineTint(p);
+        refreshRowTints(p);
 
     endRemoveRows();
 
@@ -83,7 +83,7 @@ void SearchModel::setFilterRole(int role){
     filterRole = role;
 }
 
-void SearchModel::refreshOfflineTint(SearchItem *item)
+void SearchModel::refreshRowTints(SearchItem *item)
 {
     if (!item)
         return;
@@ -93,19 +93,17 @@ void SearchModel::refreshOfflineTint(SearchItem *item)
     if (item->parent() && item->parent()->parent())
         group = item->parent();
 
+    // Gray only when every source is offline (not for zero free slots).
     bool allOff = cidOffline(group->cid);
-    if (allOff) {
-        for (SearchItem *child : group->children()) {
-            if (!cidOffline(child->cid)) {
-                allOff = false;
-                break;
-            }
-        }
+    for (SearchItem *child : group->children()) {
+        if (!allOff)
+            break;
+        allOff = cidOffline(child->cid);
     }
 
-    group->setOfflineTint(allOff);
+    group->setMutedTint(allOff);
     for (SearchItem *child : group->children())
-        child->setOfflineTint(allOff);
+        child->setMutedTint(allOff);
 }
 
 void SearchModel::emitGroupDataChanged(SearchItem *group)
@@ -123,7 +121,7 @@ void SearchModel::emitGroupDataChanged(SearchItem *group)
 
 void SearchModel::emitGroupChanged(SearchItem *group)
 {
-    refreshOfflineTint(group);
+    refreshRowTints(group);
     emitGroupDataChanged(group);
 }
 
@@ -146,7 +144,7 @@ void SearchModel::refreshLocal(const QString &tth){
         child->clearQueued();
     }
 
-    // Local/queue only; presence cache is updated on membership / duplicate SR.
+    // Local/queue only; muted tint updates on membership / duplicate SR.
     emitGroupDataChanged(item);
 }
 

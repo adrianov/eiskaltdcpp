@@ -51,13 +51,13 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         case Qt::BackgroundRole:
         {
             if (!item->isDir) {
-                // Local / queued win over offline: stronger signals.
+                // Local / queued win over muted gray: stronger signals.
                 if (!item->localPath().isEmpty())
                     return AppTheme::sharedFileHighlight();
                 if (item->isQueued())
                     return AppTheme::queuedFileHighlight();
             }
-            if (item->offlineTint())
+            if (item->mutedTint())
                 return AppTheme::offlineSourceHighlight();
             break;
         }

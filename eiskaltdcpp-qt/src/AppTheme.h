@@ -60,7 +60,7 @@ public:
     static QColor sharedFileHighlight();
     /** Soft row tint for files already in the download queue (search). */
     static QColor queuedFileHighlight();
-    /** Soft row tint for search sources whose users are offline. */
+    /** Soft gray wash for muted search rows (all sources offline). */
     static QColor offlineSourceHighlight();
     static QColor findHighlightColor();
     static QColor chatBackground();

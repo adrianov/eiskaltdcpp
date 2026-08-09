@@ -13,7 +13,6 @@
 #include "WulforUtil.h"
 
 #include <QFileInfo>
-#include <QDir>
 
 bool SearchModel::addResultPtr(const QVariantMap &map){
     try {
@@ -58,25 +57,27 @@ bool SearchModel::addResult
 
     SearchItem *item;
 
-    QFileInfo file_info(QDir::toNativeSeparators(file));
-    QString ext = "";
-
-    if (size > 0)
-        ext = file_info.suffix().toUpper();
+    QString ext;
+    if (!isDir)
+        ext = QFileInfo(file).suffix().toUpper();
 
     SearchItem *parent = rootItem;
     const QString dirKey = dirGroupKey(path, file);
 
     if (!isDir && tths.contains(tth)) {
         parent = tths[tth];
-        if (parent->exists(cid)) {
-            // Same CID again (ShareIndex then hub SR): refresh offline wash.
+        if (SearchItem *src = parent->findSource(cid)) {
+            // Same CID again (ShareIndex then hub SR): slots + offline wash.
+            src->updateColumn(COLUMN_SF_FREESLOTS, free_slots);
+            src->updateColumn(COLUMN_SF_ALLSLOTS, all_slots);
             emitGroupChanged(parent);
             return false;
         }
     } else if (isDir && dirs.contains(dirKey)) {
         parent = dirs[dirKey];
-        if (parent->exists(cid)) {
+        if (SearchItem *src = parent->findSource(cid)) {
+            src->updateColumn(COLUMN_SF_FREESLOTS, free_slots);
+            src->updateColumn(COLUMN_SF_ALLSLOTS, all_slots);
             emitGroupChanged(parent);
             return false;
         }
@@ -85,7 +86,7 @@ bool SearchModel::addResult
     QList<QVariant> item_data;
 
     item_data << QVariant() << file << ext << WulforUtil::formatBytes(size)
-              << size << tth << path << nick << free_slots
+              << path << size << tth << nick << free_slots
               << all_slots << ip << hub << host
               << QVariant() << QVariant() << QVariant() << QVariant();
 
@@ -111,7 +112,7 @@ bool SearchModel::addResult
         else
             dirs.insert(dirKey, item);
 
-        refreshOfflineTint(item);
+        refreshRowTints(item);
 
         const int row = parent->sortedInsertRow(sortColumn, sortOrder, item);
         beginInsertRows(QModelIndex(), row, row);
@@ -125,10 +126,10 @@ bool SearchModel::addResult
     beginInsertRows(parentIdx, parent->childCount(), parent->childCount());
     parent->appendChild(item);
     // Before endInsertRows: view may paint the new row (and parent) immediately.
-    refreshOfflineTint(parent);
+    refreshRowTints(parent);
     endInsertRows();
 
-    // Parent / sibling wash may have flipped (all-offline → mixed).
+    // Parent / sibling offline wash may have flipped.
     emitGroupDataChanged(parent);
 
     // Defer Count-column root resort to end of batch (avoids layoutChanged per child).
