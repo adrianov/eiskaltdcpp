@@ -9,25 +9,24 @@
  */
 
 #include "stdinc.h"
-#include "ListCache.h"
+#include "listcache/ListCache.h"
 
 #include "ClientManager.h"
 #include "ConnectionManagerPeerMatch.h"
 #include "DirectoryListing.h"
 #include "File.h"
-#include "ListCacheStore.h"
 #include "Util.h"
+#include "listcache/ListCacheStore.h"
+#include "listcache/ListRetention.h"
 
 namespace dcpp {
 
-namespace {
-
-const time_t DAY_SECS = 24 * 60 * 60;
-
-} // namespace
-
 void ListCache::load() {
-    ListCacheStore::load();
+    ListRetention().onStartup();
+}
+
+void ListCache::purgeOldLists() {
+    ListRetention().expire();
 }
 
 string ListCache::findListFile(const string& listBase) {
@@ -85,7 +84,7 @@ bool ListCache::fetchedWithinDay(const CID& cid) {
     const time_t fetched = ListCacheStore::fetchTime(cid);
     if(fetched < 0)
         return false;
-    return (time(nullptr) - fetched) < DAY_SECS;
+    return (time(nullptr) - fetched) < ListRetention::DEFAULT_MAX_AGE;
 }
 
 bool ListCache::fetchedWithinDay(const HintedUser& user) {

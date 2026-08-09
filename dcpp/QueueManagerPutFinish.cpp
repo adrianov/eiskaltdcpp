@@ -16,7 +16,7 @@
 #include "Download.h"
 #include "File.h"
 #include "HashManager.h"
-#include "ListCache.h"
+#include "listcache/ListCache.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
 #include "Transfer.h"

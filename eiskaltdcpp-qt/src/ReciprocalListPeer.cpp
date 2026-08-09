@@ -16,7 +16,7 @@
 #include "dcpp/stdinc.h"
 #include "dcpp/HintedUser.h"
 #include "dcpp/ConnectionManagerPeerMatch.h"
-#include "dcpp/ListCache.h"
+#include "dcpp/listcache/ListCache.h"
 #include "dcpp/QueueManager.h"
 
 #include <QMutex>

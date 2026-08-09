@@ -23,7 +23,7 @@
 #include "FinishedManager.h"
 #include "HashManager.h"
 #include "sharemedia/MediaInfoCache.h"
-#include "ListCache.h"
+#include "listcache/ListCache.h"
 #include "LogManager.h"
 #include "MappingManager.h"
 #include "IncomingPortCheck.h"
@@ -131,6 +131,7 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     if(f != NULL)
         (*f)(p, _("Users"));
     ClientManager::getInstance()->loadUsers();
+    // Loads ListCache.xml, migrates sidecars, expires FileLists/ older than 1 day.
     ListCache::load();
 }
 

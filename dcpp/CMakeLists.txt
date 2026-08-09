@@ -38,8 +38,9 @@ set(DCPP_EXTRA_SOURCES
     hub/HubConnectPace.cpp
     hub/HubUserCounts.cpp
     hub/SearchQueue.cpp
-    ListCache.cpp
-    ListCacheStore.cpp
+    listcache/ListCache.cpp
+    listcache/ListCacheStore.cpp
+    listcache/ListRetention.cpp
     ExpectedMap.cpp
     queue/SegmentPicker.cpp
     queue/QueueItemSegment.cpp
@@ -394,6 +395,8 @@ if (WITH_DEV_FILES)
     install (FILES ${nmdc_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/nmdc/)
     file (GLOB hub_hdrs ${PROJECT_SOURCE_DIR}/hub/*.h)
     install (FILES ${hub_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/hub/)
+    file (GLOB listcache_hdrs ${PROJECT_SOURCE_DIR}/listcache/*.h)
+    install (FILES ${listcache_hdrs} DESTINATION ${EISKALTDCPP_INCLUDE_DIR}/dcpp/listcache/)
 
     set (prefix ${CMAKE_INSTALL_PREFIX})
     set (libdir ${LIBDIR})

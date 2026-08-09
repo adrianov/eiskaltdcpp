@@ -10,13 +10,17 @@
 
 #pragma once
 
-#include "CID.h"
+#include "../CID.h"
 
 #include <cstdint>
 #include <ctime>
+#include <string>
 
 namespace dcpp {
 
+using std::string;
+
+/** In-memory + ListCache.xml persistence for per-CID file-list metadata. */
 namespace ListCacheStore {
 
 void load();
@@ -24,6 +28,17 @@ int64_t shareSize(const CID& cid);
 int64_t fileSize(const CID& cid);
 time_t fetchTime(const CID& cid);
 void setMeta(const CID& cid, int64_t shareSize, int64_t fileSize, time_t when);
+
+bool isCid(const string& cid);
+/** FetchTime for base32 CID, or -1; caller must load() first. */
+time_t cachedFetch(const string& cid);
+bool eraseCid(const string& cid);
+/** Keep newer fetchTime when importing a legacy sidecar. */
+void mergeMigrated(const string& cid, int64_t shareSize, time_t fetchTime);
+/** Write ListCache.xml; false when I/O fails. */
+bool persist();
+/** Erase rows with FetchTime in [0, cutoff). */
+bool eraseFetchedBefore(time_t cutoff);
 
 } // namespace ListCacheStore
 

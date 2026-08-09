@@ -15,7 +15,7 @@
 #include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "Download.h"
-#include "ListCache.h"
+#include "listcache/ListCache.h"
 #include "Transfer.h"
 #include "UserConnection.h"
 

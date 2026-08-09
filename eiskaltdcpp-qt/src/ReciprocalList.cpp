@@ -16,7 +16,7 @@
 #include "ReciprocalListPeer.h"
 
 #include "dcpp/ConnectionManagerPeerMatch.h"
-#include "dcpp/ListCache.h"
+#include "dcpp/listcache/ListCache.h"
 #include "dcpp/QueueManager.h"
 #include "dcpp/Transfer.h"
 #include "dcpp/Upload.h"

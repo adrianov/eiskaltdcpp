@@ -14,17 +14,20 @@
 #include <ctime>
 #include <string>
 
-#include "CID.h"
-#include "HintedUser.h"
+#include "../CID.h"
+#include "../HintedUser.h"
 
 namespace dcpp {
 
 using std::string;
 
-/** Per-user file list cache metadata in PATH_USER_LOCAL/ListCache.xml. */
+/** Per-user file-list cache (ListCache.xml + FileLists/ on disk). */
 class ListCache {
 public:
+    /** Load metadata, migrate legacy sidecars, expire lists older than 1 day. */
     static void load();
+    /** Expire FileLists/ older than 1 day (also runs from load()). */
+    static void purgeOldLists();
 
     static string findListFile(const string& listBase);
     /** True when the online user's reported share size matches cached metadata. */

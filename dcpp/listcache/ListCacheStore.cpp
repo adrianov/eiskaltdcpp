@@ -9,7 +9,7 @@
  */
 
 #include "stdinc.h"
-#include "ListCacheStore.h"
+#include "listcache/ListCacheStore.h"
 
 #include "Encoder.h"
 #include "File.h"
@@ -18,12 +18,11 @@
 
 #include <mutex>
 #include <unordered_map>
+
 namespace dcpp {
 namespace ListCacheStore {
 namespace {
-const size_t CID_LEN = 39;
-const string SIZE_EXT = ".sharesize";
-const string FETCH_EXT = ".listfetch";
+
 struct Entry {
     int64_t shareSize = -1;
     int64_t fileSize = -1;
@@ -34,19 +33,16 @@ std::unordered_map<string, Entry> entries;
 CriticalSection dataCs;
 CriticalSection fileCs;
 std::once_flag loadFlag;
+
 string cacheFile() {
     return Util::getPath(Util::PATH_USER_LOCAL) + "ListCache.xml";
 }
 
-bool validCid(const string& cid) {
-    return cid.size() == CID_LEN && Encoder::isBase32(cid);
-}
 void writeXml() {
     Lock fileLock(fileCs);
     SimpleXML xml;
     xml.addTag("ListCache");
     xml.stepIn();
-
     {
         Lock l(dataCs);
         for(const auto& i: entries) {
@@ -73,6 +69,7 @@ void writeXml() {
     out.close();
     File::renameFile(fName + ".tmp", fName);
 }
+
 void readXml() {
     if(File::getSize(cacheFile()) == -1)
         return;
@@ -86,7 +83,7 @@ void readXml() {
     Lock l(dataCs);
     while(xml.findChild("User")) {
         const string cid = xml.getChildAttrib("CID");
-        if(!validCid(cid))
+        if(!isCid(cid))
             continue;
 
         Entry entry;
@@ -102,62 +99,68 @@ void readXml() {
         entries[cid] = entry;
     }
 }
-StringList migrateSidecars() {
-    StringList migrated;
-    for(const auto& sizePath: File::findFiles(Util::getListPath(), "*" + SIZE_EXT)) {
-        const string name = Util::getFileName(sizePath);
-        if(name.size() < CID_LEN + SIZE_EXT.size())
-            continue;
-        const string cid = name.substr(name.size() - CID_LEN - SIZE_EXT.size(), CID_LEN);
-        if(!validCid(cid))
-            continue;
 
-        Entry entry;
-        try {
-            entry.shareSize = Util::toInt64(File(sizePath, File::READ, File::OPEN).read());
-        } catch(const Exception&) {
-            continue;
-        }
-
-        const string fetchPath = sizePath.substr(0, sizePath.size() - SIZE_EXT.size()) + FETCH_EXT;
-        try {
-            if(File::getSize(fetchPath) != -1)
-                entry.fetchTime = static_cast<time_t>(
-                    Util::toInt64(File(fetchPath, File::READ, File::OPEN).read()));
-        } catch(const Exception&) { }
-
-        {
-            Lock l(dataCs);
-            const auto old = entries.find(cid);
-            if(old == entries.end() || entry.fetchTime > old->second.fetchTime)
-                entries[cid] = entry;
-        }
-        migrated.push_back(sizePath);
-        migrated.push_back(fetchPath);
-    }
-    return migrated;
-}
 void loadStore() {
     try {
         readXml();
     } catch(const Exception&) { }
-
-    const StringList migrated = migrateSidecars();
-    if(migrated.empty())
-        return;
-
-    try {
-        writeXml();
-        for(const auto& path: migrated)
-            File::deleteFile(path);
-    } catch(const Exception&) {
-        // Keep legacy files when centralized persistence fails.
-    }
 }
+
 } // namespace
+
 void load() {
     std::call_once(loadFlag, loadStore);
 }
+
+bool isCid(const string& cid) {
+    return cid.size() == 39 && Encoder::isBase32(cid);
+}
+
+time_t cachedFetch(const string& cid) {
+    Lock l(dataCs);
+    const auto it = entries.find(cid);
+    return it == entries.end() ? -1 : it->second.fetchTime;
+}
+
+bool eraseCid(const string& cid) {
+    Lock l(dataCs);
+    return entries.erase(cid) > 0;
+}
+
+void mergeMigrated(const string& cid, int64_t shareSize, time_t fetchTime) {
+    Lock l(dataCs);
+    const auto old = entries.find(cid);
+    if(old != entries.end() && fetchTime <= old->second.fetchTime)
+        return;
+    Entry& entry = entries[cid];
+    entry.shareSize = shareSize;
+    if(fetchTime >= 0)
+        entry.fetchTime = fetchTime;
+}
+
+bool persist() {
+    try {
+        writeXml();
+        return true;
+    } catch(const Exception&) {
+        return false;
+    }
+}
+
+bool eraseFetchedBefore(time_t cutoff) {
+    Lock l(dataCs);
+    bool dirty = false;
+    for(auto it = entries.begin(); it != entries.end(); ) {
+        if(it->second.fetchTime >= 0 && it->second.fetchTime < cutoff) {
+            it = entries.erase(it);
+            dirty = true;
+        } else {
+            ++it;
+        }
+    }
+    return dirty;
+}
+
 int64_t shareSize(const CID& cid) {
     load();
     Lock l(dataCs);
@@ -188,9 +191,7 @@ void setMeta(const CID& cid, int64_t shareSize, int64_t fileSize, time_t when) {
         entry.fileSize = fileSize;
         entry.fetchTime = when;
     }
-    try {
-        writeXml();
-    } catch(const Exception&) { }
+    persist();
 }
 
 } // namespace ListCacheStore
