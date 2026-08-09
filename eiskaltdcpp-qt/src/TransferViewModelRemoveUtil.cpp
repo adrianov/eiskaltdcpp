@@ -10,7 +10,7 @@
 ***************************************************************************/
 
 #include "TransferViewRemoveUtil.h"
-#include "TransferDisplay.h"
+#include "transferdisplay/TransferDisplay.h"
 #include "TransferViewModel.h"
 #include "WulforUtil.h"
 

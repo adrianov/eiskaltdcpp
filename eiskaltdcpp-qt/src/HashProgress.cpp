@@ -136,7 +136,7 @@ void HashProgress::timerTick(){
         double speedStat = (((double)(startBytes - bytes)) * 1000) / diff;
 
         status->setText(tr("%1 files/h, %2 files left").arg(filestat).arg((uint32_t)files));
-        speed->setText(tr("%1/s, %2 left, %3 shared").arg(WulforUtil::formatBytes((int64_t)speedStat))
+        speed->setText(tr("%1/s, %2 left, %3 shared").arg(WulforUtil::formatDisplayBytes((int64_t)speedStat))
                                                      .arg(WulforUtil::formatBytes(bytes))
                                                      .arg(WulforUtil::formatBytes(ShareManager::getInstance()->getShareSize())));
 

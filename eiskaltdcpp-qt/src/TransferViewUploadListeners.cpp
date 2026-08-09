@@ -16,47 +16,7 @@
 #include "dcpp/Upload.h"
 #include "extra/ipfilter.h"
 
-#include <QHash>
-
 using namespace TransferViewMetrics;
-
-namespace {
-
-static const quint64 UPLOAD_UI_INTERVAL_MS = 250;
-static QHash<QString, quint64> uploadTickTimes;
-
-QString uploadTickKey(const dcpp::Upload *ul) {
-    return _q(ul->getUser()->getCID().toBase32()) + QLatin1Char('|')
-        + _q(ul->getUserConnection().getHubUrl()) + QLatin1Char('|')
-        + _q(ul->getPath());
-}
-
-bool shouldRefreshUploadUi(const QString &key) {
-    const quint64 now = GET_TICK();
-    const auto it = uploadTickTimes.constFind(key);
-    if (it != uploadTickTimes.constEnd() && now - *it < UPLOAD_UI_INTERVAL_MS)
-        return false;
-    uploadTickTimes[key] = now;
-    return true;
-}
-
-void clearUploadUiThrottle(const QString &key) {
-    uploadTickTimes.remove(key);
-}
-
-void clearUploadUiThrottleByCid(const QString &cid) {
-    if (cid.isEmpty() || uploadTickTimes.isEmpty())
-        return;
-    const QString prefix = cid + QLatin1Char('|');
-    for (auto it = uploadTickTimes.begin(); it != uploadTickTimes.end(); ) {
-        if (it.key().startsWith(prefix))
-            it = uploadTickTimes.erase(it);
-        else
-            ++it;
-    }
-}
-
-} // namespace
 
 void TransferView::clearUploadThrottle(const QString &cid) {
     clearUploadUiThrottleByCid(cid);

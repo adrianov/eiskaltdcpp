@@ -20,8 +20,6 @@
 #include <ifaddrs.h>
 #include <fcntl.h>
 #endif
-#include "TransferDisplay.h"
-
 #include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
 #include "dcpp/Util.h"

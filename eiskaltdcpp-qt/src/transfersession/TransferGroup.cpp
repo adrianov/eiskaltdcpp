@@ -11,8 +11,7 @@
 
 #include "transfersession/TransferGroup.h"
 
-#include "TransferDisplay.h"
-#include "TransferViewMetrics.h"
+#include "transferdisplay/TransferDisplay.h"
 #include "TransferViewModel.h"
 #include "WulforUtil.h"
 #include "transfersession/TransferSession.h"
@@ -56,6 +55,13 @@ void TransferGroup::scanChild(TransferViewItem *child, Scan &s) const
     if (!tag.isEmpty() && !s.tags.contains(tag))
         s.tags.append(tag);
 
+    // Prefer a peer that is still trying; a parked one only until a better arrives.
+    const QString stat = child->data(COLUMN_TRANSFER_STATS).toString();
+    if (!stat.isEmpty() && (s.childStat.isEmpty() || (s.statFailed && !child->fail))) {
+        s.childStat = stat;
+        s.statFailed = child->fail;
+    }
+
     const qint64 sz = child->data(COLUMN_TRANSFER_SIZE).toLongLong();
     if (sz > s.totalSize)
         s.totalSize = sz;
@@ -71,18 +77,12 @@ void TransferGroup::noteActive(TransferViewItem *child, Scan &s) const
     if (parent_->download) {
         if (child->segBytes > 0)
             s.active++;
-        else if (child->queuePos > 0
-                 && (s.bestQueuePos == 0 || child->queuePos < s.bestQueuePos))
-            s.bestQueuePos = child->queuePos;
         return;
     }
     // In-flight upload segment (finished means idle between segments).
     if (!child->finished
             && !child->data(COLUMN_TRANSFER_FNAME).toString().isEmpty())
         s.active++;
-    else if (child->queuePos > 0
-             && (s.bestQueuePos == 0 || child->queuePos < s.bestQueuePos))
-        s.bestQueuePos = child->queuePos;
 }
 
 void TransferGroup::finishProgress(Scan &s) const
@@ -127,15 +127,12 @@ void TransferGroup::writeSpeed(const Scan &s) const
 
 QString TransferGroup::progressStat(const Scan &s) const
 {
-    QString prefix;
-    if (s.active || parent_->dpos > 0 || parent_->percent > 0)
-        prefix = parent_->download ? TransferViewModel::tr("Downloaded ")
-                                   : TransferViewModel::tr("Uploaded ");
-    else if (parent_->download)
-        prefix = TransferViewMetrics::slotWaitStat(s.bestQueuePos, true);
-    else
-        prefix = TransferViewModel::tr("Uploaded ");
-    return prefix + WulforUtil::formatDisplayBytes(parent_->dpos)
+    // Byte counters would read "0 B (0.0%)" before the first byte — echo the peers instead.
+    if (parent_->download && !s.active && parent_->dpos <= 0 && !s.childStat.isEmpty())
+        return s.childStat;
+    return (parent_->download ? TransferViewModel::tr("Downloaded ")
+                              : TransferViewModel::tr("Uploaded "))
+            + WulforUtil::formatDisplayBytes(parent_->dpos)
             + QString(" (%1%)").arg(parent_->percent, 0, 'f', 1);
 }
 

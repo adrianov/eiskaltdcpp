@@ -112,8 +112,11 @@ void TransferView::on(dcpp::ConnectionManagerListener::Failed, dcpp::ConnectionQ
 
     getParams(params, cqi);
 
-    params["STAT"] = _q(reason);
-    params["FAIL"] = true;
+    // Parked by MaxedOut: the socket close is a slot wait, not a failure to report.
+    params["STAT"] = cqi->getQueuePos() >= 0
+            ? TransferViewMetrics::slotWaitStat(cqi->getQueuePos())
+            : _q(reason);
+    params["FAIL"] = cqi->getQueuePos() < 0;
     params["SPEED"] = (qlonglong)0;
     params["TLEFT"] = -1;
     fillDownloadTarget(params, cqi);

@@ -33,9 +33,11 @@ public:
 private:
     struct Scan {
         int active = 0;
-        qint64 bestQueuePos = 0;
         qint64 totalSize = 0;
         qlonglong progressPos = 0;
+        /** Peer status the group echoes while nothing has been transferred. */
+        QString childStat;
+        bool statFailed = false;
         QList<QString> hubs;
         QList<QString> tags;
         QString nick;
@@ -44,6 +46,7 @@ private:
     TransferViewItem *parent_;
 
     void scanChild(TransferViewItem *child, Scan &s) const;
+    /** Count peers with an in-flight segment. */
     void noteActive(TransferViewItem *child, Scan &s) const;
     void finishProgress(Scan &s) const;
     qlonglong downloadProgress(const Scan &s) const;

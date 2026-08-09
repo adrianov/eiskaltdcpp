@@ -22,6 +22,8 @@
 #include "dcpp/Util.h"
 
 #include <QHash>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QObject>
 
 using namespace dcpp;
@@ -30,8 +32,53 @@ namespace TransferViewMetrics {
 
 namespace {
 
-static const quint64 DOWNLOAD_UI_INTERVAL_MS = 250;
-static QHash<QString, quint64> downloadTickTimes;
+static const quint64 UI_TICK_MS = 250;
+
+/** Core Tick / Complete / Failed / CM-Removed all share these maps. */
+struct TickThrottle {
+    QMutex mutex;
+    QHash<QString, quint64> times;
+
+    bool shouldRefresh(const QString &key)
+    {
+        if (key.isEmpty())
+            return false;
+        const quint64 now = GET_TICK();
+        QMutexLocker lock(&mutex);
+        const auto it = times.constFind(key);
+        if (it != times.constEnd() && now - *it < UI_TICK_MS)
+            return false;
+        times[key] = now;
+        return true;
+    }
+
+    void clear(const QString &key)
+    {
+        if (key.isEmpty())
+            return;
+        QMutexLocker lock(&mutex);
+        times.remove(key);
+    }
+
+    void clearByCid(const QString &cid)
+    {
+        if (cid.isEmpty())
+            return;
+        QMutexLocker lock(&mutex);
+        if (times.isEmpty())
+            return;
+        const QString prefix = cid + QLatin1Char('|');
+        for (auto it = times.begin(); it != times.end(); ) {
+            if (it.key().startsWith(prefix))
+                it = times.erase(it);
+            else
+                ++it;
+        }
+    }
+};
+
+static TickThrottle uploadTicks;
+static TickThrottle downloadTicks;
 
 int64_t uploadDiskSize(const Upload *ul)
 {
@@ -42,37 +89,52 @@ int64_t uploadDiskSize(const Upload *ul)
 
 } // namespace
 
+QString uploadTickKey(const Upload *ul)
+{
+    const UserPtr user = ul->getUser();
+    if (!user)
+        return QString();
+    return _q(user->getCID().toBase32()) + QLatin1Char('|')
+        + _q(ul->getUserConnection().getHubUrl()) + QLatin1Char('|')
+        + _q(ul->getPath());
+}
+
 QString downloadTickKey(const Download *dl)
 {
-    return _q(dl->getUser()->getCID().toBase32()) + QLatin1Char('|') + _q(dl->getPath());
+    const UserPtr user = dl->getUser();
+    if (!user)
+        return QString();
+    return _q(user->getCID().toBase32()) + QLatin1Char('|') + _q(dl->getPath());
+}
+
+bool shouldRefreshUploadUi(const QString &key)
+{
+    return uploadTicks.shouldRefresh(key);
 }
 
 bool shouldRefreshDownloadUi(const QString &key)
 {
-    const quint64 now = GET_TICK();
-    const auto it = downloadTickTimes.constFind(key);
-    if (it != downloadTickTimes.constEnd() && now - *it < DOWNLOAD_UI_INTERVAL_MS)
-        return false;
-    downloadTickTimes[key] = now;
-    return true;
+    return downloadTicks.shouldRefresh(key);
+}
+
+void clearUploadUiThrottle(const QString &key)
+{
+    uploadTicks.clear(key);
 }
 
 void clearDownloadUiThrottle(const QString &key)
 {
-    downloadTickTimes.remove(key);
+    downloadTicks.clear(key);
+}
+
+void clearUploadUiThrottleByCid(const QString &cid)
+{
+    uploadTicks.clearByCid(cid);
 }
 
 void clearDownloadUiThrottleByCid(const QString &cid)
 {
-    if (cid.isEmpty() || downloadTickTimes.isEmpty())
-        return;
-    const QString prefix = cid + QLatin1Char('|');
-    for (auto it = downloadTickTimes.begin(); it != downloadTickTimes.end(); ) {
-        if (it.key().startsWith(prefix))
-            it = downloadTickTimes.erase(it);
-        else
-            ++it;
-    }
+    downloadTicks.clearByCid(cid);
 }
 
 int64_t downloadFileSize(const Transfer *trf)
@@ -128,14 +190,11 @@ QString downloadProgressStat(int64_t bytes, int64_t size)
     return QObject::tr("Downloaded %1 (%2%) ").arg(WulforUtil::formatDisplayBytes(bytes)).arg(percent, 0, 'f', 1);
 }
 
-QString slotWaitStat(qint64 queuePos, bool trailingSpace)
+QString slotWaitStat(qint64 queuePos)
 {
-    QString stat = queuePos > 0
+    return queuePos > 0
         ? QObject::tr("Waiting for slot (#%1)").arg(queuePos)
         : QObject::tr("Waiting for slot");
-    if (trailingSpace)
-        stat += ' ';
-    return stat;
 }
 
 void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat)

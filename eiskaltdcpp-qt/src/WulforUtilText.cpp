@@ -10,7 +10,7 @@
 ***************************************************************************/
 
 #include "WulforUtil.h"
-#include "TransferDisplay.h"
+#include "transferdisplay/TransferDisplay.h"
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
@@ -79,7 +79,7 @@ QString WulforUtil::formatBytes(int64_t aBytes){
 }
 
 QString WulforUtil::formatDisplayBytes(int64_t aBytes){
-    return formatBytes(static_cast<int64_t>(TransferDisplay::roundBytes(aBytes)));
+    return TransferDisplay::formatBytes(aBytes);
 }
 
 void WulforUtil::bindActionIcon(QAction *act, Icons icon)

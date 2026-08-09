@@ -64,7 +64,6 @@ public:
     quint64 speedStart;
     /** File/upload session: baseline at begin. Download peer: file left at join. */
     qlonglong speedBase;
-    qint64 queuePos;
     double percent;
     /** Shown Time left (seconds), smoothed — see TransferDisplay::smoothTimeLeft. */
     qlonglong smoothTleft;

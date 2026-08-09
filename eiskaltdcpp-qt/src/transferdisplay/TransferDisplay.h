@@ -16,16 +16,17 @@
 
 namespace TransferDisplay {
 
-constexpr int ByteSigFigs = 2;
-
+/**
+ * Compact transfer size/speed text for the UI.
+ * Same unit ladder as Util::formatBytes. Print whole numbers only.
+ * From KB up, round so the ones digit is 0 when the value is ≥ 10
+ * (23 → 20, 720 → 720). Bytes below one KB stay exact.
+ */
 double roundBytes(double bytes);
 inline double roundSpeed(double speed) { return roundBytes(speed); }
+QString formatBytes(int64_t bytes);
 
-/**
- * Time left (seconds): never increase.
- * If the new estimate is lower, step to the midpoint of shown and estimate.
- * If the estimate is unknown, keep the value already shown.
- */
+/** Time left (seconds): never rise; on a lower estimate, step halfway there. */
 inline int64_t smoothTimeLeft(int64_t shown, int64_t estimate)
 {
     if (estimate < 0)
@@ -37,13 +38,11 @@ inline int64_t smoothTimeLeft(int64_t shown, int64_t estimate)
     return shown;
 }
 
-/** True for "Downloaded …" / "Uploaded …" progress status text. */
 inline bool isProgressStat(const QString &stat, const QString &downloadedPrefix, const QString &uploadedPrefix)
 {
     return stat.startsWith(downloadedPrefix) || stat.startsWith(uploadedPrefix);
 }
 
-/** High-water mark: multi-segment/source ticks can briefly under-count. */
 inline qlonglong highWaterBytes(qlonglong shown, qlonglong next)
 {
     return next < shown ? shown : next;

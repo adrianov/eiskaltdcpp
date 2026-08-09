@@ -44,7 +44,6 @@ void TransferView::on(dcpp::DownloadManagerListener::Queued, dcpp::Download* dl,
 
     getParams(params, dl);
 
-    params["QUEUE_POS"] = static_cast<qlonglong>(queuePos);
     params["STAT"] = slotWaitStat(static_cast<qint64>(queuePos));
     params["FAIL"] = false;
 
@@ -57,7 +56,6 @@ void TransferView::on(dcpp::DownloadManagerListener::Starting, dcpp::Download* d
     getParams(params, dl);
 
     params["FPOS"]  = (qlonglong)QueueManager::getInstance()->getPos(dl->getPath());
-    params["QUEUE_POS"] = static_cast<qlonglong>(0);
     const DownloadUiState s = downloadState(dl);
     // Peer progress text comes from TransferSession (sum of this peer's segments).
     applyDownloadMetrics(params, s, tr("Download starting..."));

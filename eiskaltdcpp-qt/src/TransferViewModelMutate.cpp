@@ -10,7 +10,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferDisplay.h"
+#include "transferdisplay/TransferDisplay.h"
 #include "TransferViewModelTree.h"
 #include "TransferViewRemoveUtil.h"
 #include "transfersession/TransferSessionRow.h"
@@ -82,8 +82,6 @@ void TransferViewModel::updateTransfer(const VarMap &params){
         item->finished = false;
     if (p.contains("TTH"))
         item->tth = vstr(p["TTH"]);
-    if (p.contains("QUEUE_POS"))
-        item->queuePos = vlng(p["QUEUE_POS"]);
 
     const QString fname = vstr(p["FNAME"]);
     const QString newTarget = vstr(p["TARGET"]);

@@ -44,17 +44,22 @@ DownloadUiState downloadState(const dcpp::Download *dl);
 QString uploadProgressStat(int64_t sent, int64_t fileSize);
 /** Status text for bytes/size (file group or active segment). */
 QString downloadProgressStat(int64_t bytes, int64_t size);
-/** 1-based remote upload queue position; 0 if unknown. trailingSpace for parent status suffix. */
-QString slotWaitStat(qint64 queuePos, bool trailingSpace = false);
+/** 1-based remote upload queue position; 0 if unknown. */
+QString slotWaitStat(qint64 queuePos);
 
 void applyUploadMetrics(QVariantMap &params, const UploadUiState &s, const QString &stat);
 void applyDownloadMetrics(QVariantMap &params, const DownloadUiState &s, const QString &stat);
 void applyUploadSpeed(QVariantMap &params, const dcpp::Upload *ul, const UploadUiState &s);
 void applyDownloadSpeed(QVariantMap &params, const dcpp::Download *dl, const DownloadUiState &s);
 
+QString uploadTickKey(const dcpp::Upload *ul);
 QString downloadTickKey(const dcpp::Download *dl);
+
+bool shouldRefreshUploadUi(const QString &key);
 bool shouldRefreshDownloadUi(const QString &key);
+void clearUploadUiThrottle(const QString &key);
 void clearDownloadUiThrottle(const QString &key);
+void clearUploadUiThrottleByCid(const QString &cid);
 void clearDownloadUiThrottleByCid(const QString &cid);
 
 } // namespace TransferViewMetrics

@@ -20,7 +20,6 @@ TransferViewItem::TransferViewItem(const QList<QVariant> &data, TransferViewItem
     segBytes(0L),
     speedStart(0),
     speedBase(0L),
-    queuePos(0),
     percent(0.0),
     smoothTleft(-1),
     itemData(data),

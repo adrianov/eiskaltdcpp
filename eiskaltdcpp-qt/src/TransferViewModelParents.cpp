@@ -10,7 +10,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
-#include "TransferDisplay.h"
+#include "transferdisplay/TransferDisplay.h"
 #include "transfersession/TransferGroup.h"
 
 void TransferViewModel::updateParents(){
