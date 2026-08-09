@@ -10,50 +10,20 @@
  ***************************************************************************/
 
 #include "treeheader/HeaderColumnFit.h"
+#include "treeheader/ColumnContentSpan.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
-#include <QFontMetrics>
 #include <QHeaderView>
-#include <QIcon>
-#include <QPixmap>
 #include <QTableView>
 #include <QTreeView>
 #include <QTreeWidget>
-#include <QVector>
 
-namespace {
-
-void measureRows(QAbstractItemModel *model, const QModelIndex &parent,
-                 int column, const QFontMetrics &fm, int depth, int &w)
-{
-    if (!model || depth > 24)
-        return;
-    const int rows = qMin(model->rowCount(parent), 300);
-    for (int r = 0; r < rows; ++r) {
-        const QModelIndex idx = model->index(r, column, parent);
-        if (!idx.isValid())
-            continue;
-        int rowW = fm.horizontalAdvance(idx.data(Qt::DisplayRole).toString()) + 20;
-        const QVariant deco = idx.data(Qt::DecorationRole);
-        if (deco.canConvert<QPixmap>())
-            rowW += deco.value<QPixmap>().width() + 4;
-        else if (deco.canConvert<QIcon>()) {
-            const QIcon icon = deco.value<QIcon>();
-            if (!icon.isNull())
-                rowW += icon.actualSize(QSize(16, 16)).width() + 4;
-        }
-        w = qMax(w, rowW);
-        if (model->hasChildren(idx))
-            measureRows(model, idx, column, fm, depth + 1, w);
-    }
-}
-
-} // namespace
-
-HeaderColumnFit::HeaderColumnFit(QAbstractItemView *view, int stretchColumn)
+HeaderColumnFit::HeaderColumnFit(QAbstractItemView *view, int stretchColumn,
+                                 const QSet<int> &manual)
     : view_(view)
     , stretchColumn_(stretchColumn)
+    , manual_(manual)
 {
 }
 
@@ -61,14 +31,14 @@ QHeaderView *HeaderColumnFit::headerOf(QAbstractItemView *view)
 {
     if (QTableView *table = qobject_cast<QTableView*>(view))
         return table->horizontalHeader();
-    if (QTreeWidget *treeWidget = qobject_cast<QTreeWidget*>(view))
-        return treeWidget->header();
+    if (QTreeWidget *tw = qobject_cast<QTreeWidget*>(view))
+        return tw->header();
     if (QTreeView *tree = qobject_cast<QTreeView*>(view))
         return tree->header();
     return nullptr;
 }
 
-bool HeaderColumnFit::canApply() const
+bool HeaderColumnFit::ready() const
 {
     return view_ && view_->isVisible() && view_->viewport()
         && view_->viewport()->width() >= 40 && headerOf(view_);
@@ -88,104 +58,92 @@ QList<int> HeaderColumnFit::visibleColumns() const
     return visible;
 }
 
-int HeaderColumnFit::labelWidth(int column) const
+int HeaderColumnFit::flexIndex(const QList<int> &visible) const
 {
-    QAbstractItemModel *model = view_->model();
-    if (!model)
-        return 48;
-    return qMax(48, QFontMetrics(view_->font()).horizontalAdvance(
-                   model->headerData(column, Qt::Horizontal).toString()) + 24);
-}
-
-int HeaderColumnFit::contentWidth(int column) const
-{
-    QHeaderView *header = headerOf(view_);
-    int w = labelWidth(column);
-    if (QTreeView *tree = qobject_cast<QTreeView*>(view_))
-        tree->resizeColumnToContents(column);
-    else if (QTableView *table = qobject_cast<QTableView*>(view_))
-        table->resizeColumnToContents(column);
-    w = qMax(w, header->sectionSize(column));
-    w = qMax(w, header->sectionSizeHint(column) + 16);
-    if (QAbstractItemModel *model = view_->model())
-        measureRows(model, QModelIndex(), column, QFontMetrics(view_->font()), 0, w);
-    return w;
-}
-
-int HeaderColumnFit::stretchIndex(const QList<int> &visible) const
-{
-    if (visible.isEmpty())
-        return 0;
-    if (stretchColumn_ >= 0) {
-        const int idx = visible.indexOf(stretchColumn_);
-        if (idx >= 0)
-            return idx;
+    const int preferred = visible.indexOf(stretchColumn_);
+    if (preferred >= 0 && !manual_.contains(stretchColumn_))
+        return preferred;
+    for (int i = 0; i < visible.size(); ++i) {
+        if (!manual_.contains(visible.at(i)))
+            return i;
     }
-    return 0;
+    return -1;
 }
 
-bool HeaderColumnFit::isAdequate() const
+bool HeaderColumnFit::fillsView() const
 {
     const QList<int> visible = visibleColumns();
     if (visible.isEmpty())
         return true;
-    if (!canApply())
+    if (!ready())
         return false;
 
     QHeaderView *header = headerOf(view_);
-    const int viewW = view_->viewport()->width();
+    ColumnContentSpan span(view_);
     int total = 0;
     for (int col : visible) {
-        if (header->sectionSize(col) < labelWidth(col))
+        if (!manual_.contains(col) && header->sectionSize(col) < span.title(col))
             return false;
         total += header->sectionSize(col);
     }
-    // Saved/user widths that fill the viewport are fine — do not refit to content.
-    return total >= viewW - 32;
+    // Restored or dragged widths that already fill the viewport need no refit.
+    return total >= view_->viewport()->width() - 32;
+}
+
+QVector<int> HeaderColumnFit::baseWidths(const QList<int> &visible,
+                                         QHeaderView *header) const
+{
+    ColumnContentSpan span(view_);
+    const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
+    QVector<int> widths;
+    widths.reserve(visible.size());
+    for (int col : visible) {
+        const int prev = header->sectionSize(col);
+        if (manual_.contains(col))
+            widths.append(prev);
+        else
+            widths.append(qMax(hasRows ? span.cells(col) : span.title(col), prev));
+    }
+    return widths;
+}
+
+void HeaderColumnFit::balance(QVector<int> &widths, const QList<int> &visible,
+                              int viewWidth) const
+{
+    int total = 0;
+    for (int w : widths)
+        total += w;
+
+    const int flex = flexIndex(visible);
+    if (flex >= 0 && total < viewWidth - 8) {
+        widths[flex] += viewWidth - total;
+        return;
+    }
+    if (total <= viewWidth || stretchColumn_ < 0 || manual_.contains(stretchColumn_))
+        return;
+    const int at = visible.indexOf(stretchColumn_);
+    if (at < 0)
+        return;
+    ColumnContentSpan span(view_);
+    const int cut = qMin(total - viewWidth,
+                         qMax(0, widths[at] - span.title(stretchColumn_)));
+    if (cut > 0)
+        widths[at] -= cut;
 }
 
 void HeaderColumnFit::apply()
 {
     QHeaderView *header = headerOf(view_);
-    if (!canApply() || header->count() < 1)
+    if (!ready() || header->count() < 1)
         return;
-
     const QList<int> visible = visibleColumns();
     if (visible.isEmpty())
         return;
 
     header->setStretchLastSection(false);
-    const int viewWidth = view_->viewport()->width();
-    const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
-
-    // Snapshot before contentWidth() mutates sections via resizeColumnToContents.
-    QVector<int> previous;
-    previous.reserve(visible.size());
-    for (int col : visible)
-        previous.append(header->sectionSize(col));
-
-    QVector<int> widths;
-    widths.reserve(visible.size());
-    int total = 0;
-    for (int i = 0; i < visible.size(); ++i) {
-        const int col = visible.at(i);
-        // Keep restored/user widths; with no rows only enforce label minimum.
-        const int need = hasRows ? contentWidth(col) : labelWidth(col);
-        widths.append(qMax(need, previous.at(i)));
-        total += widths.last();
-    }
-
-    const int stretch = stretchIndex(visible);
-    const int shrinkAt = visible.indexOf(stretchColumn_);
-    if (total < viewWidth - 8)
-        widths[stretch] += viewWidth - total;
-    else if (total > viewWidth && shrinkAt >= 0) {
-        const int minW = labelWidth(stretchColumn_);
-        const int shrink = qMin(total - viewWidth, qMax(0, widths[shrinkAt] - minW));
-        if (shrink > 0)
-            widths[shrinkAt] -= shrink;
-    }
-
+    // Snapshot sizes inside baseWidths before cells() probes with resizeColumnToContents.
+    QVector<int> widths = baseWidths(visible, header);
+    balance(widths, visible, view_->viewport()->width());
     for (int i = 0; i < visible.size(); ++i)
         header->resizeSection(visible.at(i), widths.at(i));
 }

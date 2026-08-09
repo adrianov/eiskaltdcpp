@@ -12,31 +12,36 @@
 #pragma once
 
 #include <QList>
+#include <QSet>
+#include <QVector>
 
 class QAbstractItemView;
 class QHeaderView;
 
 /**
- * Fits tree/table columns to content and the viewport. Keeps existing section
- * widths when larger than content; one stretch column takes leftover or shrinks.
+ * Lays out tree/table columns to content and the viewport. Keeps a section
+ * when it is already wider than content; one flexible column absorbs leftover
+ * space or shrinks on overflow. Columns in `manual` stay at the dragged width.
  */
 class HeaderColumnFit
 {
 public:
-    HeaderColumnFit(QAbstractItemView *view, int stretchColumn);
+    HeaderColumnFit(QAbstractItemView *view, int stretchColumn,
+                    const QSet<int> &manual = QSet<int>());
 
     static QHeaderView *headerOf(QAbstractItemView *view);
 
-    bool canApply() const;
-    bool isAdequate() const;
+    bool ready() const;
+    bool fillsView() const;
     void apply();
 
 private:
     QList<int> visibleColumns() const;
-    int labelWidth(int column) const;
-    int contentWidth(int column) const;
-    int stretchIndex(const QList<int> &visible) const;
+    int flexIndex(const QList<int> &visible) const;
+    QVector<int> baseWidths(const QList<int> &visible, QHeaderView *header) const;
+    void balance(QVector<int> &widths, const QList<int> &visible, int viewWidth) const;
 
     QAbstractItemView *view_ = nullptr;
     int stretchColumn_ = -1;
+    QSet<int> manual_;
 };

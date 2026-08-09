@@ -14,6 +14,7 @@
 #include <QByteArray>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 
 class QAbstractItemView;
 class QEvent;
@@ -22,6 +23,7 @@ class QHeaderView;
 /**
  * Defers header column fitting until the view is ready. One content fit runs
  * after rows exist; later inserts do not keep rewriting widths.
+ * Columns the user has dragged stay at that width (no further autosize).
  * Does not watch ancestor widgets — dock/window drags must stay fluid.
  */
 class TreeHeaderAutosize : public QObject
@@ -36,6 +38,7 @@ private:
     explicit TreeHeaderAutosize(QAbstractItemView *view);
 
     static TreeHeaderAutosize *attached(QAbstractItemView *view);
+    void hookHeader();
     void requestFit();
     void hookModel();
     void scheduleCheck();
@@ -47,5 +50,7 @@ private:
     bool done_ = false;
     bool pending_ = false;
     bool modelHooked_ = false;
-    bool rowsSized_ = false; // one content fit after the model has rows
+    bool contentFit_ = false; // one content fit after the model has rows
+    bool fitting_ = false;    // ignore sectionResized from our own fits
+    QSet<int> manual_;
 };

@@ -39,7 +39,19 @@ TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
     setObjectName(QLatin1String(kObjectName));
     // View only — ancestor Resize (MainWindow / side dock) must not fit columns.
     view->installEventFilter(this);
+    hookHeader();
     hookModel();
+}
+
+void TreeHeaderAutosize::hookHeader()
+{
+    QHeaderView *header = HeaderColumnFit::headerOf(view_);
+    if (!header)
+        return;
+    connect(header, &QHeaderView::sectionResized, this, [this](int logical, int, int) {
+        if (!fitting_)
+            manual_.insert(logical);
+    });
 }
 
 void TreeHeaderAutosize::setStretchColumn(QAbstractItemView *view, int logicalColumn)
@@ -48,7 +60,7 @@ void TreeHeaderAutosize::setStretchColumn(QAbstractItemView *view, int logicalCo
     if (!a || a->stretchColumn_ == logicalColumn)
         return;
     a->stretchColumn_ = logicalColumn;
-    a->rowsSized_ = false;
+    a->contentFit_ = false;
     a->requestFit();
 }
 
@@ -60,10 +72,13 @@ void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
     if (!view)
         return;
     header->setStretchLastSection(false);
+    TreeHeaderAutosize *a = attached(view);
+    a->fitting_ = true;
     if (!state.isEmpty())
         header->restoreState(state);
-    TreeHeaderAutosize *a = attached(view);
-    a->rowsSized_ = false;
+    a->fitting_ = false;
+    a->manual_.clear();
+    a->contentFit_ = false;
     a->requestFit();
 }
 
@@ -72,7 +87,7 @@ void TreeHeaderAutosize::ensure(QAbstractItemView *view)
     if (!view)
         return;
     TreeHeaderAutosize *a = attached(view);
-    a->rowsSized_ = false;
+    a->contentFit_ = false;
     a->requestFit();
 }
 
@@ -94,7 +109,7 @@ void TreeHeaderAutosize::hookModel()
     connect(model, &QAbstractItemModel::rowsInserted, this, [this]() { requestFit(); });
     connect(model, &QAbstractItemModel::columnsInserted, this, [this]() { requestFit(); });
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
-        rowsSized_ = false;
+        contentFit_ = false;
         requestFit();
     });
 }
@@ -125,19 +140,21 @@ void TreeHeaderAutosize::checkLayout()
 {
     if (!view_)
         return;
-    HeaderColumnFit fit(view_, stretchColumn_);
+    HeaderColumnFit fit(view_, stretchColumn_, manual_);
     const bool hasRows = view_->model() && view_->model()->rowCount() > 0;
     // Viewport fill alone is not enough before the first content fit — empty
-    // fits leave header-sized columns that stay narrow after rows arrive.
-    if (fit.isAdequate() && (!hasRows || rowsSized_)) {
+    // fits leave title-sized columns that stay narrow after rows arrive.
+    if (fit.fillsView() && (!hasRows || contentFit_)) {
         done_ = true;
         return;
     }
     done_ = false;
-    if (!fit.canApply())
+    if (!fit.ready())
         return;
+    fitting_ = true;
     fit.apply();
-    done_ = fit.isAdequate();
+    fitting_ = false;
+    done_ = fit.fillsView();
     if (hasRows && done_)
-        rowsSized_ = true;
+        contentFit_ = true;
 }
