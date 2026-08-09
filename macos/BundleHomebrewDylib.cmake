@@ -99,5 +99,3 @@ if (NOT _duck_line MATCHES "@executable_path/../Frameworks/${BUNDLE_DYLIB_NAME}"
     "BundleHomebrewDylib: ${BUNDLE_DYLIB_NAME} not rewritten to @executable_path "
     "(changed=${_changed}). line=[${_duck_line}] tried=[${_bundle_olds}]")
 endif ()
-
-message(STATUS "Bundled ${BUNDLE_DYLIB_NAME} into ${_bundle_app}")

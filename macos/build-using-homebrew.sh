@@ -49,7 +49,7 @@ cd "${MAIN_DIR}/builddir"
 which nproc > /dev/null && JOBS=$(nproc) || JOBS=4
 
 cmake .. -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" ${BUILD_OPTIONS} ${@}
-cmake --build . --target all -- -j ${JOBS}
+cmake --build . --target all -- -sj ${JOBS}
 
 cpack -G DragNDrop
 cp -a EiskaltDC++*.dmg "${MAIN_DIR}/../"

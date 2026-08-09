@@ -28,10 +28,13 @@ cmake "$root" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_PREFIX="$dist" \
     -DCMAKE_INSTALL_MESSAGE=NEVER \
+    -DCMAKE_MESSAGE_LOG_LEVEL=NOTICE \
     -DCMAKE_C_COMPILER=/usr/bin/clang \
-    -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+    -DQUIET_BUILD=ON
 
-make -j"$(sysctl -n hw.ncpu)"
+# -s: no recipe echo; QUIET_BUILD drops per-file "[ n%] Building..." lines.
+make -sj"$(sysctl -n hw.ncpu)"
 make install
 
 app=$dist/EiskaltDC++.app

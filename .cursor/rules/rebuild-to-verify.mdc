@@ -23,11 +23,14 @@ After editing compilable code (C++/CMake/headers, Qt UI wiring, etc.), **rebuild
 
 ## How
 
-- Prefer the existing tree: `cmake --build build --target <target> -j$(sysctl -n hw.ncpu)` (or `make` in `build/`). Use `macos/build.sh` / `macos/build-using-homebrew.sh` when a full/configure cycle is needed.
+- Prefer a quiet build so logs stay short for diagnosis:  
+  `cmake --build build --target <target> -j$(sysctl -n hw.ncpu) -- -s`  
+  (or `make -sj…` in `build/`). `QUIET_BUILD` (default ON) already hides per-file progress; `-s` hides recipe echo. Compiler errors/warnings still appear.
+- Use `macos/build.sh` / `macos/build-using-homebrew.sh` when a full/configure cycle is needed.
 - Scope to what changed when reliable (`dcpp`, `eiskaltdcpp-qt`, …); widen if public headers or cross-lib APIs moved.
 - After adding/moving `dcpp/` sources, reconfigure when CMake lists change.
 - Headers under `dcpp/<subdir>/` must include dcpp roots as `"../Foo.h"` (same pattern as `hub/`, `queue/`) so Qt translation units that pull them via `dcpp/HashManager.h` still resolve.
-- On failure: fix and rebuild in the same turn until clean.
+- On failure: fix and rebuild in the same turn until clean. Do not paste full successful build logs into the reply.
 
 ## Skip only when
 
