@@ -16,14 +16,17 @@
 #include <QPointer>
 #include <QSet>
 
+#include <memory>
+
+class ColumnPeakWatch;
 class QAbstractItemView;
 class QEvent;
 class QHeaderView;
 class QTimer;
 
 /**
- * Debounced column autosize for tree/table headers. Timing and manual-drag
- * tracking live here; width rules are applied by HeaderContentFit.
+ * Column autosize: short debounce on show/resize, plus ColumnPeakWatch when
+ * a column's peak content width grows.
  */
 class TreeHeaderAutosize : public QObject
 {
@@ -37,14 +40,15 @@ private:
     static TreeHeaderAutosize *attached(QAbstractItemView *view);
 
     void hookHeader();
-    void requestFit();
     void hookModel();
+    void requestFit();
     void scheduleCheck();
     void checkLayout();
     bool eventFilter(QObject *obj, QEvent *ev) override;
 
     QPointer<QAbstractItemView> view_;
     QTimer *debounce_ = nullptr;
+    std::unique_ptr<ColumnPeakWatch> peaks_;
     bool done_ = false;
     bool modelHooked_ = false;
     bool fitting_ = false;

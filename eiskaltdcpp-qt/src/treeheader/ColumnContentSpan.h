@@ -12,6 +12,7 @@
 #pragma once
 
 class QAbstractItemView;
+class QModelIndex;
 
 /** Soft (p80+30%) and full (p100) content widths, each at least the header title. */
 struct ColumnWidths {
@@ -30,6 +31,8 @@ public:
     explicit ColumnContentSpan(QAbstractItemView *view);
 
     int title(int column) const;
+    /** Single-cell width using the same rules as widths(). */
+    int cellWidth(const QModelIndex &index) const;
     ColumnWidths widths(int column) const;
 
 private:

@@ -10,6 +10,7 @@
  ***************************************************************************/
 
 #include "treeheader/TreeHeaderAutosize.h"
+#include "treeheader/ColumnPeakWatch.h"
 #include "treeheader/HeaderContentFit.h"
 
 #include <QAbstractItemModel>
@@ -20,7 +21,7 @@
 
 namespace {
 const char kObjectName[] = "TreeHeaderAutosize";
-constexpr int kDebounceMs = 1000;
+constexpr int kDebounceMs = 200;
 }
 
 TreeHeaderAutosize *TreeHeaderAutosize::attached(QAbstractItemView *view)
@@ -37,11 +38,14 @@ TreeHeaderAutosize::TreeHeaderAutosize(QAbstractItemView *view)
     : QObject(view)
     , view_(view)
     , debounce_(new QTimer(this))
+    , peaks_(std::make_unique<ColumnPeakWatch>(view))
 {
     setObjectName(QLatin1String(kObjectName));
     debounce_->setSingleShot(true);
     debounce_->setInterval(kDebounceMs);
     connect(debounce_, &QTimer::timeout, this, [this]() { checkLayout(); });
+    peaks_->setManual(&manual_);
+    peaks_->setNeedFit([this]() { requestFit(); });
     view->installEventFilter(this);
     hookHeader();
     hookModel();
@@ -69,10 +73,10 @@ void TreeHeaderAutosize::restore(QHeaderView *header, const QByteArray &state)
     a->fitting_ = true;
     if (!state.isEmpty())
         header->restoreState(state);
-    // After restore: saved state may re-enable stretchLastSection (QTreeView default).
     header->setStretchLastSection(false);
     a->fitting_ = false;
     a->manual_.clear();
+    a->peaks_->clearPeaks();
     a->hookModel();
     a->requestFit();
 }
@@ -99,10 +103,23 @@ void TreeHeaderAutosize::hookModel()
     if (!model)
         return;
     modelHooked_ = true;
-    connect(model, &QAbstractItemModel::rowsInserted, this, [this]() { requestFit(); });
-    connect(model, &QAbstractItemModel::rowsRemoved, this, [this]() { requestFit(); });
-    connect(model, &QAbstractItemModel::columnsInserted, this, [this]() { requestFit(); });
-    connect(model, &QAbstractItemModel::modelReset, this, [this]() { requestFit(); });
+
+    connect(model, &QAbstractItemModel::rowsInserted, this,
+            [this](const QModelIndex &parent, int first, int last) {
+                peaks_->onInserted(parent, first, last);
+            });
+    connect(model, &QAbstractItemModel::columnsInserted, this, [this]() {
+        peaks_->clearPeaks();
+        requestFit();
+    });
+    connect(model, &QAbstractItemModel::modelReset, this, [this]() {
+        peaks_->clearPeaks();
+        requestFit();
+    });
+    connect(model, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &tl, const QModelIndex &br, const QVector<int> &roles) {
+                peaks_->onDataChanged(tl, br, roles);
+            });
 }
 
 void TreeHeaderAutosize::scheduleCheck()
@@ -127,12 +144,10 @@ bool TreeHeaderAutosize::eventFilter(QObject *obj, QEvent *ev)
 void TreeHeaderAutosize::checkLayout()
 {
     HeaderContentFit fit(view_, manual_);
-    if (!fit.ready()) {
-        // Not mapped yet — Show/Resize while !done_ will schedule again.
+    if (!fit.ready())
         return;
-    }
     fitting_ = true;
-    fit.apply();
+    peaks_->setPeaks(fit.apply());
     fitting_ = false;
     done_ = true;
 }

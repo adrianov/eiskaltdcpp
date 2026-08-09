@@ -25,7 +25,6 @@ namespace {
 
 constexpr int kSampleRows = 300;
 constexpr int kPercentile = 80;
-/** Allow up to this fraction above p80, still capped by p100. */
 constexpr int kAboveP80Pct = 30;
 
 int iconPad(const QVariant &deco)
@@ -38,6 +37,38 @@ int iconPad(const QVariant &deco)
     return icon.isNull() ? 0 : icon.actualSize(QSize(16, 16)).width() + 4;
 }
 
+int treeDepth0(QAbstractItemView *view)
+{
+    QTreeView *tree = qobject_cast<QTreeView*>(view);
+    return (tree && tree->rootIsDecorated()) ? 1 : 0;
+}
+
+int treeIndent(QAbstractItemView *view)
+{
+    QTreeView *tree = qobject_cast<QTreeView*>(view);
+    return tree ? tree->indentation() : 0;
+}
+
+int indexDepth(const QModelIndex &index, int depth0)
+{
+    int depth = depth0;
+    for (QModelIndex p = index.parent(); p.isValid(); p = p.parent())
+        ++depth;
+    return depth;
+}
+
+int cellSpan(const QModelIndex &idx, const QFontMetrics &fm, int depth, int indent)
+{
+    if (!idx.isValid())
+        return 0;
+    const QString text = idx.data(Qt::DisplayRole).toString();
+    const int icons = iconPad(idx.data(Qt::DecorationRole));
+    if (text.trimmed().isEmpty() && icons < 1)
+        return 0;
+    return fm.horizontalAdvance(text) + 20 + icons
+            + (idx.column() == 0 ? depth * indent : 0);
+}
+
 void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
                    int column, const QFontMetrics &fm, int depth, int indent,
                    QVector<int> &out)
@@ -47,15 +78,9 @@ void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
     const int rows = qMin(model->rowCount(parent), kSampleRows);
     for (int r = 0; r < rows; ++r) {
         const QModelIndex idx = model->index(r, column, parent);
-        if (!idx.isValid())
-            continue;
-        const QString text = idx.data(Qt::DisplayRole).toString();
-        const int icons = iconPad(idx.data(Qt::DecorationRole));
-        // Blank cells are not samples — they must not pull p80/p100 down.
-        if (!text.trimmed().isEmpty() || icons > 0) {
-            out.append(fm.horizontalAdvance(text) + 20 + icons
-                       + (column == 0 ? depth * indent : 0));
-        }
+        const int w = cellSpan(idx, fm, depth, indent);
+        if (w > 0)
+            out.append(w);
         if (model->hasChildren(idx))
             collectWidths(model, idx, column, fm, depth + 1, indent, out);
     }
@@ -89,6 +114,14 @@ int ColumnContentSpan::title(int column) const
                    model->headerData(column, Qt::Horizontal).toString()) + 24);
 }
 
+int ColumnContentSpan::cellWidth(const QModelIndex &index) const
+{
+    if (!view_ || !index.isValid())
+        return 0;
+    return cellSpan(index, QFontMetrics(view_->font()),
+                    indexDepth(index, treeDepth0(view_)), treeIndent(view_));
+}
+
 ColumnWidths ColumnContentSpan::widths(int column) const
 {
     const int floor = title(column);
@@ -96,17 +129,9 @@ ColumnWidths ColumnContentSpan::widths(int column) const
     if (!model || model->rowCount() < 1)
         return ColumnWidths{floor, floor};
 
-    int indent = 0;
-    int depth0 = 0;
-    if (QTreeView *tree = qobject_cast<QTreeView*>(view_)) {
-        indent = tree->indentation();
-        // Match QTreeView: decorated roots sit at indent level 1.
-        depth0 = tree->rootIsDecorated() ? 1 : 0;
-    }
-
     QVector<int> samples;
     samples.reserve(qMin(model->rowCount(), kSampleRows));
     collectWidths(model, QModelIndex(), column, QFontMetrics(view_->font()),
-                  depth0, indent, samples);
+                  treeDepth0(view_), treeIndent(view_), samples);
     return fromSamples(samples, floor);
 }

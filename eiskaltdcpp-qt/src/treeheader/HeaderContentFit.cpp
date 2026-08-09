@@ -10,13 +10,96 @@
  ***************************************************************************/
 
 #include "treeheader/HeaderContentFit.h"
-#include "treeheader/HeaderWidthPlan.h"
+#include "treeheader/ColumnContentSpan.h"
 
 #include <QAbstractItemView>
 #include <QHeaderView>
 #include <QTableView>
 #include <QTreeView>
 #include <QTreeWidget>
+#include <QVector>
+
+namespace {
+
+struct ColSpan {
+    int col = 0;
+    int soft = 0;
+    int full = 0;
+};
+
+struct Measure {
+    QVector<ColSpan> autos;
+    int sumFull = 0;
+};
+
+Measure measure(QAbstractItemView *view, QHeaderView *header, const QSet<int> &manual)
+{
+    Measure m;
+    ColumnContentSpan span(view);
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (header->isSectionHidden(col))
+            continue;
+        if (manual.contains(col)) {
+            m.sumFull += header->sectionSize(col);
+            continue;
+        }
+        const ColumnWidths w = span.widths(col);
+        m.autos.append(ColSpan{col, w.soft, w.full});
+        m.sumFull += w.full;
+    }
+    return m;
+}
+
+void setContent(QHeaderView *header, const Measure &m, bool useFull)
+{
+    for (const ColSpan &c : m.autos)
+        header->resizeSection(c.col, useFull ? c.full : c.soft);
+}
+
+void enlargeProportional(QHeaderView *header, const QSet<int> &manual, int viewW)
+{
+    QVector<int> cols;
+    QVector<int> sizes;
+    int total = 0;
+    int flexSum = 0;
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (header->isSectionHidden(col))
+            continue;
+        const int sz = header->sectionSize(col);
+        total += sz;
+        if (manual.contains(col))
+            continue;
+        cols.append(col);
+        sizes.append(sz);
+        flexSum += sz;
+    }
+    if (cols.isEmpty() || flexSum < 1 || total >= viewW)
+        return;
+
+    const int budget = flexSum + (viewW - total);
+    int allocated = 0;
+    for (int i = 0; i < cols.size(); ++i) {
+        int neu = (i + 1 == cols.size())
+                ? budget - allocated
+                : int((qint64(sizes.at(i)) * budget) / flexSum);
+        neu = qMax(neu, header->minimumSectionSize());
+        header->resizeSection(cols.at(i), neu);
+        allocated += neu;
+    }
+}
+
+QHash<int, int> peaksOf(const Measure &m)
+{
+    QHash<int, int> out;
+    out.reserve(m.autos.size());
+    for (const ColSpan &c : m.autos)
+        out.insert(c.col, c.full);
+    return out;
+}
+
+} // namespace
 
 HeaderContentFit::HeaderContentFit(QAbstractItemView *view, const QSet<int> &manual)
     : view_(view)
@@ -41,32 +124,25 @@ bool HeaderContentFit::ready() const
         && view_->viewport()->width() >= 40 && headerOf(view_);
 }
 
-void HeaderContentFit::apply()
+QHash<int, int> HeaderContentFit::apply()
 {
     QHeaderView *header = headerOf(view_);
     if (!header || !view_->viewport() || header->count() < 1)
-        return;
+        return {};
     header->setStretchLastSection(false);
 
-    HeaderWidthPlan plan(view_, manual_);
-    if (!plan.measure(header))
-        return;
+    const Measure m = measure(view_, header, manual_);
+    if (m.autos.isEmpty())
+        return {};
+
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (!header->isSectionHidden(col))
+            header->setSectionResizeMode(col, QHeaderView::Interactive);
+    }
 
     const int viewW = view_->viewport()->width();
-    if (plan.sumFull() <= viewW) {
-        plan.setFull(header);
-        plan.fillSpare(header, viewW - plan.sumFull());
-        return;
-    }
-
-    plan.setSoft(header);
-    if (plan.sumSoft() < viewW) {
-        plan.fillSpare(header, viewW - plan.sumSoft());
-        return;
-    }
-    if (plan.sumSoft() > viewW) {
-        // Prefer trimming the widest column so side columns keep their soft floor.
-        plan.trimWidest(header, plan.sumSoft() - viewW);
-        plan.shrinkOverflow(header, viewW);
-    }
+    setContent(header, m, m.sumFull <= viewW);
+    enlargeProportional(header, manual_, viewW);
+    return peaksOf(m);
 }

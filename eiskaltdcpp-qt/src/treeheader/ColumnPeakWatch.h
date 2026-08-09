@@ -13,25 +13,36 @@
 
 #include <QHash>
 #include <QSet>
+#include <functional>
 
 class QAbstractItemView;
-class QHeaderView;
+class QModelIndex;
 
 /**
- * Content-sizes columns (p100 when it fits, else soft), then proportionally
- * enlarges non-manual columns into spare width. Does not shrink to fill.
+ * Tracks per-column peak content widths. Calls needFit only when a peak
+ * grows (narrower peaks are ignored).
  */
-class HeaderContentFit
+class ColumnPeakWatch
 {
 public:
-    HeaderContentFit(QAbstractItemView *view, const QSet<int> &manual);
+    using NeedFit = std::function<void()>;
 
-    static QHeaderView *headerOf(QAbstractItemView *view);
+    explicit ColumnPeakWatch(QAbstractItemView *view);
 
-    bool ready() const;
-    QHash<int, int> apply();
+    void setManual(const QSet<int> *manual);
+    void setNeedFit(NeedFit fn);
+    void setPeaks(QHash<int, int> peaks);
+    void clearPeaks();
+
+    void onInserted(const QModelIndex &parent, int first, int last);
+    void onDataChanged(const QModelIndex &tl, const QModelIndex &br,
+                       const QVector<int> &roles);
 
 private:
+    bool noteWider(int col, int width);
+
     QAbstractItemView *view_ = nullptr;
-    QSet<int> manual_;
+    const QSet<int> *manual_ = nullptr;
+    NeedFit needFit_;
+    QHash<int, int> peaks_;
 };
