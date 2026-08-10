@@ -22,6 +22,8 @@ class QObject;
 class WindowPresence {
 public:
     void boot(MainWindow *host, MainWindowPrivate *d);
+    /** Bind listen ports and prune missing share dirs once share data is loaded. */
+    void finishBoot(MainWindow *host, MainWindowPrivate *d);
     void teardown(MainWindow *host, MainWindowPrivate *d);
 
     void onShow(MainWindow *host, MainWindowPrivate *d, QShowEvent *e);

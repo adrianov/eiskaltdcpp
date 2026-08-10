@@ -9,7 +9,6 @@
 
 #include "MainWindow.h"
 #include "MainWindowPrivate.h"
-#include "AntiSpamFrame.h"
 #include "HashProgress.h"
 #include "PmSpamFilter.h"
 #include "ShortcutManager.h"
@@ -33,11 +32,6 @@ MainWindow::MainWindow(QWidget *parent)
 {
     Q_D(MainWindow);
 
-    if (WBGET(WB_ANTISPAM_ENABLED)) {
-        AntiSpam::newInstance();
-        AntiSpam::getInstance()->loadLists();
-        AntiSpam::getInstance()->loadSettings();
-    }
     PmSpamFilter::newInstance();
     ShortcutManager::newInstance();
 
@@ -83,6 +77,12 @@ void MainWindow::show()
 {
     Q_D(MainWindow);
     d->place.applyShow(this);
+}
+
+void MainWindow::finishStartup()
+{
+    Q_D(MainWindow);
+    d->presence.finishBoot(this, d);
 }
 
 void MainWindow::showEvent(QShowEvent *e)

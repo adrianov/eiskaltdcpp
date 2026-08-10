@@ -11,7 +11,7 @@
 
 #if !defined(Q_OS_WIN) && !defined(Q_OS_HAIKU)
 
-#include "MainAppUnix.h"
+#include "appshell/session/UnixSignals.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/ProcessExit.h"

@@ -58,6 +58,9 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 set(QT_EXTRA_SOURCES
     src/appshell/AppPriority.cpp
     src/appshell/AppSession.cpp
+    src/appshell/session/SessionBootstrap.cpp
+    src/appshell/session/ShareIndexLife.cpp
+    src/appshell/session/UnixSignals.cpp
     src/AppThemeControls.cpp
     src/AppThemeCombo.cpp
     src/AppThemeInputs.cpp
@@ -118,8 +121,6 @@ set(QT_EXTRA_SOURCES
     src/PMWindowEvents.cpp
     src/appshell/MainAppCli.cpp
     src/appshell/MainAppRun.cpp
-    src/appshell/MainAppShareIndex.cpp
-    src/appshell/MainAppUnix.cpp
     src/appshell/MainAppXdg.cpp
     src/mainwindow/MainWindow.cpp
     src/mainwindow/MainWindowArena.cpp

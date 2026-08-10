@@ -93,8 +93,8 @@ void WindowPresence::boot(MainWindow *host, MainWindowPrivate *d)
 {
     LogManager::getInstance()->addListener(host);
     TimerManager::getInstance()->addListener(host);
-    host->startSocket(false);
-    host->setStatusMessage(MainWindow::tr("Ready"));
+    // Listen sockets open later (finishBoot), after paint and share load.
+    host->setStatusMessage(MainWindow::tr("Starting..."));
 
     TransferView::newInstance();
     d->transfer_dock->setWidget(TransferView::getInstance());
@@ -104,6 +104,13 @@ void WindowPresence::boot(MainWindow *host, MainWindowPrivate *d)
         qApp->setStyle(WSGET(WS_APP_THEME));
     else
         AppTheme::applyPreferredStyle();
+}
+
+void WindowPresence::finishBoot(MainWindow *host, MainWindowPrivate *d)
+{
+    Q_UNUSED(d);
+    host->startSocket(false);
+    host->setStatusMessage(MainWindow::tr("Ready"));
 
     if (!WBGET(WB_APP_REMOVE_NOT_EX_DIRS))
         return;

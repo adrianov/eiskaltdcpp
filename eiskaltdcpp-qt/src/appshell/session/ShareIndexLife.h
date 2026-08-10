@@ -1,15 +1,14 @@
-/***************************************************************************
- *                                                                         *
- *   Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>          *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
+/*
+ * Copyright (C) 2026 Peter Adrianov <peter.adrianov@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
 
 #pragma once
 
+/** Open/close the DuckDB ShareIndex for one UI session. */
 void startShareIndex();
 void stopShareIndex();

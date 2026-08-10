@@ -12,10 +12,8 @@
 class EiskaltApp;
 
 /**
- * Owns one Qt UI session: core bring-up, window/services, event loop, and
- * orderly teardown (including process-priority restore before exit).
- * Heavier optional services (finished transfers, emoticons, aspell, hub
- * autoconnect) start on a queued turn after the main window is shown.
+ * Runs one Qt UI session: SessionBootstrap bring-up, event loop with
+ * AppPriority yield, then orderly tear-down.
  */
 class AppSession {
 public:
@@ -23,15 +21,5 @@ public:
     int run();
 
 private:
-    void startCore();
-    void startUi();
-    void loadChrome();
-    void createWindow();
-    void startServices();
-    void startDeferredServices();
-    void showWindow();
-    void stopUi();
-    void stopCore();
-
     EiskaltApp &app_;
 };

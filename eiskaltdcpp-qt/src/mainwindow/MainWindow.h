@@ -76,6 +76,8 @@ friend class dcpp::Singleton<MainWindow>;
         void startSocket(bool changed);
         void showPortsError(const std::string& port);
         void autoconnect();
+        /** Bind ports and finish deferred boot after share data is in memory. */
+        void finishStartup();
         void retranslateUi();
         void reloadSomeSettings();
         void setUnload(bool b);

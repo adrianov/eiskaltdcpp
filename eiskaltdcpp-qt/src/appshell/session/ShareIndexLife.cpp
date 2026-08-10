@@ -9,7 +9,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "MainAppShareIndex.h"
+#include "appshell/session/ShareIndexLife.h"
 
 #include "ShareIndex.h"
 #include "ReciprocalList.h"
