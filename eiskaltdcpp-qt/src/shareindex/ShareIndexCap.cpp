@@ -15,9 +15,6 @@
 
 namespace {
 
-/** Unique TTH rows in share_files; over this, open wipes and rebuilds empty. */
-const qint64 kMaxShareFiles = 5000000;
-
 bool upsertMeta(duckdb::Connection &con, const QString &key, qint64 value, QString *err)
 {
     auto res = ShareIndexDb::query2(
@@ -83,12 +80,6 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
         }
     }
     return true;
-}
-
-bool ShareIndex::filesOverCap(duckdb::Connection &con)
-{
-    // ensureCap always materializes file_count before this runs.
-    return metaValue(con, QStringLiteral("file_count"), 0) > kMaxShareFiles;
 }
 
 #endif

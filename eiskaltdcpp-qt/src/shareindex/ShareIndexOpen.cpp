@@ -15,11 +15,28 @@
 #ifdef USE_QT_SQLITE
 
 #include <QFile>
+#include <QFileInfo>
 
 #include "dcpp/Util.h"
 #include "WulforUtil.h"
 
 using namespace dcpp;
+
+namespace {
+
+/** Soft on-disk cap for ShareIndex.duckdb (+ WAL); over this, open wipes empty. */
+const qint64 kMaxDbBytes = 3LL * 1024 * 1024 * 1024;
+
+bool dbOverCap(const QString &path)
+{
+    if (path.isEmpty())
+        return false;
+    const qint64 n = QFileInfo(path).size()
+            + QFileInfo(path + QStringLiteral(".wal")).size();
+    return n > kMaxDbBytes;
+}
+
+} // namespace
 
 duckdb::Connection *ShareIndex::threadConn()
 {
@@ -53,36 +70,17 @@ void ShareIndex::wipeDbFiles()
 
 bool ShareIndex::finishOpen()
 {
-    auto prepare = [this]() -> bool {
-        duckdb::Connection *con = threadConn();
-        if (!con)
-            return false;
-        // Cap RAM so the share index cannot dominate the process.
-        ShareIndexDb::execOk(*con, "SET memory_limit='1GB'");
-        ShareIndexDb::execOk(*con, "SET threads=2");
-        if (!compactLegacyDb())
-            return false;
-        con = threadConn();
-        return con && ensureSchema(*con) && ensureCap(*con);
-    };
-
-    if (!prepare())
-        return false;
-
     duckdb::Connection *con = threadConn();
-    if (con && filesOverCap(*con)) {
-        // Auxiliary cache — drop and reopen empty (lists re-ingest).
-        closeDb();
-        wipeDbFiles();
-        QString err;
-        if (!store.openDuck(&err)) {
-            setLastError(err);
-            return false;
-        }
-        if (!prepare())
-            return false;
-    }
-
+    if (!con)
+        return false;
+    // Cap RAM so the share index cannot dominate the process.
+    ShareIndexDb::execOk(*con, "SET memory_limit='1GB'");
+    ShareIndexDb::execOk(*con, "SET threads=2");
+    if (!compactLegacyDb())
+        return false;
+    con = threadConn();
+    if (!con || !ensureSchema(*con) || !ensureCap(*con))
+        return false;
     if (ShareIndexDb::takeFatal())
         return false;
     store.setOpen(true);
@@ -106,6 +104,10 @@ void ShareIndex::open()
         QFile::rename(oldFile, store.dbFile);
     else if (QFile::exists(store.dbFile))
         QFile::remove(oldFile);
+
+    // Auxiliary cache — wipe oversized files before open (lists re-ingest).
+    if (dbOverCap(store.dbFile))
+        wipeDbFiles();
 
     auto tryOpen = [this]() -> bool {
         QString err;
