@@ -63,12 +63,9 @@ void applyOsYield(bool yield) {
 AppPriority::AppPriority(QObject *parent)
     : QObject(parent)
 {
-    qApp->installEventFilter(this);
     connect(qApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState) {
-        // Immediate settle on activate/deactivate (Transmission macOS).
         applyState();
     });
-    applyState();
 }
 
 AppPriority::~AppPriority()
@@ -85,27 +82,20 @@ void AppPriority::trackWindow(QWidget *window) {
     applyState();
 }
 
+void AppPriority::setYieldAllowed(bool allowed) {
+    if (allowed == yieldAllowed_)
+        return;
+    yieldAllowed_ = allowed;
+    applyState();
+}
+
 void AppPriority::restoreNormal() {
     setYielding(false);
 }
 
 bool AppPriority::eventFilter(QObject *obj, QEvent *event) {
-    switch (event->type()) {
-    case QEvent::WindowStateChange:
-        if (obj == window_)
-            scheduleUpdate();
-        break;
-    case QEvent::MouseButtonPress:
-    case QEvent::MouseButtonDblClick:
-    case QEvent::KeyPress:
-    case QEvent::Wheel:
-        // Interaction: raise scheduling before work runs (Transmission).
-        if (qApp->applicationState() == Qt::ApplicationActive)
-            restoreNormal();
-        break;
-    default:
-        break;
-    }
+    if (obj == window_ && event->type() == QEvent::WindowStateChange)
+        scheduleUpdate();
     return QObject::eventFilter(obj, event);
 }
 
@@ -126,6 +116,8 @@ void AppPriority::applyState() {
 }
 
 bool AppPriority::shouldYield() const {
+    if (!yieldAllowed_)
+        return false;
     if (qApp->applicationState() != Qt::ApplicationActive)
         return true;
     return window_ && window_->isMinimized();

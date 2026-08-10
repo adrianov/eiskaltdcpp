@@ -12,8 +12,8 @@
 class EiskaltApp;
 
 /**
- * Runs one Qt UI session: SessionBootstrap bring-up, event loop with
- * AppPriority yield, then orderly tear-down.
+ * Runs one Qt UI session: SessionBootstrap bring-up at normal process
+ * priority, event loop (yield allowed only after bootstrap), tear-down.
  */
 class AppSession {
 public:

@@ -16,8 +16,9 @@ class QEvent;
 class QWidget;
 
 /**
- * Yields process CPU/disk while inactive or minimized; returns to normal
- * scheduling for foreground use (Transmission-style).
+ * Yields process CPU/disk while inactive or minimized (Transmission-style
+ * Darwin BG + disk throttle). Yield stays off until setYieldAllowed(true)
+ * so cold start always runs at normal priority.
  */
 class AppPriority : public QObject {
     Q_OBJECT
@@ -26,6 +27,8 @@ public:
     ~AppPriority() override;
 
     void trackWindow(QWidget *window);
+    /** When false (default), keep normal scheduling regardless of focus. */
+    void setYieldAllowed(bool allowed);
     void restoreNormal();
 
 protected:
@@ -43,4 +46,5 @@ private:
     QPointer<QWidget> window_;
     bool pending_ = false;
     bool yielding_ = false;
+    bool yieldAllowed_ = false;
 };

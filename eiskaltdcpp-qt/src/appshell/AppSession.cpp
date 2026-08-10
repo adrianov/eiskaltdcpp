@@ -27,15 +27,16 @@ AppSession::AppSession(EiskaltApp &app)
 
 int AppSession::run()
 {
-    SessionBootstrap boot(app_);
-    boot.bringUp();
-
     AppPriority yield;
+    SessionBootstrap boot(app_);
+    boot.bringUp(); // HashIndex / share / queue at normal process priority
+
     yield.trackWindow(MainWindow::getInstance());
+    yield.setYieldAllowed(true);
 
     const int ret = app_.exec();
 
-    yield.restoreNormal();
+    yield.setYieldAllowed(false);
     yield.trackWindow(nullptr);
     boot.tearDown();
     return ret;
