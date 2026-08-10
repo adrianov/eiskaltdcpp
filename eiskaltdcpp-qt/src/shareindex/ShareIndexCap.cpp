@@ -15,10 +15,8 @@
 
 namespace {
 
-/** Hub hits accumulate; file-list rows are rewritten per user. */
-const qint64 kMaxHubEntries = 5000000;
-/** Oldest-first delete page under the open-time 1 GB memory_limit. */
-const qint64 kPruneBatch = 10000;
+/** Unique TTH rows in share_files; over this, open wipes and rebuilds empty. */
+const qint64 kMaxShareFiles = 5000000;
 
 bool upsertMeta(duckdb::Connection &con, const QString &key, qint64 value, QString *err)
 {
@@ -38,38 +36,6 @@ qint64 metaValue(duckdb::Connection &con, const QString &key, qint64 fallback = 
     if (!res || res->HasError() || res->RowCount() == 0)
         return fallback;
     return ShareIndexDb::qi64(res->GetValue(0, 0));
-}
-
-bool pruneFail(duckdb::unique_ptr<duckdb::MaterializedQueryResult> &res, QString *err)
-{
-    if (res && !res->HasError())
-        return false;
-    if (err && err->isEmpty())
-        *err = res ? QString::fromStdString(res->GetError()) : QStringLiteral("prune");
-    return true;
-}
-
-/** Evict oldest hub-search locations in batches (memory_limit-safe). */
-bool pruneHubLocations(duckdb::Connection &con, QString *err)
-{
-    for (;;) {
-        qint64 n = 0;
-        if (!ShareIndexDb::scalarI64(
-                con, "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2", &n, err))
-            return false;
-        const qint64 excess = n - kMaxHubEntries;
-        if (excess <= 0)
-            return true;
-        const qint64 batch = excess < kPruneBatch ? excess : kPruneBatch;
-        auto res = ShareIndexDb::query1(
-            con,
-            "DELETE FROM share_locations WHERE rowid IN ("
-            "SELECT rowid FROM share_locations WHERE source = 2 "
-            "ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-            ShareIndexDb::i64Val(batch), err);
-        if (pruneFail(res, err))
-            return false;
-    }
 }
 
 } // namespace
@@ -119,24 +85,10 @@ bool ShareIndex::ensureCap(duckdb::Connection &con)
     return true;
 }
 
-bool ShareIndex::pruneExcess(duckdb::Connection &con)
+bool ShareIndex::filesOverCap(duckdb::Connection &con)
 {
-    QString err;
-    qint64 hubCount = 0;
-    if (!ShareIndexDb::scalarI64(
-            con, "SELECT count(*)::BIGINT FROM share_locations WHERE source = 2",
-            &hubCount, &err)) {
-        setLastError(err);
-        return false;
-    }
-    if (hubCount <= kMaxHubEntries)
-        return true;
-    // Orphan share_files cleanup stays on write paths (too heavy for open).
-    if (!pruneHubLocations(con, &err)) {
-        setLastError(err.isEmpty() ? QStringLiteral("prune locations") : err);
-        return false;
-    }
-    return true;
+    // ensureCap always materializes file_count before this runs.
+    return metaValue(con, QStringLiteral("file_count"), 0) > kMaxShareFiles;
 }
 
 #endif

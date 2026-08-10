@@ -222,24 +222,25 @@ set(QT_EXTRA_SOURCES
     src/WulforSettingsI18n.cpp
     src/ShareIndex.cpp
     src/shareindex/ShareIndexStore.cpp
+    src/shareindex/ShareIndexOpen.cpp
     src/ShareIndexIngest.cpp
     src/ShareIndexIngestWrite.cpp
     src/ShareIndexInsert.cpp
     src/ShareIndexEnsure.cpp
-    src/ShareIndexMigrate.cpp
+    src/shareindex/ShareIndexMigrate.cpp
     src/ShareIndexQueue.cpp
     src/ShareIndexQueueCore.cpp
     src/ShareIndexQueueMatch.cpp
     src/ShareIndexRowWrite.cpp
     src/ShareIndexEnqueue.cpp
-    src/ShareIndexSchema.cpp
+    src/shareindex/ShareIndexSchema.cpp
     src/ShareIndexSearch.cpp
     src/ShareIndexSearchQuery.cpp
     src/ShareIndexSearchRows.cpp
     src/ShareIndexUsers.cpp
     src/ShareIndexMedia.cpp
-    src/ShareIndexCap.cpp
-    src/ShareIndexVacuum.cpp
+    src/shareindex/ShareIndexCap.cpp
+    src/shareindex/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
     src/ShareIndexSmokeWrite.cpp

@@ -151,8 +151,8 @@ private:
     bool writeListRows(const QString &cid, const QList<QVariantMap> &rows);
     void upsertFromSearchBatchSync(const QList<QVariantMap> &maps);
     void upsertMediaSync(const QHash<QString, MediaInfo> &media);
-    /** Open-time hub-hit cap; orphan sweeps stay on write paths. */
-    bool pruneExcess(duckdb::Connection &con);
+    /** True when share_files exceeds the soft cap (open should wipe). */
+    bool filesOverCap(duckdb::Connection &con);
     bool removeOrphans(duckdb::Connection &con);
     bool refreshEntryCount(duckdb::Connection &con);
     void reclaimFreePages(duckdb::Connection &con);
