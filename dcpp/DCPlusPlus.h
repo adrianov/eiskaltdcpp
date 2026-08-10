@@ -24,8 +24,15 @@ namespace dcpp {
 
 using std::string;
 
-/** refreshShare: false for headless CLI that exits without joining ShareManager. */
+/**
+ * Full core bring-up (shell + hash index / share / queue).
+ * refreshShare: false for headless CLI that exits without joining ShareManager.
+ */
 extern void startup(void (*f)(void*, const string&), void* p, bool refreshShare = true);
+/** Managers, settings, favorites, certs — skips HashIndex.xml, files.xml.bz2, Queue.xml. */
+extern void startupShell(void (*f)(void*, const string&), void* p);
+/** Load hash index, share list, download queue, users, and list cache. */
+extern void startupShareData(void (*f)(void*, const string&), void* p, bool refreshShare = true);
 extern void shutdown();
 
 } // namespace dcpp

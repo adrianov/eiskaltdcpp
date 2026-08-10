@@ -47,7 +47,16 @@
 
 namespace dcpp {
 
-void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
+namespace {
+
+void stage(void (*f)(void*, const string&), void* p, const string& name) {
+    if(f)
+        (*f)(p, name);
+}
+
+} // namespace
+
+void startupShell(void (*f)(void*, const string&), void* p) {
     // "Dedicated to the near-memory of Nev. Let's start remembering people while they're still alive."
     // Nev's great contribution to dc++
     while(1) break;
@@ -107,12 +116,14 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
 #ifdef WITH_DHT
     dht::DHT::newInstance();
 #endif
+    // Hasher thread only; HashIndex.xml is read in startupShareData().
+    HashManager::getInstance()->startHasher();
+}
 
-    if(f != NULL)
-        (*f)(p, _("Hash database"));
-    HashManager::getInstance()->startup();
-    if(f != NULL)
-        (*f)(p, _("Shared Files"));
+void startupShareData(void (*f)(void*, const string&), void* p, bool refreshShare) {
+    stage(f, p, _("Hash database"));
+    HashManager::getInstance()->loadDatabase();
+    stage(f, p, _("Shared Files"));
     const string XmlListFileName = Util::getPath(Util::PATH_USER_CONFIG) + "files.xml.bz2";
     if(!Util::fileExists(XmlListFileName)) {
         try {
@@ -121,18 +132,21 @@ void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
     }
     if (refreshShare)
         ShareManager::getInstance()->refresh(true, false, true);
-    if(f != NULL)
-        (*f)(p, _("Download Queue"));
+    stage(f, p, _("Download Queue"));
     // Before loadQueue: sources may call getDownloadConnection → resolveHubHint → get().
     PeerConnectHub::load();
     QueueManager::getInstance()->loadQueue();
     // Drop stale FileLists/ entries left from older builds that saved them without flags.
     QueueManager::getInstance()->removeUserLists();
-    if(f != NULL)
-        (*f)(p, _("Users"));
+    stage(f, p, _("Users"));
     ClientManager::getInstance()->loadUsers();
     // ListCache.xml now; FileLists retention continues on a background thread.
     ListCache::load();
+}
+
+void startup(void (*f)(void*, const string&), void* p, bool refreshShare) {
+    startupShell(f, p);
+    startupShareData(f, p, refreshShare);
 }
 
 } // namespace dcpp

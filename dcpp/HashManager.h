@@ -76,7 +76,11 @@ public:
 
     void rebuild() { hasher.scheduleRebuild(); }
 
-    void startup() { hasher.start(); store.load(); }
+    void startup() { startHasher(); loadDatabase(); }
+    /** Start the hasher thread; HashIndex.xml is loaded separately via loadDatabase(). */
+    void startHasher() { hasher.start(); }
+    /** Parse HashIndex.xml (often multi-MB — call after first UI paint when possible). */
+    void loadDatabase() { Lock l(cs); store.load(); }
 
     void shutdown() {
         hasher.shutdown();
