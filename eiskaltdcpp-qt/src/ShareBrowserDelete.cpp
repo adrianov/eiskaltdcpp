@@ -157,6 +157,11 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
         FileBrowserItem *ti = remote.isEmpty() ? listRoot
             : tree_model->createRootForPath(remote, listRoot);
         if (ti) {
+            // Left-pane selection slot is a no-op in flat mode — refresh explicitly.
+            if (flatMode) {
+                goToFlatItem(ti);
+                return;
+            }
             const QModelIndex ix = treeMapFromSource(tree_model->createIndexForItem(ti));
             treeView_LPANE->selectionModel()->select(ix,
                     QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
@@ -165,4 +170,5 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
     }
 
     reloadRightPane(flatMode ? currentDir() : viewParent);
+    updateUpButton();
 }

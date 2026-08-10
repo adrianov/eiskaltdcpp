@@ -59,6 +59,7 @@ public:
     QList<FileBrowserItem*> childItems;
 
     FileBrowserItem *nextSibling();
+    FileBrowserItem *prevSibling();
 
     dcpp::DirectoryListing::Directory *dir;
     dcpp::DirectoryListing::File *file;

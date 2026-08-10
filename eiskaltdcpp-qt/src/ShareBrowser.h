@@ -103,6 +103,7 @@ private:
     void applyFlatMode(bool on);
     void restoreSplitterSizes();
     void updateUpButton();
+    void goToFlatItem(FileBrowserItem *item);
     void applyOptionalColumns();
     void reloadRightPane(dcpp::DirectoryListing::Directory *dir);
     dcpp::DirectoryListing::Directory *currentDir();

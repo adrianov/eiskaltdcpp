@@ -92,3 +92,10 @@ FileBrowserItem *FileBrowserItem::nextSibling(){
 
     return parent()->child(row()+1);
 }
+
+FileBrowserItem *FileBrowserItem::prevSibling(){
+    if (!parent() || row() == 0)
+        return nullptr;
+
+    return parent()->child(row() - 1);
+}

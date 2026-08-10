@@ -98,12 +98,20 @@ DirectoryListing::Directory *ShareBrowser::currentDir()
 
 void ShareBrowser::updateUpButton()
 {
-    if (lineEdit_PATH->text().isEmpty()) {
-        toolButton_UP->setEnabled(false);
-        return;
-    }
-    FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+    FileBrowserItem *item = nullptr;
+    if (!lineEdit_PATH->text().isEmpty())
+        item = tree_model->createRootForPath(lineEdit_PATH->text());
+
     toolButton_UP->setEnabled(item && item->parent() && item->parent()->dir);
+
+    // Flat: Prev/Next walk sibling folders. Folder view: history (always enabled).
+    if (flatMode) {
+        toolButton_BACK->setEnabled(item && item->prevSibling());
+        toolButton_FORWARD->setEnabled(item && item->nextSibling());
+    } else {
+        toolButton_BACK->setEnabled(true);
+        toolButton_FORWARD->setEnabled(true);
+    }
 }
 
 void ShareBrowser::restoreSplitterSizes()
@@ -151,8 +159,6 @@ void ShareBrowser::applyFlatMode(bool on)
         restoreSplitterSizes();
     }
 
-    toolButton_BACK->setEnabled(!on);
-    toolButton_FORWARD->setEnabled(!on);
     updateUpButton();
 
     ShareListColumns(treeView_RPANE->header()).setPathVisible(on);

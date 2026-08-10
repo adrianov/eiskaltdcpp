@@ -24,6 +24,29 @@
 
 using namespace dcpp;
 
+void ShareBrowser::goToFlatItem(FileBrowserItem *item)
+{
+    if (!item || !item->dir)
+        return;
+
+    QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
+    const QModelIndex src = tree_model->createIndexForItem(item);
+    QModelIndex viewIdx = treeMapFromSource(src);
+    {
+        const QSignalBlocker block(selection_model);
+        if (viewIdx.isValid()) {
+            for (QModelIndex p = viewIdx.parent(); p.isValid(); p = p.parent())
+                treeView_LPANE->expand(p);
+            selection_model->setCurrentIndex(viewIdx,
+                    QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        }
+    }
+    lineEdit_PATH->setText(tree_model->createRemotePath(item));
+    changeRootFlat(item->dir);
+    applyViewFiltersNow();
+    updateUpButton();
+}
+
 void ShareBrowser::slotButtonUp(){
     // Path bar is the source of truth — ignore tree multi-select / empty selection.
     if (lineEdit_PATH->text().isEmpty())
@@ -34,24 +57,14 @@ void ShareBrowser::slotButtonUp(){
         return;
 
     FileBrowserItem *parentItem = item->parent();
+    if (flatMode) {
+        goToFlatItem(parentItem);
+        return;
+    }
+
     const QString parentPath = tree_model->createRemotePath(parentItem);
     const QModelIndex parentSrc = tree_model->createIndexForItem(parentItem);
     QItemSelectionModel *selection_model = treeView_LPANE->selectionModel();
-
-    if (flatMode) {
-        {
-            const QSignalBlocker block(selection_model);
-            if (parentSrc.isValid()) {
-                selection_model->setCurrentIndex(treeMapFromSource(parentSrc),
-                        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            }
-        }
-        lineEdit_PATH->setText(parentPath);
-        changeRootFlat(parentItem->dir);
-        applyViewFiltersNow();
-        updateUpButton();
-        return;
-    }
 
     disconnect(selection_model, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(slotLeftPaneSelChanged(QItemSelection,QItemSelection)));
@@ -77,8 +90,12 @@ void ShareBrowser::slotButtonUp(){
 }
 
 void ShareBrowser::slotButtonBack(){
-    if (flatMode)
+    if (flatMode) {
+        FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+        if (item)
+            goToFlatItem(item->prevSibling());
         return;
+    }
 
     if (pathHistory_iter && !pathHistory.isEmpty()){
 
@@ -102,8 +119,12 @@ void ShareBrowser::slotButtonBack(){
 }
 
 void ShareBrowser::slotButtonForward(){
-    if (flatMode)
+    if (flatMode) {
+        FileBrowserItem *item = tree_model->createRootForPath(lineEdit_PATH->text());
+        if (item)
+            goToFlatItem(item->nextSibling());
         return;
+    }
 
     if (pathHistory_iter && !pathHistory.isEmpty()){
 
