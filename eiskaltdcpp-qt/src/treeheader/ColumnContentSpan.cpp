@@ -81,8 +81,10 @@ void collectWidths(QAbstractItemModel *model, const QModelIndex &parent,
         const int w = cellSpan(idx, fm, depth, indent);
         if (w > 0)
             out.append(w);
-        if (model->hasChildren(idx))
-            collectWidths(model, idx, column, fm, depth + 1, indent, out);
+        // Qt item models report children only on column 0.
+        const QModelIndex row = model->index(r, 0, parent);
+        if (model->hasChildren(row))
+            collectWidths(model, row, column, fm, depth + 1, indent, out);
     }
 }
 
