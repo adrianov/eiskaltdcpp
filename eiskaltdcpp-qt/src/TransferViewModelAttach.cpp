@@ -15,66 +15,69 @@
 #include "transfersession/TransferSession.h"
 #include "transfersession/TransferSessionRow.h"
 
-void TransferViewModel::initTransfer(const VarMap &params){
+namespace {
+
+/** Clear complete state before applying metrics for the next upload file/parts. */
+void prepareUploadReuse(TransferViewItem *item, TransferViewItem *root, const QVariantMap &params)
+{
+    item->finished = false;
+    item->segBytes = 0;
+
+    TransferViewItem *scope = TransferSession::scopeOf(item, root);
+    if (!scope)
+        return;
+
+    const QString newTarget = params.value(QStringLiteral("TARGET")).toString();
+    const bool nextFile = (scope == item && TransferViewTree::targetChanged(item, newTarget))
+            || TransferViewTree::scopeFullyDone(scope);
+    if (nextFile) {
+        TransferViewTree::clearByteProgress(scope);
+        scope->percent = 0.0;
+    }
+    scope->finished = false;
+    // Once per file — keeps the mean across segments (BASE ignored if already begun).
+    TransferSession(scope).begin(params.value(QStringLiteral("BASE")).toLongLong());
+}
+
+/** Same peer, next download segment: commit in-flight bytes or reset on retarget. */
+void prepareDownloadReuse(TransferViewItem *item, const QVariantMap &params)
+{
+    item->finished = false;
+    if (TransferViewTree::targetChanged(item, params.value(QStringLiteral("TARGET")).toString()))
+        TransferViewTree::clearByteProgress(item);
+    else
+        TransferSessionRow::commitSegment(item);
+}
+
+} // namespace
+
+void TransferViewModel::initTransfer(const VarMap &params)
+{
     if (params.empty())
         return;
 
-    const QString hub = vbol(params["DOWN"]) ? QString() : vstr(params["HOST"]);
-    if (!vbol(params["DOWN"]))
+    const bool download = vbol(params["DOWN"]);
+    const QString hub = download ? QString() : vstr(params["HOST"]);
+    if (!download)
         grace.cancelUpload(vstr(params["CID"]), hub);
+
     TransferViewItem *item = nullptr;
-    if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub)) {
+    if (!findTransfer(vstr(params["CID"]), download, &item, hub)) {
         addConnection(params);
-        if (!findTransfer(vstr(params["CID"]), vbol(params["DOWN"]), &item, hub))
+        if (!findTransfer(vstr(params["CID"]), download, &item, hub))
             return;
     }
 
-    // Reuse the row for the next file/parts — clear complete state before applying metrics.
-    if (item && !item->download) {
-        TransferViewItem *scope = TransferSession::scopeOf(item, rootItem);
-        const qlonglong size = scope
-                ? scope->data(COLUMN_TRANSFER_SIZE).toLongLong() : 0;
-        const QString newTarget = vstr(params.value("TARGET"));
-        const bool leafRetarget = scope == item && !item->target.isEmpty()
-                && !newTarget.isEmpty() && newTarget != item->target;
-        const bool fullyDone = scope && scope->finished
-                && (scope->percent >= 100.0 || (size > 0 && scope->fpos >= size));
-        const bool nextFile = leafRetarget || fullyDone;
-        item->finished = false;
-        item->segBytes = 0;
-        if (scope) {
-            if (nextFile) {
-                scope->fpos = 0;
-                scope->dpos = 0;
-                scope->percent = 0.0;
-                scope->smoothTleft = -1;
-                scope->speedStart = 0;
-                scope->speedBase = 0;
-            }
-            scope->finished = false;
-            // Once per file — keeps the mean across segments (BASE ignored if already begun).
-            TransferSession(scope).begin(vlng(params.value("BASE")));
-        }
-    } else if (item) {
-        // Same peer, next segment: commit in-flight bytes; keep mean rate + peer total.
-        item->finished = false;
-        const QString newTarget = vstr(params.value("TARGET"));
-        if (!item->target.isEmpty() && !newTarget.isEmpty() && newTarget != item->target) {
-            item->fpos = 0;
-            item->dpos = 0;
-            item->segBytes = 0;
-            item->speedStart = 0;
-            item->speedBase = 0;
-            item->smoothTleft = -1;
-        } else {
-            TransferSessionRow::commitSegment(item);
-        }
-    }
+    if (!item->download)
+        prepareUploadReuse(item, rootItem, params);
+    else
+        prepareDownloadReuse(item, params);
 
     updateTransfer(params);
 }
 
-void TransferViewModel::addConnection(const VarMap &params){
+void TransferViewModel::addConnection(const VarMap &params)
+{
     if (params.empty())
         return;
 
@@ -110,8 +113,7 @@ void TransferViewModel::addConnection(const VarMap &params){
     if (deferAttach)
         return;
 
-    TransferViewTree::attach(item, parent);
-    emit layoutChanged();
+    insertUnder(parent, item);
 
     // Added alone never reaches updateTransfer — still drop if Starting never comes.
     if (!bDownload && fname.isEmpty())

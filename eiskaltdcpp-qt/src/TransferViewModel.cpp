@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "TransferViewModel.h"
+#include "TransferViewModelTree.h"
 
 TransferViewModel::TransferViewModel(QObject *parent)
     : QAbstractItemModel(parent), grace(this), showTranferedFilesOnly(false)
@@ -40,20 +41,87 @@ TransferViewModel::TransferViewModel(QObject *parent)
 
 TransferViewModel::~TransferViewModel()
 {
-    if (rootItem)
-        delete rootItem;
+    // forgetItem only drops liveItems entries — it does not free rows.
+    liveItems.clear();
+    delete rootItem;
+    rootItem = nullptr;
+}
+
+void TransferViewModel::trackItem(TransferViewItem *item)
+{
+    if (item)
+        liveItems.insert(item);
+}
+
+void TransferViewModel::forgetItem(TransferViewItem *item)
+{
+    if (!item || !liveItems.contains(item))
+        return;
+    const QList<TransferViewItem*> children = item->childItems;
+    for (TransferViewItem *child : children)
+        forgetItem(child);
+    liveItems.remove(item);
+}
+
+void TransferViewModel::destroyRow(TransferViewItem *item)
+{
+    if (!item)
+        return;
+    forgetItem(item);
+    delete item;
+}
+
+bool TransferViewModel::isLive(TransferViewItem *item) const
+{
+    return item && liveItems.contains(item);
+}
+
+TransferViewItem *TransferViewModel::liveChild(TransferViewItem *parent, int row) const
+{
+    if (!parent || (parent != rootItem && !isLive(parent)))
+        return nullptr;
+    TransferViewItem *child = parent->child(row);
+    return isLive(child) ? child : nullptr;
+}
+
+QModelIndex TransferViewModel::indexOfItem(TransferViewItem *item) const
+{
+    if (!isLive(item) || item == rootItem)
+        return QModelIndex();
+    TransferViewItem *parentItem = item->parent();
+    if (!parentItem)
+        return QModelIndex();
+    return createIndex(item->row(), 0, item);
+}
+
+void TransferViewModel::insertUnder(TransferViewItem *parent, TransferViewItem *item)
+{
+    if (!item || !parent || TransferViewTree::isAttached(item))
+        return;
+
+    trackItem(item);
+    const QModelIndex parentIdx = (parent == rootItem) ? QModelIndex() : indexOfItem(parent);
+    beginInsertRows(parentIdx, parent->childCount(), parent->childCount());
+    parent->appendChild(item);
+    endInsertRows();
 }
 
 void TransferViewModel::clear()
 {
     // Reset before free: deleting first leaves QTreeView with dangling indexes.
     beginResetModel();
+    liveItems.clear();
     qDeleteAll(rootItem->childItems);
     rootItem->childItems.clear();
+    transfer_hash.clear();
     endResetModel();
 }
 
 void TransferViewModel::repaint()
 {
+    // Identity remap — bare layoutChanged() nulls persistent indexes and crashes scroll.
+    const QModelIndexList from = persistentIndexList();
+    emit layoutAboutToBeChanged();
+    changePersistentIndexList(from, from);
     emit layoutChanged();
 }

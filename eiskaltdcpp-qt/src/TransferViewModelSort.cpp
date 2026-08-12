@@ -114,8 +114,7 @@ void TransferViewModel::sort(int column, Qt::SortOrder order) {
     to.reserve(from.size());
     for (int i = 0; i < fromItems.size(); ++i) {
         TransferViewItem *item = fromItems.at(i);
-        TransferViewItem *p = item ? item->parent() : nullptr;
-        if (!item || !p || !p->childItems.contains(item))
+        if (!isLive(item) || !item->parent() || !item->parent()->childItems.contains(item))
             to.append(QModelIndex());
         else
             to.append(createIndex(item->row(), from.at(i).column(), item));

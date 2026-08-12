@@ -108,7 +108,7 @@ void TransferViewModel::placeTransferRow(TransferViewItem *item, const VarMap &p
     if (TransferViewTree::isAttached(item) && from && from != to)
         moveTransfer(item, from, to);
     else if (!(showTranferedFilesOnly && TransferViewTree::isHiddenName(fname)))
-        TransferViewTree::attach(item, to);
+        insertUnder(to, item);
 
     if (from && from != to)
         releaseEmptyGroup(from);

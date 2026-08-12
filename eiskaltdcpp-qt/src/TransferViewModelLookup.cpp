@@ -71,6 +71,6 @@ TransferViewItem *TransferViewModel::getParent(const QString &target, const VarM
     p->target = target;
     p->fpos = params.value("FPOS").toLongLong();
     p->dpos = p->fpos;
-    rootItem->appendChild(p);
+    insertUnder(rootItem, p);
     return p;
 }

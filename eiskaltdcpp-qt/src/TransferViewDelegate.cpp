@@ -13,6 +13,7 @@
 
 #include "AppTheme.h"
 #include "ProgressBarPaint.h"
+#include "TransferViewModel.h"
 #include "WulforSettings.h"
 
 TransferViewDelegate::TransferViewDelegate(QObject *parent):
@@ -41,15 +42,19 @@ QColor transferBarColor(bool download, const QColor &customColor)
 
 void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const{
     TransferViewItem *item = reinterpret_cast<TransferViewItem*>(index.internalPointer());
+    const auto *model = qobject_cast<const TransferViewModel*>(index.model());
 
-    if (index.column() != COLUMN_TRANSFER_STATS || !item) {
+    if (index.column() != COLUMN_TRANSFER_STATS || !model || !model->isLive(item)) {
         QStyledItemDelegate::paint(painter, option, index);
         return;
     }
 
     // Single-peer groups paint the leaf; finished parents keep their own status/bar.
-    if (item->childCount() == 1 && item->cid.isEmpty() && !item->finished)
-        item = item->child(0);
+    if (item->childCount() == 1 && item->cid.isEmpty() && !item->finished) {
+        TransferViewItem *child = item->child(0);
+        if (model->isLive(child))
+            item = child;
+    }
 
     const QString status = stripBracketedStatusPrefix(item->data(COLUMN_TRANSFER_STATS).toString());
     // Upload `finished` is idle-between-segments; only held downloads force a full bar.

@@ -64,7 +64,7 @@ int TransferViewModel::columnCount(const QModelIndex &parent) const
     if (!parent.isValid())
         return rootItem->columnCount();
     auto *item = static_cast<TransferViewItem*>(parent.internalPointer());
-    return item ? item->columnCount() : 0;
+    return isLive(item) ? item->columnCount() : 0;
 }
 
 QVariant TransferViewModel::data(const QModelIndex &index, int role) const
@@ -73,9 +73,9 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     TransferViewItem *item = reinterpret_cast<TransferViewItem*>(index.internalPointer());
-    // Stale view indexes after layoutChanged/remove can be "valid" with a null pointer;
-    // item->download sits at offset 0x10 and crashes QTreeView::indexRowSizeHint on scroll.
-    if (!item)
+    // Stale indexes after bare layoutChanged/remove: null or freed pointer.
+    // item->download is at 0x10 — null deref matches the wheel-scroll crash report.
+    if (!isLive(item))
         return QVariant();
 
     switch (role) {
@@ -83,9 +83,12 @@ QVariant TransferViewModel::data(const QModelIndex &index, int role) const
         return transferIcon(item, index.column());
     case Qt::DisplayRole:
         // Single-child groups show the child row (download segments or same-IP uploads).
-        if (item->childCount() == 1 && index.column() != COLUMN_TRANSFER_SIZE)
-            return data(createIndex(0, index.column(),
-                                    reinterpret_cast<void*>(item->childItems.first())), role);
+        if (item->childCount() == 1 && index.column() != COLUMN_TRANSFER_SIZE) {
+            TransferViewItem *child = liveChild(item, 0);
+            if (!child)
+                return QVariant();
+            return data(createIndex(0, index.column(), child), role);
+        }
         return displayText(item, index.column());
     case Qt::TextAlignmentRole:
         if (index.column() == COLUMN_TRANSFER_SPEED || index.column() == COLUMN_TRANSFER_SIZE)
@@ -110,16 +113,14 @@ QModelIndex TransferViewModel::index(int row, int column, const QModelIndex &par
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    TransferViewItem *parentItem;
-    if (!parent.isValid())
-        parentItem = rootItem;
-    else {
+    TransferViewItem *parentItem = rootItem;
+    if (parent.isValid()) {
         parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
-        if (!parentItem)
+        if (!isLive(parentItem))
             return QModelIndex();
     }
 
-    TransferViewItem *childItem = parentItem->child(row);
+    TransferViewItem *childItem = liveChild(parentItem, row);
     return childItem ? createIndex(row, column, childItem) : QModelIndex();
 }
 
@@ -129,12 +130,12 @@ QModelIndex TransferViewModel::parent(const QModelIndex &index) const
         return QModelIndex();
 
     TransferViewItem *child = static_cast<TransferViewItem*>(index.internalPointer());
-    if (!child)
+    if (!isLive(child))
         return QModelIndex();
     TransferViewItem *parentItem = child->parent();
-    if (!parentItem || parentItem == rootItem)
-        return QModelIndex();
-    if (!rootItem->childItems.contains(parentItem))
+    // Groups are always root children; isLive alone does not prove tree membership.
+    if (!parentItem || parentItem == rootItem || !isLive(parentItem)
+            || !rootItem->childItems.contains(parentItem))
         return QModelIndex();
 
     return createIndex(parentItem->row(), 0, parentItem);
@@ -150,7 +151,7 @@ int TransferViewModel::rowCount(const QModelIndex &parent) const
         parentItem = rootItem;
     else {
         parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
-        if (!parentItem)
+        if (!isLive(parentItem))
             return 0;
     }
     return parentItem->childCount();
@@ -162,7 +163,7 @@ bool TransferViewModel::hasChildren(const QModelIndex &parent) const
         return rootItem->childCount() > 0;
 
     TransferViewItem *parentItem = static_cast<TransferViewItem*>(parent.internalPointer());
-    if (!parentItem)
+    if (!isLive(parentItem))
         return false;
     // Single-child groups stay flat; multi-hub same-IP uploads expand like download sources.
     return parentItem->childCount() > 1;
@@ -170,7 +171,7 @@ bool TransferViewModel::hasChildren(const QModelIndex &parent) const
 
 QModelIndex TransferViewModel::createIndexForItem(TransferViewItem *item)
 {
-    if (!(rootItem && item && item->parent()))
+    if (!(rootItem && isLive(item) && item->parent()))
         return QModelIndex();
 
     if (item->parent() == rootItem)

@@ -27,7 +27,7 @@ void TransferViewModel::releaseEmptyGroup(TransferViewItem *group) {
         return;
     beginRemoveRows(QModelIndex(), group->row(), group->row());
     rootItem->childItems.removeAt(group->row());
-    delete group;
+    destroyRow(group);
     endRemoveRows();
 }
 
@@ -50,7 +50,7 @@ void TransferViewModel::dropTransferRow(TransferViewItem *item) {
         }
         ++i;
     }
-    delete item;
+    destroyRow(item);
     releaseEmptyGroup(p);
     pruneEmptyParents();
 }

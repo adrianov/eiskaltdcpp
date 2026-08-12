@@ -43,6 +43,8 @@ public:
     TransferViewItem *getParent(const QString &target, const VarMap &params);
 
     QModelIndex createIndexForItem(TransferViewItem*);
+    /** True if pointer is an attached row (safe before deref of QModelIndex payload). */
+    bool isLive(TransferViewItem *item) const;
 
     int getSortColumn() const;
     void setSortColumn(int);
@@ -105,9 +107,19 @@ private:
     void markDownloadComplete(TransferViewItem *item);
     void moveTransfer(TransferViewItem*, TransferViewItem*, TransferViewItem*);
     void removeQueueTargetNow(const QString &target);
+    /** Insert under parent with beginInsertRows (keeps QTreeView indexes in sync). */
+    void insertUnder(TransferViewItem *parent, TransferViewItem *item);
+    void trackItem(TransferViewItem *item);
+    void forgetItem(TransferViewItem *item);
+    void destroyRow(TransferViewItem *item);
+    QModelIndex indexOfItem(TransferViewItem *item) const;
+    /** Child at row if parent (or root) and child are live; else nullptr. */
+    TransferViewItem *liveChild(TransferViewItem *parent, int row) const;
 
     TransferGrace grace;
     QMultiHash<QString, TransferViewItem*> transfer_hash;
+    /** Attached row pointers; rejects stale QModelIndex internalPointers without deref. */
+    QSet<TransferViewItem*> liveItems;
     QSet<QString> pendingTargetRemoves;
     bool flushTargetsQueued = false;
     QMap<QString, int> column_map;

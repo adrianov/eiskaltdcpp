@@ -83,7 +83,7 @@ void TransferViewModel::removeQueueTargetNow(const QString &target){
             const int row = p->childCount() - 1;
             beginRemoveRows(createIndexForItem(p), row, row);
             p->childItems.removeLast();
-            delete child;
+            destroyRow(child);
             endRemoveRows();
         }
 
@@ -91,7 +91,7 @@ void TransferViewModel::removeQueueTargetNow(const QString &target){
             const int parentRow = p->row();
             beginRemoveRows(QModelIndex(), parentRow, parentRow);
             rootItem->childItems.removeAt(parentRow);
-            delete p;
+            destroyRow(p);
             endRemoveRows();
         }
     }
@@ -108,7 +108,7 @@ void TransferViewModel::removeQueueTargetNow(const QString &target){
         eraseHashEntry(transfer_hash, item);
         beginRemoveRows(QModelIndex(), row, row);
         rootItem->childItems.removeAt(row);
-        delete item;
+        destroyRow(item);
         endRemoveRows();
     }
 

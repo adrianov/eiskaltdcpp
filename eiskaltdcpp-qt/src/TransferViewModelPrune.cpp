@@ -21,7 +21,7 @@ void TransferViewModel::pruneEmptyParents(){
             continue;
         beginRemoveRows(QModelIndex(), row, row);
         rootItem->childItems.removeAt(row);
-        delete p;
+        destroyRow(p);
         endRemoveRows();
     }
 }
