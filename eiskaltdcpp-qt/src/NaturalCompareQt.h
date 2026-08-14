@@ -14,7 +14,7 @@
 
 #include "dcpp/NaturalCompare.h"
 
-/** Same digit-aware path-depth + natural order as dcpp::compareNatural for Qt grids. */
+/** Same digit-aware path-depth, duration, and natural order as dcpp::compareNatural. */
 inline int compareNaturalQ(const QString &a, const QString &b) {
     return dcpp::compareNatural(a.toStdString(), b.toStdString());
 }

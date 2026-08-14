@@ -8,7 +8,8 @@
  * (at your option) any later version.
  */
 
-/** Alpha-numeric natural string order; path depth first when / or \\ present. */
+/** Alpha-numeric natural string order; path depth first when / or \\ present.
+ *  Adjacent number+time-unit runs (h, min, s, ms, …) compare as elapsed time. */
 
 #include "stdinc.h"
 #include "NaturalCompare.h"
@@ -40,6 +41,88 @@ size_t pathDepth(const string& s) {
         }
     }
     return hasSep ? depth : 0;
+}
+
+bool asciiEq(const char* p, const char* w, size_t n) {
+    for(size_t i = 0; i < n; ++i) {
+        char c = p[i];
+        if(c >= 'A' && c <= 'Z')
+            c = static_cast<char>(c + 32);
+        if(c != w[i])
+            return false;
+    }
+    return true;
+}
+
+bool isAsciiLetter(unsigned char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+/** Time unit at p → milliseconds. Rejects prefixes of longer words ("s" in "song"). */
+bool matchTimeUnit(const char* p, uint64_t& ms, size_t& len) {
+    static const struct { const char* n; uint8_t l; uint64_t ms; } units[] = {
+        {"minutes", 7, 60000},
+        {"seconds", 7, 1000},
+        {"minute", 6, 60000},
+        {"second", 6, 1000},
+        {"hours", 5, 3600000ull},
+        {"days", 4, 86400000ull},
+        {"hour", 4, 3600000ull},
+        {"day", 3, 86400000ull},
+        {"min", 3, 60000},
+        {"sec", 3, 1000},
+        {"ms", 2, 1},
+        {"mn", 2, 60000},
+        {"hr", 2, 3600000ull},
+        {"d", 1, 86400000ull},
+        {"h", 1, 3600000ull},
+        {"s", 1, 1000}
+    };
+    for(const auto& u: units) {
+        if(!asciiEq(p, u.n, u.l) || isAsciiLetter(static_cast<unsigned char>(p[u.l])))
+            continue;
+        ms = u.ms;
+        len = u.l;
+        return true;
+    }
+    return false;
+}
+
+/** One or more "N unit" tokens (MediaInfo "1 h 56 min", "7 min 58 s") as milliseconds. */
+bool parseDurationMs(const char*& p, uint64_t& out) {
+    const char* cur = p;
+    uint64_t total = 0;
+    int parts = 0;
+    for(;;) {
+        const char* save = cur;
+        while(*cur == ' ' || *cur == '\t')
+            ++cur;
+        if(!isDigitByte(static_cast<unsigned char>(*cur)))
+            break;
+
+        uint64_t n = 0;
+        while(isDigitByte(static_cast<unsigned char>(*cur))) {
+            n = n * 10 + static_cast<uint64_t>(*cur - '0');
+            ++cur;
+        }
+        while(*cur == ' ' || *cur == '\t')
+            ++cur;
+
+        uint64_t unitMs = 0;
+        size_t ulen = 0;
+        if(!matchTimeUnit(cur, unitMs, ulen)) {
+            cur = save;
+            break;
+        }
+        cur += ulen;
+        total += n * unitMs;
+        ++parts;
+    }
+    if(parts == 0)
+        return false;
+    p = cur;
+    out = total;
+    return true;
 }
 
 int compareDigitRuns(const char*& a, const char*& b) {
@@ -91,6 +174,16 @@ int compareNatural(const string& a, const string& b) {
     while(*pa || *pb) {
         if(isDigitByte(static_cast<unsigned char>(*pa)) &&
            isDigitByte(static_cast<unsigned char>(*pb))) {
+            const char* da = pa;
+            const char* db = pb;
+            uint64_t ma = 0, mb = 0;
+            if(parseDurationMs(da, ma) && parseDurationMs(db, mb)) {
+                if(ma != mb)
+                    return ma < mb ? -1 : 1;
+                pa = da;
+                pb = db;
+                continue;
+            }
             const int digitCmp = compareDigitRuns(pa, pb);
             if(digitCmp != 0)
                 return digitCmp;

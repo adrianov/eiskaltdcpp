@@ -15,6 +15,7 @@
 namespace dcpp {
 
 /** Digit-aware case-insensitive UTF-8 compare; "file1" before "file11".
+ *  Number+time-unit runs compare by duration ("7 min 58 s" before "1 h 56 min").
  *  Paths with / or \\: fewer directory segments first, then natural order. Returns <0, 0, >0. */
 int compareNatural(const string& a, const string& b);
 
