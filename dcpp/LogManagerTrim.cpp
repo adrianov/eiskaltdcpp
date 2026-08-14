@@ -12,17 +12,14 @@
 
 #include "File.h"
 #include "SettingsManager.h"
-#include "TimerManager.h"
 #include "Util.h"
 
 namespace dcpp {
 
 namespace {
 
-constexpr uint64_t kTrimInterval = 60 * 1000;
-
-FastCriticalSection trimCs;
-unordered_map<string, uint64_t> lastTrim;
+constexpr int kKeepLines = 10000;
+constexpr int kMaxDepth = 6;
 
 void copyRest(File& in, File& out) {
     char buf[8192];
@@ -34,27 +31,42 @@ void copyRest(File& in, File& out) {
     }
 }
 
-bool claimTrim(const string& path) {
-    FastLock l(trimCs);
-    const uint64_t tick = GET_TICK();
-    auto it = lastTrim.find(path);
-    if(it != lastTrim.end() && tick < it->second + kTrimInterval)
-        return false;
-    lastTrim[path] = tick;
-    return true;
-}
+/** Byte offset of the first kept line, or 0 if the file has at most kKeepLines lines. */
+int64_t keepFrom(File& in, int64_t size) {
+    if(size <= 0)
+        return 0;
 
-void markTrimmed(const string& path) {
-    FastLock l(trimCs);
-    lastTrim[path] = GET_TICK();
-}
+    int need = kKeepLines;
+    {
+        in.setPos(size - 1);
+        char last = 0;
+        size_t n = 1;
+        in.read(&last, n);
+        if(n == 1 && last == '\n')
+            ++need;
+    }
 
-void clearTrimClaim(const string& path) {
-    FastLock l(trimCs);
-    lastTrim.erase(path);
-}
+    constexpr size_t CHUNK = 8192;
+    char buf[CHUNK];
+    int64_t pos = size;
+    int found = 0;
 
-} // namespace
+    while(pos > 0 && found < need) {
+        const size_t n = static_cast<size_t>(std::min<int64_t>(static_cast<int64_t>(CHUNK), pos));
+        pos -= static_cast<int64_t>(n);
+        in.setPos(pos);
+        size_t len = n;
+        in.read(buf, len);
+        for(size_t i = len; i-- > 0; ) {
+            if(buf[i] == '\n') {
+                ++found;
+                if(found == need)
+                    return pos + static_cast<int64_t>(i) + 1;
+            }
+        }
+    }
+    return 0;
+}
 
 void trimLogFile(const string& path) {
     const int maxMb = SettingsManager::getInstance()->get(SettingsManager::LOG_MAX_FILE_SIZE, true);
@@ -64,36 +76,54 @@ void trimLogFile(const string& path) {
     try {
         const int64_t maxBytes = static_cast<int64_t>(maxMb) * 1024 * 1024;
         const int64_t size = File::getSize(path);
-        if(size <= 0 || size <= maxBytes || !claimTrim(path))
+        if(size <= 0 || size <= maxBytes)
             return;
 
-        const int64_t keepBytes = maxBytes * 9 / 10;
-        int64_t skipPos = size - keepBytes;
-        if(skipPos < 0)
-            skipPos = 0;
-
         File in(path, File::READ, File::OPEN);
-        if(skipPos > 0) {
-            in.setPos(skipPos);
-            char buf[4096];
-            size_t len = sizeof(buf);
-            in.read(buf, len);
-            const string chunk(buf, len);
-            const auto nl = chunk.find('\n');
-            if(nl != string::npos)
-                in.setPos(skipPos + static_cast<int64_t>(nl) + 1);
-        }
+        const int64_t skipPos = keepFrom(in, size);
+        if(skipPos <= 0)
+            return;
 
+        in.setPos(skipPos);
         const string tmp = path + ".trimtmp";
         File out(tmp, File::WRITE, File::OPEN | File::CREATE | File::TRUNCATE);
         copyRest(in, out);
         in.close();
         out.close();
         File::renameFile(tmp, path);
-        markTrimmed(path);
     } catch (const FileException&) {
-        clearTrimClaim(path);
+        File::deleteFile(path + ".trimtmp");
     }
+}
+
+void trimLogDir(const string& dir, int depth) {
+    if(depth > kMaxDepth || dir.empty())
+        return;
+
+    string path = dir;
+    if(path.back() != PATH_SEPARATOR)
+        path += PATH_SEPARATOR;
+
+    for(const string& p : File::findFiles(path, "*")) {
+        if(p.empty())
+            continue;
+        if(p.back() == PATH_SEPARATOR) {
+            const string name = Util::getFileName(p.substr(0, p.size() - 1));
+            if(name != "." && name != "..")
+                trimLogDir(p, depth + 1);
+        } else if(Util::stricmp(Util::getFileExt(p), ".log") == 0) {
+            trimLogFile(p);
+        }
+    }
+}
+
+} // namespace
+
+void trimLogFiles() {
+    const string dir = SETTING(LOG_DIRECTORY);
+    if(dir.empty() || !Util::fileExists(dir))
+        return;
+    trimLogDir(dir, 0);
 }
 
 } // namespace dcpp

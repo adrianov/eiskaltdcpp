@@ -25,6 +25,7 @@
 #include "sharemedia/MediaInfoCache.h"
 #include "listcache/ListCache.h"
 #include "LogManager.h"
+#include "LogManagerTrim.h"
 #include "MappingManager.h"
 #include "IncomingPortCheck.h"
 #include "PeerConnectHub.h"
@@ -100,6 +101,7 @@ void startupShell(void (*f)(void*, const string&), void* p) {
 #endif
 
     SettingsManager::getInstance()->load();
+    trimLogFiles();
 
     Util::setLang(SETTING(LANGUAGE));
 #ifdef USE_MINIUPNP

@@ -21,7 +21,6 @@
 #include "LogManager.h"
 
 #include "File.h"
-#include "LogManagerTrim.h"
 #include "TimerManager.h"
 
 namespace dcpp {
@@ -77,8 +76,6 @@ void LogManager::log(const string& area, const string& msg) noexcept {
     } catch (const FileException&) {
         return;
     }
-
-    trimLogFile(aArea);
 
     Lock l(cs);
     try {

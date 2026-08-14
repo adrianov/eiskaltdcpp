@@ -10,10 +10,9 @@
 
 #pragma once
 
-#include "typedefs.h"
-
 namespace dcpp {
 
-void trimLogFile(const string& path);
+/** On startup, drop the head of oversized *.log files under LOG_DIRECTORY, keeping the last 10000 lines. */
+void trimLogFiles();
 
 } // namespace dcpp
