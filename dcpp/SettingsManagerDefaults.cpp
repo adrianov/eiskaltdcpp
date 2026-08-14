@@ -155,7 +155,6 @@ void SettingsManager::setDefaults() {
     setDefault(HASH_BUFFER_POPULATE, true);
     setDefault(HASH_BUFFER_NORESERVE, true);
     setDefault(HASH_BUFFER_PRIVATE, true);
-    setDefault(MIN_MEDIAINFO_SIZE, 1); // MB — Flylink default
     setDefault(VIDEO_END_FIRST, true);
     setDefault(VIDEO_END_FIRST_SIZE, 20); // MB trailing chunk (video index near EOF) before start
     setDefault(RECONNECT_DELAY, 15);

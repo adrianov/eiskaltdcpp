@@ -87,7 +87,7 @@ const string SettingsManager::settingTags[] =
     "BindIface", "MinimumSearchInterval", "EnableDynDNS", "AllowUploadOverMultiHubs",
     "UseADLOnlyOnOwnList", "AllowSimUploads", "CheckTargetsPathsOnStart", "NmdcDebug",
     "ShareSkipZeroByte", "RequireTLS", "LogSpy", "AppUnitBase",
-    "LogCmdDebug", "LogMaxFileSize", "MinMediaInfoSize",
+    "LogCmdDebug", "LogMaxFileSize",
     "VideoEndFirst", "VideoEndFirstSize",
     "SENTRY",
     // Int64

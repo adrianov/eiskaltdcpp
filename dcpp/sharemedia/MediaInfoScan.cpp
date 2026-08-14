@@ -13,7 +13,6 @@
 #include "MediaInfoScan.h"
 #include "MediaInfoCache.h"
 #include "MediaInfoProbe.h"
-#include "SettingsManager.h"
 #include "Text.h"
 #include "Util.h"
 #include "File.h"
@@ -23,12 +22,14 @@ namespace dcpp {
 
 namespace {
 
-// Flylink compiled/Settings mediainfo_ext (+ mxf).
+// Flylink compiled/Settings mediainfo_ext (+ mxf, raster images for WH).
 const char* mediaExts[] = {
     "3gp", "avi", "divx", "flv", "m4v", "mkv", "dts", "mov", "mp4", "mpg", "mpeg",
     "vob", "wmv", "bik", "qt", "rm", "aac", "ac3", "ape", "fla", "flac", "m4a",
     "mp1", "mp2", "mp3", "ogg", "wma", "wv", "mka", "vqf", "lqt", "ts", "tp",
-    "mod", "m2ts", "webm", "mpe", "mxf", nullptr
+    "mod", "m2ts", "webm", "mpe", "mxf",
+    "bmp", "gif", "heic", "heif", "ico", "jpeg", "jpe", "jpg", "png", "psd",
+    "tga", "tif", "tiff", "webp", "avif", "pcx", nullptr
 };
 
 string fileExt(const string& path)
@@ -65,7 +66,7 @@ bool mediaInfoFill(const string& path, int64_t size, const TTHValue& tth, MediaI
 
     if (size < 0)
         size = File::getSize(path);
-    if (size < int64_t(SETTING(MIN_MEDIAINFO_SIZE)) * 1024 * 1024)
+    if (size <= 0)
         return false;
     if (!isMediaInfoExt(fileExt(path)))
         return false;
