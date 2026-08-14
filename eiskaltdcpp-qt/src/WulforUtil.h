@@ -112,7 +112,8 @@ public Q_SLOTS:
     static void headerMenu(QTreeView*, const QList<int> &skipColumns = {});
 
     /** Restore saved layout; fit columns that are still too narrow once visible.
-     *  Dragged columns keep their width; autosize will not rewrite them. */
+     *  Dragged columns keep their width; autosize will not rewrite them.
+     *  Fitted columns keep the widest content they have shown. Sort does not refit. */
     static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
 
     /** Re-check column widths after the view becomes visible or its model changes. */

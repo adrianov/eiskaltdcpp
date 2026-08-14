@@ -109,17 +109,16 @@ void TreeHeaderAutosize::hookModel()
                 peaks_->onInserted(parent, first, last);
             });
     connect(model, &QAbstractItemModel::columnsInserted, this, [this]() {
-        peaks_->clearPeaks();
         requestFit();
     });
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
-        peaks_->clearPeaks();
-        requestFit();
+        peaks_->onReset();
     });
     connect(model, &QAbstractItemModel::dataChanged, this,
             [this](const QModelIndex &tl, const QModelIndex &br, const QVector<int> &roles) {
                 peaks_->onDataChanged(tl, br, roles);
             });
+    // layoutChanged (sort) is not connected: values do not change.
 }
 
 void TreeHeaderAutosize::scheduleCheck()
@@ -147,7 +146,7 @@ void TreeHeaderAutosize::checkLayout()
     if (!fit.ready())
         return;
     fitting_ = true;
-    peaks_->setPeaks(fit.apply());
+    peaks_->mergePeaks(fit.apply(peaks_->peaks()));
     fitting_ = false;
     done_ = true;
 }

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "treeheader/ColumnContentSpan.h"
+
 #include <QHash>
 #include <QSet>
 
@@ -20,6 +22,7 @@ class QHeaderView;
 /**
  * Content-sizes columns (p100 when it fits, else soft), then proportionally
  * enlarges non-manual columns into spare width. Does not shrink to fill.
+ * Known peaks are a floor and skip a fresh content walk.
  */
 class HeaderContentFit
 {
@@ -29,7 +32,7 @@ public:
     static QHeaderView *headerOf(QAbstractItemView *view);
 
     bool ready() const;
-    QHash<int, int> apply();
+    QHash<int, ColumnWidths> apply(const QHash<int, ColumnWidths> &peaks);
 
 private:
     QAbstractItemView *view_ = nullptr;

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "treeheader/ColumnContentSpan.h"
+
 #include <QHash>
 #include <QSet>
 #include <functional>
@@ -19,8 +21,8 @@ class QAbstractItemView;
 class QModelIndex;
 
 /**
- * Tracks per-column peak content widths. Calls needFit only when a peak
- * grows (narrower peaks are ignored).
+ * Tracks per-column peak content widths. Peaks never decrease except on
+ * clearPeaks. needFit runs only when a peak grows; shorter values are ignored.
  */
 class ColumnPeakWatch
 {
@@ -31,18 +33,21 @@ public:
 
     void setManual(const QSet<int> *manual);
     void setNeedFit(NeedFit fn);
-    void setPeaks(QHash<int, int> peaks);
+    const QHash<int, ColumnWidths> &peaks() const { return peaks_; }
+    void mergePeaks(const QHash<int, ColumnWidths> &measured);
     void clearPeaks();
 
     void onInserted(const QModelIndex &parent, int first, int last);
     void onDataChanged(const QModelIndex &tl, const QModelIndex &br,
                        const QVector<int> &roles);
+    void onReset();
 
 private:
     bool noteWider(int col, int width);
+    void fitIfGrew(bool grew);
 
     QAbstractItemView *view_ = nullptr;
     const QSet<int> *manual_ = nullptr;
     NeedFit needFit_;
-    QHash<int, int> peaks_;
+    QHash<int, ColumnWidths> peaks_;
 };

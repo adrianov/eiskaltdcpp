@@ -43,12 +43,17 @@ void ListFilterProxy::setSourceModel(QAbstractItemModel *sourceModel)
         if (filter_.isActive())
             scheduleFilter();
     });
+    connect(sourceModel, &QAbstractItemModel::layoutAboutToBeChanged, this, [this]() {
+        if (!filter_.isActive())
+            emit layoutAboutToBeChanged();
+    });
     connect(sourceModel, &QAbstractItemModel::layoutChanged, this, [this]() {
+        // Sort reorders existing rows; do not reset (autosize hooks modelReset).
         filter_.cancel();
         if (filter_.isActive())
-            scheduleFilter();
+            scheduleFilter(false);
         else
-            setIdentity();
+            emit layoutChanged();
     });
 }
 
@@ -116,19 +121,30 @@ void ListFilterProxy::setIdentity()
     endResetModel();
 }
 
-void ListFilterProxy::setRows(QVector<int> rows)
+void ListFilterProxy::adoptRows(QVector<int> rows)
 {
-    beginResetModel();
     rows_ = std::move(rows);
     sourceToProxy_.clear();
     sourceToProxy_.reserve(rows_.size());
     for (int i = 0; i < rows_.size(); ++i)
         sourceToProxy_.insert(rows_.at(i), i);
     filtered_ = true;
+}
+
+void ListFilterProxy::setRows(QVector<int> rows, bool reset)
+{
+    if (!reset && filtered_ && rows.size() == rows_.size()) {
+        emit layoutAboutToBeChanged();
+        adoptRows(std::move(rows));
+        emit layoutChanged();
+        return;
+    }
+    beginResetModel();
+    adoptRows(std::move(rows));
     endResetModel();
 }
 
-void ListFilterProxy::scheduleFilter()
+void ListFilterProxy::scheduleFilter(bool reset)
 {
     if (!filter_.isActive()) {
         setIdentity();
@@ -141,8 +157,8 @@ void ListFilterProxy::scheduleFilter()
         return;
 
     if (filter_.shouldAsync(root->childCount())) {
-        filter_.scanAsync(root, pathPrefix_, this, [this](QVector<int> rows) {
-            setRows(std::move(rows));
+        filter_.scanAsync(root, pathPrefix_, this, [this, reset](QVector<int> rows) {
+            setRows(std::move(rows), reset);
         });
         return;
     }
@@ -153,7 +169,7 @@ void ListFilterProxy::scheduleFilter()
         if (filter_.acceptItem(root->child(i), pathPrefix_))
             rows.append(i);
     }
-    setRows(std::move(rows));
+    setRows(std::move(rows), reset);
 }
 
 void ListFilterProxy::applyFilters(const QStringList &terms, qulonglong size, int sizeMode,

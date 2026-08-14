@@ -47,8 +47,9 @@ public:
 private:
     void clearMap();
     void setIdentity();
-    void setRows(QVector<int> rows);
-    void scheduleFilter();
+    void adoptRows(QVector<int> rows);
+    void setRows(QVector<int> rows, bool reset);
+    void scheduleFilter(bool reset = true);
 
     ListFilter filter_;
     QString pathPrefix_;

@@ -32,7 +32,8 @@ struct Measure {
     int sumFull = 0;
 };
 
-Measure measure(QAbstractItemView *view, QHeaderView *header, const QSet<int> &manual)
+Measure measure(QAbstractItemView *view, QHeaderView *header, const QSet<int> &manual,
+                const QHash<int, ColumnWidths> &peaks)
 {
     Measure m;
     ColumnContentSpan span(view);
@@ -44,7 +45,14 @@ Measure measure(QAbstractItemView *view, QHeaderView *header, const QSet<int> &m
             m.sumFull += header->sectionSize(col);
             continue;
         }
-        const ColumnWidths w = span.widths(col);
+        const ColumnWidths remembered = peaks.value(col);
+        ColumnWidths w;
+        if (remembered.full > 0) {
+            const int t = span.title(col);
+            w = ColumnWidths{qMax(remembered.soft, t), qMax(remembered.full, t)};
+        } else {
+            w = span.widths(col);
+        }
         m.autos.append(ColSpan{col, w.soft, w.full});
         m.sumFull += w.full;
     }
@@ -90,12 +98,12 @@ void enlargeProportional(QHeaderView *header, const QSet<int> &manual, int viewW
     }
 }
 
-QHash<int, int> peaksOf(const Measure &m)
+QHash<int, ColumnWidths> peaksOf(const Measure &m)
 {
-    QHash<int, int> out;
+    QHash<int, ColumnWidths> out;
     out.reserve(m.autos.size());
     for (const ColSpan &c : m.autos)
-        out.insert(c.col, c.full);
+        out.insert(c.col, ColumnWidths{c.soft, c.full});
     return out;
 }
 
@@ -124,14 +132,14 @@ bool HeaderContentFit::ready() const
         && view_->viewport()->width() >= 40 && headerOf(view_);
 }
 
-QHash<int, int> HeaderContentFit::apply()
+QHash<int, ColumnWidths> HeaderContentFit::apply(const QHash<int, ColumnWidths> &peaks)
 {
     QHeaderView *header = headerOf(view_);
     if (!header || !view_->viewport() || header->count() < 1)
         return {};
     header->setStretchLastSection(false);
 
-    const Measure m = measure(view_, header, manual_);
+    const Measure m = measure(view_, header, manual_, peaks);
     if (m.autos.isEmpty())
         return {};
 

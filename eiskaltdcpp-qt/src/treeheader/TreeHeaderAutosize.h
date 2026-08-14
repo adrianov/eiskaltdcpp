@@ -26,7 +26,8 @@ class QTimer;
 
 /**
  * Column autosize: short debounce on show/resize, plus ColumnPeakWatch when
- * a column's peak content width grows.
+ * a column's peak content width grows. Peaks are a floor: later shorter
+ * values do not shrink a column. Sort (layoutChanged) is not hooked.
  */
 class TreeHeaderAutosize : public QObject
 {
