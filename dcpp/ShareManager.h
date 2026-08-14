@@ -17,10 +17,7 @@
 
 #pragma once
 
-#include <functional>
 #include <list>
-#include <map>
-#include <memory>
 #include <set>
 #include <unordered_map>
 
@@ -43,6 +40,7 @@
 #include "MerkleTree.h"
 #include "Pointer.h"
 #include "Atomic.h"
+#include "share/ShareFileList.h"
 
 #ifdef WITH_DHT
 namespace dht {
@@ -52,10 +50,7 @@ class IndexManager;
 
 namespace dcpp {
 
-using std::function;
-using std::map;
 using std::set;
-using std::unique_ptr;
 using std::unordered_map;
 
 STANDARD_EXCEPTION(ShareException);
@@ -90,14 +85,16 @@ public:
     TTHValue getTTH(const string& virtualFile) const;
 
     void refresh(bool dirs = false, bool aUpdate = true, bool block = false) noexcept;
-    void setDirty() { xmlDirty = true; }
+    void setDirty() { fileList.setDirty(); }
 
     void search(SearchResultList& l, const string& aString, int aSearchType, int64_t aSize, int aFileType, Client* aClient, StringList::size_type maxResults) noexcept;
     void search(SearchResultList& l, const StringList& params, StringList::size_type maxResults) noexcept;
 
     StringPairList getDirectories() const noexcept;
 
-    MemoryInputStream* generatePartialList(const string& dir, bool recurse) const;
+    MemoryInputStream* generatePartialList(const string& dir, bool recurse) const {
+        return fileList.generatePartial(dir, recurse);
+    }
     MemoryInputStream* getTree(const string& virtualFile) const;
 
     AdcCommand getFileInfo(const string& aFile);
@@ -122,9 +119,9 @@ public:
     }
 
     const string getOwnListFile() {
-        generateXmlList();
-        return getBZXmlFile();
+        return fileList.ensure();
     }
+    const string& getBZXmlFile() const { return fileList.getPath(); }
 
     bool isTTHShared(const TTHValue& tth){
         Lock l(cs);
@@ -133,7 +130,6 @@ public:
     void publish();
 
     GETSET(uint32_t, hits, Hits);
-    GETSET(string, bzXmlFile, BZXmlFile);
 
 private:
     struct AdcSearch;
@@ -252,6 +248,7 @@ private:
 
     friend class Directory;
     friend struct ShareLoader;
+    friend class ShareFileList;
     friend class ShareTreeScan;
 
     friend class Singleton<ShareManager>;
@@ -279,24 +276,14 @@ private:
         bool isDirectory;
     };
 
-    int64_t xmlListLen;
-    TTHValue xmlRoot;
-    int64_t bzXmlListLen;
-    TTHValue bzXmlRoot;
-    unique_ptr<File> bzXmlRef;
-
-    bool xmlDirty;
-    bool forceXmlRefresh; /// bypass the 15-minutes guard
     bool refreshDirs;
     bool update;
     bool initial;
 
-    int listN;
-
     Atomic<bool,memory_ordering_strong> refreshing;
 
-    uint64_t lastXmlUpdate;
     uint64_t lastFullUpdate;
+    ShareFileList fileList;
 
     mutable CriticalSection cs;
 
@@ -330,8 +317,6 @@ private:
 
     Directory::Ptr merge(const Directory::Ptr& directory);
 
-    void generateXmlList();
-    bool loadCache() noexcept;
     DirList::const_iterator getByVirtual(const string& virtualName) const noexcept;
     pair<Directory::Ptr, string> splitVirtual(const string& virtualPath) const;
 

@@ -65,9 +65,13 @@ void WindowShare::browseFilelist()
 
 void WindowShare::browseOwnFilelist()
 {
-    UserPtr user = ClientManager::getInstance()->getMe();
-    QString file = QString::fromStdString(ShareManager::getInstance()->getOwnListFile());
-    ArenaWidgetFactory().create<ShareBrowser, UserPtr, QString, QString>(user, file, "");
+    try {
+        UserPtr user = ClientManager::getInstance()->getMe();
+        QString file = QString::fromStdString(ShareManager::getInstance()->getOwnListFile());
+        ArenaWidgetFactory().create<ShareBrowser, UserPtr, QString, QString>(user, file, "");
+    } catch (const Exception &e) {
+        host->setStatusMessage(MainWindow::tr("Unable to load file list: %1").arg(_q(e.getError())));
+    }
 }
 
 void WindowShare::matchAllLists()

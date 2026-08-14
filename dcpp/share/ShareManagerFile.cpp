@@ -138,7 +138,7 @@ void ShareManager::removeFile(const string& realPath) noexcept {
 
     d->files.erase(i);
     setDirty();
-    forceXmlRefresh = true;
+    fileList.forceRefresh();
 }
 
 void ShareManager::on(QueueManagerListener::FileMoved, const string& realPath) noexcept {
@@ -184,7 +184,7 @@ void ShareManager::on(HashManagerListener::TTHDone, const string& realPath, cons
             updateIndices(*d, it);
         }
         setDirty();
-        forceXmlRefresh = true;
+        fileList.forceRefresh();
     }
 }
 

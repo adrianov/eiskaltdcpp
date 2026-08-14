@@ -168,6 +168,7 @@ set(DCPP_EXTRA_SOURCES
     share/ShareFileType.cpp
     share/ShareTreeScan.cpp
     share/ShareDirSearch.cpp
+    share/ShareFileList.cpp
     FinishedManagerComplete.cpp
     FinishedManagerMap.cpp
 )

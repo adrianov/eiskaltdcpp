@@ -52,7 +52,7 @@ void ShareManager::removeDir(const string& realPath) noexcept {
     d->getParent()->directories.erase(d->getName());
     rebuildIndices();
     setDirty();
-    forceXmlRefresh = true;
+    fileList.forceRefresh();
 }
 
 } // namespace dcpp

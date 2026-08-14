@@ -2380,12 +2380,16 @@ void MainWindow::refreshFileList_client()
 
 void MainWindow::openOwnList_client(bool useSetting)
 {
-    UserPtr user = ClientManager::getInstance()->getMe();
-    string path = ShareManager::getInstance()->getOwnListFile();
+    try {
+        UserPtr user = ClientManager::getInstance()->getMe();
+        string path = ShareManager::getInstance()->getOwnListFile();
 
-    typedef Func4<MainWindow, UserPtr, string, string, bool> F4;
-    F4 *func = new F4(this, &MainWindow::showShareBrowser_gui, user, path, "", useSetting);
-    WulforManager::get()->dispatchGuiFunc(func);
+        typedef Func4<MainWindow, UserPtr, string, string, bool> F4;
+        F4 *func = new F4(this, &MainWindow::showShareBrowser_gui, user, path, "", useSetting);
+        WulforManager::get()->dispatchGuiFunc(func);
+    } catch (const Exception& e) {
+        LogManager::getInstance()->message(e.getError());
+    }
 }
 
 void MainWindow::matchAllList_client()

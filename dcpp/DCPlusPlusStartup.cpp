@@ -126,7 +126,7 @@ void startupShareData(void (*f)(void*, const string&), void* p, bool refreshShar
     stage(f, p, _("Hash database"));
     HashManager::getInstance()->loadDatabase();
     stage(f, p, _("Shared Files"));
-    const string XmlListFileName = Util::getPath(Util::PATH_USER_CONFIG) + "files.xml.bz2";
+    const string XmlListFileName = ShareFileList::diskPath();
     if(!Util::fileExists(XmlListFileName)) {
         try {
             File::copyFile(XmlListFileName + ".bak", XmlListFileName);
