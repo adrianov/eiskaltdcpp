@@ -22,7 +22,7 @@
 #include "filebrowser/ListFilterProxy.h"
 #include "sharebrowser/ShareBrowserMenu.h"
 #include "sharebrowser/ShareFolderList.h"
-#include "SearchFileTypes.h"
+#include "filebrowser/FileTypeCounter.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/User.h"
@@ -95,6 +95,7 @@ private:
     void download(dcpp::DirectoryListing::Directory*, const QString &);
     void download(dcpp::DirectoryListing::File*, const QString &);
     void contextMoreActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
+    bool contextCopyClip(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void deleteOwnItems(const QModelIndexList &list);
 

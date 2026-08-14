@@ -37,6 +37,8 @@
 
 using namespace dcpp;
 
+class QAction;
+
 class FinishedTransferProxy: public QWidget{
 Q_OBJECT
 typedef QVariantMap VarMap;
@@ -141,6 +143,9 @@ private:
     void openFile(QString file);
     void openOrReveal(QString file);
     void slotItemDoubleClicked(const QModelIndex &proxyIndex) override;
+    void applyMenuAction(QAction *ret, const QStringList &files, const QModelIndexList &indexes,
+                         QAction *open_f, QAction *open_dir, QAction *copy_name,
+                         QAction *delete_f, QAction *convert_epub);
     void slotContextMenu() override;
     void slotHeaderMenu() override;
     void slotSwitchOnlyFull(bool checked) override;

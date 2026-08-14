@@ -17,6 +17,8 @@
 #include "dcpp/CID.h"
 #include "dcpp/Util.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QTextCodec>
 #include <QAction>
 #include <QRegExp>
@@ -76,6 +78,13 @@ QTextCodec *WulforUtil::codecForEncoding(const QString &name){
 
 QString WulforUtil::formatBytes(int64_t aBytes){
     return TransferDisplay::formatBytes(aBytes);
+}
+
+void WulforUtil::copyClipboard(const QString &text)
+{
+    const QString t = text.trimmed();
+    if (!t.isEmpty())
+        qApp->clipboard()->setText(t, QClipboard::Clipboard);
 }
 
 void WulforUtil::bindActionIcon(QAction *act, Icons icon)

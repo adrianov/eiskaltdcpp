@@ -33,6 +33,7 @@ class QHeaderView;
 class QAbstractItemView;
 class QTreeView;
 class QMenu;
+class QWidget;
 
 #define WICON(x)(WulforUtil::getInstance()->getPixmap((x)))
 #define WICON_SIZE(x, s)(WulforUtil::scalePixmap(WulforUtil::getInstance()->getPixmap((x)), (s)))
@@ -92,6 +93,14 @@ public Q_SLOTS:
 
     QString makeMagnet(const QString&, const int64_t, const QString&);
     static void splitMagnet(const QString &magnet, int64_t &size, QString &tth, QString &name);
+    static QString webMagnet(const QString &magnet, const QString &name) {
+        if (magnet.isEmpty())
+            return QString();
+        return QLatin1String("[magnet=\"") + magnet + QLatin1String("\"]") + name
+                + QLatin1String("[/magnet]");
+    }
+    static void copyClipboard(const QString &text);
+    static void showMagnet(QWidget *parent, const QString &magnet);
 
     int sortOrderToInt(Qt::SortOrder);
     Qt::SortOrder intToSortOrder(int);
@@ -113,7 +122,8 @@ public Q_SLOTS:
 
     /** Restore saved layout; fit columns that are still too narrow once visible.
      *  Dragged columns keep their width; autosize will not rewrite them.
-     *  Fitted columns keep the widest content they have shown. Sort does not refit. */
+     *  Fitted columns keep the widest content they have shown unless the new
+     *  longest is at least 30% shorter. Sort does not refit. */
     static void restoreTreeHeader(QHeaderView *header, const QByteArray &state);
 
     /** Re-check column widths after the view becomes visible or its model changes. */

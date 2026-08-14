@@ -15,12 +15,67 @@
 #include "ArenaWidgetFactory.h"
 #include "SearchFrame.h"
 #include "WulforUtil.h"
-#include "Magnet.h"
-
-#include <QClipboard>
-#include <QApplication>
 
 using namespace dcpp;
+
+namespace {
+
+QString queueMagnet(DownloadQueueItem *i)
+{
+    return WulforUtil::getInstance()->makeMagnet(
+            i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed(),
+            i->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong(),
+            i->data(COLUMN_DOWNLOADQUEUE_TTH).toString());
+}
+
+void copyQueueNames(const QList<DownloadQueueItem*> &items)
+{
+    QString names;
+    for (const auto &i : items) {
+        const QString name = (i->data(COLUMN_DOWNLOADQUEUE_PATH).toString()
+                              + i->data(COLUMN_DOWNLOADQUEUE_NAME).toString()).trimmed();
+        if (!name.isEmpty())
+            names += name + QLatin1Char('\n');
+    }
+    WulforUtil::copyClipboard(names);
+}
+
+void copyQueueMagnets(const QList<DownloadQueueItem*> &items, bool web)
+{
+    QString magnets;
+    for (const auto &i : items) {
+        const QString magnet = queueMagnet(i);
+        if (magnet.isEmpty())
+            continue;
+        magnets += web ? WulforUtil::webMagnet(
+                magnet, i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed()) : magnet;
+        magnets += QLatin1Char('\n');
+    }
+    WulforUtil::copyClipboard(magnets);
+}
+
+} // namespace
+
+bool DownloadQueue::contextCopyClip(Menu::Action act, const QList<DownloadQueueItem*> &items)
+{
+    switch (act) {
+        case Menu::CopyFileName:
+            copyQueueNames(items);
+            return true;
+        case Menu::Magnet:
+            copyQueueMagnets(items, false);
+            return true;
+        case Menu::MagnetWeb:
+            copyQueueMagnets(items, true);
+            return true;
+        case Menu::MagnetInfo:
+            for (const auto &i : items)
+                WulforUtil::showMagnet(this, queueMagnet(i));
+            return true;
+        default:
+            return false;
+    }
+}
 
 void DownloadQueue::slotContextMenu(const QPoint &){
     QModelIndexList list = treeView_TARGET->selectionModel()->selectedRows(0);
@@ -54,94 +109,14 @@ void DownloadQueue::slotContextMenu(const QPoint &){
     if (items.isEmpty())
         return;
 
-    switch (act){
-        case Menu::Alternates:
-        {
-            SearchFrame *sf = ArenaWidgetFactory().create<SearchFrame>();
-
-            for (const auto &i : items)
-                sf->searchAlternates(i->data(COLUMN_DOWNLOADQUEUE_TTH).toString());
-
-            break;
-        }
-        case Menu::CopyFileName:
-        {
-            QString names;
-
-            for (const auto &i : items){
-                const QString name = i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed();
-
-                if (!name.isEmpty())
-                    names += name + "\n";
-            }
-
-            names = names.trimmed();
-
-            if (!names.isEmpty())
-                qApp->clipboard()->setText(names, QClipboard::Clipboard);
-
-            break;
-        }
-        case Menu::Magnet:
-        {
-            QString magnet = "";
-
-            for (const auto &i : items)
-                magnet += WulforUtil::getInstance()->makeMagnet(
-                        i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed(),
-                        i->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong(),
-                        i->data(COLUMN_DOWNLOADQUEUE_TTH).toString()) + "\n";
-
-            if (!magnet.isEmpty())
-                qApp->clipboard()->setText(magnet, QClipboard::Clipboard);
-
-            break;
-        }
-        case Menu::MagnetWeb:
-        {
-            QString magnet = "";
-
-            for (const auto &i : items){
-                magnet += "[magnet=\"" +
-                    WulforUtil::getInstance()->makeMagnet(
-                        i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed(),
-                        i->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong(),
-                        i->data(COLUMN_DOWNLOADQUEUE_TTH).toString()) +
-                    "\"]"+i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed()+"[/magnet]\n";
-            }
-
-            if (!magnet.isEmpty())
-                qApp->clipboard()->setText(magnet, QClipboard::Clipboard);
-
-            break;
-        }
-        case Menu::MagnetInfo:
-        {
-            for (const auto &i : items){
-                const QString &&magnet = WulforUtil::getInstance()->makeMagnet(
-                            i->data(COLUMN_DOWNLOADQUEUE_NAME).toString().trimmed(),
-                            i->data(COLUMN_DOWNLOADQUEUE_ESIZE).toLongLong(),
-                            i->data(COLUMN_DOWNLOADQUEUE_TTH).toString());
-
-                if (!magnet.isEmpty()){
-                    Magnet m(this);
-                    m.setLink(magnet, Magnet::MAGNET_ACTION_SHOW_UI);
-                    m.exec();
-                }
-            }
-
-            break;
-        }
-        case Menu::RenameMove:
-        case Menu::SetPriority:
-        case Menu::Browse:
-        case Menu::SendPM:
-        case Menu::RemoveSource:
-        case Menu::RemoveUser:
-        case Menu::Remove:
-            contextMoreActions(act, items, target, arg);
-            break;
-        default:
-            break;
+    if (act == Menu::Alternates) {
+        SearchFrame *sf = ArenaWidgetFactory().create<SearchFrame>();
+        for (const auto &i : items)
+            sf->searchAlternates(i->data(COLUMN_DOWNLOADQUEUE_TTH).toString());
+        return;
     }
+    if (contextCopyClip(act, items))
+        return;
+
+    contextMoreActions(act, items, target, arg);
 }

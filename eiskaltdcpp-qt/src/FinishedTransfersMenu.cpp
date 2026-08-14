@@ -12,11 +12,11 @@
 #include "FinishedTransfers.h"
 #include "fb2epub/Fb2EpubExport.h"
 
-#include <QApplication>
-#include <QClipboard>
+#include <QAction>
 #include <QCursor>
 #include <QItemSelectionModel>
 #include <QMenu>
+#include <QTreeView>
 
 template <bool isUpload>
 void FinishedTransfers<isUpload>::slotItemDoubleClicked(const QModelIndex &proxyIndex)
@@ -59,59 +59,106 @@ void FinishedTransfers<isUpload>::slotItemDoubleClicked(const QModelIndex &proxy
     }
 }
 
+namespace {
+
+QModelIndexList finishedSourceRows(QTreeView *tree, FinishedTransferProxyModel *proxy)
+{
+    QModelIndexList indexes;
+    for (const auto &i : tree->selectionModel()->selectedRows(0))
+        indexes.push_back(proxy->mapToSource(i));
+    return indexes;
+}
+
+void fillFinishedFiles(const QModelIndexList &indexes, int combo, bool upload,
+                       QStringList &files, bool &hasFb2)
+{
+    for (const auto &i : indexes) {
+        auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+        if (!item)
+            continue;
+        if (combo == 0) {
+            const QString file = item->data(COLUMN_FINISHED_TARGET).toString();
+            if (file.isEmpty())
+                continue;
+            files.push_back(file);
+            if (!upload && (Fb2EpubExport::isFb2Name(file)
+                    || Fb2EpubExport::isFb2Name(item->data(COLUMN_FINISHED_NAME).toString())))
+                hasFb2 = true;
+            continue;
+        }
+        const QString file_list = item->data(COLUMN_FINISHED_PATH).toString();
+        if (file_list.isEmpty())
+            continue;
+        const QStringList parts = file_list.split("; ", WULFOR_SKIP_EMPTY);
+        files.append(parts);
+        if (upload || hasFb2)
+            continue;
+        for (const auto &part : parts) {
+            if (Fb2EpubExport::isFb2Name(part)) {
+                hasFb2 = true;
+                break;
+            }
+        }
+    }
+}
+
+void copyFinishedNames(const QModelIndexList &indexes)
+{
+    QString names;
+    for (const auto &i : indexes) {
+        auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
+        if (!item)
+            continue;
+        const QString name = item->data(COLUMN_FINISHED_TARGET).toString().trimmed();
+        if (!name.isEmpty())
+            names += name + QLatin1Char('\n');
+    }
+    WulforUtil::copyClipboard(names);
+}
+
+} // namespace
+
+template <bool isUpload>
+void FinishedTransfers<isUpload>::applyMenuAction(QAction *ret, const QStringList &files,
+        const QModelIndexList &indexes, QAction *open_f, QAction *open_dir,
+        QAction *copy_name, QAction *delete_f, QAction *convert_epub)
+{
+    if (ret == open_f) {
+        for (const auto &f : files)
+            openFile(f);
+        return;
+    }
+    if (ret == open_dir) {
+        for (const auto &f : files)
+            WulforUtil::revealPath(finishedLocalPath(f));
+        return;
+    }
+    if (convert_epub && ret == convert_epub) {
+        QStringList resolved;
+        resolved.reserve(files.size());
+        for (const auto &f : files)
+            resolved.push_back(finishedLocalPath(f));
+        Fb2EpubExport::convertAndReveal(resolved);
+        return;
+    }
+    if (copy_name && ret == copy_name)
+        copyFinishedNames(indexes);
+    else if (delete_f && ret == delete_f)
+        deleteDiskFiles(files);
+}
+
 template <bool isUpload>
 void FinishedTransfers<isUpload>::slotContextMenu()
 {
     static WulforUtil *WU = WulforUtil::getInstance();
 
-    QItemSelectionModel *s_model = treeView->selectionModel();
-    QModelIndexList p_indexes = s_model->selectedRows(0);
-    QModelIndexList indexes;
-
-    for (const auto &i : p_indexes)
-        indexes.push_back(proxy->mapToSource(i));
-
-    if (indexes.size() < 1)
+    const QModelIndexList indexes = finishedSourceRows(treeView, proxy);
+    if (indexes.isEmpty())
         return;
 
     QStringList files;
     bool hasFb2 = false;
-
-    if (comboBox->currentIndex() == 0){
-        for (const auto &i : indexes){
-            auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            if (!item)
-                continue;
-            const QString file = item->data(COLUMN_FINISHED_TARGET).toString();
-            if (file.isEmpty())
-                continue;
-            files.push_back(file);
-            // Suffix on TARGET/FNAME only — exists() can fail until finishedLocalPath().
-            if (!isUpload && (Fb2EpubExport::isFb2Name(file)
-                    || Fb2EpubExport::isFb2Name(item->data(COLUMN_FINISHED_NAME).toString())))
-                hasFb2 = true;
-        }
-    }
-    else {
-        for (const auto &i : indexes){
-            auto *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            if (!item)
-                continue;
-            const QString file_list = item->data(COLUMN_FINISHED_PATH).toString();
-            if (file_list.isEmpty())
-                continue;
-            const QStringList parts = file_list.split("; ", WULFOR_SKIP_EMPTY);
-            files.append(parts);
-            if (!isUpload) {
-                for (const auto &part : parts) {
-                    if (Fb2EpubExport::isFb2Name(part)) {
-                        hasFb2 = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    fillFinishedFiles(indexes, comboBox->currentIndex(), isUpload, files, hasFb2);
 
     QMenu *m = new QMenu();
     QAction *open_f   = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), tr("Open file"), m);
@@ -142,46 +189,15 @@ void FinishedTransfers<isUpload>::slotContextMenu()
     }
 
     QAction *ret = m->exec(QCursor::pos());
-
+    applyMenuAction(ret, files, indexes, open_f, open_dir, copy_name, delete_f, convert_epub);
     delete m;
-
-    if (ret == open_f){
-        for (const auto &f : files)
-            openFile(f);
-    }
-    else if (ret == open_dir){
-        for (const auto &f : files)
-            WulforUtil::revealPath(finishedLocalPath(f));
-    }
-    else if (convert_epub && ret == convert_epub){
-        QStringList resolved;
-        resolved.reserve(files.size());
-        for (const auto &f : files)
-            resolved.push_back(finishedLocalPath(f));
-        Fb2EpubExport::convertAndReveal(resolved);
-    }
-    else if (copy_name && ret == copy_name){
-        QString names;
-
-        for (const auto &i : indexes){
-            FinishedTransfersItem *item = reinterpret_cast<FinishedTransfersItem*>(i.internalPointer());
-            const QString name = item->data(COLUMN_FINISHED_NAME).toString().trimmed();
-
-            if (!name.isEmpty())
-                names += name + "\n";
-        }
-
-        names = names.trimmed();
-
-        if (!names.isEmpty())
-            qApp->clipboard()->setText(names, QClipboard::Clipboard);
-    }
-    else if (delete_f && ret == delete_f){
-        deleteDiskFiles(files);
-    }
 }
 
 template void FinishedTransfers<true>::slotItemDoubleClicked(const QModelIndex&);
 template void FinishedTransfers<false>::slotItemDoubleClicked(const QModelIndex&);
+template void FinishedTransfers<true>::applyMenuAction(QAction*, const QStringList&,
+        const QModelIndexList&, QAction*, QAction*, QAction*, QAction*, QAction*);
+template void FinishedTransfers<false>::applyMenuAction(QAction*, const QStringList&,
+        const QModelIndexList&, QAction*, QAction*, QAction*, QAction*, QAction*);
 template void FinishedTransfers<true>::slotContextMenu();
 template void FinishedTransfers<false>::slotContextMenu();

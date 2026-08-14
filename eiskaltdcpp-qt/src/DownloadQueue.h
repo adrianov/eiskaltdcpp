@@ -156,6 +156,7 @@ private:
     void getItems(const QModelIndexList &list, QList<DownloadQueueItem*> &items);
     void contextMoreActions(Menu::Action act, const QList<DownloadQueueItem*> &items,
                             const QString &target, const QVariant &arg);
+    bool contextCopyClip(Menu::Action act, const QList<DownloadQueueItem*> &items);
 
     QString getCID(const VarMap&);
 

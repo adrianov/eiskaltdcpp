@@ -13,128 +13,108 @@
 #include "WulforUtil.h"
 #include "FileBrowserModel.h"
 #include "SearchFrame.h"
-#include "Magnet.h"
 #include "ArenaWidgetFactory.h"
-
-
-#include <QClipboard>
-#include <QDir>
-#include <QApplication>
 
 using namespace dcpp;
 
+namespace {
+
+FileBrowserItem *browserItem(const QModelIndex &index)
+{
+    return reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+}
+
+QString listingCopyName(DirectoryListing &listing, FileBrowserItem *item)
+{
+    if (!item)
+        return QString();
+    if (item->file)
+        return _q(listing.getPath(item->file) + item->file->getName());
+    if (item->dir) {
+        QString name = _q(listing.getPath(item->dir));
+        if (name.endsWith(QLatin1Char('\\')))
+            name.chop(1);
+        if (!name.isEmpty())
+            return name;
+    }
+    return item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed();
+}
+
+QString shareFileMagnet(FileBrowserItem *item)
+{
+    if (!item)
+        return QString();
+    return WulforUtil::getInstance()->makeMagnet(
+            item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed(),
+            item->data(COLUMN_FILEBROWSER_ESIZE).toLongLong(),
+            item->data(COLUMN_FILEBROWSER_TTH).toString());
+}
+
+void copyShareNames(DirectoryListing &listing, const QModelIndexList &list)
+{
+    QString names;
+    for (const auto &index : list) {
+        const QString name = listingCopyName(listing, browserItem(index));
+        if (!name.isEmpty())
+            names += name + QLatin1Char('\n');
+    }
+    WulforUtil::copyClipboard(names);
+}
+
+void copyShareMagnets(const QModelIndexList &list, bool web)
+{
+    QString magnets;
+    for (const auto &index : list) {
+        FileBrowserItem *item = browserItem(index);
+        const QString magnet = shareFileMagnet(item);
+        if (magnet.isEmpty())
+            continue;
+        magnets += web ? WulforUtil::webMagnet(
+                magnet, item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed()) : magnet;
+        magnets += QLatin1Char('\n');
+    }
+    WulforUtil::copyClipboard(magnets);
+}
+
+} // namespace
+
+bool ShareBrowser::contextCopyClip(ShareBrowserMenu::Action act, const QModelIndexList &list)
+{
+    switch (act) {
+        case ShareBrowserMenu::CopyFileName:
+            copyShareNames(listing, list);
+            return true;
+        case ShareBrowserMenu::Magnet:
+            copyShareMagnets(list, false);
+            return true;
+        case ShareBrowserMenu::MagnetWeb:
+            copyShareMagnets(list, true);
+            return true;
+        case ShareBrowserMenu::MagnetInfo:
+            for (const auto &index : list)
+                WulforUtil::showMagnet(this, shareFileMagnet(browserItem(index)));
+            return true;
+        default:
+            return false;
+    }
+}
+
 void ShareBrowser::contextMoreActions(ShareBrowserMenu::Action act, const QModelIndexList &list)
 {
-    switch (act){
+    if (contextCopyClip(act, list))
+        return;
+
+    switch (act) {
         case ShareBrowserMenu::Alternates:
-        {
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-
-                if (item->file){//search alternates only for files
-                    QString tth = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                    SearchFrame *sf = ArenaWidgetFactory().create<SearchFrame>();
-
-                    sf->searchAlternates(tth);
-
-                    break;//just one file
-                }
+            for (const auto &index : list) {
+                FileBrowserItem *item = browserItem(index);
+                if (!item || !item->file)
+                    continue;
+                ArenaWidgetFactory().create<SearchFrame>()->searchAlternates(
+                        item->data(COLUMN_FILEBROWSER_TTH).toString());
+                break;
             }
-
             break;
-        }
-        case ShareBrowserMenu::CopyFileName:
-        {
-            QString names;
-
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                const QString name = item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed();
-
-                if (!name.isEmpty())
-                    names += name + "\n";
-            }
-
-            names = names.trimmed();
-
-            if (!names.isEmpty())
-                qApp->clipboard()->setText(names, QClipboard::Clipboard);
-
-            break;
-        }
-        case ShareBrowserMenu::Magnet:
-        {
-            QString magnets = "";
-            QString path, tth, magnet;
-            qlonglong size;
-
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-
-                path = item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed();
-                tth  = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                size = item->data(COLUMN_FILEBROWSER_ESIZE).toLongLong();
-
-                magnet = WulforUtil::getInstance()->makeMagnet(path, size, tth);
-
-                if (!magnet.isEmpty())
-                    magnets += (magnet + "\n");
-            }
-
-            magnets = magnets.trimmed();
-
-            qApp->clipboard()->setText(magnets, QClipboard::Clipboard);
-
-            break;
-        }
-        case ShareBrowserMenu::MagnetWeb:
-        {
-            QString magnets = "";
-            QString path, tth, magnet;
-            qlonglong size;
-
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-
-                path = item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed();
-                tth  = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                size = item->data(COLUMN_FILEBROWSER_ESIZE).toLongLong();
-
-                magnet = "[magnet=\"" + WulforUtil::getInstance()->makeMagnet(path, size, tth) + "\"]"+path+"[/magnet]";
-
-                if (!magnet.isEmpty())
-                    magnets += (magnet + "\n");
-            }
-
-            magnets = magnets.trimmed();
-
-            qApp->clipboard()->setText(magnets, QClipboard::Clipboard);
-
-            break;
-        }
-        case ShareBrowserMenu::MagnetInfo:
-        {
-            QString path, tth, magnet;
-            qlonglong size;
-
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-
-                path = item->data(COLUMN_FILEBROWSER_NAME).toString().trimmed();
-                tth  = item->data(COLUMN_FILEBROWSER_TTH).toString();
-                size = item->data(COLUMN_FILEBROWSER_ESIZE).toLongLong();
-
-                magnet = WulforUtil::getInstance()->makeMagnet(path, size, tth);
-
-                if (!magnet.isEmpty()){
-                    Magnet m(this);
-                    m.setLink(magnet, Magnet::MAGNET_ACTION_SHOW_UI);
-                    m.exec();
-                }
-            }
-
-            break;
-        }
         case ShareBrowserMenu::AddToFav:
         case ShareBrowserMenu::AddRestrinction:
         case ShareBrowserMenu::RemoveRestriction:
@@ -144,6 +124,7 @@ void ShareBrowser::contextMoreActions(ShareBrowserMenu::Action act, const QModel
         case ShareBrowserMenu::DeleteFile:
             contextUserActions(act, list);
             break;
-        default: break;
+        default:
+            break;
     }
 }

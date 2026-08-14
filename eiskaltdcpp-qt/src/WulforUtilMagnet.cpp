@@ -10,6 +10,7 @@
 ***************************************************************************/
 
 #include "WulforUtil.h"
+#include "Magnet.h"
 
 #include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
@@ -18,6 +19,15 @@
 #include "extra/magnet.h"
 
 using namespace dcpp;
+
+void WulforUtil::showMagnet(QWidget *parent, const QString &magnet)
+{
+    if (magnet.isEmpty())
+        return;
+    Magnet m(parent);
+    m.setLink(magnet, Magnet::MAGNET_ACTION_SHOW_UI);
+    m.exec();
+}
 
 QString WulforUtil::makeMagnet(const QString &path, const int64_t size, const QString &tth){
     if (path.isEmpty() || tth.isEmpty())

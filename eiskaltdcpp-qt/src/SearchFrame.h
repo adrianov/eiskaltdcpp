@@ -126,6 +126,8 @@ private:
     /** Second ShareIndex media pass after the search progress window ends. */
     void requeueMissingMedia();
     bool contextDownloads(Menu::Action act, const QModelIndexList &list);
+    bool contextLocalOpen(Menu::Action act, const QModelIndexList &list);
+    bool contextCopyClip(Menu::Action act, const QModelIndexList &list);
     bool contextMoreActions(Menu::Action act, const QModelIndexList &list);
     bool contextUserActions(Menu::Action act, const QModelIndexList &list);
     void getFileList(const VarMap&, bool = false);
