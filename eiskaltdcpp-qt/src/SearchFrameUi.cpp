@@ -25,6 +25,7 @@
 #include <QSplitter>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QSignalBlocker>
 
 using namespace dcpp;
 
@@ -34,13 +35,15 @@ void SearchFrame::searchAlternates(const QString &tth){
 
     Q_D(SearchFrame);
 
+    d->saveFileType = false;
     lineEdit_SEARCHSTR->setText(tth);
-    comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_TTH);
+    {
+        const QSignalBlocker block(comboBox_FILETYPES);
+        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_TTH);
+    }
     lineEdit_SIZE->setText("");
 
     slotStartSearch();
-
-    d->saveFileType = false;
 }
 
 void SearchFrame::searchFile(const QString &file){
@@ -49,11 +52,13 @@ void SearchFrame::searchFile(const QString &file){
 
     Q_D(SearchFrame);
 
-    lineEdit_SEARCHSTR->setText(file);
-    comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_ANY);
-    lineEdit_SIZE->setText("");
-
     d->saveFileType = false;
+    lineEdit_SEARCHSTR->setText(file);
+    {
+        const QSignalBlocker block(comboBox_FILETYPES);
+        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_ANY);
+    }
+    lineEdit_SIZE->setText("");
 
     slotStartSearch();
 }
@@ -62,10 +67,14 @@ void SearchFrame::fastSearch(const QString &text, bool isTTH){
     if (text.isEmpty())
         return;
 
-    if (!isTTH)
-        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_ANY);
-    else
-        comboBox_FILETYPES->setCurrentIndex(SearchManager::TYPE_TTH);
+    Q_D(SearchFrame);
+    d->saveFileType = false;
+
+    {
+        const QSignalBlocker block(comboBox_FILETYPES);
+        comboBox_FILETYPES->setCurrentIndex(isTTH ? SearchManager::TYPE_TTH
+                                                  : SearchManager::TYPE_ANY);
+    }
 
     lineEdit_SEARCHSTR->setText(text);
 

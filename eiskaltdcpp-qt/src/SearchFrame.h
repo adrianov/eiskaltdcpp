@@ -96,6 +96,7 @@ private Q_SLOTS:
     void slotApplyViewFilters();
     /** Apply pending view filters once. */
     void flushViewFilters();
+    void persistFileType();
     void slotClose();
     void slotSettingsChanged(const QString &key, const QString &value);
     void onHubAdded(const QString &info);

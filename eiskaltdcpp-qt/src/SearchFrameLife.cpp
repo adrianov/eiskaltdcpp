@@ -136,7 +136,9 @@ void SearchFrame::load(){
     checkBox_FILTERSLOTS->setChecked(WBGET(WB_SEARCHFILTER_NOFREE));
     checkBox_HIDEPANEL->setChecked(WBGET(WB_SEARCH_DONTHIDEPANEL));
 
-    comboBox_FILETYPES->setCurrentIndex(WIGET(WI_SEARCH_LAST_TYPE));
+    const int last = WIGET(WI_SEARCH_LAST_TYPE);
+    if (last >= 0 && last < comboBox_FILETYPES->count())
+        comboBox_FILETYPES->setCurrentIndex(last);
 
     treeView_RESULTS->sortByColumn(WIGET(WI_SEARCH_SORT_COLUMN), WulforUtil::getInstance()->intToSortOrder(WIGET(WI_SEARCH_SORT_ORDER)));
 
@@ -150,6 +152,13 @@ void SearchFrame::load(){
     lineEdit_SEARCHSTR->setCompleter(d->completer);
 }
 
+void SearchFrame::persistFileType()
+{
+    const int idx = comboBox_FILETYPES->currentIndex();
+    if (idx >= 0)
+        WISET(WI_SEARCH_LAST_TYPE, idx);
+}
+
 void SearchFrame::save(){
     Q_D(SearchFrame);
 
@@ -159,7 +168,7 @@ void SearchFrame::save(){
     WISET(WI_SEARCH_SHARED_ACTION, static_cast<int>(d->filterShared));
 
     if (d->saveFileType)
-        WISET(WI_SEARCH_LAST_TYPE, comboBox_FILETYPES->currentIndex());
+        persistFileType();
 
     WBSET(WB_SEARCHFILTER_NOFREE, checkBox_FILTERSLOTS->isChecked());
     WBSET(WB_SEARCH_DONTHIDEPANEL, checkBox_HIDEPANEL->isChecked());

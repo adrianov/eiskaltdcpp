@@ -105,6 +105,7 @@ void SearchFrame::init(){
     connect(comboBox_SIZE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
     connect(comboBox_SIZETYPE, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
     connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(slotApplyViewFilters()));
+    connect(comboBox_FILETYPES, SIGNAL(currentIndexChanged(int)), this, SLOT(persistFileType()));
 
     connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)), this, SLOT(slotSettingsChanged(QString,QString)));
 
