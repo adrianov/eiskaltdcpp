@@ -31,6 +31,24 @@
 
 using namespace dcpp;
 
+namespace {
+
+void collectListingTypes(DirectoryListing::Directory *dir, DirectoryListing &listing,
+                         SearchFileTypes::FileTypeCounter &types, bool &hasDirs)
+{
+    if (!dir)
+        return;
+    if (!dir->directories.empty())
+        hasDirs = true;
+    const QString path = _q(listing.getPath(dir));
+    for (const auto &file : dir->files)
+        types.addFile(_q(file->getName()), path);
+    for (const auto &sub : dir->directories)
+        collectListingTypes(sub, listing, types, hasDirs);
+}
+
+} // namespace
+
 void ShareBrowser::init(){
     setupUi(this);
 
@@ -43,7 +61,12 @@ void ShareBrowser::init(){
 
     initModels();
 
-    SearchFileTypes::fillCombo(comboBox_FILETYPES);
+    SearchFileTypes::FileTypeCounter types;
+    bool hasDirs = false;
+    collectListingTypes(listing.getRoot(), listing, types, hasDirs);
+    listingTypes_.hasDirs = hasDirs;
+    types.fillListing(listingTypes_);
+    SearchFileTypes::fillListingCombo(comboBox_FILETYPES, listingTypes_);
     lineEdit_FILTER->setPlaceholderText(tr("Filter path (space-separated, -exclude)"));
     lineEdit_FILTER->setToolTip(tr("Filter by path/name. Space-separated terms; prefix - to exclude."));
     // Let the filter field shrink so the folder pane is not capped by the toolbar row.

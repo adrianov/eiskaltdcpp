@@ -35,11 +35,9 @@ QModelIndex FileBrowserFilterProxy::parent(const QModelIndex &child) const {
     return QSortFilterProxyModel::parent(child);
 }
 
-void FileBrowserFilterProxy::applyFilters(const QStringList &terms, qulonglong size, int sizeMode,
-                                          bool dirsOnly, bool filesOnly, const QStringList &exts,
-                                          const QString &pathPrefix) {
+void FileBrowserFilterProxy::applyFilters(const FilterMatch &match, const QString &pathPrefix) {
     Q_UNUSED(pathPrefix);
-    if (!filter_.set(terms, size, sizeMode, dirsOnly, filesOnly, exts))
+    if (!filter_.set(match))
         return;
     invalidateFilter();
 }

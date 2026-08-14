@@ -17,29 +17,15 @@
 #include <QPointer>
 #include <QThread>
 
-bool ListFilter::set(const QStringList &terms, qulonglong size, int sizeMode,
-                     bool dirsOnly, bool filesOnly, const QStringList &exts)
+bool ListFilter::set(FilterMatch m)
 {
-    QStringList upperExts;
-    upperExts.reserve(exts.size());
-    for (const QString &ext : exts)
-        upperExts.append(ext.toUpper());
+    for (QString &ext : m.extFilter)
+        ext = ext.toUpper();
 
-    if (textTermsRaw_ == terms && match_.sizeLimit == size && match_.sizeMode == sizeMode
-            && match_.dirsOnly == dirsOnly && match_.filesOnly == filesOnly
-            && match_.extFilter == upperExts)
+    if (match_.filter == m)
         return false;
 
-    if (textTermsRaw_ != terms) {
-        textTermsRaw_ = terms;
-        match_.setTerms(terms);
-    }
-
-    match_.sizeLimit = size;
-    match_.sizeMode = sizeMode;
-    match_.dirsOnly = dirsOnly;
-    match_.filesOnly = filesOnly;
-    match_.extFilter = upperExts;
+    match_.filter = std::move(m);
     ++(*gen_);
     return true;
 }
@@ -69,7 +55,7 @@ void ListFilter::scanAsync(FileBrowserItem *root, const QString &pathPrefix, QOb
 
     const std::shared_ptr<std::atomic<int>> liveGen = gen_;
     const int gen = liveGen->load();
-    const FilterMatch match = match_;
+    const ListingMatch match = match_;
     // QList COW: O(1) on the UI thread; item fields are read on the worker.
     const QList<FileBrowserItem*> items = root->childItems;
 

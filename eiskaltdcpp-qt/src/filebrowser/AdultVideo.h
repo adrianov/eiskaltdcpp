@@ -11,30 +11,11 @@
 
 #pragma once
 
-#include "FileBrowserModel.h"
-#include "filebrowser/ListFilter.h"
+class QString;
 
-#include <QSortFilterProxyModel>
+/** Adult-video name/path tags (same cues as Transmission's Adult category). */
+namespace AdultVideo {
 
-namespace dcpp {
-class DirectoryListing;
-}
+bool matches(const QString &name, const QString &path);
 
-/** Left-pane directory tree filter (small row counts; sync QSortFilterProxyModel). */
-class FileBrowserFilterProxy : public QSortFilterProxyModel {
-Q_OBJECT
-public:
-    explicit FileBrowserFilterProxy(QObject *parent = nullptr);
-
-    void sort(int column, Qt::SortOrder order) override;
-    QModelIndex mapToSource(const QModelIndex &proxyIndex) const override;
-    QModelIndex parent(const QModelIndex &child) const override;
-
-    void applyFilters(const FilterMatch &match, const QString &pathPrefix);
-
-protected:
-    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
-
-private:
-    ListFilter filter_;
-};
+} // namespace AdultVideo

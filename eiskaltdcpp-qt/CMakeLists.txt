@@ -73,7 +73,9 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserModelMedia.cpp
     src/FileBrowserModelPath.cpp
     src/MediaEnrichQueue.cpp
+    src/filebrowser/AdultVideo.cpp
     src/filebrowser/FilterMatch.cpp
+    src/filebrowser/ListingMatch.cpp
     src/filebrowser/ListFilter.cpp
     src/filebrowser/ListFilterProxy.cpp
     src/filebrowser/FileBrowserFilterProxy.cpp

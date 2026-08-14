@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "filebrowser/FilterMatch.h"
+#include "filebrowser/ListingMatch.h"
 
 #include <QVector>
 #include <atomic>
@@ -23,7 +23,7 @@ class QObject;
 
 /**
  * Owns filter criteria, generation tokens, and async list scans.
- * Matching rules live in FilterMatch.
+ * File/dir predicates live in FilterMatch; tree walks in ListingMatch.
  */
 class ListFilter
 {
@@ -33,19 +33,18 @@ public:
     ListFilter() = default;
     ~ListFilter() { ++(*gen_); }
 
-    bool set(const QStringList &terms, qulonglong size, int sizeMode,
-             bool dirsOnly, bool filesOnly, const QStringList &exts);
+    bool set(FilterMatch m);
     void cancel();
     /**
      * Cancel scans and wait until workers parented to owner exit.
      * No timeout: workers hold FileBrowserItem* and must finish before model reset.
      * cancel() is observed at least every 64 list rows / files in scanAsync and
-     * FilterMatch subtree walks (dirs-only size filter may briefly walk totals).
+     * ListingMatch subtree walks (dirs-only size filter may briefly walk totals).
      */
     void join(QObject *owner);
 
-    bool isActive() const { return match_.isActive(); }
-    bool dirsOnly() const { return match_.dirsOnly; }
+    bool isActive() const { return match_.filter.isActive(); }
+    bool dirsOnly() const { return match_.filter.dirsOnly; }
     bool acceptItem(FileBrowserItem *item, const QString &pathPrefix,
                     const std::atomic<int> *gen = nullptr, int expect = 0) const {
         return match_.acceptItem(item, pathPrefix, gen, expect);
@@ -65,8 +64,7 @@ public:
                    const std::function<void(QVector<int>)> &onDone);
 
 private:
-    QStringList textTermsRaw_;
-    FilterMatch match_;
+    ListingMatch match_;
     /** Shared so async workers can cancel-check after ListFilter is destroyed. */
     std::shared_ptr<std::atomic<int>> gen_ = std::make_shared<std::atomic<int>>(0);
 };

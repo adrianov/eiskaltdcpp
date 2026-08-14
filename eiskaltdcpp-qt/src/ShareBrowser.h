@@ -22,6 +22,7 @@
 #include "filebrowser/ListFilterProxy.h"
 #include "sharebrowser/ShareBrowserMenu.h"
 #include "sharebrowser/ShareFolderList.h"
+#include "SearchFileTypes.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/User.h"
@@ -149,4 +150,5 @@ private:
     FileBrowserItem  *list_root = nullptr;
     ShareFolderList  *folderList = nullptr;
     MediaEnrichQueue *mediaEnrich = nullptr;
+    SearchFileTypes::ListingTypes listingTypes_;
 };

@@ -15,7 +15,6 @@
 
 #include <QAbstractProxyModel>
 #include <QHash>
-#include <QStringList>
 #include <QVector>
 
 /**
@@ -40,9 +39,7 @@ public:
     QModelIndex mapToSource(const QModelIndex &proxyIndex) const override;
     QModelIndex mapFromSource(const QModelIndex &sourceIndex) const override;
 
-    void applyFilters(const QStringList &terms, qulonglong size, int sizeMode,
-                      bool dirsOnly, bool filesOnly, const QStringList &exts,
-                      const QString &pathPrefix);
+    void applyFilters(const FilterMatch &match, const QString &pathPrefix);
 
 private:
     void clearMap();

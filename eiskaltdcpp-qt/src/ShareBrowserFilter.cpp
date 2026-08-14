@@ -12,6 +12,7 @@
 #include "ShareBrowser.h"
 #include "SearchFileTypes.h"
 #include "filebrowser/FileBrowserFilterProxy.h"
+#include "filebrowser/FilterMatch.h"
 #include "filebrowser/ListFilterProxy.h"
 
 #include "dcpp/SearchManager.h"
@@ -87,28 +88,27 @@ void ShareBrowser::applyViewFiltersNow() {
     const int typeId = (idx >= 0) ? comboBox_FILETYPES->itemData(idx).toInt() : SearchManager::TYPE_ANY;
     const QString typeName = (idx >= 0) ? comboBox_FILETYPES->itemText(idx) : QString();
 
-    bool dirsOnly = false;
-    bool filesOnly = false;
-    QStringList exts;
+    FilterMatch match;
+    match.setTerms(terms);
+    match.sizeLimit = llsize;
+    match.sizeMode = sizeMode;
+    match.adultVideo = SearchFileTypes::isAdultVideoType(typeId);
     if (typeId == SearchManager::TYPE_DIRECTORY) {
-        dirsOnly = true;
+        match.dirsOnly = true;
     } else if (typeId != SearchManager::TYPE_ANY && typeId != SearchManager::TYPE_TTH) {
         // TTH is hub-search only; treat like Any for the local folder list.
-        filesOnly = true;
-        exts = SearchFileTypes::extensionsFor(typeId, typeName);
+        match.filesOnly = true;
+        match.extFilter = SearchFileTypes::extensionsFor(typeId, typeName);
     }
 
     if (proxy)
-        proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts,
-                            flatMode ? QString() : lineEdit_PATH->text());
+        proxy->applyFilters(match, flatMode ? QString() : lineEdit_PATH->text());
     // Flat mode hides the left tree; subtree scans over a huge listing freeze typing.
     if (tree_proxy) {
-        if (flatMode) {
-            tree_proxy->applyFilters(QStringList(), 0, SearchManager::SIZE_DONTCARE,
-                                     false, false, QStringList(), QString());
-        } else {
-            tree_proxy->applyFilters(terms, llsize, sizeMode, dirsOnly, filesOnly, exts, QString());
-        }
+        if (flatMode)
+            tree_proxy->applyFilters(FilterMatch(), QString());
+        else
+            tree_proxy->applyFilters(match, QString());
     }
 }
 

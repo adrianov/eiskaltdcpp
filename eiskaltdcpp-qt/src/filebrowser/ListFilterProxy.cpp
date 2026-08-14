@@ -172,11 +172,9 @@ void ListFilterProxy::scheduleFilter(bool reset)
     setRows(std::move(rows), reset);
 }
 
-void ListFilterProxy::applyFilters(const QStringList &terms, qulonglong size, int sizeMode,
-                                   bool dirsOnly, bool filesOnly, const QStringList &exts,
-                                   const QString &pathPrefix)
+void ListFilterProxy::applyFilters(const FilterMatch &match, const QString &pathPrefix)
 {
-    const bool critChanged = filter_.set(terms, size, sizeMode, dirsOnly, filesOnly, exts);
+    const bool critChanged = filter_.set(match);
     const bool pathChanged = (pathPrefix_ != pathPrefix);
     pathPrefix_ = pathPrefix;
     if (!critChanged && !pathChanged)
