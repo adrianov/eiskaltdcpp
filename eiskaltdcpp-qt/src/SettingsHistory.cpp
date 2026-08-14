@@ -11,7 +11,7 @@
 
 #include "WulforSettings.h"
 #include "WulforUtil.h"
-#include "DownloadToHistory.h"
+#include "downloadto/DownloadToHistory.h"
 
 SettingsHistory::SettingsHistory(QWidget *parent): QWidget(parent) {
     setupUi(this);

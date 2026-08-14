@@ -40,7 +40,7 @@
 #include "Magnet.h"
 #include "ArenaWidgetManager.h"
 #include "ArenaWidgetFactory.h"
-#include "DownloadToHistory.h"
+#include "downloadto/DownloadToHistory.h"
 #include "GlobalTimer.h"
 
 #include "dcpp/CID.h"

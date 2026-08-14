@@ -17,7 +17,7 @@
 #include "WulforUtil.h"
 #include "Magnet.h"
 #include "ArenaWidgetFactory.h"
-#include "DownloadToHistory.h"
+#include "downloadto/DownloadToHistory.h"
 #include "HubFrame.h"
 #include "HubManager.h"
 #include "MainWindow.h"

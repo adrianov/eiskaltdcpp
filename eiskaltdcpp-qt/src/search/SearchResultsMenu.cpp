@@ -10,6 +10,7 @@
  ***************************************************************************/
 
 #include "search/SearchResultsMenu.h"
+#include "downloadto/DownloadToMenu.h"
 #include "WulforUtil.h"
 
 #include <QAction>
@@ -35,14 +36,12 @@ SearchResultsMenu::SearchResultsMenu()
     QAction *down = new QAction(sfTr("Download"), nullptr);
     down->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
-    down_to = new QMenu(sfTr("Download to..."));
-    down_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
+    down_to = new DownloadToMenu(sfTr("Download to..."), sfTr("Browse"));
 
     QAction *down_wh = new QAction(sfTr("Download Whole Directory"), nullptr);
     down_wh->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD));
 
-    down_wh_to = new QMenu(sfTr("Download Whole Directory to..."));
-    down_wh_to->setIcon(WU->getPixmap(AppIcons::eiDOWNLOAD_AS));
+    down_wh_to = new DownloadToMenu(sfTr("Download Whole Directory to..."), sfTr("Browse"));
 
     QAction *open_file = new QAction(sfTr("Open file"), nullptr);
     open_file->setIcon(WU->getPixmap(AppIcons::eiFOLDER_BLUE));

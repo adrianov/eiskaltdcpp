@@ -262,6 +262,7 @@ set(QT_EXTRA_SOURCES
     src/sharebrowser/ListingMediaIndex.cpp
     src/sharebrowser/ShareBrowserList.cpp
     src/sharebrowser/ShareBrowserMedia.cpp
+    src/downloadto/DownloadToMenu.cpp
     src/sharebrowser/ShareBrowserMenu.cpp
     src/sharebrowser/AsyncRunner.cpp
     src/fb2epub/EpubPack.cpp
@@ -290,6 +291,7 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserSetup.cpp
     src/ShareBrowserContextUser.cpp
     src/ShareBrowserDelete.cpp
+    src/ShareBrowserRename.cpp
     src/DownloadQueueContext.cpp
     src/DownloadQueueContextMore.cpp
     src/DownloadQueueMenu.cpp

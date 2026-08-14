@@ -13,7 +13,7 @@
 #include "SearchFramePrivate.h"
 #include "SearchModel.h"
 #include "WulforUtil.h"
-#include "DownloadToHistory.h"
+#include "downloadto/DownloadToHistory.h"
 #include "ArenaWidgetFactory.h"
 #include "HubManager.h"
 #include "HubFrame.h"

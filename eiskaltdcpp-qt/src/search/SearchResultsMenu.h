@@ -21,6 +21,8 @@
 #include "dcpp/stdinc.h"
 #include "dcpp/Singleton.h"
 
+class DownloadToMenu;
+
 /** Context menu for Search results: download, magnets, user actions, blacklist. */
 class SearchResultsMenu : public dcpp::Singleton<SearchResultsMenu> {
     friend class dcpp::Singleton<SearchResultsMenu>;
@@ -69,7 +71,7 @@ private:
 
     QMenu *menu = nullptr;
     QMenu *magnet_menu = nullptr;
-    QMenu *down_to = nullptr;
-    QMenu *down_wh_to = nullptr;
+    DownloadToMenu *down_to = nullptr;
+    DownloadToMenu *down_wh_to = nullptr;
     QMenu *black_list_menu = nullptr;
 };

@@ -10,87 +10,25 @@
  ***************************************************************************/
 
 #include "search/SearchResultsMenu.h"
+#include "downloadto/DownloadToHistory.h"
+#include "downloadto/DownloadToMenu.h"
 #include "WulforUtil.h"
-#include "WulforSettings.h"
-#include "DownloadToHistory.h"
 
 #include "dcpp/UserCommand.h"
 
 #include <QAction>
-#include <QCoreApplication>
 #include <QCursor>
-#include <QDir>
 #include <QScopedPointer>
 
 using namespace dcpp;
-
-namespace {
-
-QString sfTr(const char *s)
-{
-    return QCoreApplication::translate("SearchFrame", s);
-}
-
-} // namespace
 
 SearchResultsMenu::Action SearchResultsMenu::exec(const QStringList &list, bool canOpenLocal)
 {
     for (const auto &a : action_list)
         a->setParent(nullptr);
 
-    qDeleteAll(down_to->actions());
-    qDeleteAll(down_wh_to->actions());
-    down_to->clear();
-    down_wh_to->clear();
-
-    QString aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
-    QString paths = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
-
-    QStringList a = aliases.split("\n", WULFOR_SKIP_EMPTY);
-    QStringList p = paths.split("\n", WULFOR_SKIP_EMPTY);
-
-    QStringList temp_pathes = DownloadToDirHistory::get();
-
-    if (!temp_pathes.isEmpty()) {
-        for (const auto &t : temp_pathes) {
-            QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
-            act->setToolTip(t);
-            act->setData(t);
-            down_to->addAction(act);
-
-            QAction *act1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), QDir(t).dirName(), down_to);
-            act1->setToolTip(t);
-            act1->setData(t);
-            down_wh_to->addAction(act1);
-        }
-
-        down_to->addSeparator();
-        down_wh_to->addSeparator();
-    }
-
-    if (a.size() == p.size() && !a.isEmpty()) {
-        for (int i = 0; i < a.size(); i++) {
-            QAction *act = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
-            act->setData(p.at(i));
-            down_to->addAction(act);
-
-            QAction *act1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), a.at(i), down_to);
-            act1->setData(p.at(i));
-            down_wh_to->addAction(act1);
-        }
-
-        down_to->addSeparator();
-        down_wh_to->addSeparator();
-    }
-
-    QAction *browse = new QAction(WICON(AppIcons::eiFOLDER_BLUE), sfTr("Browse"), down_to);
-    browse->setData("");
-
-    QAction *browse1 = new QAction(WICON(AppIcons::eiFOLDER_BLUE), sfTr("Browse"), down_to);
-    browse1->setData("");
-
-    down_to->addAction(browse);
-    down_wh_to->addAction(browse1);
+    down_to->refill();
+    down_wh_to->refill();
 
     // Open file / Open directory are action_list[2] and [3]
     action_list.at(2)->setEnabled(canOpenLocal);
@@ -112,11 +50,9 @@ SearchResultsMenu::Action SearchResultsMenu::exec(const QStringList &list, bool 
 
     if (actions.contains(ret)) {
         return actions.value(ret);
-    } else if (down_to->actions().contains(ret)) {
-        downToPath = ret->data().toString();
+    } else if (down_to->takeTarget(ret, downToPath)) {
         return DownloadTo;
-    } else if (down_wh_to->actions().contains(ret)) {
-        downToPath = ret->data().toString();
+    } else if (down_wh_to->takeTarget(ret, downToPath)) {
         return DownloadWholeDirTo;
     } else if (ret && ret->data().canConvert(QVariant::Int)) {
         uc_cmd_id = ret->data().toInt();
