@@ -9,7 +9,7 @@
 *                                                                         *
 ***************************************************************************/
 
-#include "TransferViewPath.h"
+#include "transfermenu/TransferViewPath.h"
 #include "TransferView.h"
 #include "TransferViewModel.h"
 #include "WulforUtil.h"

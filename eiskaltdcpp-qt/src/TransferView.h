@@ -30,6 +30,7 @@
 
 
 class TransferViewModel;
+class TransferSelection;
 
 class TransferView : public QWidget,
                      private Ui::UITransferView,
@@ -190,4 +191,6 @@ private:
     void init();
 
     TransferViewModel *model;
+
+    friend class TransferSelection;
 };

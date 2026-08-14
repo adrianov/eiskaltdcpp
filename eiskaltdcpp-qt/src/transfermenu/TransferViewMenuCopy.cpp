@@ -14,8 +14,6 @@
 
 #include "dcpp/HashManager.h"
 
-#include <QApplication>
-#include <QClipboard>
 #include <QDir>
 #include <QFileInfo>
 
@@ -45,5 +43,5 @@ void TransferView::copyMenuSelection(const QList<TransferViewItem*> &items, int 
     }
 
     if (!data.isEmpty())
-        qApp->clipboard()->setText(data, QClipboard::Clipboard);
+        WulforUtil::copyClipboard(data);
 }

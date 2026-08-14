@@ -74,6 +74,7 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserModelPath.cpp
     src/MediaEnrichQueue.cpp
     src/filebrowser/AdultVideo.cpp
+    src/filebrowser/FileTypeCounter.cpp
     src/filebrowser/FilterMatch.cpp
     src/filebrowser/ListingMatch.cpp
     src/filebrowser/ListFilter.cpp
@@ -308,9 +309,10 @@ set(QT_EXTRA_SOURCES
     src/TransferViewDelegate.cpp
     src/TransferViewDownloadListeners.cpp
     src/transferrow/TransferViewItem.cpp
-    src/TransferViewMenu.cpp
-    src/TransferViewMenuCopy.cpp
-    src/TransferViewMenuExec.cpp
+    src/transfermenu/TransferViewMenu.cpp
+    src/transfermenu/TransferViewMenuCopy.cpp
+    src/transfermenu/TransferViewMenuExec.cpp
+    src/transfermenu/TransferSelection.cpp
     src/TransferViewModelLookup.cpp
     src/TransferViewModelMutate.cpp
     src/TransferViewModelAttach.cpp
@@ -324,7 +326,7 @@ set(QT_EXTRA_SOURCES
     src/TransferViewModelSort.cpp
     src/TransferViewParams.cpp
     src/TransferViewRemove.cpp
-    src/TransferViewPath.cpp
+    src/transfermenu/TransferViewPath.cpp
     src/TransferViewMetrics.cpp
     src/TransferViewUploadListeners.cpp
     src/transfersession/TransferGroup.cpp
