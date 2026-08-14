@@ -97,7 +97,7 @@ QString duplicateTip(FileBrowserItem *item,
 
 QString mediaTip(DirectoryListing::File *f)
 {
-    if (f->mediaInfo.video_info.empty() && f->mediaInfo.audio_info.empty())
+    if (f->mediaInfo.empty())
         return QString();
 
     const MediaInfo &mi = f->mediaInfo;

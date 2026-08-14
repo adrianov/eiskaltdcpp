@@ -106,16 +106,20 @@ void readAudio(MediaInfoLib::MediaInfo& lib, MediaInfo& out)
     }
 }
 
+void fillResolution(MediaInfoLib::MediaInfo& lib, MediaInfoLib::stream_t stream, MediaInfo& out)
+{
+    if (!out.resolution.empty())
+        return;
+    const int mediaX = Util::toInt(miGet(lib, stream, 0, L"Width"));
+    const int mediaY = mediaX ? Util::toInt(miGet(lib, stream, 0, L"Height")) : 0;
+    if (mediaX && mediaY)
+        out.resolution = Util::toString(mediaX) + "x" + Util::toString(mediaY);
+}
+
 void readVideo(MediaInfoLib::MediaInfo& lib, MediaInfo& out)
 {
-    const string width = miGet(lib, MediaInfoLib::Stream_Video, 0, L"Width");
-    if (!width.empty()) {
-        const int mediaX = Util::toInt(width);
-        const int mediaY = mediaX
-                ? Util::toInt(miGet(lib, MediaInfoLib::Stream_Video, 0, L"Height")) : 0;
-        if (mediaX && mediaY)
-            out.resolution = Util::toString(mediaX) + "x" + Util::toString(mediaY);
-    }
+    fillResolution(lib, MediaInfoLib::Stream_Video, out);
+    fillResolution(lib, MediaInfoLib::Stream_Image, out);
 
     const size_t n = lib.Count_Get(MediaInfoLib::Stream_Video);
     if (n == 0)
