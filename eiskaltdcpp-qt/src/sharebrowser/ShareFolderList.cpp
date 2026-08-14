@@ -9,7 +9,7 @@
 
 #include "sharebrowser/ShareFolderList.h"
 #include "FileBrowserModel.h"
-#include "SearchFileTypes.h"
+#include "filebrowser/FileTypeCounter.h"
 #include "WulforUtil.h"
 
 #include <QDateTime>

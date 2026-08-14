@@ -30,13 +30,15 @@ QString joinPath(const QString &path, const QString &name)
 bool hasKeyword(const QString &lower)
 {
     static const char *const words[] = {
-        "[18+]", "[adult]", "nsfw", "onlyfans", "porn", "xxx", "xvideos", "ladyboy"
+        "[18+]", "[adult]", "[porn]", "[xxx]", "18+", "+18", "nsfw", "onlyfans",
+        "porn", "pornhub", "xxx", "xvideos", "ladyboy", "hentai", "brazzers",
+        "tushy", "ultrafilms", "sacana"
     };
     for (const char *word : words) {
         if (lower.contains(QLatin1String(word)))
             return true;
     }
-    return false;
+    return lower.contains(QStringLiteral("порно"));
 }
 
 bool hasJavCode(const QString &text)

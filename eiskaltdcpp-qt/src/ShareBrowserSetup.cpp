@@ -16,7 +16,7 @@
 #include "MediaEnrichQueue.h"
 #include "filebrowser/FileBrowserFilterProxy.h"
 #include "filebrowser/ListFilterProxy.h"
-#include "SearchFileTypes.h"
+#include "filebrowser/FileTypeCounter.h"
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
 #include "AutoToolTip.h"

@@ -13,7 +13,7 @@
 
 class QString;
 
-/** Adult-video name/path tags (same cues as Transmission's Adult category). */
+/** Adult-video name/path tags (Transmission cues plus hentai / 18+ / Cyrillic порно). */
 namespace AdultVideo {
 
 bool matches(const QString &name, const QString &path);
