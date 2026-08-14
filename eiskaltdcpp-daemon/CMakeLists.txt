@@ -11,6 +11,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR} nasdc_SRCS)
 set(NASDC_EXTRA_SOURCES
     ServerThreadQueue.cpp
     ServerThreadQueueParams.cpp
+    hubsearch/HubSearch.cpp
 )
 foreach(_src ${NASDC_EXTRA_SOURCES})
     set(_path ${PROJECT_SOURCE_DIR}/${_src})

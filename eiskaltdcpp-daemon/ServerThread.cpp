@@ -50,14 +50,7 @@ bool isDebug = false;
 string xmlrpcLog = "/tmp/eiskaltdcpp-daemon.xmlrpc.log";
 string xmlrpcUriPath = "/eiskaltdcpp";
 
-struct ServerThread::SearchFilter {
-    string token;
-    TStringList currentSearch;
-    bool isHash = false;
-};
-
 ServerThread::ClientMap ServerThread::clientsMap;
-ServerThread::SearchFilter ServerThread::searchFilter;
 #ifdef JSONRPC_DAEMON
 Json::Rpc::HTTPServer * jsonserver;
 #endif
@@ -247,29 +240,6 @@ bool ServerThread::disconnectAll() {
             disconnectClient(client.first);
     }
     return true;
-}
-
-bool ServerThread::ignoreSearchResult(SearchResultPtr result)
-{
-    if (searchFilter.currentSearch.empty() || !result)
-        return true;
-
-    if (!result->getToken().empty() && searchFilter.token != result->getToken())
-        return true;
-
-    if(searchFilter.isHash) {
-        if(result->getType() != SearchResult::TYPE_FILE || TTHValue(Text::fromT(searchFilter.currentSearch[0])) != result->getTTH())
-            return true;
-    }
-    else {
-        for (const auto &j : searchFilter.currentSearch) {
-            if((*j.begin() != ('-') && Util::findSubString(result->getFile(), j) == string::npos) ||
-               (*j.begin() == ('-') && j.size() != 1 && Util::findSubString(result->getFile(), j.substr(1)) != string::npos))
-                return true;
-        }
-    }
-
-    return false;
 }
 
 void ServerThread::Close() {
@@ -494,12 +464,9 @@ void ServerThread::on(SearchFlood, Client*, const string& line) noexcept {
 void ServerThread::on(SearchManagerListener::SR, const SearchResultPtr& result) noexcept {
     if (!result)
         return;
-
-    for (const auto& client : clientsMap) {
-        if (clientsMap[client.first].curclient && client.first == result->getHubURL()) {
-            clientsMap[client.first].cursearchresult.push_back(result);
-        }
-    }
+    ClientIter i = clientsMap.find(result->getHubURL());
+    if (i != clientsMap.end() && i->second.curclient)
+        hubSearch.add(result);
 }
 
 void ServerThread::startSocket(bool changed) {
@@ -614,154 +581,19 @@ void ServerThread::getChatPubFromClient(string& chat, const string& hub, const s
         chat = "Hub URL is invalid";
 }
 
-void ServerThread::parseSearchResult(SearchResultPtr result, StringMap &resultMap) {
-    if (result->getType() == SearchResult::TYPE_FILE) {
-        string file = revertSeparator(result->getFile());
-        if (file.rfind('/') == string::npos) {
-            resultMap["Filename"] = file;
-        } else {
-            resultMap["Filename"] = Util::getFileName(file);
-            resultMap["Path"] = Util::getFilePath(file);
-        }
-
-        resultMap["File Order"] = "f" + resultMap["Filename"];
-        resultMap["Type"] = Util::getFileExt(resultMap["Filename"]);
-        if (!resultMap["Type"].empty() && resultMap["Type"][0] == '.')
-            resultMap["Type"].erase(0, 1);
-        resultMap["Size"] = Util::formatBytes(result->getSize());
-        resultMap["Exact Size"] = Util::formatExactSize(result->getSize());
-        resultMap["Icon"] = "icon-file";
-        resultMap["Shared"] = Util::toString(ShareManager::getInstance()->isTTHShared(result->getTTH()));
-    } else {
-        string path = revertSeparator(result->getFile());
-        resultMap["Filename"] = Util::getLastDir(path) + PATH_SEPARATOR;
-        resultMap["Path"] = Util::getFilePath(path.substr(0, path.length() - 1)); // getFilePath just returns path unless we chop the last / off
-        if (resultMap["Path"].find("/") == string::npos)
-            resultMap["Path"] = "";
-        resultMap["File Order"] = "d" + resultMap["Filename"];
-        resultMap["Type"] = _("Directory");
-        resultMap["Icon"] = "icon-directory";
-        resultMap["Shared"] = "0";
-        if (result->getSize() > 0) {
-            resultMap["Size"] = Util::formatBytes(result->getSize());
-            resultMap["Exact Size"] = Util::formatExactSize(result->getSize());
-        }
-    }
-
-    resultMap["Nick"] = Util::toString(ClientManager::getInstance()->getNicks(result->getUser()->getCID(), result->getHubURL()));
-    resultMap["CID"] = result->getUser()->getCID().toBase32();
-    resultMap["Slots"] = result->getSlotString();
-    resultMap["Connection"] = ClientManager::getInstance()->getConnection(result->getUser()->getCID());
-    resultMap["Hub"] = result->getHubName().empty() ? result->getHubURL().c_str() : result->getHubName().c_str();
-    resultMap["Hub URL"] = result->getHubURL();
-    resultMap["IP"] = result->getIP();
-    resultMap["Real Size"] = Util::toString(result->getSize());
-    if (result->getType() == SearchResult::TYPE_FILE)
-        resultMap["TTH"] = result->getTTH().toBase32();
-
-    // assumption: total slots is never above 999
-    resultMap["Slots Order"] = Util::toString(-1000 * result->getFreeSlots() - result->getSlots());
-    resultMap["Free Slots"] = Util::toString(result->getFreeSlots());
-}
-
-string ServerThread::revertSeparator(const string& ps) {
-    string str = ps;
-    for (auto& ch : str) {
-#ifdef _WIN32
-        if (ch == '/')
-            ch = '\\';
-#else
-        if (ch == '\\')
-            ch = '/';
-#endif //_WIN32
-    }
-    return str;
-}
-
 bool ServerThread::sendSearchOnHubs(const string& search, const int& searchtype, const int& sizemode, const int& sizetype, const double& lsize, const string& huburls) {
-    if (search.empty())
-        return false;
-    StringList clients;
-    if (!huburls.empty()) {
-        StringTokenizer<string> sl(huburls, ";");
-        for (const auto& client : sl.getTokens()) {
-            clients.push_back(client);
-        }
-        if (clients.empty())
-            return false;
-    } else {
-        for (const auto& client : clientsMap) {
-            clients.push_back(client.first);
-        }
-    }
-    string ssearch;
-    dcpp::TStringList searchlist = StringTokenizer<string>(search, ' ').getTokens();
-    for (const auto& item : searchlist) {
-        if (item[0] != '-')
-            ssearch += item + ' ';
-    }
-    ssearch = ssearch.substr(0, std::max(ssearch.size(), static_cast<string::size_type>(1)) - 1);
-
-    double llsize = lsize;
-    switch (sizetype) {
-        case 1:
-            llsize *= 1024.0;
-            break;
-        case 2:
-            llsize *= 1024.0 * 1024.0;
-            break;
-        case 3:
-            llsize *= 1024.0 * 1024.0 * 1024.0;
-            break;
-    }
-    int64_t lllsize = static_cast<int64_t>(llsize);
-
-    SearchManager::SizeModes mode((SearchManager::SizeModes)sizemode);
-    if (!llsize)
-        mode = SearchManager::SIZE_DONTCARE;
-    int ftype = searchtype;
-    string ftypeStr;
-    if (ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_LAST) {
-        ftypeStr = SearchManager::getInstance()->getTypeStr(ftype);
-    } else {
-        ftype = SearchManager::TYPE_ANY;
-    }
-    // Get ADC searchtype extensions if any is selected
-    StringList exts;
-    try {
-        if (ftype == SearchManager::TYPE_ANY && !ftypeStr.empty()) {
-            exts = SettingsManager::getInstance()->getExtensions(ftypeStr);
-        } else if ((ftype > SearchManager::TYPE_ANY && ftype < SearchManager::TYPE_DIRECTORY) ||
-                   ftype == SearchManager::TYPE_CD_IMAGE ||
-                   ftype == SearchManager::TYPE_AUDIO_VIDEO) {
-            exts = SearchManager::getTypeExtensions(ftype);
-        }
-    } catch (const SearchTypeException&) {
-        ftype = SearchManager::TYPE_ANY;
-    }
-
-    searchFilter.currentSearch = searchlist;
-    searchFilter.token = Util::toString(Util::rand());
-    searchFilter.isHash = (ftype == SearchManager::TYPE_TTH);
-
-    SearchManager::getInstance()->search(clients, ssearch, lllsize, SearchManager::TypeModes(ftype), mode, searchFilter.token, exts);
-
-    return true;
+    StringList hubs;
+    hubs.reserve(clientsMap.size());
+    for (const auto& client : clientsMap)
+        hubs.push_back(client.first);
+    return hubSearch.start(search, searchtype, sizemode, sizetype, lsize, huburls, hubs);
 }
 
 void ServerThread::returnSearchResults(vector<StringMap>& resultarray, const string& huburl) {
     for (const auto& client : clientsMap) {
         if (!huburl.empty() && client.first != huburl)
             continue;
-
-        for (const auto& searchresult : clientsMap[client.first].cursearchresult) {
-            if (ignoreSearchResult(searchresult))
-                continue;
-
-            StringMap resultMap;
-            parseSearchResult(searchresult, resultMap);
-            resultarray.push_back(resultMap);
-        }
+        hubSearch.append(resultarray, client.first);
     }
 }
 
@@ -769,7 +601,7 @@ bool ServerThread::clearSearchResults(const string& huburl) {
     for (const auto& client : clientsMap) {
         if (!huburl.empty() && client.first != huburl)
             continue;
-        clientsMap[client.first].cursearchresult.clear();
+        hubSearch.clearHub(client.first);
         return true;
     }
     return false;
@@ -1087,7 +919,7 @@ void ServerThread::lsDirInList(DirectoryListing::Directory *dir, unordered_map<s
         map["Size preformatted"] = Util::formatBytes(file->getSize());
         map["TTH"] = file->getTTH().toBase32();
         map["Bitrate"] = file->mediaInfo.bitrate ? (Util::toString(file->mediaInfo.bitrate)) : Util::emptyString;
-        map["Resolution"] = !file->mediaInfo.video_info.empty() ? file->mediaInfo.resolution : Util::emptyString;
+        map["Resolution"] = file->mediaInfo.resolution;
         map["Video"] = file->mediaInfo.video_info;
         map["Audio"] = file->mediaInfo.audio_info;
         map["Downloaded"] = Util::toString(file->getHit());

@@ -26,6 +26,7 @@
 #include "dcpp/Socket.h"
 #include "dcpp/TimerManager.h"
 #include "dcpp/Thread.h"
+#include "hubsearch/HubSearch.h"
 
 class ServerThread :
         private TimerManagerListener,
@@ -101,13 +102,9 @@ private:
     void autoConnect();
     void showPortsError(const std::string& port);
     bool disconnectAll();
-    bool ignoreSearchResult(SearchResultPtr result);
-    void parseSearchResult(SearchResultPtr result, StringMap &resultMap);
-    string revertSeparator(const string &ps);
     typedef struct {
             deque<string> curchat;
             Client* curclient;
-            SearchResultList cursearchresult;
             StringMap curuserlist;
     } CurHub;
 
@@ -119,8 +116,7 @@ private:
     typedef ClientMap::const_iterator ClientIter;
     static ClientMap clientsMap;
 
-    struct SearchFilter;
-    static SearchFilter searchFilter;
+    HubSearch hubSearch;
 
     typedef unordered_map <string, DirectoryListing*> FilelistMap;
     FilelistMap listsMap;
