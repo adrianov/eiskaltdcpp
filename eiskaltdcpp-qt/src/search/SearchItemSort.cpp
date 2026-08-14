@@ -100,9 +100,9 @@ typename Compare<order>::AttrComp Compare<order>::attrs[17] = { CountCmp,
                                                                 AttrCmp<COLUMN_SF_HUB>,
                                                                 AttrCmp<COLUMN_SF_HOST>,
                                                                 NumCmp<COLUMN_SF_BR>,
-                                                                AttrCmp<COLUMN_SF_WH>,
-                                                                AttrCmp<COLUMN_SF_MVIDEO>,
-                                                                AttrCmp<COLUMN_SF_MAUDIO>
+                                                                NaturalAttrCmp<COLUMN_SF_WH>,
+                                                                NaturalAttrCmp<COLUMN_SF_MVIDEO>,
+                                                                NaturalAttrCmp<COLUMN_SF_MAUDIO>
                                                                 };
 
 template <> template <typename T>

@@ -68,9 +68,9 @@ typename Compare<order>::AttrComp Compare<order>::attrs[NUM_OF_COLUMNS] = {  Nat
                                                                 NumCmp<COLUMN_FILEBROWSER_ESIZE>,
                                                                 AttrCmp<COLUMN_FILEBROWSER_TTH>,
                                                                 NumCmp<COLUMN_FILEBROWSER_BR>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_WH>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_MVIDEO>,
-                                                                AttrCmp<COLUMN_FILEBROWSER_MAUDIO>,
+                                                                NaturalAttrCmp<COLUMN_FILEBROWSER_WH>,
+                                                                NaturalAttrCmp<COLUMN_FILEBROWSER_MVIDEO>,
+                                                                NaturalAttrCmp<COLUMN_FILEBROWSER_MAUDIO>,
                                                                 NumCmp<COLUMN_FILEBROWSER_HIT>,
                                                                 AttrCmp<COLUMN_FILEBROWSER_TS>,
                                                                 PathCmp
