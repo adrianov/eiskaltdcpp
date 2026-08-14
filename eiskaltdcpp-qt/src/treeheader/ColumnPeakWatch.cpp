@@ -18,6 +18,7 @@
 
 namespace {
 constexpr int kSampleRows = 300; // ColumnContentSpan
+constexpr int kShrinkPct = 30;
 }
 
 ColumnPeakWatch::ColumnPeakWatch(QAbstractItemView *view)
@@ -48,6 +49,33 @@ void ColumnPeakWatch::mergePeaks(const QHash<int, ColumnWidths> &measured)
 void ColumnPeakWatch::clearPeaks()
 {
     peaks_.clear();
+    pendingRecheck_ = false;
+}
+
+void ColumnPeakWatch::recheck()
+{
+    if (!pendingRecheck_ || !view_)
+        return;
+    pendingRecheck_ = false;
+    QHeaderView *header = HeaderContentFit::headerOf(view_);
+    if (!header)
+        return;
+
+    ColumnContentSpan span(view_);
+    for (int v = 0; v < header->count(); ++v) {
+        const int col = header->logicalIndex(v);
+        if (header->isSectionHidden(col) || (manual_ && manual_->contains(col)))
+            continue;
+        const ColumnWidths w = span.widths(col);
+        ColumnWidths p = peaks_.value(col);
+        if (w.full > p.full || w.soft > p.soft) {
+            p.soft = qMax(p.soft, w.soft);
+            p.full = qMax(p.full, w.full);
+            peaks_.insert(col, p);
+        } else if (p.full > 0 && w.full * 100 <= p.full * (100 - kShrinkPct)) {
+            peaks_.insert(col, w);
+        }
+    }
 }
 
 void ColumnPeakWatch::fitIfGrew(bool grew)
@@ -128,24 +156,7 @@ void ColumnPeakWatch::onReset()
             needFit_();
         return;
     }
-    QHeaderView *header = HeaderContentFit::headerOf(view_);
-    if (!header)
-        return;
-
-    ColumnContentSpan span(view_);
-    bool grew = false;
-    for (int v = 0; v < header->count(); ++v) {
-        const int col = header->logicalIndex(v);
-        if (header->isSectionHidden(col) || (manual_ && manual_->contains(col)))
-            continue;
-        const ColumnWidths w = span.widths(col);
-        ColumnWidths p = peaks_.value(col);
-        if (w.full > p.full || w.soft > p.soft) {
-            p.soft = qMax(p.soft, w.soft);
-            p.full = qMax(p.full, w.full);
-            peaks_.insert(col, p);
-            grew = true;
-        }
-    }
-    fitIfGrew(grew);
+    pendingRecheck_ = true;
+    if (needFit_)
+        needFit_();
 }

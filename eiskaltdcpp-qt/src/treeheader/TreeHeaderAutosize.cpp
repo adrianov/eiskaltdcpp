@@ -114,6 +114,9 @@ void TreeHeaderAutosize::hookModel()
     connect(model, &QAbstractItemModel::modelReset, this, [this]() {
         peaks_->onReset();
     });
+    connect(model, &QAbstractItemModel::rowsRemoved, this, [this]() {
+        peaks_->onReset();
+    });
     connect(model, &QAbstractItemModel::dataChanged, this,
             [this](const QModelIndex &tl, const QModelIndex &br, const QVector<int> &roles) {
                 peaks_->onDataChanged(tl, br, roles);
@@ -146,6 +149,7 @@ void TreeHeaderAutosize::checkLayout()
     if (!fit.ready())
         return;
     fitting_ = true;
+    peaks_->recheck();
     peaks_->mergePeaks(fit.apply(peaks_->peaks()));
     fitting_ = false;
     done_ = true;

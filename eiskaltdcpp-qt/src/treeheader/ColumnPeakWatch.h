@@ -21,8 +21,9 @@ class QAbstractItemView;
 class QModelIndex;
 
 /**
- * Tracks per-column peak content widths. Peaks never decrease except on
- * clearPeaks. needFit runs only when a peak grows; shorter values are ignored.
+ * Tracks per-column peak content widths. needFit runs when a peak grows.
+ * On reset or row removal, a peak shrinks only if the new longest is at
+ * least 30% shorter; smaller drops are skipped.
  */
 class ColumnPeakWatch
 {
@@ -36,6 +37,7 @@ public:
     const QHash<int, ColumnWidths> &peaks() const { return peaks_; }
     void mergePeaks(const QHash<int, ColumnWidths> &measured);
     void clearPeaks();
+    void recheck();
 
     void onInserted(const QModelIndex &parent, int first, int last);
     void onDataChanged(const QModelIndex &tl, const QModelIndex &br,
@@ -50,4 +52,5 @@ private:
     const QSet<int> *manual_ = nullptr;
     NeedFit needFit_;
     QHash<int, ColumnWidths> peaks_;
+    bool pendingRecheck_ = false;
 };
