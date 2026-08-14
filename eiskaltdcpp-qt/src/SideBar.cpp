@@ -10,6 +10,7 @@
 #include "SideBar.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
+#include "MainWindow.h"
 
 #define CREATE_ROOT_EL(a, b, c, d, e) \
     do { \
@@ -59,6 +60,8 @@ SideBarModel::SideBarModel(QObject *parent) :
 
     connect(WulforSettings::getInstance(), SIGNAL(strValueChanged(QString,QString)),
             this, SLOT(slotSettingsChanged(QString,QString)));
+    if (MainWindow *mw = MainWindow::getInstance())
+        connect(mw, SIGNAL(redrawWidgetPanels()), this, SLOT(redraw()));
 }
 
 SideBarModel::~SideBarModel()

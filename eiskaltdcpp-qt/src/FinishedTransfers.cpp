@@ -9,9 +9,42 @@
 
 #include "FinishedTransfers.h"
 #include "FinishedTransfersProxy.h"
+#include "MainWindow.h"
 
 QString FinishedTransferProxy::uploadTitle(){ return tr("Finished uploads"); }
 QString FinishedTransferProxy::downloadTitle() { return tr("Finished downloads"); }
+
+template <bool isUpload>
+QString FinishedTransfers<isUpload>::getArenaShortTitle() {
+    if (isUpload || newCount <= 0)
+        return getArenaTitle();
+    return downloadTitle() + QString(" (%1)").arg(newCount);
+}
+
+template <bool isUpload>
+void FinishedTransfers<isUpload>::noteNewDownload() {
+    if (isUpload || isVisible())
+        return;
+    ++newCount;
+    if (MainWindow *mw = MainWindow::getInstance())
+        mw->redrawToolPanel();
+}
+
+template <bool isUpload>
+void FinishedTransfers<isUpload>::clearNewDownloads() {
+    if (isUpload || newCount <= 0)
+        return;
+    newCount = 0;
+    if (MainWindow *mw = MainWindow::getInstance())
+        mw->redrawToolPanel();
+}
+
+template QString FinishedTransfers<true>::getArenaShortTitle();
+template QString FinishedTransfers<false>::getArenaShortTitle();
+template void FinishedTransfers<true>::noteNewDownload();
+template void FinishedTransfers<false>::noteNewDownload();
+template void FinishedTransfers<true>::clearNewDownloads();
+template void FinishedTransfers<false>::clearNewDownloads();
 
 template <bool isUpload>
 bool FinishedTransfers<isUpload>::isFileListPath(const std::string &file) {

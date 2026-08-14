@@ -12,47 +12,47 @@
 #include "SideBar.h"
 #include "WulforUtil.h"
 
+#include <QApplication>
+#include <QFont>
+
+namespace {
+
+QVariant boldTitleFont(ArenaWidget *awgt)
+{
+    if (!awgt || !awgt->titleBold())
+        return QVariant();
+    // Default QFont() can paint invisible on Fusion/macOS; bold the app font.
+    QFont font = qApp->font();
+    font.setBold(true);
+    return font;
+}
+
+} // namespace
+
 QVariant SideBarModel::data(const QModelIndex &index, int role) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || index.column() == 1)
         return QVariant();
 
-    SideBarItem *item = static_cast<SideBarItem*>(index.internalPointer());
+    const SideBarItem *item = static_cast<SideBarItem*>(index.internalPointer());
+    ArenaWidget *awgt = item->getWidget();
 
-    if (index.column() == 1)
-        return QVariant();
-
-    switch(role) {
+    switch (role) {
     case Qt::DecorationRole:
-    {
-        if (!item->getWidget())
-            return WulforUtil::scalePixmap(item->pixmap, 18);
-        else if (item->getWidget())
-            return WulforUtil::scalePixmap(item->getWidget()->getPixmap(), 18);
-    }
+        return WulforUtil::scalePixmap(awgt ? awgt->getPixmap() : item->pixmap, 18);
     case Qt::DisplayRole:
-    {
-        if (!item->getWidget())
-            return item->title;
-        else if (item->getWidget())
-            return item->getWidget()->getArenaShortTitle();
-    }
+        return awgt ? awgt->getArenaShortTitle() : item->title;
     case Qt::TextAlignmentRole:
-    {
         return static_cast<uint>(Qt::AlignLeft | Qt::AlignVCenter);
-    }
+    case Qt::FontRole:
+        return boldTitleFont(awgt);
     case Qt::ForegroundRole:
     case Qt::BackgroundRole:
     case Qt::ToolTipRole:
-    {
-        if (!item->getWidget())
-            return item->title;
-        else if (item->getWidget())
-            return WulforUtil::getInstance()->compactToolTipText(item->getWidget()->getArenaTitle(), 60, "\n");
+        return awgt
+            ? QVariant(WulforUtil::getInstance()->compactToolTipText(awgt->getArenaTitle(), 60, "\n"))
+            : QVariant(item->title);
     }
-        break;
-    }
-
     return QVariant();
 }
 

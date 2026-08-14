@@ -41,6 +41,8 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
 
     // Persist is done in the listener (thread-safe SQLite). Signals only update the model.
     QObject::connect(this, SIGNAL(coreAddedFile(VarMap)),   model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
+    if (!isUpload)
+        QObject::connect(this, SIGNAL(coreAddedFile(VarMap)), this, SLOT(noteNewDownload()), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreAddedUser(VarMap)),   model, SLOT(addUser(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreUpdatedFile(VarMap)), model, SLOT(addFile(VarMap)), Qt::QueuedConnection);
     QObject::connect(this, SIGNAL(coreUpdatedUser(VarMap)), model, SLOT(addUser(VarMap)), Qt::QueuedConnection);

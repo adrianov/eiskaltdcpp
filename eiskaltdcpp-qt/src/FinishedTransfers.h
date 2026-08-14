@@ -69,6 +69,7 @@ public Q_SLOTS:
     virtual void slotFilterText(const QString &) = 0;
     virtual void slotFileTypeChanged(int) = 0;
     virtual void slotSettingsChanged(const QString &key, const QString &) = 0;
+    virtual void noteNewDownload() {}
 
 protected:
     virtual void persistFile(const VarMap&) {}
@@ -92,7 +93,8 @@ friend class dcpp::Singleton< FinishedTransfers<isUpload> >;
 public:
     QWidget *getWidget() override { return this;}
     QString getArenaTitle() override { return (isUpload? uploadTitle() : downloadTitle()); }
-    QString getArenaShortTitle() override { return getArenaTitle(); }
+    QString getArenaShortTitle() override;
+    bool titleBold() const override { return !isUpload && newCount > 0; }
     QMenu *getMenu() override { return nullptr; }
     ArenaWidget::Role role() const override;
 
@@ -114,6 +116,8 @@ protected:
             diskPruned = true;
             pruneMissingFiles();
         }
+        if (!isUpload)
+            clearNewDownloads();
         QMetaObject::invokeMethod(treeView, "scrollToBottom", Qt::QueuedConnection);
     }
 
@@ -143,6 +147,8 @@ private:
     void slotFilterText(const QString &text) override;
     void slotFileTypeChanged(int index) override;
     void slotSettingsChanged(const QString &key, const QString &) override;
+    void noteNewDownload() override;
+    void clearNewDownloads();
 
     void on(FinishedManagerListener::AddedFile, bool upload, const std::string &file, const FinishedFileItemPtr &item) noexcept override;
     void on(FinishedManagerListener::AddedUser, bool upload, const dcpp::HintedUser &user, const FinishedUserItemPtr &item) noexcept override;
@@ -164,6 +170,7 @@ private:
 #endif
     bool db_opened = false;
     bool diskPruned = false;
+    int newCount = 0;
 };
 
 template <>

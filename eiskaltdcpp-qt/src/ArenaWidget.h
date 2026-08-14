@@ -61,6 +61,7 @@ public:
     virtual QWidget *getWidget() = 0;
     virtual QString getArenaTitle() = 0;
     virtual QString getArenaShortTitle() = 0;
+    virtual bool titleBold() const { return false; }
     virtual QMenu *getMenu() = 0;
     virtual QAction *toolButton() { return toolBtn; }
     virtual void  setToolButton(QAction *btn) { if (btn) toolBtn = btn; }
