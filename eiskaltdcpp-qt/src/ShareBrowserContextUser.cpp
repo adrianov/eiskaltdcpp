@@ -122,6 +122,9 @@ void ShareBrowser::contextUserActions(ShareBrowserMenu::Action act, const QModel
         case ShareBrowserMenu::DeleteFile:
             deleteOwnItems(list);
             break;
+        case ShareBrowserMenu::RenameFolder:
+            renameOwnFolder(list);
+            break;
         default: break;
     }
 }

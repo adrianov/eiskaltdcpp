@@ -20,7 +20,9 @@
 #include "dcpp/User.h"
 #include "dcpp/Singleton.h"
 
-/** Context menu for ShareBrowser panes: download, magnets, open, EPUB export, delete. */
+class DownloadToMenu;
+
+/** Context menu for ShareBrowser panes: download, magnets, open, EPUB export, rename, delete. */
 class ShareBrowserMenu : public dcpp::Singleton<ShareBrowserMenu> {
     friend class dcpp::Singleton<ShareBrowserMenu>;
 
@@ -42,11 +44,12 @@ public:
         OpenUrl,
         ConvertEpub,
         DeleteFile,
+        RenameFolder,
         None
     };
 
     Action exec(const dcpp::UserPtr &user = dcpp::UserPtr(nullptr), bool treePane = false,
-                bool hasDeletable = false, bool hasFb2 = false);
+                bool hasDeletable = false, bool hasFb2 = false, bool hasRenameFolder = false);
     QString getTarget() { return target; }
 
 private:
@@ -55,12 +58,13 @@ private:
 
     QMap<QAction *, Action> actions;
     QMenu *menu;
-    QMenu *down_to;
-    QMenu *down_wh_to;
+    DownloadToMenu *down_to;
+    DownloadToMenu *down_wh_to;
     QMenu *rest_menu;
     QString target;
     QAction *open_file;
     QAction *open_url;
     QAction *convert_epub;
     QAction *delete_file;
+    QAction *rename_folder;
 };

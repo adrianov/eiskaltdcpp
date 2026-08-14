@@ -11,7 +11,7 @@
 
 #include "ShareBrowser.h"
 #include "FileBrowserModel.h"
-#include "DownloadToHistory.h"
+#include "downloadto/DownloadToHistory.h"
 #include "fb2epub/Fb2EpubExport.h"
 
 #include "dcpp/SettingsManager.h"
@@ -102,7 +102,17 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         }
     }
 
-    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(user, view == treeView_LPANE, hasDeletable, hasFb2);
+    bool hasRenameFolder = false;
+    if (list.size() == 1) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(list.at(0).internalPointer());
+        if (item && item->dir && item->dir != listing.getRoot()
+                && !dynamic_cast<dcpp::DirectoryListing::AdlDirectory*>(item->dir)
+                && listing.getLocalPaths(item->dir).size() == 1)
+            hasRenameFolder = true;
+    }
+
+    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(
+            user, view == treeView_LPANE, hasDeletable, hasFb2, hasRenameFolder);
     QString target = _q(SETTING(DOWNLOAD_DIRECTORY));
 
     switch (act){
@@ -168,6 +178,7 @@ void ShareBrowser::slotCustomContextMenu(const QPoint &){
         case ShareBrowserMenu::OpenUrl:
         case ShareBrowserMenu::ConvertEpub:
         case ShareBrowserMenu::DeleteFile:
+        case ShareBrowserMenu::RenameFolder:
             contextMoreActions(act, list);
             break;
         default: break;

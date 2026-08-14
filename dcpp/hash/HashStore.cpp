@@ -20,6 +20,7 @@
 #include "hash/HashIndexXml.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace dcpp {
 
@@ -149,6 +150,35 @@ void HashStore::rebuild() {
         save();
     } catch (const Exception& e) {
         LogManager::getInstance()->message(str(F_("Hashing failed: %1%") % e.getError()));
+    }
+}
+
+void HashStore::renameDir(const string& oldPath, const string& newPath) {
+    if (oldPath.empty() || newPath.empty() || oldPath == newPath)
+        return;
+
+    string oldP = oldPath;
+    string newP = newPath;
+    if (oldP.back() != PATH_SEPARATOR)
+        oldP += PATH_SEPARATOR;
+    if (newP.back() != PATH_SEPARATOR)
+        newP += PATH_SEPARATOR;
+    if (oldP == newP)
+        return;
+
+    unordered_map<string, vector<FileInfo>> moved;
+    for (auto i = fileIndex.begin(); i != fileIndex.end(); ) {
+        if (Util::strnicmp(i->first, oldP, oldP.length()) == 0) {
+            moved[newP + i->first.substr(oldP.length())] = std::move(i->second);
+            i = fileIndex.erase(i);
+            dirty = true;
+        } else {
+            ++i;
+        }
+    }
+    for (auto& m : moved) {
+        auto& dest = fileIndex[m.first];
+        dest.insert(dest.end(), m.second.begin(), m.second.end());
     }
 }
 

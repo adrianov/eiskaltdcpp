@@ -72,6 +72,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     open_file = new QAction(WU->getPixmap(AppIcons::eiFILETYPE_UNKNOWN), sbTr("Open file"), menu);
     open_url = new QAction(WU->getPixmap(AppIcons::eiFOLDER_BLUE), sbTr("Open directory"), menu);
     convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), sbTr("Convert to EPUB"), menu);
+    rename_folder = new QAction(WU->getPixmap(AppIcons::eiEDIT), sbTr("Rename Folder"), menu);
     delete_file = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), sbTr("Delete File"), menu);
     QAction *sep2 = new QAction(menu);
     QAction *sep3 = new QAction(menu);
@@ -90,6 +91,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     actions.insert(open_file, OpenFile);
     actions.insert(open_url, OpenUrl);
     actions.insert(convert_epub, ConvertEpub);
+    actions.insert(rename_folder, RenameFolder);
     actions.insert(delete_file, DeleteFile);
 
     magnet_menu->addActions(QList<QAction*>() << magnet << magnet_web << sep3 << magnet_info);
@@ -107,7 +109,8 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     menu->insertMenu(down_wh, down_to);
     menu->insertMenu(sep, down_wh_to);
     menu->addMenu(rest_menu);
-    menu->addActions(QList<QAction*>() << open_file << open_url << convert_epub << sep4 << delete_file);
+    menu->addActions(QList<QAction*>() << open_file << open_url << convert_epub << sep4
+                     << rename_folder << delete_file);
 }
 
 ShareBrowserMenu::~ShareBrowserMenu(){
@@ -120,7 +123,7 @@ ShareBrowserMenu::~ShareBrowserMenu(){
 }
 
 ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool treePane,
-                                                    bool hasDeletable, bool hasFb2){
+                                                    bool hasDeletable, bool hasFb2, bool hasRenameFolder){
     down_to->refill();
     down_wh_to->refill();
 
@@ -131,6 +134,8 @@ ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool 
     open_url->setEnabled(own);
     convert_epub->setEnabled(canConvert);
     convert_epub->setVisible(canConvert);
+    rename_folder->setEnabled(own && hasRenameFolder);
+    rename_folder->setVisible(own && hasRenameFolder);
     delete_file->setEnabled(own && hasDeletable);
 
     if (canConvert && Fb2EpubExport::convertIsDefaultOpen())

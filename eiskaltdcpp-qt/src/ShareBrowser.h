@@ -98,6 +98,7 @@ private:
     bool contextCopyClip(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void deleteOwnItems(const QModelIndexList &list);
+    void renameOwnFolder(const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);
     void changeRootFlat(dcpp::DirectoryListing::Directory*);

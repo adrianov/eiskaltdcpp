@@ -40,6 +40,8 @@ public:
 
     HashStore();
     void addFile(const string& aFileName, uint32_t aTimeStamp, const TigerTree& tth, bool aUsed);
+    /** Remap file-index keys after a directory was renamed on disk. */
+    void renameDir(const string& oldPath, const string& newPath);
 
     void load();
     void save();

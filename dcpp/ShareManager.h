@@ -75,6 +75,8 @@ public:
     void removeFile(const string& realPath) noexcept;
     /** Remove a nested shared directory (or share root) from the in-memory index. Does not delete disk. */
     void removeDir(const string& realPath) noexcept;
+    /** Rename a shared folder in the in-memory index after it was renamed on disk. */
+    bool renameDir(const string& realPath, const string& newName) noexcept;
     void renameDirectory(const string& realPath, const string& virtualName);
 
     bool isRefreshing() { return refreshing; }

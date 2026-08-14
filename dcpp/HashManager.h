@@ -52,6 +52,10 @@ public:
     bool checkTTH(const string& aFileName, int64_t aSize, uint32_t aTimeStamp);
 
     void stopHashing(const string& baseDir) { hasher.stopHashing(baseDir); }
+    void renameDir(const string& oldPath, const string& newPath) {
+        Lock l(cs);
+        store.renameDir(oldPath, newPath);
+    }
     void setPriority(Thread::Priority p) { hasher.setThreadPriority(p); }
 
     /** @return TTH root */

@@ -165,6 +165,7 @@ set(DCPP_EXTRA_SOURCES
     ScriptManagerEval.cpp
     share/ShareManagerFile.cpp
     share/ShareManagerRemoveDir.cpp
+    share/ShareManagerRenameDir.cpp
     share/ShareFileType.cpp
     share/ShareTreeScan.cpp
     share/ShareDirSearch.cpp
