@@ -60,29 +60,16 @@ bool isAsciiLetter(unsigned char c) {
 
 /** Time unit at p → milliseconds. Rejects prefixes of longer words ("s" in "song"). */
 bool matchTimeUnit(const char* p, uint64_t& ms, size_t& len) {
-    static const struct { const char* n; uint8_t l; uint64_t ms; } units[] = {
-        {"minutes", 7, 60000},
-        {"seconds", 7, 1000},
-        {"minute", 6, 60000},
-        {"second", 6, 1000},
-        {"hours", 5, 3600000ull},
-        {"days", 4, 86400000ull},
-        {"hour", 4, 3600000ull},
-        {"day", 3, 86400000ull},
-        {"min", 3, 60000},
-        {"sec", 3, 1000},
-        {"ms", 2, 1},
-        {"mn", 2, 60000},
-        {"hr", 2, 3600000ull},
-        {"d", 1, 86400000ull},
-        {"h", 1, 3600000ull},
-        {"s", 1, 1000}
+    static const struct { const char* n; uint64_t ms; } units[] = {
+        {"min", 60000}, {"ms", 1}, {"mn", 60000},
+        {"h", 3600000ull}, {"s", 1000}, {"d", 86400000ull}
     };
     for(const auto& u: units) {
-        if(!asciiEq(p, u.n, u.l) || isAsciiLetter(static_cast<unsigned char>(p[u.l])))
+        const size_t l = std::strlen(u.n);
+        if(!asciiEq(p, u.n, l) || isAsciiLetter(static_cast<unsigned char>(p[l])))
             continue;
         ms = u.ms;
-        len = u.l;
+        len = l;
         return true;
     }
     return false;
