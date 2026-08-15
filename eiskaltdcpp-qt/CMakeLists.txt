@@ -309,6 +309,7 @@ set(QT_EXTRA_SOURCES
     src/TransferViewActions.cpp
     src/TransferViewConnectionListeners.cpp
     src/TransferViewDelegate.cpp
+    src/IconRowDelegate.cpp
     src/TransferViewDownloadListeners.cpp
     src/transferrow/TransferViewItem.cpp
     src/transfermenu/TransferViewMenu.cpp

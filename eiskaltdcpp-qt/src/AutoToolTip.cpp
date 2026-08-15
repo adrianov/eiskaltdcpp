@@ -17,7 +17,8 @@
 #include <QTextDocument>
 #include <QToolTip>
 
-AutoToolTipDelegate::AutoToolTipDelegate(QObject *parent): QStyledItemDelegate(parent) {}
+AutoToolTipDelegate::AutoToolTipDelegate(QObject *parent, int iconSide)
+    : IconRowDelegate(parent, iconSide) {}
 AutoToolTipDelegate::~AutoToolTipDelegate() {}
 
 void AutoToolTipDelegate::setElideLeftColumns(const QSet<int> &columns)

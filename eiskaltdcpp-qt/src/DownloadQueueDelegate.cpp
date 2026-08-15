@@ -16,7 +16,7 @@
 #include <QtWidgets>
 
 DownloadQueueDelegate::DownloadQueueDelegate(QObject *parent):
-        QStyledItemDelegate(parent)
+        IconRowDelegate(parent, IconRowDelegate::kFileIcon)
 {
 }
 

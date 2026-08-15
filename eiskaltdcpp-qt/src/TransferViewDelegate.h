@@ -11,12 +11,11 @@
 
 #pragma once
 
-#include <QStyledItemDelegate>
-
+#include "IconRowDelegate.h"
 #include "TransferViewModel.h"
 
 class TransferViewDelegate:
-        public QStyledItemDelegate
+        public IconRowDelegate
 {
     Q_OBJECT
 
@@ -25,7 +24,6 @@ public:
     virtual ~TransferViewDelegate();
 
     virtual void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex&) const;
-    virtual QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const;
 
 private Q_SLOTS:
     void wsVarValueChanged(const QString&, const QVariant &);

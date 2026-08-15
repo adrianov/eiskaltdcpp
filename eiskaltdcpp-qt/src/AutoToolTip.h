@@ -13,16 +13,17 @@
 
 #pragma once
 
-#include <QStyledItemDelegate>
+#include "IconRowDelegate.h"
+
 #include <QHelpEvent>
 #include <QAbstractItemView>
 #include <QSet>
 
-class AutoToolTipDelegate : public QStyledItemDelegate
+class AutoToolTipDelegate : public IconRowDelegate
 {
     Q_OBJECT
 public:
-    AutoToolTipDelegate(QObject* parent);
+    AutoToolTipDelegate(QObject* parent, int iconSide = IconRowDelegate::kNone);
     ~AutoToolTipDelegate();
 
     /** Columns that elide the start of the text (e.g. Path) when the cell is too narrow. */

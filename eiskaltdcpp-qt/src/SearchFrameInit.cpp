@@ -52,7 +52,7 @@ void SearchFrame::init(){
     treeView_RESULTS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RESULTS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    AutoToolTipDelegate *resultsTip = new AutoToolTipDelegate(treeView_RESULTS);
+    AutoToolTipDelegate *resultsTip = new AutoToolTipDelegate(treeView_RESULTS, IconRowDelegate::kFileIcon);
     resultsTip->setElideLeftColumns({COLUMN_SF_PATH});
     treeView_RESULTS->setItemDelegate(resultsTip);
 

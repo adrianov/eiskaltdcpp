@@ -8,6 +8,7 @@
 ***************************************************************************/
 
 #include "FavoriteUsers.h"
+#include "IconRowDelegate.h"
 #include "WulforUtil.h"
 #include "FavoriteUsersModel.h"
 
@@ -34,6 +35,7 @@ FavoriteUsers::FavoriteUsers(QWidget *parent) :
     treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView->installEventFilter(this);
     treeView->setModel(model);
+    treeView->setItemDelegate(new IconRowDelegate(treeView));
     treeView->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     WulforUtil::restoreTreeHeader(treeView->header(), WVGET(WS_FAVUSERS_STATE, QByteArray()).toByteArray());
     treeView->setSortingEnabled(true);

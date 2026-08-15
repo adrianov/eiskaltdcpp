@@ -9,8 +9,9 @@
 
 #pragma once
 
+#include "IconRowDelegate.h"
+
 #include <QAbstractItemModel>
-#include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QPainter>
 #include <QSize>
@@ -32,7 +33,7 @@ static const unsigned COLUMN_DOWNLOADQUEUE_ADDED    = 9;
 static const unsigned COLUMN_DOWNLOADQUEUE_TTH      = 10;
 
 class DownloadQueueDelegate:
-        public QStyledItemDelegate
+        public IconRowDelegate
 {
     Q_OBJECT
 

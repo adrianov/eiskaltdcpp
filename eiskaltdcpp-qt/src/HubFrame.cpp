@@ -32,6 +32,7 @@
 #include "GlobalTimer.h"
 
 #include "UserListModel.h"
+#include "IconRowDelegate.h"
 #include "EmoticonFactory.h"
 #include "hubframe/HubPaneLayout.h"
 
@@ -454,6 +455,7 @@ void HubFrame::init(){
     treeView_USERS->setSortingEnabled(true);
     treeView_USERS->setItemsExpandable(false);
     treeView_USERS->setUniformRowHeights(true);
+    treeView_USERS->setItemDelegate(new IconRowDelegate(treeView_USERS));
     treeView_USERS->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_USERS->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_USERS->header()->hideSection(COLUMN_EXACT_SHARE);

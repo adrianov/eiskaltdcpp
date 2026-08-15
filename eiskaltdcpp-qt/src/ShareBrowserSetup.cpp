@@ -20,6 +20,7 @@
 #include "MainWindow.h"
 #include "ArenaWidgetManager.h"
 #include "AutoToolTip.h"
+#include "IconRowDelegate.h"
 #include "sharebrowser/ListingMediaIndex.h"
 #include "sharebrowser/ShareListColumns.h"
 
@@ -85,6 +86,7 @@ void ShareBrowser::init(){
 
     treeView_LPANE->setExpanded(treeMapFromSource(tree_model->index(0, 0)), true);
     treeView_LPANE->setContextMenuPolicy(Qt::CustomContextMenu);
+    treeView_LPANE->setItemDelegate(new IconRowDelegate(treeView_LPANE));
 
     treeView_RPANE->setModel(proxy);
     treeView_RPANE->setUniformRowHeights(true);
@@ -92,7 +94,7 @@ void ShareBrowser::init(){
     treeView_RPANE->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_RPANE->installEventFilter(this);
 
-    AutoToolTipDelegate *rpaneTip = new AutoToolTipDelegate(treeView_RPANE);
+    AutoToolTipDelegate *rpaneTip = new AutoToolTipDelegate(treeView_RPANE, IconRowDelegate::kFileIcon);
     rpaneTip->setElideLeftColumns({COLUMN_FILEBROWSER_PATH});
     treeView_RPANE->setItemDelegate(rpaneTip);
 

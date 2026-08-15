@@ -13,6 +13,7 @@
 #include "settings/ShareDirModel.h"
 #include "settings/SimpleShareTree.h"
 #include "HashProgress.h"
+#include "IconRowDelegate.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
 
@@ -55,6 +56,7 @@ void ShareDirsPane::ensureModel()
 
     model_ = new ShareDirModel(this);
     treeView_->setModel(model_);
+    treeView_->setItemDelegate(new IconRowDelegate(treeView_));
     treeView_->setSortingEnabled(true);
     treeView_->header()->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView_->header()->hideSection(1);

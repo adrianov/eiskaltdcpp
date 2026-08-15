@@ -17,7 +17,7 @@
 #include "WulforSettings.h"
 
 TransferViewDelegate::TransferViewDelegate(QObject *parent):
-        QStyledItemDelegate(parent)
+        IconRowDelegate(parent, IconRowDelegate::kTransferIcon)
 {
     download_bar_color = qvariant_cast<QColor>(WVGET("transferview/download-bar-color", QColor()));
     upload_bar_color = qvariant_cast<QColor>(WVGET("transferview/upload-bar-color", QColor()));
@@ -66,20 +66,6 @@ void TransferViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
                                   item->download ? download_bar_color : upload_bar_color));
 
     paintProgressCell(painter, option, percent, status, &pal);
-}
-
-QSize TransferViewDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-    QSize size = QStyledItemDelegate::sizeHint(option, index);
-    // dataChanged on the first row remeasures from the leftmost visible column.
-    QStyleOptionViewItem opt = option;
-    initStyleOption(&opt, index);
-    opt.features |= QStyleOptionViewItem::HasDecoration;
-    opt.decorationSize = QSize(18, 18);
-    if (const QWidget *w = opt.widget)
-        size.setHeight(qMax(size.height(),
-            w->style()->sizeFromContents(QStyle::CT_ItemViewItem, &opt, QSize(), w).height()));
-    return size;
 }
 
 void TransferViewDelegate::wsVarValueChanged(const QString &key, const QVariant &val){

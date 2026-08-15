@@ -11,6 +11,7 @@
 
 #include "FinishedTransfers.h"
 #include "FinishedTransfersProxy.h"
+#include "IconRowDelegate.h"
 #include "SearchFileTypes.h"
 #include "WulforSettings.h"
 
@@ -31,6 +32,7 @@ FinishedTransfers<isUpload>::FinishedTransfers(QWidget *parent) :
     proxy->setSourceModel(model);
 
     treeView->setModel(proxy);
+    treeView->setItemDelegate(new IconRowDelegate(treeView));
 
     openDatabase();
 
