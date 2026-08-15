@@ -81,6 +81,8 @@ QString duplicateTip(FileBrowserItem *item,
         return QString();
 
     DirectoryListing::File *file = const_cast<DirectoryListing::File*>(it.value());
+    if (file == item->file)
+        return FileBrowserModel::tr("This file has another copy in the share");
     DirectoryListing::Directory *parentDir = file->getParent();
     if (!parentDir)
         return QString();

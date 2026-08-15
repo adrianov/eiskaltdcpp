@@ -13,7 +13,9 @@
 #include "FileBrowserModel.h"
 #include "downloadto/DownloadToHistory.h"
 #include "fb2epub/Fb2EpubExport.h"
+#include "sharebrowser/ShareOwnDelete.h"
 
+#include "dcpp/ClientManager.h"
 #include "dcpp/SettingsManager.h"
 
 #include <QFileDialog>
@@ -87,6 +89,7 @@ ShareBrowserMenu::Flags ShareBrowser::menuFlags(QTreeView *view, const QModelInd
 {
     ShareBrowserMenu::Flags flags;
     flags.treePane = (view == treeView_LPANE);
+    ShareOwnDelete ownDel(listing);
     for (const auto &index : list) {
         FileBrowserItem *item = itemAt(index);
         if (!item)
@@ -96,16 +99,18 @@ ShareBrowserMenu::Flags ShareBrowser::menuFlags(QTreeView *view, const QModelInd
             if (Fb2EpubExport::isFb2Name(_q(item->file->getName())))
                 flags.fb2 = true;
         }
-        if (nestedDeleteDir(item))
+        if (ownDel.nestedDir(item))
             flags.deleteWholeDir = true;
     }
-    if (list.size() != 1)
-        return flags;
-    FileBrowserItem *item = itemAt(list.at(0));
-    if (item && item->dir && item->dir != listing.getRoot()
-            && !dynamic_cast<DirectoryListing::AdlDirectory*>(item->dir)
-            && listing.getLocalPaths(item->dir).size() == 1)
-        flags.renameFolder = true;
+    if (list.size() == 1) {
+        FileBrowserItem *item = itemAt(list.at(0));
+        if (item && item->dir && item->dir != listing.getRoot()
+                && !dynamic_cast<DirectoryListing::AdlDirectory*>(item->dir)
+                && listing.getLocalPaths(item->dir).size() == 1)
+            flags.renameFolder = true;
+    }
+    if (!flags.treePane && user == ClientManager::getInstance()->getMe())
+        flags.otherCopies = ownDel.otherCopyCount(list);
     return flags;
 }
 

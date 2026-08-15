@@ -44,6 +44,7 @@ public:
         OpenUrl,
         ConvertEpub,
         DeleteFile,
+        DeleteOtherCopies,
         DeleteWholeDir,
         RenameFolder,
         None
@@ -55,6 +56,7 @@ public:
         bool fb2 = false;
         bool renameFolder = false;
         bool deleteWholeDir = false;
+        int otherCopies = 0;
     };
 
     Action exec(const dcpp::UserPtr &user, const Flags &flags);
@@ -74,6 +76,7 @@ private:
     QAction *open_url;
     QAction *convert_epub;
     QAction *delete_file;
+    QAction *delete_other_copies;
     QAction *delete_whole_dir;
     QAction *rename_folder;
 };

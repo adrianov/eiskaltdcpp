@@ -196,6 +196,7 @@ void ShareBrowser::initModels(){
     tree_root  = tree_model->getRootElem();
 
     list_model = new FileBrowserModel();
+    list_model->setListing(&listing);
     list_root = list_model->getRootElem();
     folderList = new ShareFolderList(list_model, list_root);
 

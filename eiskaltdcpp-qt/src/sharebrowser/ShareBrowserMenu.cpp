@@ -74,6 +74,9 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), sbTr("Convert to EPUB"), menu);
     rename_folder = new QAction(WU->getPixmap(AppIcons::eiEDIT), sbTr("Rename Folder"), menu);
     delete_file = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), sbTr("Delete File"), menu);
+    delete_other_copies = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE),
+                                      sbTr("Delete Other Copy"), menu);
+    delete_other_copies->setVisible(false);
     delete_whole_dir = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE),
                                    sbTr("Delete Whole Directory"), menu);
     QAction *sep2 = new QAction(menu);
@@ -95,6 +98,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     actions.insert(convert_epub, ConvertEpub);
     actions.insert(rename_folder, RenameFolder);
     actions.insert(delete_file, DeleteFile);
+    actions.insert(delete_other_copies, DeleteOtherCopies);
     actions.insert(delete_whole_dir, DeleteWholeDir);
 
     magnet_menu->addActions(QList<QAction*>() << magnet << magnet_web << sep3 << magnet_info);
@@ -113,7 +117,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     menu->insertMenu(sep, down_wh_to);
     menu->addMenu(rest_menu);
     menu->addActions(QList<QAction*>() << open_file << open_url << convert_epub << sep4
-                     << rename_folder << delete_file << delete_whole_dir);
+                     << rename_folder << delete_file << delete_other_copies << delete_whole_dir);
 }
 
 ShareBrowserMenu::~ShareBrowserMenu(){
@@ -139,6 +143,15 @@ ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, const
     rename_folder->setEnabled(own && flags.renameFolder);
     rename_folder->setVisible(own && flags.renameFolder);
     delete_file->setEnabled(own && flags.deletable);
+    const bool canDeleteOthers = own && flags.otherCopies > 0;
+    delete_other_copies->setVisible(canDeleteOthers);
+    delete_other_copies->setEnabled(canDeleteOthers);
+    if (canDeleteOthers) {
+        if (flags.otherCopies == 1)
+            delete_other_copies->setText(sbTr("Delete Other Copy"));
+        else
+            delete_other_copies->setText(sbTr("Delete Other Copies (%1)").arg(flags.otherCopies));
+    }
     delete_whole_dir->setEnabled(own && flags.deleteWholeDir);
 
     if (canConvert && Fb2EpubExport::convertIsDefaultOpen())

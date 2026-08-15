@@ -134,21 +134,23 @@ void FileBrowserModel::highlightDuplicates(){
     if (!rootItem || !rootItem->childCount())
         return;
 
-    for (const auto &i : rootItem->childItems){
-        const QString &tth = i->data(COLUMN_FILEBROWSER_TTH).toString();
+    hash.clear();
+    for (const auto &i : rootItem->childItems) {
+        i->isDuplicate = false;
+        if (!i->file || i->file->getAdls())
+            continue;
 
+        const QString &tth = i->data(COLUMN_FILEBROWSER_TTH).toString();
         if (tth.isEmpty())
             continue;
 
-        auto it = hash.find(tth);
-
-        if (it != hash.end()){
-            if (i->file != it.value())//Found duplicate
-                i->isDuplicate = true;
-        }
-        else if (!i->file->getAdls()){
+        if (!hash.contains(tth))
             hash.insert(tth, i->file);
-        }
+
+        if (listing)
+            i->isDuplicate = listing->tthCopyCount(i->file->getTTH()) > 1;
+        else if (hash.value(tth) != i->file)
+            i->isDuplicate = true;
     }
 }
 

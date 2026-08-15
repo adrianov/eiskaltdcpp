@@ -290,7 +290,9 @@ set(QT_EXTRA_SOURCES
     src/ShareBrowserInit.cpp
     src/ShareBrowserSetup.cpp
     src/ShareBrowserContextUser.cpp
-    src/ShareBrowserDelete.cpp
+    src/sharebrowser/ShareBrowserDelete.cpp
+    src/sharebrowser/ShareOwnDelete.cpp
+    src/sharebrowser/ShareOwnFileDelete.cpp
     src/ShareBrowserRename.cpp
     src/DownloadQueueContext.cpp
     src/DownloadQueueContextMore.cpp

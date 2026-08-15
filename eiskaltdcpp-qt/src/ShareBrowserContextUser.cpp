@@ -121,6 +121,9 @@ void ShareBrowser::contextUserActions(ShareBrowserMenu::Action act, const QModel
         case ShareBrowserMenu::DeleteFile:
             deleteOwnItems(list);
             break;
+        case ShareBrowserMenu::DeleteOtherCopies:
+            deleteOwnOtherCopies(list);
+            break;
         case ShareBrowserMenu::DeleteWholeDir:
             deleteOwnWholeDir(list);
             break;
