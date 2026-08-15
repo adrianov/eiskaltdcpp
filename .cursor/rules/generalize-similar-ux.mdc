@@ -1,0 +1,24 @@
+---
+description: When fixing a UI/UX defect, apply the same fix to similar cases in the same turn if it improves the product.
+alwaysApply: true
+---
+
+# Generalize similar UI/UX fixes
+
+When resolving a **user-visible** UI or UX defect, do not stop at the first widget that showed the bug. Search for the same pattern elsewhere and fix those sites in the **same turn** when the same user would hit them.
+
+## Do
+
+- After the local fix is clear, scan for the same cause (same layout quirk, missing enable rule, icon/height/scroll behavior, menu/action gap).
+- Prefer one shared helper over copying the same workaround into each view.
+- Cover every list, pane, or dialog where the defect can actually appear.
+
+## Skip
+
+- Sites that cannot show the problem (no icons, one column, already handled).
+- Unrelated polish, refactors, or extras that are not this defect.
+- Behavior the user did not ask for beyond applying this same fix.
+
+## Example
+
+Transfers rows shrank when icon columns scrolled away (Qt remasures only visible columns). The same issue applied to Search, Share Browser, Queue, hub users, and other icon grids — those were in scope; Public Hubs (no icons) was not.
