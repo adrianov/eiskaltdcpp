@@ -19,6 +19,9 @@
 #include "dcpp/SearchResult.h"
 #include "dcpp/ClientManager.h"
 
+#include <QHash>
+#include <QStringList>
+
 using namespace dcpp;
 
 void SearchFrame::getParams(SearchFrame::VarMap &map, const dcpp::SearchResultPtr &ptr){
@@ -131,49 +134,60 @@ void SearchFrame::flushResults(){
     addResults(batch);
 }
 
+namespace {
+
+void takeHitMedia(SearchModel *model, const QVariantMap &map, const QString &tth,
+                  QHash<QString, QVariantMap> &knownMedia, QStringList &mediaTths)
+{
+    const int br = map.value(QStringLiteral("BITRATE")).toInt();
+    const QString res = map.value(QStringLiteral("RESOLUTION")).toString();
+    const QString video = map.value(QStringLiteral("VIDEO")).toString();
+    const QString audio = map.value(QStringLiteral("AUDIO")).toString();
+    if (br > 0 || !res.isEmpty() || !video.isEmpty() || !audio.isEmpty()) {
+        QVariantMap m;
+        m.insert(QStringLiteral("bitrate"), br);
+        m.insert(QStringLiteral("resolution"), res);
+        m.insert(QStringLiteral("video"), video);
+        m.insert(QStringLiteral("audio"), audio);
+        knownMedia.insert(tth, m);
+        return;
+    }
+    if (!model->hasMedia(tth))
+        mediaTths << tth;
+}
+
+} // namespace
+
 void SearchFrame::addResults(const QList<VarMap> &maps){
     Q_D(SearchFrame);
     static SearchBlacklist *SB = SearchBlacklist::getInstance();
 
     QStringList mediaTths;
     QHash<QString, QVariantMap> knownMedia;
+    const qulonglong resultsBefore = d->results;
     for (const VarMap &map : maps) {
         try {
-            if (SB->ok(map["FILE"].toString(), SearchBlacklist::NAME) && SB->ok(map["TTH"].toString(), SearchBlacklist::TTH)){
-                const bool isDir = map["ISDIR"].toBool();
-                const QString tth = map["TTH"].toString();
-                if (d->model->addResult(map["FILE"].toString(),
-                                        map["SIZE"].toULongLong(),
-                                        tth,
-                                        map["PATH"].toString(),
-                                        map["NICK"].toString(),
-                                        map["FSLS"].toULongLong(),
-                                        map["ASLS"].toULongLong(),
-                                        map["IP"].toString(),
-                                        map["HUB"].toString(),
-                                        map["HOST"].toString(),
-                                        map["CID"].toString(),
-                                        isDir)) {
-                    d->results++;
-                    if (isDir || tth.isEmpty())
-                        continue;
-                    // Local ShareIndex hits already carry media; hub hits need async lookup.
-                    const int br = map.value(QStringLiteral("BITRATE")).toInt();
-                    const QString res = map.value(QStringLiteral("RESOLUTION")).toString();
-                    const QString video = map.value(QStringLiteral("VIDEO")).toString();
-                    const QString audio = map.value(QStringLiteral("AUDIO")).toString();
-                    if (br > 0 || !res.isEmpty() || !video.isEmpty() || !audio.isEmpty()) {
-                        QVariantMap m;
-                        m.insert(QStringLiteral("bitrate"), br);
-                        m.insert(QStringLiteral("resolution"), res);
-                        m.insert(QStringLiteral("video"), video);
-                        m.insert(QStringLiteral("audio"), audio);
-                        knownMedia.insert(tth, m);
-                    } else if (!d->model->hasMedia(tth)) {
-                        mediaTths << tth;
-                    }
-                }
-            }
+            if (!SB->ok(map["FILE"].toString(), SearchBlacklist::NAME)
+                    || !SB->ok(map["TTH"].toString(), SearchBlacklist::TTH))
+                continue;
+            const bool isDir = map["ISDIR"].toBool();
+            const QString tth = map["TTH"].toString();
+            if (!d->model->addResult(map["FILE"].toString(),
+                                    map["SIZE"].toULongLong(),
+                                    tth,
+                                    map["PATH"].toString(),
+                                    map["NICK"].toString(),
+                                    map["FSLS"].toULongLong(),
+                                    map["ASLS"].toULongLong(),
+                                    map["IP"].toString(),
+                                    map["HUB"].toString(),
+                                    map["HOST"].toString(),
+                                    map["CID"].toString(),
+                                    isDir))
+                continue;
+            d->results++;
+            if (!isDir && !tth.isEmpty())
+                takeHitMedia(d->model, map, tth, knownMedia, mediaTths);
         }
         catch (const SearchListException&){}
     }
@@ -184,4 +198,6 @@ void SearchFrame::addResults(const QList<VarMap> &maps){
     }
     if (d->mediaEnrich)
         d->mediaEnrich->queue(mediaTths);
+    if (d->results > resultsBefore)
+        noteUnseenResults();
 }

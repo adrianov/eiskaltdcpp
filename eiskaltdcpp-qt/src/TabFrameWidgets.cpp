@@ -16,6 +16,8 @@
 #include "ArenaWidgetManager.h"
 #include "DebugHelper.h"
 
+#include <QFont>
+
 void TabFrame::removeWidget(ArenaWidget *awgt){
     DEBUG_BLOCK
     
@@ -114,6 +116,12 @@ void TabFrame::redraw() {
         if (tabIconKeys.value(awgt) != iconKey) {
             btn->setWidgetIcon(awgt->getPixmap());
             tabIconKeys[awgt] = iconKey;
+        }
+        QFont f = btn->font();
+        const bool bold = awgt->titleBold();
+        if (f.bold() != bold) {
+            f.setBold(bold);
+            btn->setFont(f);
         }
 
         if (awgt->state() & ArenaWidget::Hidden)

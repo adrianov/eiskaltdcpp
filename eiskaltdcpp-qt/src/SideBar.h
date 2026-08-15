@@ -136,8 +136,13 @@ private:
     SideBarItem *rootItem;
 
     QStack<ArenaWidget*> historyStack;
-    /** Last short title + pixmap cacheKey for 1 Hz redraw skip. */
-    QHash<ArenaWidget*, QPair<QString, quint64> > redrawCache;
+    struct RedrawSnap {
+        QString title;
+        quint64 iconKey = 0;
+        bool bold = false;
+    };
+    /** Last short title + pixmap cacheKey + bold for redraw skip. */
+    QHash<ArenaWidget*, RedrawSnap> redrawCache;
 };
 
 class SideBarView: public QTreeView {

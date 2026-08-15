@@ -90,6 +90,14 @@ void SearchFrame::slotClear(){
     ShareIndex::getInstance()->cancelSearch();
     ClientManager::getInstance()->cancelSearch((void*)this);
 
+    resetResultState();
+    lineEdit_SEARCHSTR->clear();
+    lineEdit_SIZE->setText("");
+}
+
+void SearchFrame::resetResultState(){
+    Q_D(SearchFrame);
+
     if (d->resultFlush)
         d->resultFlush->stop();
     d->pendingResults.clear();
@@ -99,10 +107,8 @@ void SearchFrame::slotClear(){
     treeView_RESULTS->clearSelection();
     d->model->clearModel();
     applyOptionalColumns();
-    lineEdit_SEARCHSTR->clear();
-    lineEdit_SIZE->setText("");
-
     d->dropped = d->filtered = d->results = 0;
+    clearUnseenResults();
 }
 
 void SearchFrame::slotResultDoubleClicked(const QModelIndex &index){

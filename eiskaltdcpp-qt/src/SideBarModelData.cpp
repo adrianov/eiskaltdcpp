@@ -126,10 +126,14 @@ void SideBarModel::redraw() {
             return;
         const QString title = awgt->getArenaShortTitle();
         const quint64 iconKey = awgt->getPixmap().cacheKey();
+        const bool bold = awgt->titleBold();
         const auto prev = redrawCache.constFind(awgt);
-        if (prev != redrawCache.constEnd() && prev->first == title && prev->second == iconKey)
+        if (prev != redrawCache.constEnd()
+                && prev->title == title
+                && prev->iconKey == iconKey
+                && prev->bold == bold)
             return;
-        redrawCache.insert(awgt, qMakePair(title, iconKey));
+        redrawCache.insert(awgt, {title, iconKey, bold});
         const QModelIndex idx = createIndex(item->row(), 0, item);
         if (idx.isValid())
             emit dataChanged(idx, idx);

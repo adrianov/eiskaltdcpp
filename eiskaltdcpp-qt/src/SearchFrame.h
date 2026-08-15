@@ -14,6 +14,7 @@
 #include <QList>
 #include <QMenu>
 #include <QCloseEvent>
+#include <QShowEvent>
 #include <QMetaType>
 
 #include "ui_UISearchFrame.h"
@@ -58,6 +59,7 @@ public:
     QWidget *getWidget();
     QString  getArenaTitle();
     QString  getArenaShortTitle();
+    bool titleBold() const;
     QMenu   *getMenu();
     const QPixmap &getPixmap();
     ArenaWidget::Role role() const { return ArenaWidget::Search; }
@@ -75,6 +77,7 @@ public Q_SLOTS:
 
 protected:
     virtual void closeEvent(QCloseEvent*);
+    void showEvent(QShowEvent*);
 
 Q_SIGNALS:
     void coreSR(const VarMap&);
@@ -138,6 +141,11 @@ private:
     void readSizeFilter(quint64 &size, int &mode) const;
     /** Apply search-box terms, size, and type to the proxy now. */
     void applyViewFiltersNow();
+    /** Drop queued/shown hits and the unseen-results mark. */
+    void resetResultState();
+    /** Bold the sidebar entry until this search is shown again. */
+    void noteUnseenResults();
+    void clearUnseenResults();
     virtual void on(SearchManagerListener::SR, const SearchResultPtr& aResult) noexcept;
     virtual void on(ClientConnected, Client* c) noexcept;
     virtual void on(ClientUpdated, Client* c) noexcept;

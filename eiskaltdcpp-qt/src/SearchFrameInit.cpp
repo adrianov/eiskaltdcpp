@@ -18,7 +18,6 @@
 #include "AutoToolTip.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
-#include "MainWindow.h"
 #include "GlobalTimer.h"
 
 #include "dcpp/SettingsManager.h"

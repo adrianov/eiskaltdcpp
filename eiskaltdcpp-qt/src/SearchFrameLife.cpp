@@ -122,6 +122,33 @@ void SearchFrame::closeEvent(QCloseEvent *e){
     e->accept();
 }
 
+bool SearchFrame::titleBold() const {
+    return d_ptr && d_ptr->hasNewResults;
+}
+
+void SearchFrame::noteUnseenResults(){
+    Q_D(SearchFrame);
+    if (d->hasNewResults || isVisible())
+        return;
+    d->hasNewResults = true;
+    if (MainWindow *mw = MainWindow::getInstance())
+        mw->redrawToolPanel();
+}
+
+void SearchFrame::clearUnseenResults(){
+    Q_D(SearchFrame);
+    if (!d->hasNewResults)
+        return;
+    d->hasNewResults = false;
+    if (MainWindow *mw = MainWindow::getInstance())
+        mw->redrawToolPanel();
+}
+
+void SearchFrame::showEvent(QShowEvent *e){
+    QWidget::showEvent(e);
+    clearUnseenResults();
+}
+
 void SearchFrame::load(){
     Q_D(SearchFrame);
 
