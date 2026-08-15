@@ -28,15 +28,12 @@ inline bool isNumberedType(const std::string &type)
 
 /**
  * Fill combo with predefined + custom types and icons.
- * When forSearch is false, omit Directory/TTH (useless for local ext filters).
+ * When forSearch is false, omit Directory/TTH and insert Adult Video after Video.
  * Each item stores SearchManager type id in Qt::UserRole (TYPE_LAST for custom).
  */
 void fillCombo(QComboBox *combo, bool forSearch = true);
 
-/** Icon + translated name + type id for one combo row. */
-void addTypeItem(QComboBox *combo, int typeId);
-
-/** File-list Adult Video combo id (not a hub search type). */
+/** File-list / finished-list Adult Video combo id (not a hub search type). */
 int adultVideoType();
 bool isAdultVideoType(int typeIndex);
 
@@ -47,5 +44,12 @@ bool isAdultVideoType(int typeIndex);
  * Adult Video uses the Video extension list.
  */
 QStringList extensionsFor(int typeIndex, const QString &typeName = QString());
+
+/**
+ * True if fileName's extension is in exts (empty = any) and, when adultVideo,
+ * the file or folder name carries Adult Video tags.
+ */
+bool matchesFile(const QString &fileName, const QString &path,
+                 const QStringList &exts, bool adultVideo);
 
 } // namespace SearchFileTypes

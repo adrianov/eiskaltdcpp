@@ -97,7 +97,13 @@ private:
     void contextMoreActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
     bool contextCopyClip(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list);
+    QModelIndexList mappedSelection(QTreeView *view) const;
+    ShareBrowserMenu::Flags menuFlags(QTreeView *view, const QModelIndexList &list);
+    void contextDownload(ShareBrowserMenu::Action act, const QModelIndexList &list);
     void deleteOwnItems(const QModelIndexList &list);
+    void deleteOwnWholeDir(const QModelIndexList &list);
+    dcpp::DirectoryListing::Directory *nestedDeleteDir(FileBrowserItem *);
+    void refreshAfterOwnDelete(dcpp::DirectoryListing::Directory *viewParent, bool removedDir);
     void renameOwnFolder(const QModelIndexList &list);
 
     void changeRoot(dcpp::DirectoryListing::Directory*);

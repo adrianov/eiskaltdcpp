@@ -10,7 +10,7 @@
  ***************************************************************************/
 
 #include "filebrowser/FilterMatch.h"
-#include "filebrowser/AdultVideo.h"
+#include "SearchFileTypes.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/SearchManager.h"
@@ -83,13 +83,7 @@ bool FilterMatch::acceptFile(const QString &name, const QString &path, const QSt
     if (dirsOnly)
         return false;
 
-    if (!extFilter.isEmpty()) {
-        const int dot = name.lastIndexOf(QLatin1Char('.'));
-        if (dot < 0 || !extFilter.contains(name.mid(dot + 1).toUpper()))
-            return false;
-    }
-
-    if (adultVideo && !AdultVideo::matches(name, path))
+    if (!SearchFileTypes::matchesFile(name, path, extFilter, adultVideo))
         return false;
 
     if (!sizeOk(size))

@@ -115,17 +115,8 @@ void ShareBrowser::contextMoreActions(ShareBrowserMenu::Action act, const QModel
                 break;
             }
             break;
-        case ShareBrowserMenu::AddToFav:
-        case ShareBrowserMenu::AddRestrinction:
-        case ShareBrowserMenu::RemoveRestriction:
-        case ShareBrowserMenu::OpenFile:
-        case ShareBrowserMenu::OpenUrl:
-        case ShareBrowserMenu::ConvertEpub:
-        case ShareBrowserMenu::DeleteFile:
-        case ShareBrowserMenu::RenameFolder:
-            contextUserActions(act, list);
-            break;
         default:
+            contextUserActions(act, list);
             break;
     }
 }

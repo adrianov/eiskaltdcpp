@@ -44,12 +44,20 @@ public:
         OpenUrl,
         ConvertEpub,
         DeleteFile,
+        DeleteWholeDir,
         RenameFolder,
         None
     };
 
-    Action exec(const dcpp::UserPtr &user = dcpp::UserPtr(nullptr), bool treePane = false,
-                bool hasDeletable = false, bool hasFb2 = false, bool hasRenameFolder = false);
+    struct Flags {
+        bool treePane = false;
+        bool deletable = false;
+        bool fb2 = false;
+        bool renameFolder = false;
+        bool deleteWholeDir = false;
+    };
+
+    Action exec(const dcpp::UserPtr &user, const Flags &flags);
     QString getTarget() { return target; }
 
 private:
@@ -66,5 +74,6 @@ private:
     QAction *open_url;
     QAction *convert_epub;
     QAction *delete_file;
+    QAction *delete_whole_dir;
     QAction *rename_folder;
 };

@@ -10,6 +10,8 @@
 ***************************************************************************/
 
 #include "SearchFileTypes.h"
+#include "filebrowser/AdultVideo.h"
+#include "filebrowser/FileTypeCounter.h"
 #include "AppTheme.h"
 #include "WulforUtil.h"
 
@@ -18,6 +20,7 @@
 #include "dcpp/SettingsManager.h"
 
 #include <QComboBox>
+#include <QCoreApplication>
 
 using namespace dcpp;
 
@@ -60,12 +63,19 @@ WulforUtil::Icons iconForType(int type)
 
 const int kAdultVideoType = SearchManager::TYPE_LAST + 1;
 
-} // namespace
-
 void addTypeItem(QComboBox *combo, int typeId)
 {
     combo->addItem(WICON(iconForType(typeId)), _q(SearchManager::getTypeStr(typeId)), typeId);
 }
+
+void addAdultVideoItem(QComboBox *combo)
+{
+    combo->addItem(WICON(iconForType(SearchManager::TYPE_VIDEO)),
+                   QCoreApplication::translate("SearchFileTypes", "Adult Video"),
+                   kAdultVideoType);
+}
+
+} // namespace
 
 void fillCombo(QComboBox *combo, bool forSearch)
 {
@@ -77,11 +87,48 @@ void fillCombo(QComboBox *combo, bool forSearch)
         if (!forSearch && (i == SearchManager::TYPE_DIRECTORY || i == SearchManager::TYPE_TTH))
             continue;
         addTypeItem(combo, i);
+        if (!forSearch && i == SearchManager::TYPE_VIDEO)
+            addAdultVideoItem(combo);
     }
     for (const auto &entry : SettingsManager::getInstance()->getSearchTypes()) {
         if (!isNumberedType(entry.first))
             combo->addItem(_q(entry.first), SearchManager::TYPE_LAST);
     }
+    combo->setCurrentIndex(0);
+    AppTheme::applyInputPalette(combo);
+}
+
+void fillListingCombo(QComboBox *combo, const ListingTypes &types)
+{
+    if (!combo)
+        return;
+
+    combo->clear();
+    addTypeItem(combo, SearchManager::TYPE_ANY);
+
+    const bool hasVideo = types.typeIds.contains(SearchManager::TYPE_VIDEO);
+    for (int i = SearchManager::TYPE_AUDIO; i < SearchManager::TYPE_LAST; ++i) {
+        if (i == SearchManager::TYPE_TTH || i == SearchManager::TYPE_AUDIO_VIDEO)
+            continue;
+        if (i == SearchManager::TYPE_DIRECTORY) {
+            if (types.hasDirs)
+                addTypeItem(combo, i);
+            continue;
+        }
+        if (!types.typeIds.contains(i))
+            continue;
+        addTypeItem(combo, i);
+        if (i == SearchManager::TYPE_AUDIO && !hasVideo)
+            addTypeItem(combo, SearchManager::TYPE_AUDIO_VIDEO);
+        if (i != SearchManager::TYPE_VIDEO)
+            continue;
+        if (types.hasAdultVideo)
+            addAdultVideoItem(combo);
+        addTypeItem(combo, SearchManager::TYPE_AUDIO_VIDEO);
+    }
+    for (const QString &name : types.customNames)
+        combo->addItem(name, SearchManager::TYPE_LAST);
+
     combo->setCurrentIndex(0);
     AppTheme::applyInputPalette(combo);
 }
@@ -112,6 +159,17 @@ QStringList extensionsFor(int typeIndex, const QString &typeName)
     catch (const SearchTypeException&) {
     }
     return QStringList();
+}
+
+bool matchesFile(const QString &fileName, const QString &path,
+                 const QStringList &exts, bool adultVideo)
+{
+    if (!exts.isEmpty()) {
+        const int dot = fileName.lastIndexOf(QLatin1Char('.'));
+        if (dot < 0 || !exts.contains(fileName.mid(dot + 1).toUpper()))
+            return false;
+    }
+    return !adultVideo || AdultVideo::matches(fileName, path);
 }
 
 } // namespace SearchFileTypes

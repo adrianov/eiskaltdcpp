@@ -11,6 +11,7 @@
 
 #include "FinishedTransfersProxy.h"
 #include "FinishedTransfersModel.h"
+#include "SearchFileTypes.h"
 
 #include "dcpp/stdinc.h"
 #include "dcpp/Util.h"
@@ -19,6 +20,63 @@
 #include <QFileInfo>
 
 using namespace dcpp;
+
+namespace {
+
+QString cell(const QAbstractItemModel *m, int row, int col, const QModelIndex &parent)
+{
+    return m->data(m->index(row, col, parent), Qt::DisplayRole).toString();
+}
+
+bool rowIsFull(const QAbstractItemModel *m, int row, const QModelIndex &parent)
+{
+    const int fullCol = m->index(row, COLUMN_FINISHED_FULL, parent).isValid()
+            ? COLUMN_FINISHED_FULL : COLUMN_FINISHED_CRC32;
+    return cell(m, row, fullCol, parent) == QLatin1String("1");
+}
+
+bool fileListOk(bool hideLists, bool requireFull,
+                const QAbstractItemModel *m, int row, const QModelIndex &parent)
+{
+    if (!hideLists && !requireFull)
+        return true;
+    if (hideLists) {
+        const string target = _tq(cell(m, row, COLUMN_FINISHED_TARGET, parent));
+        const string path = _tq(cell(m, row, COLUMN_FINISHED_PATH, parent) +
+                                cell(m, row, COLUMN_FINISHED_NAME, parent));
+        if (isFinishedFileList(target) || isFinishedFileList(path))
+            return false;
+    }
+    return !requireFull || rowIsFull(m, row, parent);
+}
+
+bool typeOk(bool fileView, const QStringList &exts, bool adultVideo,
+            const QAbstractItemModel *m, int row, const QModelIndex &parent)
+{
+    if (!fileView || (exts.isEmpty() && !adultVideo))
+        return true;
+    const QString name = cell(m, row, COLUMN_FINISHED_NAME, parent);
+    const QString path = cell(m, row, COLUMN_FINISHED_PATH, parent);
+    QString candidate = cell(m, row, COLUMN_FINISHED_TARGET, parent);
+    if (candidate.isEmpty())
+        candidate = path + name;
+    const QString fileName = name.isEmpty() ? QFileInfo(candidate).fileName() : name;
+    const QString dir = path.isEmpty() ? candidate : path;
+    return SearchFileTypes::matchesFile(fileName, dir, exts, adultVideo);
+}
+
+bool textOk(const QString &text, const QAbstractItemModel *m, int row, const QModelIndex &parent)
+{
+    if (text.isEmpty())
+        return true;
+    const Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+    return cell(m, row, COLUMN_FINISHED_NAME, parent).contains(text, cs)
+            || cell(m, row, COLUMN_FINISHED_PATH, parent).contains(text, cs)
+            || cell(m, row, COLUMN_FINISHED_USER, parent).contains(text, cs)
+            || cell(m, row, COLUMN_FINISHED_TARGET, parent).contains(text, cs);
+}
+
+} // namespace
 
 bool isFinishedFileList(const string &path) {
     if (path.empty())
@@ -58,10 +116,11 @@ void FinishedTransferProxyModel::setFileView(bool fileView) {
     invalidateFilter();
 }
 
-void FinishedTransferProxyModel::setExtFilter(const QStringList &exts) {
-    if (extFilter_ == exts)
+void FinishedTransferProxyModel::setTypeFilter(const QStringList &exts, bool adultVideo) {
+    if (extFilter_ == exts && adultVideo_ == adultVideo)
         return;
     extFilter_ = exts;
+    adultVideo_ = adultVideo;
     invalidateFilter();
 }
 
@@ -69,51 +128,10 @@ bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelInd
     const QAbstractItemModel *model = sourceModel();
     if (!model)
         return true;
-
-    const QModelIndex nameIndex = model->index(sourceRow, COLUMN_FINISHED_NAME, sourceParent);
-    const QModelIndex pathIndex = model->index(sourceRow, COLUMN_FINISHED_PATH, sourceParent);
-    const QModelIndex userIndex = model->index(sourceRow, COLUMN_FINISHED_USER, sourceParent);
-    const QModelIndex targetIndex = model->index(sourceRow, COLUMN_FINISHED_TARGET, sourceParent);
-    // File view: FULL at col 9; user view: FULL remapped to CRC32 (col 6).
-    const int fullCol = model->index(sourceRow, COLUMN_FINISHED_FULL, sourceParent).isValid()
-            ? COLUMN_FINISHED_FULL : COLUMN_FINISHED_CRC32;
-    const QModelIndex fullIndex = model->index(sourceRow, fullCol, sourceParent);
-
-    if (hideFileLists_ || requireFullFile_) {
-        const string target = _tq(model->data(targetIndex, Qt::DisplayRole).toString());
-        const string path = _tq(model->data(pathIndex, Qt::DisplayRole).toString() +
-                                model->data(nameIndex, Qt::DisplayRole).toString());
-
-        if (hideFileLists_ && (isFinishedFileList(target) || isFinishedFileList(path)))
-            return false;
-
-        if (requireFullFile_ && model->data(fullIndex, Qt::DisplayRole).toString() != QLatin1String("1"))
-            return false;
-    }
-
-    if (fullOnly_ && model->data(fullIndex, Qt::DisplayRole).toString() != QLatin1String("1"))
+    if (!fileListOk(hideFileLists_, requireFullFile_, model, sourceRow, sourceParent))
         return false;
-
-    if (fileView_ && !extFilter_.isEmpty()) {
-        QString candidate = model->data(targetIndex, Qt::DisplayRole).toString();
-        if (candidate.isEmpty())
-            candidate = model->data(pathIndex, Qt::DisplayRole).toString() +
-                        model->data(nameIndex, Qt::DisplayRole).toString();
-        const QString ext = QFileInfo(candidate).suffix().toUpper();
-        if (ext.isEmpty() || !extFilter_.contains(ext))
-            return false;
-    }
-
-    if (!textFilter_.isEmpty()) {
-        const Qt::CaseSensitivity cs = Qt::CaseInsensitive;
-        const QString name = model->data(nameIndex, Qt::DisplayRole).toString();
-        const QString path = model->data(pathIndex, Qt::DisplayRole).toString();
-        const QString user = model->data(userIndex, Qt::DisplayRole).toString();
-        const QString target = model->data(targetIndex, Qt::DisplayRole).toString();
-        if (!name.contains(textFilter_, cs) && !path.contains(textFilter_, cs) &&
-            !user.contains(textFilter_, cs) && !target.contains(textFilter_, cs))
-            return false;
-    }
-
-    return true;
+    if (fullOnly_ && !rowIsFull(model, sourceRow, sourceParent))
+        return false;
+    return typeOk(fileView_, extFilter_, adultVideo_, model, sourceRow, sourceParent)
+            && textOk(textFilter_, model, sourceRow, sourceParent);
 }

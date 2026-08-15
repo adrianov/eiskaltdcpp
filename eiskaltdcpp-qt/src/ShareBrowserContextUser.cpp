@@ -52,79 +52,82 @@ StringList localPaths(DirectoryListing &listing, FileBrowserItem *item)
     }
 }
 
+void openLocals(DirectoryListing &listing, const QModelIndexList &list, bool reveal)
+{
+    for (const auto &index : list) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        if (!item)
+            continue;
+        for (const auto &path : localPaths(listing, item)) {
+            const QString local = _q(path);
+            if (reveal)
+                SearchLocalPath::openDirectory(local);
+            else
+                SearchLocalPath::openFile(local);
+        }
+    }
+}
+
+void convertFb2(DirectoryListing &listing, const QModelIndexList &list)
+{
+    QStringList paths;
+    for (const auto &index : list) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        if (!item || !item->file)
+            continue;
+        for (const auto &path : localPaths(listing, item))
+            paths.push_back(_q(path));
+    }
+    Fb2EpubExport::convertAndReveal(paths);
+}
+
+void setShareLimit(FileBrowserModel *model, const QModelIndexList &list, unsigned size)
+{
+    for (const QModelIndex &index : list) {
+        QModelIndex idx = index;
+        model->updateRestriction(idx, size);
+    }
+}
+
 } // namespace
 
 void ShareBrowser::contextUserActions(ShareBrowserMenu::Action act, const QModelIndexList &list)
 {
-    switch (act){
+    switch (act) {
         case ShareBrowserMenu::AddToFav:
-        {
             if (user && user != ClientManager::getInstance()->getMe())
                 FavoriteManager::getInstance()->addFavoriteUser(user);
-
             break;
-        }
-        case ShareBrowserMenu::AddRestrinction:
-        {
+        case ShareBrowserMenu::AddRestrinction: {
             bool ok = false;
-            unsigned share_sz = QInputDialog::getInt(this, tr("Enter restriction size (in GB)"), "Size", 0, 0, 1024, 1, &ok);
-
-            if (!ok)
-                break;
-
-            for (const QModelIndex &index : list) {
-                QModelIndex idx = index;
-                tree_model->updateRestriction(idx, share_sz);
-            }
-
+            unsigned share_sz = QInputDialog::getInt(this, tr("Enter restriction size (in GB)"),
+                                                     "Size", 0, 0, 1024, 1, &ok);
+            if (ok)
+                setShareLimit(tree_model, list, share_sz);
             break;
         }
         case ShareBrowserMenu::RemoveRestriction:
-        {
-            for (const QModelIndex &index : list) {
-                QModelIndex idx = index;
-                tree_model->updateRestriction(idx, 0);
-            }
-
+            setShareLimit(tree_model, list, 0);
             break;
-        }
         case ShareBrowserMenu::OpenFile:
+            openLocals(listing, list, false);
+            break;
         case ShareBrowserMenu::OpenUrl:
-        {
-            const bool reveal = (act == ShareBrowserMenu::OpenUrl);
-            for (const auto &index : list) {
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                if (!item)
-                    continue;
-                for (const auto &path : localPaths(listing, item)) {
-                    const QString local = _q(path);
-                    if (reveal)
-                        SearchLocalPath::openDirectory(local);
-                    else
-                        SearchLocalPath::openFile(local);
-                }
-            }
+            openLocals(listing, list, true);
             break;
-        }
         case ShareBrowserMenu::ConvertEpub:
-        {
-            QStringList paths;
-            for (const auto &index : list) {
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                if (!item || !item->file)
-                    continue;
-                for (const auto &path : localPaths(listing, item))
-                    paths.push_back(_q(path));
-            }
-            Fb2EpubExport::convertAndReveal(paths);
+            convertFb2(listing, list);
             break;
-        }
         case ShareBrowserMenu::DeleteFile:
             deleteOwnItems(list);
+            break;
+        case ShareBrowserMenu::DeleteWholeDir:
+            deleteOwnWholeDir(list);
             break;
         case ShareBrowserMenu::RenameFolder:
             renameOwnFolder(list);
             break;
-        default: break;
+        default:
+            break;
     }
 }

@@ -56,7 +56,7 @@ ShareManager::~ShareManager() {
     join();
 }
 
-ShareManager::Directory::Directory(const string& aName, const ShareManager::Directory::Ptr& aParent) :
+ShareDirectory::ShareDirectory(const string& aName, const ShareDirectory::Ptr& aParent) :
     size(0),
     name(aName),
     parent(aParent.get()),
@@ -64,19 +64,19 @@ ShareManager::Directory::Directory(const string& aName, const ShareManager::Dire
 {
 }
 
-string ShareManager::Directory::getADCPath() const noexcept {
+string ShareDirectory::getADCPath() const noexcept {
     if(!getParent())
         return '/' + name + '/';
     return getParent()->getADCPath() + name + '/';
 }
 
-string ShareManager::Directory::getFullName() const noexcept {
+string ShareDirectory::getFullName() const noexcept {
     if(!getParent())
         return getName() + '\\';
     return getParent()->getFullName() + getName() + '\\';
 }
 
-void ShareManager::Directory::addType(uint32_t type) noexcept {
+void ShareDirectory::addType(uint32_t type) noexcept {
     if(!hasType(type)) {
         fileTypes |= (1 << type);
         if(getParent())
@@ -84,7 +84,7 @@ void ShareManager::Directory::addType(uint32_t type) noexcept {
     }
 }
 
-string ShareManager::Directory::getRealPath(const std::string& path) const {
+string ShareDirectory::getRealPath(const std::string& path) const {
     if(getParent()) {
         return getParent()->getRealPath(getName() + PATH_SEPARATOR_STR + path);
     } else {
@@ -105,7 +105,7 @@ string ShareManager::findRealRoot(const string& virtualRoot, const string& virtu
     throw ShareException(UserConnection::FILE_NOT_AVAILABLE);
 }
 
-int64_t ShareManager::Directory::getSize() const noexcept {
+int64_t ShareDirectory::getSize() const noexcept {
     int64_t tmp = size;
     for(auto& i : directories)
         tmp += i.second->getSize();
@@ -238,7 +238,7 @@ AdcCommand ShareManager::getFileInfo(const string& aFile) {
     return cmd;
 }
 
-pair<ShareManager::Directory::Ptr, string> ShareManager::splitVirtual(const string& virtualPath) const {
+pair<ShareDirectory::Ptr, string> ShareManager::splitVirtual(const string& virtualPath) const {
     if(virtualPath.empty() || virtualPath[0] != '/') {
         throw ShareException(UserConnection::FILE_NOT_AVAILABLE);
     }
@@ -267,7 +267,7 @@ pair<ShareManager::Directory::Ptr, string> ShareManager::splitVirtual(const stri
     return make_pair(d, virtualPath.substr(j));
 }
 
-ShareManager::Directory::File::Set::const_iterator ShareManager::findFile(const string& virtualFile) const {
+ShareDirectory::File::Set::const_iterator ShareManager::findFile(const string& virtualFile) const {
     if(virtualFile.compare(0, 4, "TTH/") == 0) {
         auto i = tthIndex.find(TTHValue(virtualFile.substr(4)));
         if(i == tthIndex.end()) {
@@ -393,7 +393,7 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
     }
 }
 
-ShareManager::Directory::Ptr ShareManager::merge(const Directory::Ptr& directory) {
+ShareDirectory::Ptr ShareManager::merge(const Directory::Ptr& directory) {
     for(auto& i : directories) {
         if(Util::stricmp(i->getName(), directory->getName()) == 0) {
             dcdebug("Merging directory %s\n", directory->getName().c_str());
@@ -408,7 +408,7 @@ ShareManager::Directory::Ptr ShareManager::merge(const Directory::Ptr& directory
     return directory;
 }
 
-void ShareManager::Directory::merge(const Directory::Ptr& source) {
+void ShareDirectory::merge(const Ptr& source) {
     // merge directories
     for(auto& i: source->directories) {
         auto subSource = i.second;
@@ -528,7 +528,7 @@ size_t ShareManager::getSharedFiles() const noexcept {
     return tthIndex.size();
 }
 
-ShareManager::Directory::Ptr ShareManager::buildTree(const string& aName, const Directory::Ptr& aParent) {
+ShareDirectory::Ptr ShareManager::buildTree(const string& aName, const Directory::Ptr& aParent) {
     return ShareTreeScan().build(aName, aParent);
 }
 

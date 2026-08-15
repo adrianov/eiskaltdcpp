@@ -33,8 +33,8 @@ public:
     void setFullOnly(bool fullOnly);
     void setTextFilter(const QString &text);
     void setFileView(bool fileView);
-    /** Uppercase extensions without dots; empty = no type filter. */
-    void setExtFilter(const QStringList &exts);
+    /** Uppercase extensions without dots; empty = no type filter. Adult Video also requires name/path tags. */
+    void setTypeFilter(const QStringList &exts, bool adultVideo);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
@@ -46,6 +46,7 @@ private:
     bool fileView_;
     QString textFilter_;
     QStringList extFilter_;
+    bool adultVideo_ = false;
 };
 
 bool isFinishedFileList(const std::string &path);

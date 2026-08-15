@@ -74,6 +74,8 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     convert_epub = new QAction(WU->getPixmap(AppIcons::eiCONVERT_EPUB), sbTr("Convert to EPUB"), menu);
     rename_folder = new QAction(WU->getPixmap(AppIcons::eiEDIT), sbTr("Rename Folder"), menu);
     delete_file = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE), sbTr("Delete File"), menu);
+    delete_whole_dir = new QAction(WU->getPixmap(AppIcons::eiEDITDELETE),
+                                   sbTr("Delete Whole Directory"), menu);
     QAction *sep2 = new QAction(menu);
     QAction *sep3 = new QAction(menu);
     QAction *sep4 = new QAction(menu);
@@ -93,6 +95,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     actions.insert(convert_epub, ConvertEpub);
     actions.insert(rename_folder, RenameFolder);
     actions.insert(delete_file, DeleteFile);
+    actions.insert(delete_whole_dir, DeleteWholeDir);
 
     magnet_menu->addActions(QList<QAction*>() << magnet << magnet_web << sep3 << magnet_info);
 
@@ -110,7 +113,7 @@ ShareBrowserMenu::ShareBrowserMenu() : menu(new QMenu(nullptr))
     menu->insertMenu(sep, down_wh_to);
     menu->addMenu(rest_menu);
     menu->addActions(QList<QAction*>() << open_file << open_url << convert_epub << sep4
-                     << rename_folder << delete_file);
+                     << rename_folder << delete_file << delete_whole_dir);
 }
 
 ShareBrowserMenu::~ShareBrowserMenu(){
@@ -122,21 +125,21 @@ ShareBrowserMenu::~ShareBrowserMenu(){
     down_wh_to = nullptr;
 }
 
-ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, bool treePane,
-                                                    bool hasDeletable, bool hasFb2, bool hasRenameFolder){
+ShareBrowserMenu::Action ShareBrowserMenu::exec(const dcpp::UserPtr &user, const Flags &flags){
     down_to->refill();
     down_wh_to->refill();
 
     const bool own = (user == ClientManager::getInstance()->getMe());
-    const bool canConvert = own && hasFb2;
-    rest_menu->setEnabled(own && treePane);
+    const bool canConvert = own && flags.fb2;
+    rest_menu->setEnabled(own && flags.treePane);
     open_file->setEnabled(own);
     open_url->setEnabled(own);
     convert_epub->setEnabled(canConvert);
     convert_epub->setVisible(canConvert);
-    rename_folder->setEnabled(own && hasRenameFolder);
-    rename_folder->setVisible(own && hasRenameFolder);
-    delete_file->setEnabled(own && hasDeletable);
+    rename_folder->setEnabled(own && flags.renameFolder);
+    rename_folder->setVisible(own && flags.renameFolder);
+    delete_file->setEnabled(own && flags.deletable);
+    delete_whole_dir->setEnabled(own && flags.deleteWholeDir);
 
     if (canConvert && Fb2EpubExport::convertIsDefaultOpen())
         menu->setDefaultAction(convert_epub);

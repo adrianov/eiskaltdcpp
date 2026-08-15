@@ -106,7 +106,8 @@ template <bool isUpload>
 void FinishedTransfers<isUpload>::slotFileTypeChanged(int index) {
     const int typeId = (index >= 0) ? comboBox_FILETYPES->itemData(index).toInt() : -1;
     const QString name = (index >= 0) ? comboBox_FILETYPES->itemText(index) : QString();
-    proxy->setExtFilter(SearchFileTypes::extensionsFor(typeId, name));
+    proxy->setTypeFilter(SearchFileTypes::extensionsFor(typeId, name),
+                         SearchFileTypes::isAdultVideoType(typeId));
 }
 
 template <bool isUpload>

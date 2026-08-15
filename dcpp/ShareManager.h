@@ -17,30 +17,21 @@
 
 #pragma once
 
-#include <list>
-#include <set>
 #include <unordered_map>
-
-#include "NonCopyable.h"
+#include <utility>
 
 #include "TimerManager.h"
 #include "SearchManager.h"
 #include "SettingsManager.h"
 #include "HashManagerListener.h"
 #include "QueueManagerListener.h"
-#include "sharemedia/MediaInfo.h"
-
 #include "Exception.h"
 #include "CriticalSection.h"
-
-#include "StringSearch.h"
 #include "Singleton.h"
 #include "BloomFilter.h"
-#include "FastAlloc.h"
-#include "MerkleTree.h"
-#include "Pointer.h"
 #include "Atomic.h"
 #include "share/ShareFileList.h"
+#include "share/ShareDirectory.h"
 
 #ifdef WITH_DHT
 namespace dht {
@@ -49,9 +40,6 @@ class IndexManager;
 #endif
 
 namespace dcpp {
-
-using std::set;
-using std::unordered_map;
 
 STANDARD_EXCEPTION(ShareException);
 
@@ -62,24 +50,22 @@ class OutputStream;
 class MemoryInputStream;
 
 struct ShareLoader;
-class ShareManager : public Singleton<ShareManager>, private SettingsManagerListener, private Thread, private TimerManagerListener,
-        private HashManagerListener, private QueueManagerListener
+class ShareManager : public Singleton<ShareManager>, private SettingsManagerListener, private Thread,
+        private TimerManagerListener, private HashManagerListener, private QueueManagerListener
 {
 public:
-    /**
-     * @param aDirectory Physical directory location
-     * @param aName Virtual name
-     */
     void addDirectory(const string& realPath, const string &virtualName);
     void removeDirectory(const string& realPath);
     void removeFile(const string& realPath) noexcept;
-    /** Remove a nested shared directory (or share root) from the in-memory index. Does not delete disk. */
+    /** True when realPath is a folder nested inside a share, not a share root or its parent. */
+    bool isNestedShareDir(const string& realPath) const noexcept;
+    /** Remove a nested shared directory from the in-memory index. Does not delete disk or share roots. */
     void removeDir(const string& realPath) noexcept;
     /** Rename a shared folder in the in-memory index after it was renamed on disk. */
     bool renameDir(const string& realPath, const string& newName) noexcept;
     void renameDirectory(const string& realPath, const string& virtualName);
 
-    bool isRefreshing() { return refreshing; }
+    bool isRefreshing() const { return refreshing; }
 
     string toVirtual(const TTHValue& tth) const;
     string toReal(const string& virtualFile);
@@ -89,7 +75,8 @@ public:
     void refresh(bool dirs = false, bool aUpdate = true, bool block = false) noexcept;
     void setDirty() { fileList.setDirty(); }
 
-    void search(SearchResultList& l, const string& aString, int aSearchType, int64_t aSize, int aFileType, Client* aClient, StringList::size_type maxResults) noexcept;
+    void search(SearchResultList& l, const string& aString, int aSearchType, int64_t aSize, int aFileType,
+                Client* aClient, StringList::size_type maxResults) noexcept;
     void search(SearchResultList& l, const StringList& params, StringList::size_type maxResults) noexcept;
 
     StringPairList getDirectories() const noexcept;
@@ -103,29 +90,22 @@ public:
 
     int64_t getShareSize() const noexcept;
     int64_t getShareSize(const string& realPath) const noexcept;
-
     size_t getSharedFiles() const noexcept;
 
     string getShareSizeString() const { return Util::toString(getShareSize()); }
     string getShareSizeString(const string& aDir) const { return Util::toString(getShareSize(aDir)); }
 
     void getBloom(ByteVector& v, size_t k, size_t m, size_t h) const;
-
     SearchManager::TypeModes getType(const string& fileName) const noexcept;
 
     string validateVirtual(const string& /*aVirt*/) const noexcept;
     bool hasVirtual(const string& name) const noexcept;
 
-    void addHits(uint32_t aHits) {
-        hits += aHits;
-    }
-
-    const string getOwnListFile() {
-        return fileList.ensure();
-    }
+    void addHits(uint32_t aHits) { hits += aHits; }
+    const string getOwnListFile() { return fileList.ensure(); }
     const string& getBZXmlFile() const { return fileList.getPath(); }
 
-    bool isTTHShared(const TTHValue& tth){
+    bool isTTHShared(const TTHValue& tth) {
         Lock l(cs);
         return tthIndex.find(tth) != tthIndex.end();
     }
@@ -134,218 +114,57 @@ public:
     GETSET(uint32_t, hits, Hits);
 
 private:
-    struct AdcSearch;
-    class Directory : public FastAlloc<Directory>, public intrusive_ptr_base<Directory>, private NonCopyable {
-    public:
-        typedef dcpp::intrusive_ptr<Directory> Ptr;
-        typedef unordered_map<string, Ptr, CaseStringHash, CaseStringEq> Map;
-        typedef Map::iterator MapIter;
+    using Directory = ShareDirectory;
+    using AdcSearch = ShareAdcSearch;
+    using DirList = ShareDirList;
+    using HashFileMap = ShareHashMap;
 
-        struct File {
-            File() : size(0), parent(0), ts(0) { }
-            File(const string& aName, int64_t aSize, const Directory::Ptr& aParent, const TTHValue& aRoot) :
-                name(aName), tth(aRoot), size(aSize), parent(aParent.get()), ts(0) { }
-            File(const File& rhs) :
-                name(rhs.getName()), tth(rhs.getTTH()), size(rhs.getSize()), parent(rhs.getParent()),
-                mediaInfo(rhs.mediaInfo), ts(rhs.ts) { }
-
-            File& operator=(const File& rhs) {
-                name = rhs.name; size = rhs.size; parent = rhs.parent; tth = rhs.tth;
-                mediaInfo = rhs.mediaInfo; ts = rhs.ts;
-                return *this;
-            }
-
-            bool operator==(const File& rhs) const {
-                if (BOOLSETTING(CASESENSITIVE_FILELIST))
-                    return getParent() == rhs.getParent() && (strcmp(getName().c_str(), rhs.getName().c_str()) == 0);
-                else
-                    return getParent() == rhs.getParent() && (Util::stricmp(getName(), rhs.getName()) == 0);
-            }
-
-            struct StringComp {
-                StringComp(const string& s) : a(s) { }
-                bool operator()(const File& b) const {
-                    if (BOOLSETTING(CASESENSITIVE_FILELIST))
-                        return strcmp(a.c_str(), b.getName().c_str()) == 0;
-                    else
-                        return Util::stricmp(a, b.getName()) == 0;
-                }
-
-                const string& a;
-
-            private:
-                StringComp& operator=(const StringComp&);
-            };
-
-            struct FileLess {
-                bool operator()(const File& a, const File& b) const {
-                    if (BOOLSETTING(CASESENSITIVE_FILELIST))
-                        return (strcmp(a.getName().c_str(), b.getName().c_str()) < 0);
-                    else
-                        return (Util::stricmp(a.getName(), b.getName()) < 0);
-                }
-            };
-
-            typedef set<File, FileLess> Set;
-
-            string getADCPath() const { return parent->getADCPath() + name; }
-            string getFullName() const { return parent->getFullName() + name; }
-            string getRealPath() const { return parent->getRealPath(name); }
-
-            GETSET(string, name, Name);
-            GETSET(TTHValue, tth, TTH);
-            GETSET(int64_t, size, Size);
-            GETSET(Directory*, parent, Parent);
-            GETSET(uint32_t, ts, TS);
-            MediaInfo mediaInfo;
-        };
-
-        int64_t size;
-        Map directories;
-        set<File, File::FileLess> files;
-
-        static Ptr create(const string& aName, const Ptr& aParent = Ptr()) { return Ptr(new Directory(aName, aParent)); }
-
-        bool hasType(uint32_t type) const noexcept {
-            if(type == SearchManager::TYPE_ANY)
-                return true;
-            if(type == SearchManager::TYPE_AUDIO_VIDEO)
-                return (fileTypes & ((1 << SearchManager::TYPE_AUDIO) | (1 << SearchManager::TYPE_VIDEO))) != 0;
-            return (fileTypes & (1 << type)) != 0;
-        }
-        void addType(uint32_t type) noexcept;
-
-        string getADCPath() const noexcept;
-        string getFullName() const noexcept;
-        string getRealPath(const std::string& path) const;
-
-        int64_t getSize() const noexcept;
-
-        void search(SearchResultList& aResults, StringSearch::List& aStrings, int aSearchType, int64_t aSize, int aFileType, Client* aClient, StringList::size_type maxResults) const noexcept;
-        void search(SearchResultList& aResults, AdcSearch& aStrings, StringList::size_type maxResults) const noexcept;
-
-        void toXml(OutputStream& xmlFile, string& indent, string& tmp2, bool fullList) const;
-        void filesToXml(OutputStream& xmlFile, string& indent, string& tmp2) const;
-
-        auto findFile(const string& aFile) const -> decltype(files.cbegin()) { return find_if(files.begin(), files.end(), Directory::File::StringComp(aFile)); }
-
-        void merge(const Ptr& source);
-
-        GETSET(string, name, Name);
-        GETSET(Directory*, parent, Parent);
-    private:
-        friend void intrusive_ptr_release(intrusive_ptr_base<Directory>*);
-
-        Directory(const string& aName, const Ptr& aParent);
-        ~Directory() { }
-
-        /** Match files in this directory against an ADC search; stop at maxResults. */
-        void searchAdcFiles(SearchResultList& results, AdcSearch& query, StringSearch::List* terms,
-                            StringList::size_type maxResults) const noexcept;
-
-        /** Set of flags that say which SearchManager::TYPE_* a directory contains */
-        uint32_t fileTypes;
-
-    };
-
-    friend class Directory;
+    friend class ShareDirectory;
     friend struct ShareLoader;
     friend class ShareFileList;
     friend class ShareTreeScan;
-
     friend class Singleton<ShareManager>;
-    ShareManager();
-
-    virtual ~ShareManager();
-
-    struct AdcSearch {
-        AdcSearch(const StringList& adcParams);
-
-        bool isExcluded(const string& str);
-        bool hasExt(const string& name);
-        StringSearch::List* include;
-        StringSearch::List includeInit;
-        StringSearch::List exclude;
-        StringList ext;
-        StringList noExt;
-
-        int64_t gt;
-        int64_t lt;
-
-        TTHValue root;
-        bool hasRoot;
-
-        bool isDirectory;
-    };
-
-    bool refreshDirs;
-    bool update;
-    bool initial;
-
-    Atomic<bool,memory_ordering_strong> refreshing;
-
-    uint64_t lastFullUpdate;
-    ShareFileList fileList;
-
-    mutable CriticalSection cs;
-
-    // List of root directory items
-    typedef std::list<Directory::Ptr> DirList;
-    DirList directories;
-
-    /** Map real name to virtual name - multiple real names may be mapped to a single virtual one */
-    StringMap shares;
-
 #ifdef WITH_DHT
     friend class ::dht::IndexManager;
 #endif
 
-    typedef unordered_map<TTHValue, Directory::File::Set::const_iterator> HashFileMap;
-    typedef HashFileMap::iterator HashFileIter;
+    ShareManager();
+    virtual ~ShareManager();
 
+    bool refreshDirs;
+    bool update;
+    bool initial;
+    Atomic<bool, memory_ordering_strong> refreshing;
+    uint64_t lastFullUpdate;
+    ShareFileList fileList;
+    mutable CriticalSection cs;
+
+    DirList directories;
+    /** Map real name to virtual name - multiple real names may be mapped to a single virtual one */
+    StringMap shares;
     HashFileMap tthIndex;
-
     BloomFilter<5> bloom;
 
     Directory::File::Set::const_iterator findFile(const string& virtualFile) const;
-
     Directory::Ptr buildTree(const string& aName, const Directory::Ptr& aParent);
     bool checkHidden(const string& aName) const;
-
     void rebuildIndices();
-
     void updateIndices(Directory& aDirectory);
     void updateIndices(Directory& dir, const decltype(std::declval<Directory>().files.begin())& i);
-
     Directory::Ptr merge(const Directory::Ptr& directory);
-
     DirList::const_iterator getByVirtual(const string& virtualName) const noexcept;
     pair<Directory::Ptr, string> splitVirtual(const string& virtualPath) const;
-
     string findRealRoot(const string& virtualRoot, const string& virtualLeaf) const;
-
     Directory::Ptr getDirectory(const string& fname);
 
     virtual int run();
-
-    // QueueManagerListener
     virtual void on(QueueManagerListener::FileMoved, const string& realPath) noexcept;
-    // HashManagerListener
     virtual void on(HashManagerListener::TTHDone, const string& realPath, const TTHValue& root) noexcept;
-
-    // SettingsManagerListener
-    virtual void on(SettingsManagerListener::Save, SimpleXML& xml) noexcept {
-        save(xml);
-    }
-    virtual void on(SettingsManagerListener::Load, SimpleXML& xml) noexcept {
-        load(xml);
-    }
-
-    // TimerManagerListener
+    virtual void on(SettingsManagerListener::Save, SimpleXML& xml) noexcept { save(xml); }
+    virtual void on(SettingsManagerListener::Load, SimpleXML& xml) noexcept { load(xml); }
     virtual void on(TimerManagerListener::Minute, uint64_t tick) noexcept;
     void load(SimpleXML& aXml);
     void save(SimpleXML& aXml);
-
 };
 
 } // namespace dcpp

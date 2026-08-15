@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../ShareManager.h"
+#include "ShareDirectory.h"
 
 namespace dcpp {
 
@@ -24,8 +24,7 @@ class ShareTreeScan {
 public:
     ShareTreeScan();
 
-    ShareManager::Directory::Ptr build(const string& path,
-                                       const ShareManager::Directory::Ptr& parent);
+    ShareDirectory::Ptr build(const string& path, const ShareDirectory::Ptr& parent);
 
 private:
     string skipList;
@@ -34,8 +33,8 @@ private:
     bool blockedBySkiplist(const string& fileName, int64_t size) const;
     bool isReservedDir(const string& dirPath) const;
     bool keepFile(const string& name, const string& fileName, int64_t size) const;
-    void addFile(ShareManager::Directory::Ptr& dir,
-                 ShareManager::Directory::File::Set::iterator& lastFile,
+    void addFile(ShareDirectory::Ptr& dir,
+                 ShareDirectory::File::Set::iterator& lastFile,
                  const string& name, const string& fileName, int64_t size,
                  uint32_t lastWrite);
 };

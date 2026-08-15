@@ -17,6 +17,7 @@
 #include "dcpp/File.h"
 
 #include <QDir>
+#include <QSet>
 #include <QVector>
 
 using namespace dcpp;
@@ -32,109 +33,58 @@ bool underDir(DirectoryListing::Directory *anc, DirectoryListing::Directory *d)
     return false;
 }
 
-} // namespace
-
-void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
+bool isNestedListingDir(DirectoryListing::Directory *dir, DirectoryListing::Directory *root)
 {
-    if (user != ClientManager::getInstance()->getMe())
-        return;
+    return dir && root && dir != root && dir->getParent() && dir->getParent() != root
+            && !dynamic_cast<DirectoryListing::AdlDirectory*>(dir);
+}
 
-    QVector<FileBrowserItem*> files;
-    QVector<FileBrowserItem*> dirs;
-
-    for (const auto &index : list) {
-        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-        if (!item)
-            continue;
-        if (item->file)
-            files.push_back(item);
-        else if (item->dir && item->dir != listing.getRoot()
-                 && !dynamic_cast<DirectoryListing::AdlDirectory*>(item->dir))
-            dirs.push_back(item);
-    }
-
-    // Only topmost selected dirs (avoid use-after-free when parent+child are selected).
-    QVector<FileBrowserItem*> topDirs;
-    for (FileBrowserItem *item : dirs) {
+QVector<DirectoryListing::Directory*> topmostDirs(const QSet<DirectoryListing::Directory*> &dirs)
+{
+    QVector<DirectoryListing::Directory*> top;
+    for (DirectoryListing::Directory *dir : dirs) {
         bool nested = false;
-        for (FileBrowserItem *other : dirs) {
-            if (other != item && underDir(other->dir, item->dir)) {
+        for (DirectoryListing::Directory *other : dirs) {
+            if (other != dir && underDir(other, dir)) {
                 nested = true;
                 break;
             }
         }
         if (!nested)
-            topDirs.push_back(item);
+            top.push_back(dir);
     }
+    return top;
+}
 
-    DirectoryListing::Directory *viewParent = nullptr;
-    bool removedDir = false;
+void removeDiskDir(const string &realPath)
+{
+    if (!ShareManager::getInstance()->isNestedShareDir(realPath))
+        return;
 
-    for (FileBrowserItem *item : files) {
-        DirectoryListing::File *file = item->file;
-        if (!file)
-            continue;
+    QString qpath = _q(realPath);
+    while (qpath.endsWith(QLatin1Char('/')) || qpath.endsWith(QLatin1Char('\\')))
+        qpath.chop(1);
+    if (qpath.isEmpty())
+        return;
+    QDir(qpath).removeRecursively();
+}
 
-        bool covered = false;
-        for (FileBrowserItem *d : topDirs) {
-            if (underDir(d->dir, file->getParent())) {
-                covered = true;
-                break;
-            }
-        }
-        if (covered)
-            continue;
+} // namespace
 
-        const StringList paths = listing.getLocalPaths(file);
-        if (paths.empty())
-            continue;
+DirectoryListing::Directory *ShareBrowser::nestedDeleteDir(FileBrowserItem *item)
+{
+    if (!item)
+        return nullptr;
+    DirectoryListing::Directory *root = listing.getRoot();
+    if (item->dir)
+        return isNestedListingDir(item->dir, root) ? item->dir : nullptr;
+    if (item->file)
+        return isNestedListingDir(item->file->getParent(), root) ? item->file->getParent() : nullptr;
+    return nullptr;
+}
 
-        for (const auto &realPath : paths) {
-            try {
-                ShareManager::getInstance()->removeFile(realPath);
-                File::deleteFile(realPath);
-            } catch (const std::exception&) {}
-        }
-
-        viewParent = file->getParent();
-        if (!viewParent)
-            continue;
-
-        viewParent->files.erase(file);
-        item->file = nullptr;
-        delete file;
-    }
-
-    for (FileBrowserItem *item : topDirs) {
-        DirectoryListing::Directory *dir = item->dir;
-        if (!dir)
-            continue;
-
-        const StringList paths = listing.getLocalPaths(dir);
-        if (paths.empty())
-            continue;
-
-        for (const auto &realPath : paths) {
-            try {
-                ShareManager::getInstance()->removeDir(realPath);
-            } catch (const std::exception&) {}
-
-            QString qpath = _q(realPath);
-            while (qpath.endsWith(QLatin1Char('/')) || qpath.endsWith(QLatin1Char('\\')))
-                qpath.chop(1);
-            QDir(qpath).removeRecursively();
-        }
-
-        viewParent = dir->getParent();
-        if (!viewParent)
-            continue;
-
-        viewParent->directories.erase(dir);
-        item->dir = nullptr;
-        delete dir;
-        removedDir = true;
-    }
-
+void ShareBrowser::refreshAfterOwnDelete(DirectoryListing::Directory *viewParent, bool removedDir)
+{
     if (removedDir) {
         pathHistory.clear();
         pathHistory_iter = pathHistory.end();
@@ -157,7 +107,6 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
         FileBrowserItem *ti = remote.isEmpty() ? listRoot
             : tree_model->createRootForPath(remote, listRoot);
         if (ti) {
-            // Left-pane selection slot is a no-op in flat mode — refresh explicitly.
             if (flatMode) {
                 goToFlatItem(ti);
                 return;
@@ -165,10 +114,98 @@ void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
             const QModelIndex ix = treeMapFromSource(tree_model->createIndexForItem(ti));
             treeView_LPANE->selectionModel()->select(ix,
                     QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            return; // selection slot refreshes the right pane
+            return;
         }
     }
 
     reloadRightPane(flatMode ? currentDir() : viewParent);
     updateUpButton();
+}
+
+void ShareBrowser::deleteOwnItems(const QModelIndexList &list)
+{
+    if (user != ClientManager::getInstance()->getMe())
+        return;
+
+    DirectoryListing::Directory *viewParent = nullptr;
+
+    for (const auto &index : list) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        if (!item || !item->file)
+            continue;
+
+        DirectoryListing::File *file = item->file;
+        const StringList paths = listing.getLocalPaths(file);
+        if (paths.empty())
+            continue;
+
+        for (const auto &realPath : paths) {
+            try {
+                ShareManager::getInstance()->removeFile(realPath);
+                File::deleteFile(realPath);
+            } catch (const std::exception&) {}
+        }
+
+        viewParent = file->getParent();
+        if (!viewParent)
+            continue;
+
+        viewParent->files.erase(file);
+        item->file = nullptr;
+        delete file;
+    }
+
+    refreshAfterOwnDelete(viewParent, false);
+}
+
+void ShareBrowser::deleteOwnWholeDir(const QModelIndexList &list)
+{
+    if (user != ClientManager::getInstance()->getMe())
+        return;
+
+    QSet<DirectoryListing::Directory*> dirs;
+    for (const auto &index : list) {
+        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        if (DirectoryListing::Directory *dir = nestedDeleteDir(item))
+            dirs.insert(dir);
+    }
+
+    DirectoryListing::Directory *viewParent = nullptr;
+    bool removedDir = false;
+
+    for (DirectoryListing::Directory *dir : topmostDirs(dirs)) {
+        if (!isNestedListingDir(dir, listing.getRoot()))
+            continue;
+
+        const StringList paths = listing.getLocalPaths(dir);
+        if (paths.empty())
+            continue;
+
+        bool nestedDisk = true;
+        for (const auto &realPath : paths) {
+            if (!ShareManager::getInstance()->isNestedShareDir(realPath)) {
+                nestedDisk = false;
+                break;
+            }
+        }
+        if (!nestedDisk)
+            continue;
+
+        viewParent = dir->getParent();
+        for (const auto &realPath : paths) {
+            try {
+                ShareManager::getInstance()->removeDir(realPath);
+            } catch (const std::exception&) {}
+            removeDiskDir(realPath);
+        }
+
+        if (!viewParent)
+            continue;
+
+        viewParent->directories.erase(dir);
+        delete dir;
+        removedDir = true;
+    }
+
+    refreshAfterOwnDelete(viewParent, removedDir);
 }

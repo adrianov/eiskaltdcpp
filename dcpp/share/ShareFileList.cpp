@@ -49,7 +49,7 @@ struct ShareLoader : public SimpleXMLReader::CallBack {
                         }
                     }
                 } else if(cur) {
-                    cur = ShareManager::Directory::create(name, cur);
+                    cur = ShareDirectory::create(name, cur);
                     cur->getParent()->directories[cur->getName()] = cur;
                 }
             }
@@ -69,7 +69,7 @@ struct ShareLoader : public SimpleXMLReader::CallBack {
                 dcdebug("Invalid file found: %s\n", fname.c_str());
                 return;
             }
-            cur->files.insert(ShareManager::Directory::File(fname, Util::toInt64(size), cur, TTHValue(root)));
+            cur->files.insert(ShareDirectory::File(fname, Util::toInt64(size), cur, TTHValue(root)));
         }
     }
     virtual void endTag(const string& name) {
@@ -83,7 +83,7 @@ struct ShareLoader : public SimpleXMLReader::CallBack {
 
 private:
     ShareManager::DirList& dirs;
-    ShareManager::Directory::Ptr cur;
+    ShareDirectory::Ptr cur;
     size_t depth;
 };
 
@@ -217,7 +217,7 @@ MemoryInputStream* ShareFileList::generatePartial(const string& dir, bool recurs
     } else {
         string::size_type i = 1, j = 1;
 
-        ShareManager::Directory::Ptr root;
+        ShareDirectory::Ptr root;
 
         bool first = true;
         while( (i = dir.find('/', j)) != string::npos) {
@@ -257,7 +257,7 @@ MemoryInputStream* ShareFileList::generatePartial(const string& dir, bool recurs
     return new MemoryInputStream(xml);
 }
 
-void ShareManager::Directory::toXml(OutputStream& xmlFile, string& indent, string& tmp2, bool fullList) const {
+void ShareDirectory::toXml(OutputStream& xmlFile, string& indent, string& tmp2, bool fullList) const {
     xmlFile.write(indent);
     xmlFile.write(LITERAL("<Directory Name=\""));
     xmlFile.write(SimpleXML::escape(name, tmp2, true));
@@ -284,7 +284,7 @@ void ShareManager::Directory::toXml(OutputStream& xmlFile, string& indent, strin
     }
 }
 
-void ShareManager::Directory::filesToXml(OutputStream& xmlFile, string& indent, string& tmp2) const {
+void ShareDirectory::filesToXml(OutputStream& xmlFile, string& indent, string& tmp2) const {
     for(auto& f: files) {
         xmlFile.write(indent);
         xmlFile.write(LITERAL("<File Name=\""));

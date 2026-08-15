@@ -24,23 +24,43 @@
 
 namespace dcpp {
 
-void ShareManager::removeDir(const string& realPath) noexcept {
-    if (realPath.empty())
-        return;
+namespace {
 
-    string path = realPath;
-    if (path.back() != PATH_SEPARATOR)
+string withSlash(string path)
+{
+    if (!path.empty() && path.back() != PATH_SEPARATOR)
         path += PATH_SEPARATOR;
+    return path;
+}
 
-    bool shareRoot = false;
-    {
-        Lock l(cs);
-        shareRoot = (shares.find(path) != shares.end());
+} // namespace
+
+bool ShareManager::isNestedShareDir(const string& realPath) const noexcept {
+    if (realPath.empty())
+        return false;
+
+    const string path = withSlash(realPath);
+    Lock l(cs);
+    bool nested = false;
+    bool isRoot = false;
+    bool hasInner = false;
+    for (const auto& s : shares) {
+        const string& root = s.first;
+        if (Util::stricmp(path, root) == 0)
+            isRoot = true;
+        else if (root.size() > path.size() && Util::strnicmp(root, path, path.size()) == 0)
+            hasInner = true;
+        else if (path.size() > root.size() && Util::strnicmp(path, root, root.size()) == 0)
+            nested = true;
     }
-    if (shareRoot) {
-        removeDirectory(path);
+    return nested && !isRoot && !hasInner;
+}
+
+void ShareManager::removeDir(const string& realPath) noexcept {
+    if (realPath.empty() || !isNestedShareDir(realPath))
         return;
-    }
+
+    string path = withSlash(realPath);
 
     HashManager::getInstance()->stopHashing(path);
 

@@ -68,14 +68,14 @@ bool ShareTreeScan::keepFile(const string& name, const string& fileName, int64_t
     return true;
 }
 
-void ShareTreeScan::addFile(ShareManager::Directory::Ptr& dir,
-                            ShareManager::Directory::File::Set::iterator& lastFile,
+void ShareTreeScan::addFile(ShareDirectory::Ptr& dir,
+                            ShareDirectory::File::Set::iterator& lastFile,
                             const string& name, const string& fileName, int64_t size,
                             uint32_t lastWrite) {
     try {
         if(!HashManager::getInstance()->checkTTH(fileName, size, lastWrite))
             return;
-        ShareManager::Directory::File f(name, size, dir,
+        ShareDirectory::File f(name, size, dir,
                 HashManager::getInstance()->getTTH(fileName, size));
         f.setTS(lastWrite);
         mediaInfoFill(fileName, size, f.getTTH(), f.mediaInfo);
@@ -84,9 +84,9 @@ void ShareTreeScan::addFile(ShareManager::Directory::Ptr& dir,
     }
 }
 
-ShareManager::Directory::Ptr ShareTreeScan::build(const string& path,
-                                                  const ShareManager::Directory::Ptr& parent) {
-    auto dir = ShareManager::Directory::create(Util::getLastDir(path), parent);
+ShareDirectory::Ptr ShareTreeScan::build(const string& path,
+                                                  const ShareDirectory::Ptr& parent) {
+    auto dir = ShareDirectory::create(Util::getLastDir(path), parent);
     auto lastFile = dir->files.begin();
     FileFindIter end;
 

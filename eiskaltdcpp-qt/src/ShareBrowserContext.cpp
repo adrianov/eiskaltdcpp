@@ -59,128 +59,116 @@ QString pickDownloadTarget(QWidget *parent, const QString &title, const QString 
     return target;
 }
 
+FileBrowserItem *itemAt(const QModelIndex &index)
+{
+    return reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+}
+
 } // namespace
 
-void ShareBrowser::slotCustomContextMenu(const QPoint &){
-    QTreeView *view = dynamic_cast<QTreeView*>(sender());
-
-    if (!view)
-        return;
-
-    QItemSelectionModel *selection_model = view->selectionModel();
+QModelIndexList ShareBrowser::mappedSelection(QTreeView *view) const
+{
+    const QModelIndexList selected = view->selectionModel()->selectedRows(0);
     QModelIndexList list;
-    QModelIndexList selected  = selection_model->selectedRows(0);
-
-    if (view == treeView_RPANE && proxy){
+    if (view == treeView_RPANE && proxy) {
         for (const QModelIndex &i : selected)
             list.push_back(proxy->mapToSource(i));
+        return list;
     }
-    else if (view == treeView_LPANE && tree_proxy){
+    if (view == treeView_LPANE && tree_proxy) {
         for (const QModelIndex &i : selected)
             list.push_back(tree_proxy->mapToSource(i));
+        return list;
     }
-    else
-        list = selected;
+    return selected;
+}
 
-    if (!ShareBrowserMenu::getInstance())
-        ShareBrowserMenu::newInstance();
-
-    bool hasDeletable = false;
-    bool hasFb2 = false;
+ShareBrowserMenu::Flags ShareBrowser::menuFlags(QTreeView *view, const QModelIndexList &list)
+{
+    ShareBrowserMenu::Flags flags;
+    flags.treePane = (view == treeView_LPANE);
     for (const auto &index : list) {
-        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
+        FileBrowserItem *item = itemAt(index);
         if (!item)
             continue;
         if (item->file) {
-            hasDeletable = true;
+            flags.deletable = true;
             if (Fb2EpubExport::isFb2Name(_q(item->file->getName())))
-                hasFb2 = true;
+                flags.fb2 = true;
         }
-        if (item->dir && item->dir != listing.getRoot()
-                && !dynamic_cast<dcpp::DirectoryListing::AdlDirectory*>(item->dir)) {
-            hasDeletable = true;
-        }
+        if (nestedDeleteDir(item))
+            flags.deleteWholeDir = true;
     }
+    if (list.size() != 1)
+        return flags;
+    FileBrowserItem *item = itemAt(list.at(0));
+    if (item && item->dir && item->dir != listing.getRoot()
+            && !dynamic_cast<DirectoryListing::AdlDirectory*>(item->dir)
+            && listing.getLocalPaths(item->dir).size() == 1)
+        flags.renameFolder = true;
+    return flags;
+}
 
-    bool hasRenameFolder = false;
-    if (list.size() == 1) {
-        FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(list.at(0).internalPointer());
-        if (item && item->dir && item->dir != listing.getRoot()
-                && !dynamic_cast<dcpp::DirectoryListing::AdlDirectory*>(item->dir)
-                && listing.getLocalPaths(item->dir).size() == 1)
-            hasRenameFolder = true;
-    }
-
-    ShareBrowserMenu::Action act = ShareBrowserMenu::getInstance()->exec(
-            user, view == treeView_LPANE, hasDeletable, hasFb2, hasRenameFolder);
+void ShareBrowser::contextDownload(ShareBrowserMenu::Action act, const QModelIndexList &list)
+{
+    const bool whole = (act == ShareBrowserMenu::DownloadWholeDir
+                        || act == ShareBrowserMenu::DownloadWholeDirTo);
+    const bool choose = (act == ShareBrowserMenu::DownloadTo
+                         || act == ShareBrowserMenu::DownloadWholeDirTo);
     QString target = _q(SETTING(DOWNLOAD_DIRECTORY));
-
-    switch (act){
-        case ShareBrowserMenu::None:
-        {
-            break;
+    if (choose) {
+        static QString oldDownload = QDir::homePath();
+        static QString oldWhole = QDir::homePath();
+        QString &old = whole ? oldWhole : oldDownload;
+        target = pickDownloadTarget(this, tr("Select directory"),
+                                    ShareBrowserMenu::getInstance()->getTarget(), old);
+        if (target.isEmpty())
+            return;
+    }
+    if (whole) {
+        QSet<DirectoryListing::Directory*> dirs;
+        for (const auto &index : list) {
+            if (DirectoryListing::Directory *dir = wholeDir(itemAt(index)))
+                dirs.insert(dir);
         }
+        for (DirectoryListing::Directory *dir : dirs)
+            download(dir, target);
+        return;
+    }
+    for (const auto &index : list) {
+        FileBrowserItem *item = itemAt(index);
+        if (!item)
+            continue;
+        if (item->file)
+            download(item->file, target);
+        else if (item->dir)
+            download(item->dir, target);
+    }
+}
+
+void ShareBrowser::slotCustomContextMenu(const QPoint &)
+{
+    QTreeView *view = dynamic_cast<QTreeView*>(sender());
+    if (!view)
+        return;
+
+    const QModelIndexList list = mappedSelection(view);
+    if (!ShareBrowserMenu::getInstance())
+        ShareBrowserMenu::newInstance();
+
+    const ShareBrowserMenu::Action act =
+            ShareBrowserMenu::getInstance()->exec(user, menuFlags(view, list));
+    switch (act) {
+        case ShareBrowserMenu::None:
+            break;
         case ShareBrowserMenu::Download:
         case ShareBrowserMenu::DownloadTo:
-        {
-            static QString old_target = QDir::homePath();
-            if (act == ShareBrowserMenu::DownloadTo) {
-                target = pickDownloadTarget(this, tr("Select directory"),
-                                            ShareBrowserMenu::getInstance()->getTarget(), old_target);
-                if (target.isEmpty())
-                    break;
-            }
-
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                if (!item)
-                    continue;
-                if (item->file)
-                    download(item->file, target);
-                else if (item->dir)
-                    download(item->dir, target);
-            }
-
-            break;
-        }
         case ShareBrowserMenu::DownloadWholeDir:
         case ShareBrowserMenu::DownloadWholeDirTo:
-        {
-            static QString old_target = QDir::homePath();
-            if (act == ShareBrowserMenu::DownloadWholeDirTo) {
-                target = pickDownloadTarget(this, tr("Select directory"),
-                                            ShareBrowserMenu::getInstance()->getTarget(), old_target);
-                if (target.isEmpty())
-                    break;
-            }
-
-            QSet<DirectoryListing::Directory*> dirs;
-            for (const auto &index : list){
-                FileBrowserItem *item = reinterpret_cast<FileBrowserItem*>(index.internalPointer());
-                if (DirectoryListing::Directory *dir = wholeDir(item))
-                    dirs.insert(dir);
-            }
-
-            for (DirectoryListing::Directory *dir : dirs)
-                download(dir, target);
-
+            contextDownload(act, list);
             break;
-        }
-        case ShareBrowserMenu::Alternates:
-        case ShareBrowserMenu::CopyFileName:
-        case ShareBrowserMenu::Magnet:
-        case ShareBrowserMenu::MagnetWeb:
-        case ShareBrowserMenu::MagnetInfo:
-        case ShareBrowserMenu::AddToFav:
-        case ShareBrowserMenu::AddRestrinction:
-        case ShareBrowserMenu::RemoveRestriction:
-        case ShareBrowserMenu::OpenFile:
-        case ShareBrowserMenu::OpenUrl:
-        case ShareBrowserMenu::ConvertEpub:
-        case ShareBrowserMenu::DeleteFile:
-        case ShareBrowserMenu::RenameFolder:
+        default:
             contextMoreActions(act, list);
             break;
-        default: break;
     }
 }

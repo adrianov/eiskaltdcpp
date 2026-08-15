@@ -76,7 +76,7 @@ inline uint16_t toCode(char a, char b) {
 
 } // namespace
 
-void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::List& aStrings,
+void ShareDirectory::search(SearchResultList& aResults, StringSearch::List& aStrings,
         int aSearchType, int64_t aSize, int aFileType, Client*, StringList::size_type maxResults) const noexcept {
     if(!hasType(aFileType))
         return;
@@ -138,7 +138,7 @@ void ShareManager::search(SearchResultList& results, const string& aString, int 
         (*j)->search(results, ssl, aSearchType, aSize, aFileType, aClient, maxResults);
 }
 
-ShareManager::AdcSearch::AdcSearch(const StringList& adcParams) :
+ShareAdcSearch::ShareAdcSearch(const StringList& adcParams) :
     include(&includeInit),
     gt(0),
     lt(numeric_limits<int64_t>::max()),
@@ -177,7 +177,7 @@ ShareManager::AdcSearch::AdcSearch(const StringList& adcParams) :
     }
 }
 
-bool ShareManager::AdcSearch::isExcluded(const string& str) {
+bool ShareAdcSearch::isExcluded(const string& str) {
     for(auto& i : exclude) {
         if(i.match(str))
             return true;
@@ -185,7 +185,7 @@ bool ShareManager::AdcSearch::isExcluded(const string& str) {
     return false;
 }
 
-bool ShareManager::AdcSearch::hasExt(const string& name) {
+bool ShareAdcSearch::hasExt(const string& name) {
     if(ext.empty())
         return true;
     if(!noExt.empty()) {
@@ -199,7 +199,7 @@ bool ShareManager::AdcSearch::hasExt(const string& name) {
     return false;
 }
 
-void ShareManager::Directory::searchAdcFiles(SearchResultList& results, AdcSearch& query,
+void ShareDirectory::searchAdcFiles(SearchResultList& results, ShareAdcSearch& query,
         StringSearch::List* terms, StringList::size_type maxResults) const noexcept {
     for(auto& file : files) {
         if(file.getSize() < query.gt || file.getSize() > query.lt)
@@ -214,7 +214,7 @@ void ShareManager::Directory::searchAdcFiles(SearchResultList& results, AdcSearc
     }
 }
 
-void ShareManager::Directory::search(SearchResultList& aResults, AdcSearch& aStrings,
+void ShareDirectory::search(SearchResultList& aResults, ShareAdcSearch& aStrings,
         StringList::size_type maxResults) const noexcept {
     StringSearch::List* old = aStrings.include;
     unique_ptr<StringSearch::List> narrowed;
