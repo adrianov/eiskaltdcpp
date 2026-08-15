@@ -141,6 +141,25 @@ void ShareManager::removeFile(const string& realPath) noexcept {
     fileList.forceRefresh();
 }
 
+void ShareManager::indexFile(const string& realPath) noexcept {
+    if(realPath.empty())
+        return;
+
+    Lock l(cs);
+    Directory::Ptr d = getDirectory(realPath);
+    if(!d)
+        return;
+
+    auto i = d->findFile(Util::getFileName(realPath));
+    if(i == d->files.end())
+        return;
+
+    if(tthIndex.find(i->getTTH()) == tthIndex.end()) {
+        d->size += i->getSize();
+        tthIndex.emplace(i->getTTH(), i);
+    }
+}
+
 void ShareManager::on(QueueManagerListener::FileMoved, const string& realPath) noexcept {
     if(BOOLSETTING(ADD_FINISHED_INSTANTLY)) {
         // Check if finished download is supposed to be shared

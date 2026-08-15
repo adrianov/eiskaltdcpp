@@ -57,6 +57,8 @@ public:
     void addDirectory(const string& realPath, const string &virtualName);
     void removeDirectory(const string& realPath);
     void removeFile(const string& realPath) noexcept;
+    /** Put realPath back in tthIndex when the previous indexed copy was removed. */
+    void indexFile(const string& realPath) noexcept;
     /** True when realPath is a folder nested inside a share, not a share root or its parent. */
     bool isNestedShareDir(const string& realPath) const noexcept;
     /** Remove a nested shared directory from the in-memory index. Does not delete disk or share roots. */

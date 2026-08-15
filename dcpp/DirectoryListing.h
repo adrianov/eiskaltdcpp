@@ -19,6 +19,8 @@
 #pragma once
 
 #include <set>
+#include <unordered_map>
+#include <vector>
 
 #include "NonCopyable.h"
 
@@ -140,6 +142,13 @@ public:
     StringList getLocalPaths(const File* f) const;
     /** returns the local paths of the directory when browsing own file list */
     StringList getLocalPaths(const Directory* d) const;
+    /** Shared files with this TTH (skips ADL entries). */
+    std::vector<File*> findByTTH(const TTHValue& tth) const;
+    size_t tthCopyCount(const TTHValue& tth) const;
+    /** Rebuild TTH→file map after load or a listing rewrite. */
+    void rebuildTthIndex();
+    /** Drop file from the TTH map before it is deleted. */
+    void removeTthFile(File* file);
 
     int64_t getTotalSize(bool adls = false) { return root->getTotalSize(adls); }
     size_t getTotalFileCount(bool adls = false) { return root->getTotalFileCount(adls); }
@@ -157,6 +166,7 @@ private:
     friend class ListLoader;
 
     Directory* root;
+    std::unordered_map<TTHValue, std::vector<File*>> tthFiles;
 
 };
 

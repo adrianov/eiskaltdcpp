@@ -69,6 +69,7 @@ string DirectoryListing::loadXML(InputStream& is, bool updating, bool* hasEntrie
 
     // Drop empty / nest-only complete dirs (keeps Incomplete placeholders).
     getRoot()->pruneEmptyDirs();
+    rebuildTthIndex();
 
     return ll.getBase();
 }

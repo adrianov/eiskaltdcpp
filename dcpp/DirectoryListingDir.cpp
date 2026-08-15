@@ -96,4 +96,54 @@ size_t DirectoryListing::Directory::getTotalFileCount(bool adl) {
     return x;
 }
 
+namespace {
+
+void addByTTH(DirectoryListing::Directory *dir,
+              unordered_map<TTHValue, vector<DirectoryListing::File*>> &tthFiles)
+{
+    if (!dir || dir->getAdls())
+        return;
+    for (auto f : dir->files) {
+        if (f && !f->getAdls())
+            tthFiles[f->getTTH()].push_back(f);
+    }
+    for (auto d : dir->directories)
+        addByTTH(d, tthFiles);
+}
+
+} // namespace
+
+void DirectoryListing::rebuildTthIndex()
+{
+    tthFiles.clear();
+    addByTTH(root, tthFiles);
+}
+
+void DirectoryListing::removeTthFile(File *file)
+{
+    if (!file || file->getAdls())
+        return;
+    auto it = tthFiles.find(file->getTTH());
+    if (it == tthFiles.end())
+        return;
+    auto &files = it->second;
+    files.erase(std::remove(files.begin(), files.end(), file), files.end());
+    if (files.empty())
+        tthFiles.erase(it);
+}
+
+vector<DirectoryListing::File*> DirectoryListing::findByTTH(const TTHValue &tth) const
+{
+    auto it = tthFiles.find(tth);
+    if (it == tthFiles.end())
+        return {};
+    return it->second;
+}
+
+size_t DirectoryListing::tthCopyCount(const TTHValue &tth) const
+{
+    auto it = tthFiles.find(tth);
+    return it == tthFiles.end() ? 0 : it->second.size();
+}
+
 } // namespace dcpp
