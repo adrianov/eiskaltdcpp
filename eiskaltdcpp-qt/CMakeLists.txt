@@ -568,7 +568,7 @@ if (NOT APPLE)
     list (APPEND LIBS ${ICONV_LIBRARIES})
 endif ()
 
-if (BUILD_STATIC AND USE_QT6)
+if (BUILD_STATIC)
     if (WIN32)
         find_library (QT6FontDatabaseSupport Qt6FontDatabaseSupport)
         find_library (QT6EventDispatcherSupport Qt6EventDispatcherSupport)
@@ -660,7 +660,7 @@ if (BUILD_STATIC AND USE_QT6)
                           -lXdmcp
              )
     endif (WIN32)
-endif (BUILD_STATIC AND USE_QT6)
+endif (BUILD_STATIC)
 
 if (WIN32)
     if (OPENSSL_MSVC)

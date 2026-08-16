@@ -10,23 +10,19 @@ jobs:
     - os: linux
       dist: noble
       compiler: clang
-      env: TARGET=linux64 USE_QT=qt6 DIST=noble
-      
+      env: TARGET=linux64 DIST=noble
+
     - os: linux
       dist: noble
       compiler: gcc
-      env: TARGET=linux64 USE_QT=qt6 DIST=noble
-      
+      env: TARGET=linux64 DIST=noble
+
     - os: linux
-      dist: jammy
+      dist: noble
       env: TARGET=linux64 USE_GTK=gtk3
-      
+
     - os: linux
-      dist: jammy
-      env: TARGET=linux64 USE_GTK=gtk2
-      
-    - os: linux
-      dist: jammy
+      dist: noble
       env: TARGET=linux64 USE_DAEMON=jsonrpc
       
     - os: osx

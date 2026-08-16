@@ -18,17 +18,13 @@ then
                              libidn2-dev \
                              liblua5.1-0-dev \
                              libpcre2-dev \
-                             libminiupnpc-dev
-
-    if [ "${USE_QT}" = "qt6" ]
-    then
-        sudo apt-get install -qq qt6-base-dev \
-                                 qt6-tools-dev \
-                                 qt6-multimedia-dev \
-                                 qt6-tools-dev-tools \
-                                 libqt6core5compat6-dev \
-                                 libaspell-dev
-    fi
+                             libminiupnpc-dev \
+                             qt6-base-dev \
+                             qt6-tools-dev \
+                             qt6-multimedia-dev \
+                             qt6-tools-dev-tools \
+                             libqt6core5compat6-dev \
+                             libaspell-dev
 
     if [ "${USE_GTK}" = "gtk2" ]
     then

@@ -37,15 +37,6 @@ find_package (Gettext REQUIRED)
 find_package (Iconv REQUIRED)
 find_package (Git QUIET)
 
-option (USE_QT  "Obsolete Qt 4.x interface (unsupported)" OFF)
-option (USE_QT5 "Obsolete Qt 5.x interface (unsupported)" OFF)
-option (USE_QT6 "Qt 6.x interface." ON)
-if (USE_QT)
-    message (FATAL_ERROR "USE_QT (Qt4) is no longer supported; use -DUSE_QT6=ON")
-endif ()
-if (USE_QT5)
-    message (FATAL_ERROR "USE_QT5 is no longer supported; use -DUSE_QT6=ON")
-endif ()
 option (USE_QT_QML "Build with Qt Quick UI support" OFF)
 option (USE_QT_SQLITE "Build with SQLite support" ON)
 option (USE_GTK  "GTK+ 2.x interface" OFF)
@@ -186,12 +177,12 @@ endif (INSTALL_RUNTIME_PATH)
 
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "RelWithDebInfo")
-elseif (CMAKE_BUILD_TYPE STREQUAL "Debug" AND USE_QT6)
+elseif (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message (STATUS "${PROJECT_NAME} Qt with CMAKE_BUILD_TYPE=Debug is very unstable now!\n"
                    "\tYou can build it for your own risk.\n"
                    "\tBut do not even try to write bug reports in this case.\n"
                    "\tPlease use RelWithDebInfo instead it.")
-elseif (CMAKE_BUILD_TYPE STREQUAL "Gentoo" AND USE_QT6)
+elseif (CMAKE_BUILD_TYPE STREQUAL "Gentoo")
     message (STATUS "${PROJECT_NAME} Qt with CMAKE_BUILD_TYPE=Gentoo may be unstable now.\n"
                    "\tPlease try to use RelWithDebInfo instead it if some troubles happened.")
 endif (NOT CMAKE_BUILD_TYPE)
@@ -422,9 +413,7 @@ if (JSONRPC_DAEMON)
     add_subdirectory (json)
 endif (JSONRPC_DAEMON)
 
-if (USE_QT6)
-    add_subdirectory (eiskaltdcpp-qt)
-endif (USE_QT6)
+add_subdirectory (eiskaltdcpp-qt)
 
 if (USE_GTK OR USE_GTK3)
     add_subdirectory (eiskaltdcpp-gtk)

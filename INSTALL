@@ -142,9 +142,7 @@ Keys for cmake
 ----------------
 :eiskaltdcpp-qt:
 ----------------
--DUSE_QT6=ON/OFF (default: ON)
-    Build EiskaltDC++ with Qt interface using Qt 6.x libraries (>= 6.4)
-    Qt 4 and Qt 5 are no longer supported.
+The Qt 6.x interface (>= 6.4) is always built. Qt 4 and Qt 5 are not supported.
 -DUSE_ASPELL=ON/OFF (default: ON)
     Use or not use aspell
 -DLOCAL_ASPELL_DATA=ON/OFF (default: OFF)
@@ -185,7 +183,7 @@ Keys for cmake
 :eiskaltdcpp-daemon:
 --------------------
 -DNO_UI_DAEMON=ON/OFF (default: OFF)
-    Build daemon (without any UI)
+    Also build the headless daemon (Qt UI is still built)
 -DXMLRPC_DAEMON=ON/OFF (default: OFF)
     Make this daemon as xmlrpc server.
 -DJSONRPC_DAEMON=ON/OFF (default: ON)
@@ -259,7 +257,6 @@ And other standard cmake keys...
 mkdir -p builddir && cd builddir
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
-      -DUSE_QT6=ON \
       -DUSE_GTK=ON \
       -DUSE_ASPELL=ON \
       -DUSE_QT_QML=ON \
@@ -292,7 +289,7 @@ cd builddir
 cmake .. \
       -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
       -DCMAKE_CXX_FLAGS='-I/opt/local/include -stdlib=libc++' \
-      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON -DUSE_QT6=ON
+      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON
 make -j4
 sudo make install
 
