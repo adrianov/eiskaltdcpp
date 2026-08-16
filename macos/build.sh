@@ -11,7 +11,7 @@ export OSX_DEPLOYMENT_TARGET=${OSX_DEPLOYMENT_TARGET:-26.0}
 
 # Apple Clang rejects -fuse-ld=mold (often set for Linux). Pin system clang so
 # PATH entries like Homebrew ccache/libexec cannot change CMAKE_*_COMPILER and
-# trigger a mid-configure cache wipe (which drops CMAKE_PREFIX_PATH / Qt5).
+# trigger a mid-configure cache wipe (which drops CMAKE_PREFIX_PATH / Qt6).
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
@@ -38,6 +38,7 @@ make -sj"$(sysctl -n hw.ncpu)"
 make install
 
 app=$dist/EiskaltDC++.app
+"$root/macos/fix_dist_install_names.sh" "$app"
 aspell=$app/Contents/Resources/aspell
 
 if [ ! -d "$aspell/dict" ]; then

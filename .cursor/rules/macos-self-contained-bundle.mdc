@@ -14,9 +14,12 @@ The shipped `EiskaltDC++.app` (and DMG) must run on a Mac **without Homebrew** (
   1. Ensure packaging copies it into the bundle (`Contents/Frameworks` or `Contents/MacOS`).
   2. Rewrite install names / rpaths (`install_name_tool`, `macdeployqt`, or CMake `fixup_bundle`) so the binary loads `@rpath` / `@executable_path/...` copies.
   3. Recursively bundle **transitive** dylibs the new lib needs.
-- Prefer extending the existing install path: Qt5 uses `macdeployqt` in `eiskaltdcpp-qt/CMakeLists.txt`; non-Qt libs may need an explicit copy + `install_name_tool` step in that `APPLE` install block or `macos/build-using-homebrew.sh`.
+- Prefer extending the existing install path: Qt6 uses `macdeployqt` in `eiskaltdcpp-qt/CMakeLists.txt`; non-Qt libs may need an explicit copy + `install_name_tool` step in that `APPLE` install block or `macos/build-using-homebrew.sh`.
+- Incremental `make install` into an existing `dist/*.app` must not keep **Qt 5** frameworks (`Versions/5`) next to a **Qt 6** binary (`Versions/A`). Drop stale `Qt*.framework` / `PlugIns` before `macdeployqt`; `fix_dist_install_names.sh` must replace a bundled framework when the required versioned binary is missing.
 - After packaging, verify with something like:
-  - `otool -L EiskaltDC++.app/Contents/MacOS/EiskaltDC++` — no absolute Homebrew paths
+  - `macos/fix_dist_install_names.sh` rewrites **every** bundled Mach-O (binary, Frameworks, PlugIns), not only the main executable
+  - `otool -L` on the main binary **and** bundled dylibs/frameworks — no `/opt/homebrew` or `/usr/local` load paths or rpaths
+  - `QtWidgets.framework/Versions/A/QtWidgets` (and other Qt 6 libs) exist inside `Contents/Frameworks`
   - run the `.app` with `PATH=/usr/bin:/bin` and Homebrew unlinked or absent from `DYLD_*`
 
 ## Anti-patterns

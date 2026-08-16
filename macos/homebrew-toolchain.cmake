@@ -30,8 +30,8 @@ set(_HB_PREFIX
     "${HOMEBREW}/opt/gettext"
     "${HOMEBREW}/opt/openssl@1.1"
     "${HOMEBREW}/opt/openssl"
-    "${HOMEBREW}/opt/qt@5"
-    "${HOMEBREW}/opt/qt5"
+    "${HOMEBREW}/opt/qt@6"
+    "${HOMEBREW}/opt/qt6"
     "${HOMEBREW}/opt/qt"
     "${HOMEBREW}/opt/duckdb")
 set(CMAKE_PREFIX_PATH "${_HB_PREFIX}" CACHE STRING "Homebrew package prefixes" FORCE)

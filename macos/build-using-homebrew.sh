@@ -13,7 +13,7 @@
 # Build dependencies and useful tools:
 # export HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK=1
 # brew install ccache coreutils cmake
-# brew install aspell jsoncpp libidn2 lua miniupnpc qt@5 duckdb
+# brew install aspell jsoncpp libidn2 lua miniupnpc qt qt5compat duckdb
 #
 # Additional tools:
 # brew install wget htop
@@ -30,7 +30,7 @@ TOOLCHAIN_FILE="${CUR_DIR}/homebrew-toolchain.cmake"
 
 BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release \
                -DUSE_QT=OFF \
-               -DUSE_QT5=ON \
+               -DUSE_QT6=ON \
                -DUSE_QT_SQLITE=ON \
                -DUSE_MINIUPNP=ON \
                -DUSE_ASPELL=ON \
