@@ -17,8 +17,9 @@
 #include <QVariantMap>
 
 #include "search/SearchItem.h"
+#include "dcpp/ClientManagerListener.h"
 
-class SearchModel : public QAbstractItemModel {
+class SearchModel : public QAbstractItemModel, private dcpp::ClientManagerListener {
     Q_OBJECT
     typedef QVariantMap VarMap;
 public:
@@ -63,7 +64,7 @@ public:
     /** Re-resolve local path and queue state for one TTH, or all after async moves. */
     void refreshLocal(const QString &tth);
 
-    /** Run one Count-column root sort after a batch of grouped inserts. */
+    /** Run one Count/Online-column root sort after a batch of grouped inserts. */
     void flushDeferredSort();
 
     /** Fill empty media cells for grouped TTH roots (and children). */
@@ -90,11 +91,17 @@ private:
     void emitGroupDataChanged(SearchItem *group);
     /** refreshRowTints + emitGroupDataChanged. */
     void emitGroupChanged(SearchItem *group);
+    void refreshSourcePresence();
+    void flushSourcePresence();
+    void on(dcpp::ClientManagerListener::UserConnected, const dcpp::UserPtr&) noexcept;
+    void on(dcpp::ClientManagerListener::UserDisconnected, const dcpp::UserPtr&) noexcept;
     int filterRole;
     int sortColumn;
     Qt::SortOrder sortOrder;
-    /** True when grouped inserts need one Count-column root sort. */
+    /** True when grouped inserts need one Count/Online-column root sort. */
     bool countSortPending = false;
+    /** True while a queued presence refresh is waiting to run. */
+    bool presenceRefreshPending = false;
     SearchItem *rootItem;
     QHash<QString, SearchItem*> tths;
     /** Directories grouped by path + name (same manner as TTH for files). */

@@ -45,6 +45,7 @@ QVariant alignCell(int column)
     if (column == static_cast<int>(COLUMN_SF_ESIZE)
             || column == static_cast<int>(COLUMN_SF_SIZE)
             || column == static_cast<int>(COLUMN_SF_COUNT)
+            || column == static_cast<int>(COLUMN_SF_ONLINE)
             || column == static_cast<int>(COLUMN_SF_BR))
         return Qt::AlignRight;
     return QVariant();

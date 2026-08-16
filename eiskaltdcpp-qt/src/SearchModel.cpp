@@ -16,6 +16,7 @@
 #include "WulforUtil.h"
 
 #include "dcpp/stdinc.h"
+#include "dcpp/ClientManager.h"
 
 using namespace dcpp;
 
@@ -28,6 +29,7 @@ SearchModel::SearchModel(QObject *parent):
     QList<QVariant> rootData;
     rootData << tr("Count") << tr("File") << tr("Ext") << tr("Size")
              << tr("Path") << tr("Exact size") << QString("TTH") << tr("Nick")
+             << tr("Online")
              << tr("Free slots") << tr("Total slots")
              << tr("IP") << tr("Hub") << tr("Host")
              << tr("Bitrate") << tr("Resolution") << tr("Video") << tr("Audio");
@@ -35,10 +37,12 @@ SearchModel::SearchModel(QObject *parent):
     rootItem = new SearchItem(rootData);
 
     sortColumn = -1;
+    ClientManager::getInstance()->addListener(this);
 }
 
 SearchModel::~SearchModel()
 {
+    ClientManager::getInstance()->removeListener(this);
     delete rootItem;
 }
 
@@ -85,7 +89,7 @@ void SearchModel::flushDeferredSort() {
     if (!countSortPending)
         return;
     countSortPending = false;
-    if (sortColumn == COLUMN_SF_COUNT)
+    if (sortColumn == COLUMN_SF_COUNT || sortColumn == COLUMN_SF_ONLINE)
         sort(sortColumn, sortOrder);
 }
 

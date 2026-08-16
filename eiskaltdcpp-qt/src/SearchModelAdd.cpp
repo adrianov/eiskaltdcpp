@@ -86,7 +86,7 @@ bool SearchModel::addResult
     QList<QVariant> item_data;
 
     item_data << QVariant() << file << ext << WulforUtil::formatBytes(size)
-              << path << size << tth << nick << free_slots
+              << path << size << tth << nick << QVariant() << free_slots
               << all_slots << ip << hub << host
               << QVariant() << QVariant() << QVariant() << QVariant();
 
@@ -132,8 +132,8 @@ bool SearchModel::addResult
     // Parent / sibling offline wash may have flipped.
     emitGroupDataChanged(parent);
 
-    // Defer Count-column root resort to end of batch (avoids layoutChanged per child).
-    if (sortColumn == COLUMN_SF_COUNT)
+    // Defer Count/Online-column root resort to end of batch (avoids layoutChanged per child).
+    if (sortColumn == COLUMN_SF_COUNT || sortColumn == COLUMN_SF_ONLINE)
         countSortPending = true;
 
     return true;

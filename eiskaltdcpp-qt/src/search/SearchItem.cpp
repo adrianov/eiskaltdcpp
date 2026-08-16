@@ -12,51 +12,7 @@
 #include "search/SearchItem.h"
 #include "search/SearchLocalPath.h"
 
-#include <QSet>
-
-namespace {
-
-QString sourceIp(const SearchItem *item) {
-    QString ip = item->data(COLUMN_SF_IP).toString().trimmed();
-    if (ip == QLatin1String("0.0.0.0"))
-        ip.clear();
-    return ip;
-}
-
-/** Distinct sources: same IP once; nick merges with that IP when present, else alone; else CID. */
-int uniqueSourceCount(const SearchItem *item) {
-    QSet<QString> ips;
-    QSet<QString> nicksWithIp;
-    QSet<QString> nicksNoIp;
-    QSet<QString> cidsOnly;
-
-    auto add = [&](const SearchItem *it) {
-        const QString ip = sourceIp(it);
-        const QString nick = it->data(COLUMN_SF_NICK).toString();
-        if (!ip.isEmpty()) {
-            ips.insert(ip);
-            if (!nick.isEmpty())
-                nicksWithIp.insert(nick);
-        } else if (!nick.isEmpty()) {
-            nicksNoIp.insert(nick);
-        } else {
-            cidsOnly.insert(it->cid);
-        }
-    };
-
-    add(item);
-    for (const SearchItem *child : item->children())
-        add(child);
-
-    int n = ips.size() + cidsOnly.size();
-    for (const QString &nick : nicksNoIp) {
-        if (!nicksWithIp.contains(nick))
-            ++n;
-    }
-    return n;
-}
-
-} // namespace
+#include <QtAlgorithms>
 
 SearchItem::SearchItem(const QList<QVariant> &data, SearchItem *parent) :
     isDir(false),
@@ -76,18 +32,18 @@ void SearchItem::appendChild(SearchItem *item) {
 
 void SearchItem::insertChild(int row, SearchItem *item) {
     childItems.insert(row, item);
-    countCached = -1;
+    sources.invalidate();
 }
 
 void SearchItem::removeChild(int row) {
     childItems.removeAt(row);
-    countCached = -1;
+    sources.invalidate();
 }
 
 void SearchItem::clearChildren() {
     qDeleteAll(childItems);
     childItems.clear();
-    countCached = -1;
+    sources.invalidate();
 }
 
 SearchItem *SearchItem::child(int row) {
@@ -103,13 +59,15 @@ int SearchItem::columnCount() const {
 }
 
 QVariant SearchItem::data(int column) const {
-    if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem) {
-        if (countCached < 0)
-            countCached = uniqueSourceCount(this);
-        return countCached;
-    }
-
+    if (column == COLUMN_SF_COUNT && !childItems.isEmpty() && parentItem)
+        return sources.uniqueCount(this);
+    if (column == COLUMN_SF_ONLINE && parentItem && !parentItem->parent())
+        return sources.onlineCount(this);
     return itemData.value(column);
+}
+
+void SearchItem::clearOnlineCount() {
+    sources.invalidateOnline();
 }
 
 void SearchItem::updateColumn(int column, const QVariant &value) {
@@ -168,26 +126,4 @@ bool SearchItem::isQueued() const {
 void SearchItem::clearQueued() {
     queuedChecked = false;
     queuedCached = false;
-}
-
-SearchListException::SearchListException() :
-    message("Unknown"), type(Unkn)
-{}
-
-SearchListException::SearchListException(const SearchListException &ex) :
-    message(ex.message), type(ex.type)
-{}
-
-SearchListException::SearchListException(const QString& message, Type type) :
-    message(message), type(type)
-{}
-
-SearchListException::~SearchListException(){
-}
-
-SearchListException &SearchListException::operator =(const SearchListException &ex2) {
-    type = ex2.type;
-    message = ex2.message;
-
-    return (*this);
 }

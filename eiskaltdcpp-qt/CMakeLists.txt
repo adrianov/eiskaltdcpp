@@ -165,8 +165,9 @@ set(QT_EXTRA_SOURCES
     src/SearchFrameMedia.cpp
     src/search/SearchLocalPath.cpp
     src/search/SearchListColumns.cpp
-    src/SearchFileTypes.cpp
+    src/search/SearchSources.cpp
     src/search/SearchItemSort.cpp
+    src/SearchFileTypes.cpp
     src/SearchModelAdd.cpp
     src/SearchModelMedia.cpp
     src/SearchModelData.cpp

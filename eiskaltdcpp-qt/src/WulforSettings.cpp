@@ -89,6 +89,14 @@ void WulforSettings::load(){
         }
         settings.setValue("app/search-sort-count-migrated", true);
     }
+
+    // Online inserted after Nick: shift old Free-slots-and-after sort columns.
+    if (!settings.value("app/search-online-column-migrated", false).toBool()) {
+        const int col = settings.value(WI_SEARCH_SORT_COLUMN).toInt();
+        if (col >= 8)
+            settings.setValue(WI_SEARCH_SORT_COLUMN, col + 1);
+        settings.setValue("app/search-online-column-migrated", true);
+    }
 }
 
 void WulforSettings::loadOldConfig(){

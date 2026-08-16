@@ -15,6 +15,8 @@
 #include <QString>
 #include <QVariant>
 
+#include "search/SearchSources.h"
+
 static const unsigned COLUMN_SF_COUNT          = 0;
 static const unsigned COLUMN_SF_FILENAME       = 1;
 static const unsigned COLUMN_SF_EXTENSION      = 2;
@@ -23,16 +25,17 @@ static const unsigned COLUMN_SF_PATH           = 4;
 static const unsigned COLUMN_SF_ESIZE          = 5;
 static const unsigned COLUMN_SF_TTH            = 6;
 static const unsigned COLUMN_SF_NICK           = 7;
-static const unsigned COLUMN_SF_FREESLOTS      = 8;
-static const unsigned COLUMN_SF_ALLSLOTS       = 9;
-static const unsigned COLUMN_SF_IP             = 10;
-static const unsigned COLUMN_SF_HUB            = 11;
-static const unsigned COLUMN_SF_HOST           = 12;
+static const unsigned COLUMN_SF_ONLINE         = 8;
+static const unsigned COLUMN_SF_FREESLOTS      = 9;
+static const unsigned COLUMN_SF_ALLSLOTS       = 10;
+static const unsigned COLUMN_SF_IP             = 11;
+static const unsigned COLUMN_SF_HUB            = 12;
+static const unsigned COLUMN_SF_HOST           = 13;
 /** Media from ShareIndex (appended so saved header state stays stable). */
-static const unsigned COLUMN_SF_BR             = 13;
-static const unsigned COLUMN_SF_WH             = 14;
-static const unsigned COLUMN_SF_MVIDEO         = 15;
-static const unsigned COLUMN_SF_MAUDIO         = 16;
+static const unsigned COLUMN_SF_BR             = 14;
+static const unsigned COLUMN_SF_WH             = 15;
+static const unsigned COLUMN_SF_MVIDEO         = 16;
+static const unsigned COLUMN_SF_MAUDIO         = 17;
 static const unsigned COLUMN_SF_LAST           = COLUMN_SF_MAUDIO;
 
 class SearchListException {
@@ -43,12 +46,8 @@ public:
         Unkn
     };
 
-    SearchListException();
-    SearchListException(const SearchListException&);
-    SearchListException(const QString &message, Type type);
-    virtual ~SearchListException();
-
-    SearchListException &operator=(const SearchListException&);
+    SearchListException(const QString &message = QLatin1String("Unknown"), Type type = Unkn)
+        : message(message), type(type) {}
 
     QString message;
     Type type;
@@ -90,6 +89,8 @@ public:
     /** Gray wash: all sources offline. */
     bool mutedTint() const { return mutedTint_; }
     void setMutedTint(bool on) { mutedTint_ = on; }
+    /** Drop cached online-user count so the next data(ONLINE) lookup runs again. */
+    void clearOnlineCount();
 
     QString cid;
     bool isDir;
@@ -98,11 +99,10 @@ private:
     QList<SearchItem*> childItems;
     QList<QVariant> itemData;
     SearchItem *parentItem;
+    SearchSources sources;
     mutable bool localChecked = false;
     mutable QString localCached;
     mutable bool queuedChecked = false;
     mutable bool queuedCached = false;
-    /** Unique source count; -1 means dirty. */
-    mutable int countCached = -1;
     bool mutedTint_ = false;
 };

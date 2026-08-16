@@ -82,11 +82,11 @@ struct Compare {
         template <typename T>
         bool static Cmp(const T& l, const T& r);
 
-        static AttrComp attrs[17];
+        static AttrComp attrs[COLUMN_SF_LAST + 1];
 };
 
 template <Qt::SortOrder order>
-typename Compare<order>::AttrComp Compare<order>::attrs[17] = { CountCmp,
+typename Compare<order>::AttrComp Compare<order>::attrs[COLUMN_SF_LAST + 1] = { CountCmp,
                                                                 NaturalAttrCmp<COLUMN_SF_FILENAME>,
                                                                 AttrCmp<COLUMN_SF_EXTENSION>,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
@@ -94,6 +94,7 @@ typename Compare<order>::AttrComp Compare<order>::attrs[17] = { CountCmp,
                                                                 NumCmp<COLUMN_SF_ESIZE>,
                                                                 AttrCmp<COLUMN_SF_TTH>,
                                                                 AttrCmp<COLUMN_SF_NICK>,
+                                                                NumCmp<COLUMN_SF_ONLINE>,
                                                                 NumCmp<COLUMN_SF_FREESLOTS>,
                                                                 NumCmp<COLUMN_SF_ALLSLOTS>,
                                                                 AttrCmp<COLUMN_SF_IP>,

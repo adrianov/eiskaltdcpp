@@ -15,19 +15,9 @@
 #include "dcpp/ClientManager.h"
 #include "dcpp/User.h"
 
+#include <QMetaObject>
+
 using namespace dcpp;
-
-namespace {
-
-bool cidOffline(const QString &cid)
-{
-    if (cid.size() != 39)
-        return true;
-    const UserPtr user = ClientManager::getInstance()->findUser(CID(cid.toStdString()));
-    return !user || !user->isOnline();
-}
-
-} // namespace
 
 QString SearchModel::dirGroupKey(const QString &path, const QString &file) {
     return path + QLatin1Char('\0') + file;
@@ -38,6 +28,7 @@ void SearchModel::clearModel(){
     // QItemSelection with dangling indexes and crashes in QTreeView paint.
     beginResetModel();
     countSortPending = false;
+    presenceRefreshPending = false;
     rootItem->clearChildren();
     tths.clear();
     dirs.clear();
@@ -94,13 +85,8 @@ void SearchModel::refreshRowTints(SearchItem *item)
         group = item->parent();
 
     // Gray only when every source is offline (not for zero free slots).
-    bool allOff = cidOffline(group->cid);
-    for (SearchItem *child : group->children()) {
-        if (!allOff)
-            break;
-        allOff = cidOffline(child->cid);
-    }
-
+    group->clearOnlineCount();
+    const bool allOff = group->data(COLUMN_SF_ONLINE).toInt() == 0;
     group->setMutedTint(allOff);
     for (SearchItem *child : group->children())
         child->setMutedTint(allOff);
@@ -146,6 +132,54 @@ void SearchModel::refreshLocal(const QString &tth){
 
     // Local/queue only; muted tint updates on membership / duplicate SR.
     emitGroupDataChanged(item);
+}
+
+void SearchModel::refreshSourcePresence()
+{
+    if (presenceRefreshPending)
+        return;
+    presenceRefreshPending = true;
+    QMetaObject::invokeMethod(this, [this]() { flushSourcePresence(); },
+                              Qt::QueuedConnection);
+}
+
+void SearchModel::on(ClientManagerListener::UserConnected, const UserPtr&) noexcept
+{
+    QMetaObject::invokeMethod(this, [this]() { refreshSourcePresence(); },
+                              Qt::QueuedConnection);
+}
+
+void SearchModel::on(ClientManagerListener::UserDisconnected, const UserPtr&) noexcept
+{
+    QMetaObject::invokeMethod(this, [this]() { refreshSourcePresence(); },
+                              Qt::QueuedConnection);
+}
+
+void SearchModel::flushSourcePresence()
+{
+    presenceRefreshPending = false;
+    if (!rootItem || rootItem->childCount() == 0)
+        return;
+
+    bool onlineChanged = false;
+    bool tintChanged = false;
+    for (SearchItem *group : rootItem->children()) {
+        const int prevOnline = group->data(COLUMN_SF_ONLINE).toInt();
+        const bool prevMuted = group->mutedTint();
+        refreshRowTints(group);
+        if (group->data(COLUMN_SF_ONLINE).toInt() != prevOnline)
+            onlineChanged = true;
+        if (group->mutedTint() != prevMuted)
+            tintChanged = true;
+    }
+    if (!onlineChanged && !tintChanged)
+        return;
+    if (onlineChanged && sortColumn == COLUMN_SF_ONLINE)
+        sort(sortColumn, sortOrder);
+    else {
+        for (SearchItem *group : rootItem->children())
+            emitGroupDataChanged(group);
+    }
 }
 
 bool SearchModel::okToFind(const SearchItem *item){

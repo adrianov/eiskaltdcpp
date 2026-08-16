@@ -28,6 +28,50 @@
 
 using namespace dcpp;
 
+namespace {
+
+bool tokenMismatch(const SearchFramePrivate *d, const SearchResultPtr &sr)
+{
+    return !sr->getToken().empty() && d->token != _q(sr->getToken());
+}
+
+bool hashMismatch(const SearchFramePrivate *d, const SearchResultPtr &sr)
+{
+    return sr->getType() != SearchResult::TYPE_FILE
+            || TTHValue(Text::fromT(d->currentSearch[0])) != sr->getTTH();
+}
+
+bool termDropped(const string &file, const string &term)
+{
+    if (term[0] != '-')
+        return Util::findSubString(file, term) == string::npos;
+    return term.size() != 1 && Util::findSubString(file, term.substr(1)) != string::npos;
+}
+
+bool queryDropped(const SearchFramePrivate *d, const SearchResultPtr &sr)
+{
+    if (tokenMismatch(d, sr))
+        return true;
+    if (d->isHash)
+        return hashMismatch(d, sr);
+    const string &file = sr->getFile();
+    for (const auto &term : d->currentSearch) {
+        if (termDropped(file, term))
+            return true;
+    }
+    return false;
+}
+
+bool displayFiltered(const SearchFramePrivate *d, const SearchResultPtr &sr)
+{
+    if (d->filterShared == SearchFrame::Filter && sr->getType() == SearchResult::TYPE_FILE
+            && ShareManager::getInstance()->isTTHShared(sr->getTTH()))
+        return true;
+    return d->withFreeSlots && !sr->getFreeSlots();
+}
+
+} // namespace
+
 void SearchFrame::readSizeFilter(quint64 &size, int &mode) const {
     const QString str_size = lineEdit_SIZE->text();
     double lsize = Util::toDouble(Text::fromT(str_size.toStdString()));
@@ -100,31 +144,11 @@ void SearchFrame::slotSettingsChanged(const QString &key, const QString &value){
 void SearchFrame::on(SearchManagerListener::SR, const dcpp::SearchResultPtr& aResult) noexcept {
     Q_D(SearchFrame);
 
-    if (d->currentSearch.empty() || !aResult || d->stop == true)
+    if (d->currentSearch.empty() || !aResult || d->stop)
         return;
-
-    // Dropped = does not satisfy this search query (DC++ / Flylink meaning).
-    if (!aResult->getToken().empty() && d->token != _q(aResult->getToken())){
+    if (queryDropped(d, aResult)) {
         d->dropped++;
         return;
-    }
-
-    if(d->isHash) {
-        if(aResult->getType() != SearchResult::TYPE_FILE || TTHValue(Text::fromT(d->currentSearch[0])) != aResult->getTTH()) {
-            d->dropped++;
-            return;
-        }
-    }
-    else {
-        for (const auto &j : d->currentSearch) {
-            if((*j.begin() != ('-') && Util::findSubString(aResult->getFile(), j) == string::npos) ||
-               (*j.begin() == ('-') && j.size() != 1 && Util::findSubString(aResult->getFile(), j.substr(1)) != string::npos)
-              )
-           {
-                    d->dropped++;
-                    return;
-           }
-        }
     }
 
     // Query matched: keep for ShareIndex even if UI filters hide the row.
@@ -132,15 +156,7 @@ void SearchFrame::on(SearchManagerListener::SR, const dcpp::SearchResultPtr& aRe
     getParams(map, aResult);
     SearchFrameLocal::upsertHubResult(map);
 
-    // Filtered = matches query but hidden by display preferences (not "bad" results).
-    if (d->filterShared == Filter && aResult->getType() == SearchResult::TYPE_FILE){
-        if (ShareManager::getInstance()->isTTHShared(aResult->getTTH())) {
-            d->filtered++;
-            return;
-        }
-    }
-
-    if (d->withFreeSlots && !aResult->getFreeSlots()){
+    if (displayFiltered(d, aResult)) {
         d->filtered++;
         return;
     }
