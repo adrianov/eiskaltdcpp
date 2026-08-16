@@ -16,7 +16,7 @@
 #include "AppTheme.h"
 #include "PmSpamFilter.h"
 #include "SearchBlacklist.h"
-#include "ShortcutManager.h"
+#include "shortcut/ShortcutManager.h"
 #include "TransferView.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"

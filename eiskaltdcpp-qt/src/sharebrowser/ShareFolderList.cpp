@@ -33,7 +33,7 @@ QList<QVariant> fileRowData(DirectoryListing::File *file)
             << _q(file->mediaInfo.video_info)
             << _q(file->mediaInfo.audio_info)
             << static_cast<quint64>(file->getHit())
-            << QDateTime::fromTime_t(file->getTS()).toString("yyyy-MM-dd hh:mm");
+            << QDateTime::fromSecsSinceEpoch(file->getTS()).toString("yyyy-MM-dd hh:mm");
 }
 
 void appendFlatFiles(FileBrowserItem *listRoot, DirectoryListing &listing,

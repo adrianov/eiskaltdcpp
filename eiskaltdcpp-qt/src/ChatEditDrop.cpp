@@ -66,8 +66,8 @@ void ChatEdit::dropEvent(QDropEvent *e)
 
             QMimeData mime;
             mime.setText(dropText);
-            QDropEvent drop(e->pos(), Qt::CopyAction, &mime, e->mouseButtons(),
-                            e->keyboardModifiers(), e->type());
+            QDropEvent drop(e->position(), Qt::CopyAction, &mime, e->buttons(),
+                            e->modifiers(), e->type());
 
             QTextEdit::dropEvent(&drop);
             return;

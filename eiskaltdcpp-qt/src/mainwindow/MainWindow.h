@@ -38,7 +38,7 @@
 #include "ArenaWidget.h"
 #include "HistoryInterface.h"
 #include "LineEdit.h"
-#include "ShortcutManager.h"
+#include "shortcut/ShortcutManager.h"
 #include "AboutDialog.h"
 #include "MainWindowMenuSlots.h"
 

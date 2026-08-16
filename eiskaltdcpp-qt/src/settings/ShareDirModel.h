@@ -11,11 +11,11 @@
 
 #pragma once
 
-#include <QDirModel>
+#include <QFileSystemModel>
 #include <QSet>
 
 /** Folder tree for Preferences → Sharing: checkboxes mark shared roots. */
-class ShareDirModel : public QDirModel {
+class ShareDirModel : public QFileSystemModel {
     Q_OBJECT
 public:
     explicit ShareDirModel(QObject *parent = nullptr);

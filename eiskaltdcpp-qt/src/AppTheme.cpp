@@ -29,7 +29,7 @@ QColor AppTheme::effectiveChatBackground(){
         return clr;
 
     QColor custom;
-    custom.setNamedColor(WulforSettings::getInstance()->getStr("hubframe/chat-background-color"));
+    custom = QColor::fromString(WulforSettings::getInstance()->getStr("hubframe/chat-background-color"));
     if (custom.isValid() && !AppTheme::isLegacyBackground(custom))
         return custom;
     return clr;
@@ -167,7 +167,7 @@ QString AppTheme::chatColor(const QString &settingKey){
     if (stored.isEmpty() || isLegacyDefault(stored))
         color = defaultChatColor(settingKey);
     else {
-        color.setNamedColor(stored);
+        color = QColor::fromString(stored);
         // Dark-theme leftovers (e.g. #ffffff op/bot) → theme default for this background.
         if (!hasChatContrast(color))
             color = defaultChatColor(settingKey);

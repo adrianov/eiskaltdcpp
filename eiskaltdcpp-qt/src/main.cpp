@@ -45,7 +45,6 @@ using namespace std;
 #include "appshell/MainAppXdg.h"
 #endif
 
-#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QObject>
 
@@ -75,8 +74,6 @@ int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
 
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 

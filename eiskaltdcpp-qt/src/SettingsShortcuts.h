@@ -12,7 +12,7 @@
 #include <QWidget>
 
 #include "ui_UISettingsShortcuts.h"
-#include "ShortcutsModel.h"
+#include "shortcut/ShortcutsModel.h"
 
 class SettingsShortcuts : public QWidget, private Ui::UISettingsShortcuts
 {

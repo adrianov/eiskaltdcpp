@@ -49,7 +49,7 @@ bool ToolBar::eventFilter(QObject *obj, QEvent *e){
         QDragEnterEvent *m_e = reinterpret_cast<QDragEnterEvent*>(e);
         m_e->acceptProposedAction();
 
-        int tab = tabbar->tabAt(m_e->pos());
+        int tab = tabbar->tabAt(wulforEventPos(m_e));
         if (tab >=0 && tab != tabbar->currentIndex())
             slotIndexChanged(tab);
 
@@ -58,7 +58,7 @@ bool ToolBar::eventFilter(QObject *obj, QEvent *e){
     else if (e->type() == QEvent::DragMove && reinterpret_cast<QTabBar*>(obj) == tabbar) {
         QDragMoveEvent *m_e = reinterpret_cast<QDragMoveEvent*>(e);
 
-        int tab = tabbar->tabAt(m_e->pos());
+        int tab = tabbar->tabAt(wulforEventPos(m_e));
         if (tab >=0) {
             m_e->acceptProposedAction();
             if (tab != tabbar->currentIndex())
@@ -95,16 +95,16 @@ void ToolBar::initTabs(){
 
     tabbar->installEventFilter(this);
 
-    shortcuts << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_1), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_2), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_3), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_4), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_5), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_6), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_7), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_8), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_9), parentWidget()))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_0), parentWidget()));
+    shortcuts << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_1), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_2), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_3), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_4), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_5), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_6), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_7), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_8), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_9), parentWidget()))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_0), parentWidget()));
 
     for (const auto &s : shortcuts){
         s->setContext(Qt::ApplicationShortcut);

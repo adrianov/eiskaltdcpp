@@ -11,7 +11,9 @@
 
 #include <QMenu>
 #include <QList>
-#include <QSound>
+#include <QMetaType>
+#include <QSoundEffect>
+#include <QUrl>
 #include <QFile>
 
 #include "WulforUtil.h"
@@ -27,6 +29,23 @@ static int getBitPos(unsigned eventId){
     }
 
     return -1;
+}
+
+void Notification::playSound(const QString &file, QObject *parent)
+{
+    auto *effect = new QSoundEffect(parent);
+    effect->setSource(QUrl::fromLocalFile(file));
+    QObject::connect(effect, &QSoundEffect::playingChanged, effect, [effect]() {
+        if (effect->isPlaying())
+            effect->setProperty("played", true);
+        else if (effect->property("played").toBool())
+            effect->deleteLater();
+    });
+    QObject::connect(effect, &QSoundEffect::statusChanged, effect, [effect]() {
+        if (effect->status() == QSoundEffect::Error)
+            effect->deleteLater();
+    });
+    effect->play();
 }
 
 Notification::Notification(QObject *parent) :
@@ -202,8 +221,9 @@ void Notification::showMessage(int t, const QString &title, const QString &msg){
                 if (sound.isEmpty() || !QFile::exists(sound))
                     break;
 
-                if (!WBGET(WB_NOTIFY_SND_EXTERNAL))
-                    QSound::play(sound);
+                if (!WBGET(WB_NOTIFY_SND_EXTERNAL)) {
+                    playSound(sound, this);
+                }
                 else {
                     QString cmd = WSGET(WS_NOTIFY_SND_CMD);
 
@@ -358,7 +378,7 @@ void DBusNotifyModule::showMessage(const QString &title, const QString &msg, QOb
 
     QVariantList args;
     args << QString("EiskaltDC++");
-    args << QVariant(QVariant::UInt);
+    args << QVariant(QMetaType(QMetaType::UInt));
     args << QVariant(WulforUtil::getInstance()->getAppIconsPath() + "/" + "icon_appl_big.png");
     args << QString(title);
     args << QString(msg);

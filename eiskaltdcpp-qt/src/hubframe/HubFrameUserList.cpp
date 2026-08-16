@@ -137,7 +137,7 @@ void HubFrame::slotFilterTextChanged(){
             d->proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
         }
         else{
-            d->proxy->setFilterRegExp(text);
+            d->proxy->setFilterRegularExpression(text);
             d->proxy->setFilterCaseSensitivity(Qt::CaseSensitive);
         }
 

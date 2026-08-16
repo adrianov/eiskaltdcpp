@@ -46,19 +46,14 @@ ShareBrowser::ShareBrowser(UserPtr _user, const QString &_file, const QString &_
         listing(HintedUser(_user, "")),
         user(_user)
 {
+    const QString cid = _q(user->getCID().toBase32());
     nick = WulforUtil::getInstance()->getNicks(user->getCID());
-
-    if (nick.indexOf(_q(user->getCID().toBase32()) >= nullptr)) { // User offline
-        nick = _q(ClientManager::getInstance()->getNicks(HintedUser(user, ""))[0]);
-
+    if (nick.contains('{' + cid + '}')) {
         QFileInfo info(_file);
-
-        nick = info.baseName().left(info.baseName().indexOf("."));
-
-        if (nick == "files")
-            title = tr("Own files");
-        else
-            title = tr("Listing: ") + nick;
+        nick = info.baseName().left(info.baseName().indexOf(QLatin1Char('.')));
+        title = (nick == QLatin1String("files")) ? tr("Own files") : tr("Listing: ") + nick;
+    } else {
+        title = tr("Listing: ") + nick;
     }
 
     connect(this, SIGNAL(die(QString)), this, SLOT(slotDie(QString)), Qt::QueuedConnection);

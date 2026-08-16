@@ -14,7 +14,7 @@
 #include "MainWindow.h"
 #include "MainWindowPrivate.h"
 #include "WulforUtil.h"
-#include "ShortcutManager.h"
+#include "shortcut/ShortcutManager.h"
 #include "appicon/AppIcons.h"
 
 #include <QAction>

@@ -15,7 +15,6 @@
 #include "ShellCommandRunner.h"
 
 #include <QFileDialog>
-#include <QSound>
 #include <QDir>
 
 SettingsNotification::SettingsNotification(QWidget *parent) :
@@ -106,8 +105,9 @@ void SettingsNotification::playFile(const QString &file){
         if (file.isEmpty() || !QFile::exists(file))
             return;
 
-        if (!WBGET(WB_NOTIFY_SND_EXTERNAL))
-            QSound::play(file);
+        if (!WBGET(WB_NOTIFY_SND_EXTERNAL)) {
+            Notification::playSound(file, this);
+        }
         else {
             QString cmd = lineEdit_SNDCMD->text();
 

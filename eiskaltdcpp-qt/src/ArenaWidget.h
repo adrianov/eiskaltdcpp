@@ -17,7 +17,7 @@
 
 #ifdef USE_QML
 #include <QCloseEvent>
-#include <QtDeclarative>
+#include <QQuickWidget>
 #endif
 
 class ArenaWidget
@@ -164,7 +164,7 @@ public:
 protected:
     virtual void closeEvent(QCloseEvent *e);
 private:
-    QDeclarativeView *view;
+    QQuickWidget *view;
 };
 
 Q_DECLARE_METATYPE(DeclarativeWidget*)

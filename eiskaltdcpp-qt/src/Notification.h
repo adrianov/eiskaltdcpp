@@ -62,6 +62,8 @@ enum Type{
     void setToolTip(const QString &, const QString &, const QString &, const QString &);
     void reloadSounds();
     void resetTrayIcon();
+    /** Play a notification sound without cutting off an earlier one (Qt5 QSound). */
+    static void playSound(const QString &file, QObject *parent);
 
     void setSuppressTxt(bool suppressTxt_ = false) { suppressTxt = suppressTxt_; }
     void setSuppressSnd(bool suppressSnd_ = false) { suppressSnd = suppressSnd_; }

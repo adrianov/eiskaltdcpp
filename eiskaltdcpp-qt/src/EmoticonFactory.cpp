@@ -53,11 +53,9 @@ void EmoticonFactory::load(){
         return;
 
     QDomDocument dom;
-    QString err_msg = "";
-    int err_line = 0, err_col = 0;
-
-    if (!dom.setContent(&f, &err_msg, &err_line, &err_col)){
-        qDebug() << err_line << ":" << err_col << " " << err_msg;
+    const auto parsed = dom.setContent(&f);
+    if (!parsed){
+        qDebug() << parsed.errorLine << ":" << parsed.errorColumn << " " << parsed.errorMessage;
         f.close();
         return;
     }

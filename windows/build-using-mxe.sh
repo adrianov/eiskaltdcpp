@@ -10,7 +10,7 @@
 # project. Currently it is used for testing builds on Travis CI.
 #
 # Notes:
-# make aspell libidn2 lua miniupnpc qtbase qttools qttranslations qtmultimedia
+# make aspell libidn2 lua miniupnpc qt6-qtbase qt6-qttools qt6-qttranslations qt6-qtmultimedia qt6-qt5compat
 
 set -e
 
@@ -34,7 +34,7 @@ CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX=../../EiskaltDC++ \
                -DCMAKE_BUILD_TYPE=Release \
                -DSHARE_DIR=resources \
                -DUSE_QT=OFF \
-               -DUSE_QT5=ON \
+               -DUSE_QT6=ON \
                -DUSE_QT_SQLITE=ON \
                -DUSE_QT_QML=OFF \
                -DUSE_MINIUPNP=ON \

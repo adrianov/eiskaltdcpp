@@ -15,7 +15,7 @@
 #include "Antispam.h"
 #include "WulforUtil.h"
 #include "WulforSettings.h"
-#include "ShortcutManager.h"
+#include "shortcut/ShortcutManager.h"
 #include "appicon/AppIcons.h"
 
 #include "dcpp/SettingsManager.h"

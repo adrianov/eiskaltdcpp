@@ -63,6 +63,7 @@
 #include <QDateTime>
 #include <QThread>
 #include <QRegExp>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QHeaderView>
@@ -643,7 +644,7 @@ void HubFrame::reloadSomeSettings(){
 
     QColor clr = AppTheme::chatBackground();
     if (WBGET("hubframe/change-chat-background-color", false)) {
-        clr.setNamedColor(WSGET("hubframe/chat-background-color"));
+        clr = QColor::fromString(WSGET("hubframe/chat-background-color"));
         if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
             clr = AppTheme::chatBackground();
     }
@@ -825,9 +826,9 @@ void HubFrame::addStatus(QString msg){
 
     QString nick = " * ";
 
-    QStringList lines = msg.split(QRegExp("[\\n\\r\\f]+"), WULFOR_SKIP_EMPTY);
+    QStringList lines = msg.split(QRegularExpression("[\\n\\r\\f]+"), WULFOR_SKIP_EMPTY);
     for (int i = 0; i < lines.size(); ++i) {
-        if (lines.at(i).contains(QRegExp("\\w+"))) {
+        if (lines.at(i).contains(QRegularExpression("\\w+"))) {
             short_msg = lines.at(i);
             break;
         }
@@ -1211,7 +1212,7 @@ void HubFrame::slotInputTextChanged(){
         return;
 
     SpellCheck *sp = SpellCheck::getInstance();
-    QStringList words = line.split(QRegExp("\\W+"), WULFOR_SKIP_EMPTY);
+    QStringList words = line.split(QRegularExpression("\\W+"), WULFOR_SKIP_EMPTY);
 
     if (words.isEmpty())
         return;
@@ -1316,7 +1317,7 @@ void HubFrame::slotStatusLinkOpen(const QString &url){
 }
 
 void HubFrame::slotHubMenu(QAction *res) {
-    if (res && res->data().canConvert(QVariant::Int)) {//User command
+    if (res && res->data().canConvert<int>()) {//User command
         const int id = res->data().toInt();
 
         UserCommand uc;

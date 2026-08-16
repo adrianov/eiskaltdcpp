@@ -203,7 +203,7 @@ void CmdDebug::slotFindAll(){
         QTextEdit::ExtraSelection selection;
 
         QColor color;
-        color.setNamedColor(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
+        color = QColor::fromString(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
         color.setAlpha(WIGET(WI_CHAT_FIND_COLOR_ALPHA));
 
         selection.format.setBackground(color);

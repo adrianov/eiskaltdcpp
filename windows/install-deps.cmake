@@ -3,8 +3,8 @@ cmake_minimum_required (VERSION 3.2.0)
 if (CMAKE_PREFIX_PATH MATCHES "mxe" AND NOT BUILD_STATIC)
     set (LIBS_TARGET install-dependencies)
     set (COMMON_LIBS_DIR "${CMAKE_PREFIX_PATH}/bin")
-    set (QT_LIBS_DIR "${CMAKE_PREFIX_PATH}/qt5/bin")
-    set (QT_PLUGINS_DIR "${CMAKE_PREFIX_PATH}/qt5/plugins")
+    set (QT_LIBS_DIR "${CMAKE_PREFIX_PATH}/qt6/bin")
+    set (QT_PLUGINS_DIR "${CMAKE_PREFIX_PATH}/qt6/plugins")
 
     set (COMMON_LIBS
             libaspell-15.dll
@@ -37,30 +37,30 @@ if (CMAKE_PREFIX_PATH MATCHES "mxe" AND NOT BUILD_STATIC)
         )
 
     set (QT_LIBS
-            Qt5Concurrent.dll
-            Qt5Core.dll
-            Qt5DBus.dll
-            Qt5Gui.dll
-            Qt5Multimedia.dll
-            Qt5Network.dll
-            Qt5Sql.dll
-            Qt5Widgets.dll
-            Qt5Xml.dll
+            Qt6Concurrent.dll
+            Qt6Core.dll
+            Qt6Core5Compat.dll
+            Qt6DBus.dll
+            Qt6Gui.dll
+            Qt6Multimedia.dll
+            Qt6Network.dll
+            Qt6Sql.dll
+            Qt6Widgets.dll
+            Qt6Xml.dll
         )
 
     set (QT_PLUGINS
             audio
-            bearer
             generic
             iconengines
             imageformats
-            mediaservice
+            multimedia
+            networkinformation
             platforms
             platformthemes
-            playlistformats
-            printsupport
             sqldrivers
             styles
+            tls
         )
 
     foreach (FILE ${COMMON_LIBS})

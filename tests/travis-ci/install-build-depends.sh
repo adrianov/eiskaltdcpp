@@ -20,15 +20,13 @@ then
                              libpcre2-dev \
                              libminiupnpc-dev
 
-    if [ "${USE_QT}" = "qt5" ]
+    if [ "${USE_QT}" = "qt6" ]
     then
-        sudo apt-get install -qq qtbase5-dev \
-                                 qttools5-dev \
-                                 qtmultimedia5-dev \
-                                 qtscript5-dev \
-                                 qt5-default \
-                                 libqt5xmlpatterns5-dev \
-                                 qttools5-dev-tools \
+        sudo apt-get install -qq qt6-base-dev \
+                                 qt6-tools-dev \
+                                 qt6-multimedia-dev \
+                                 qt6-tools-dev-tools \
+                                 libqt6core5compat6-dev \
                                  libaspell-dev
     fi
 
@@ -83,6 +81,6 @@ if [ "${TARGET}" = "macos64" ]
 then
     # export HOMEBREW_NO_AUTO_UPDATE=1
     export HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK=1
-    # brew install cmake gettext qt qt@5
+    # brew install cmake gettext qt qt5compat
     brew install ccache coreutils aspell jsoncpp libidn2 lua miniupnpc
 fi

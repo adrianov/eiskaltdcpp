@@ -61,7 +61,7 @@ void  ScriptWidget::setPixmap(const QPixmap &px) { pxm = px; }
 
 #ifdef USE_QML
 DeclarativeWidget::DeclarativeWidget(const QString &file) : QWidget(nullptr) {
-    view = new QDeclarativeView();
+    view = new QQuickWidget();
     view->setSource(QUrl::fromLocalFile(file));
 
     setLayout(new QVBoxLayout());

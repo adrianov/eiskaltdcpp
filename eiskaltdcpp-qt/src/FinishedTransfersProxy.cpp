@@ -99,21 +99,21 @@ void FinishedTransferProxyModel::setFullOnly(bool fullOnly) {
     if (fullOnly_ == fullOnly)
         return;
     fullOnly_ = fullOnly;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
 }
 
 void FinishedTransferProxyModel::setTextFilter(const QString &text) {
     if (textFilter_ == text)
         return;
     textFilter_ = text;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
 }
 
 void FinishedTransferProxyModel::setFileView(bool fileView) {
     if (fileView_ == fileView)
         return;
     fileView_ = fileView;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
 }
 
 void FinishedTransferProxyModel::setTypeFilter(const QStringList &exts, bool adultVideo) {
@@ -121,7 +121,7 @@ void FinishedTransferProxyModel::setTypeFilter(const QStringList &exts, bool adu
         return;
     extFilter_ = exts;
     adultVideo_ = adultVideo;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
 }
 
 bool FinishedTransferProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {

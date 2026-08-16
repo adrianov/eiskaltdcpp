@@ -40,10 +40,13 @@ declare -A paused
 
 QDBUS=$(which qdbus 2>/dev/null);
 if [ -z "$QDBUS" ]; then
+	QDBUS=$(which qdbus-qt6 2>/dev/null);
+fi
+if [ -z "$QDBUS" ]; then
 	QDBUS=$(which qdbus-qt5 2>/dev/null);
 fi
 if [ -z "$QDBUS" ]; then
-	echo "/me is missing qdbus or qdbus-qt5... :(";
+	echo "/me is missing qdbus, qdbus-qt6 or qdbus-qt5... :(";
 	exit 0;
 fi
 

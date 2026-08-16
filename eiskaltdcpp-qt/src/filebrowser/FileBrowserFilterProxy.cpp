@@ -10,6 +10,7 @@
  ***************************************************************************/
 
 #include "filebrowser/FileBrowserFilterProxy.h"
+#include "QtCompat.h"
 
 FileBrowserFilterProxy::FileBrowserFilterProxy(QObject *parent):
     QSortFilterProxyModel(parent)
@@ -39,7 +40,7 @@ void FileBrowserFilterProxy::applyFilters(const FilterMatch &match, const QStrin
     Q_UNUSED(pathPrefix);
     if (!filter_.set(match))
         return;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
 }
 
 bool FileBrowserFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {

@@ -83,62 +83,74 @@ static bool parseBasicBBCode(const QString &tag, const QString &txt, QString &in
     return false;
 }
 
+static bool parseColorBBCode(QString &input, QString &output)
+{
+    if (!input.startsWith("[color=") || input.indexOf("[/color]") <= 8)
+        return false;
+    QRegExp exp("\\[color=(\\w+|#.{6,6})\\]((.*))\\[/color\\].*");
+    const QString chunk = input.left(input.indexOf("[/color]") + 8);
+    if (!exp.exactMatch(chunk) || exp.captureCount() != 3)
+        return false;
+    const QColor bbColor = QColor::fromString(exp.cap(1));
+    output += "<font color=\"" + AppTheme::readableChatColor(bbColor).name() + "\">"
+            + HubFrame::LinkParser::parseForLinks(exp.cap(2), true) + "</font>";
+    input.remove(0, chunk.length());
+    return true;
+}
+
+static bool parseUrlBBCode(QString &input, QString &output)
+{
+    if (!input.startsWith("[url") || input.indexOf("[/url]") <= 0)
+        return false;
+    QRegExp exp("\\[url=*((.+[^\\]\\[]))*\\]((.+))\\[/url\\]");
+    const QString chunk = input.left(input.indexOf("[/url]") + 6);
+    if (!exp.exactMatch(chunk) || exp.captureCount() != 4)
+        return false;
+    QString link = exp.cap(2);
+    const QString title = exp.cap(3);
+    link = link.isEmpty() ? title : link;
+    if (link.startsWith("="))
+        link.remove(0, 1);
+    if (title.isEmpty())
+        return false;
+    output += "<a href=\"" + link + "\" title=\"" + title.toHtmlEscaped() + "\">"
+            + title.toHtmlEscaped() + "</a>";
+    input.remove(0, chunk.length());
+    return true;
+}
+
+static bool parseCodeBBCode(QString &input, QString &output)
+{
+    if (!input.startsWith("[code]") || input.indexOf("[/code]") <= 0)
+        return false;
+    input.remove(0, 6);
+    const int c_len = input.indexOf("[/code]");
+    output += "<table border=1 width=100%><tr><td align=\"left\">Code:</td></tr>"
+              "<tr><td align=\"left\"><pre style=\"white-space: pre;\"><tt>"
+            + input.left(c_len) + "</tt></pre></td></tr></table>";
+    input.remove(0, c_len + 7);
+    return true;
+}
+
 bool hubFrameTryBbCode(QString &input, QString &output)
 {
     if (!WBGET("hubframe/use-bb-code", false))
         return false;
-
-    if (parseBasicBBCode("b", "b", input, output) ||
-        parseBasicBBCode("u", "u", input, output) ||
-        parseBasicBBCode("i", "i", input, output) ||
-        parseBasicBBCode("s", "s", input, output))
+    if (parseBasicBBCode("b", "b", input, output)
+            || parseBasicBBCode("u", "u", input, output)
+            || parseBasicBBCode("i", "i", input, output)
+            || parseBasicBBCode("s", "s", input, output))
         return true;
-
-    if (input.startsWith("[color=") && input.indexOf("[/color]") > 8){
-        QRegExp exp("\\[color=(\\w+|#.{6,6})\\]((.*))\\[/color\\].*");
-        QString chunk = input.left(input.indexOf("[/color]") + 8);
-        if (exp.exactMatch(chunk) && exp.captureCount() == 3){
-            QColor bbColor;
-            bbColor.setNamedColor(exp.cap(1));
-            output += "<font color=\"" + AppTheme::readableChatColor(bbColor).name() + "\">"
-                    + HubFrame::LinkParser::parseForLinks(exp.cap(2), true) + "</font>";
-            input.remove(0, chunk.length());
-            return true;
-        }
-    } else if (input.startsWith("[url") && input.indexOf("[/url]") > 0){
-        QRegExp exp("\\[url=*((.+[^\\]\\[]))*\\]((.+))\\[/url\\]");
-        QString chunk = input.left(input.indexOf("[/url]") + 6);
-        if (exp.exactMatch(chunk) && exp.captureCount() == 4){
-            QString link = exp.cap(2);
-            QString title = exp.cap(3);
-            link = link.isEmpty() ? title : link;
-            if (link.startsWith("="))
-                link.remove(0, 1);
-            if (!title.isEmpty()){
-                output += "<a href=\"" + link + "\" title=\"" + title.toHtmlEscaped() + "\">"
-                        + title.toHtmlEscaped() + "</a>";
-                input.remove(0, chunk.length());
-                return true;
-            }
-        }
-    } else if (input.startsWith("[code]") && input.indexOf("[/code]") > 0){
-        input.remove(0, 6);
-        const int c_len = input.indexOf("[/code]");
-        output += "<table border=1 width=100%><tr><td align=\"left\">Code:</td></tr>"
-                  "<tr><td align=\"left\"><pre style=\"white-space: pre;\"><tt>"
-                + input.left(c_len) + "</tt></pre></td></tr></table>";
-        input.remove(0, c_len + 7);
-        return true;
-    }
-
-    return false;
+    return parseColorBBCode(input, output)
+            || parseUrlBBCode(input, output)
+            || parseCodeBBCode(input, output);
 }
 
 void HubFrame::LinkParser::parseForMagnetAlias(QString &output){
     int pos = 0;
     QRegExp rx("(<magnet(?:\\s+show=([^>]+))?>(.+)</magnet>)");
     rx.setMinimal(true);
-    while ((pos = output.indexOf(rx, pos)) >= 0) {
+    while ((pos = rx.indexIn(output, pos)) >= 0) {
         QFileInfo fi(rx.cap(3));
         if (fi.isDir() || !fi.exists()) {
             pos++;

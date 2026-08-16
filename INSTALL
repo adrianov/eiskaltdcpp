@@ -20,9 +20,9 @@ libattr (optional, see cmake keys)
 ----------------
 :eiskaltdcpp-qt:
 ----------------
-libqt5core5a, libqt5gui5, libqt5widgets5, libqt5network5, libqt5xml5 (>= 5.15.0)
-libqt5script5 (>= 5.15.0) (optional, see cmake keys)
-libqt5dbus5 (>= 5.15.0) (optional, see cmake keys)
+libqt6core6, libqt6gui6, libqt6widgets6, libqt6network6, libqt6xml6 (>= 6.4)
+libqt6core5compat6 (>= 6.4)
+libqt6dbus6 (>= 6.4) (optional, see cmake keys)
 .
 libaspell (optional, see cmake keys)
 -----------------
@@ -59,11 +59,7 @@ Optional Depends
 :eiskaltdcpp-qt:
 ----------------
 sh (bash, dash, etc...)
-    see examples/ and eiskaltdcpp-qt/qtscripts/
-php5-cli (or other version, check the compatibility by yourself)
-    see eiskaltdcpp-qt/examples/ and eiskaltdcpp-qt/qtscripts/
-libqtscript4-core, libqtscript4-gui, libqtscript4-network, libqtscript4-xml
-    see eiskaltdcpp-qt/qtscripts/
+    see examples/
 
 
 *******************************************************************************
@@ -73,7 +69,7 @@ Build Depends
 :common:
 --------
 gcc (>= 6.3.0) or clang (>= 3.8)
-cmake (>= 3.2.0)
+cmake (>= 3.16)
 bzip2
 zlib
 ----------------
@@ -88,7 +84,7 @@ libattr-dev (optional, see cmake keys)
 ----------------
 :eiskaltdcpp-qt:
 ----------------
-Qt5 (>= 5.15.0)
+Qt6 (>= 6.4) and Qt Core5Compat
 libaspell-dev (optional, see cmake keys)
 -----------------
 :eiskaltdcpp-gtk:
@@ -146,8 +142,9 @@ Keys for cmake
 ----------------
 :eiskaltdcpp-qt:
 ----------------
--DUSE_QT5=ON/OFF (default: ON)
-    Build EiskaltDC++ with Qt interface using Qt 5.x libraries (>= 5.15)
+-DUSE_QT6=ON/OFF (default: ON)
+    Build EiskaltDC++ with Qt interface using Qt 6.x libraries (>= 6.4)
+    Qt 4 and Qt 5 are no longer supported.
 -DUSE_ASPELL=ON/OFF (default: ON)
     Use or not use aspell
 -DLOCAL_ASPELL_DATA=ON/OFF (default: OFF)
@@ -161,9 +158,9 @@ Keys for cmake
 -DDBUS_NOTIFY=ON/OFF (default: ON)
     Use or not use QtDBus module
 -DUSE_JS=ON/OFF (default: OFF)
-    Enable/disable QtScript basic support
+    QtScript support was removed with Qt 6 and this option is rejected.
 -DUSE_QT_QML=ON/OFF (default: OFF)
-    Enable/disable Qt Declarative UI support
+    Enable/disable Qt Quick UI support
 -DUSE_QT_SQLITE=ON/OFF (default: ON)
     Build with SQLite (FinishedTransfers) and DuckDB ShareIndex.
     On macOS, install DuckDB via Homebrew (`brew install duckdb`); packaging
@@ -262,9 +259,8 @@ And other standard cmake keys...
 mkdir -p builddir && cd builddir
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
-      -DUSE_QT5=ON \
+      -DUSE_QT6=ON \
       -DUSE_GTK=ON \
-      -DUSE_JS=ON \
       -DUSE_ASPELL=ON \
       -DUSE_QT_QML=ON \
       -DUSE_QT_SQLITE=ON \
@@ -296,7 +292,7 @@ cd builddir
 cmake .. \
       -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
       -DCMAKE_CXX_FLAGS='-I/opt/local/include -stdlib=libc++' \
-      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON -DUSE_QT5=ON
+      -DNO_UI_DAEMON=ON -DXMLRPC_DAEMON=ON -DJSONRPC_DAEMON=ON -DUSE_QT6=ON
 make -j4
 sudo make install
 

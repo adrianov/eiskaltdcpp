@@ -16,6 +16,8 @@
 #include <string>
 #include <vector>
 
+class SearchItem;
+
 /** Live view filter for Search results (text terms, size, file type). */
 class SearchProxyModel: public QSortFilterProxyModel {
 Q_OBJECT
@@ -32,6 +34,11 @@ protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
 private:
+    bool acceptText(const QAbstractItemModel *model, int row, const QModelIndex &parent) const;
+    bool acceptType(const SearchItem *item, const QAbstractItemModel *model,
+                    int row, const QModelIndex &parent) const;
+    bool acceptSize(const QAbstractItemModel *model, int row, const QModelIndex &parent) const;
+
     struct Term {
         std::string value;
         bool exclude = false;

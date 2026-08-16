@@ -61,58 +61,66 @@ void SearchProxyModel::applyFilters(const QStringList &terms, qulonglong size, i
     dirsOnly_ = dirsOnly;
     filesOnly_ = filesOnly;
     extFilter_ = exts;
-    invalidateFilter();
+    WULFOR_INVALIDATE_FILTER();
+}
+
+bool SearchProxyModel::acceptText(const QAbstractItemModel *model, int row,
+                                 const QModelIndex &parent) const {
+    if (textTerms_.empty())
+        return true;
+    // Same case-insensitive fold as hub intake (Util::findSubString / utf8ToLC).
+    const string haystack = _tq(
+            model->data(model->index(row, COLUMN_SF_PATH, parent)).toString() +
+            model->data(model->index(row, COLUMN_SF_FILENAME, parent)).toString() +
+            QLatin1Char(' ') +
+            model->data(model->index(row, COLUMN_SF_TTH, parent)).toString());
+    for (const Term &term : textTerms_) {
+        const bool found = Util::findSubString(haystack, term.value) != string::npos;
+        if (term.exclude ? found : !found)
+            return false;
+    }
+    return true;
+}
+
+bool SearchProxyModel::acceptType(const SearchItem *item, const QAbstractItemModel *model,
+                                  int row, const QModelIndex &parent) const {
+    if (dirsOnly_)
+        return item->isDir;
+    if (!filesOnly_ && extFilter_.isEmpty())
+        return true;
+    if (item->isDir)
+        return false;
+    if (extFilter_.isEmpty())
+        return true;
+    const QString ext = model->data(model->index(row, COLUMN_SF_EXTENSION, parent)).toString();
+    return !ext.isEmpty() && extFilter_.contains(ext, Qt::CaseInsensitive);
+}
+
+bool SearchProxyModel::acceptSize(const QAbstractItemModel *model, int row,
+                                  const QModelIndex &parent) const {
+    if (!sizeLimit_ || sizeMode_ == SearchManager::SIZE_DONTCARE)
+        return true;
+    const qulonglong size = model->data(model->index(row, COLUMN_SF_ESIZE, parent)).toULongLong();
+    if (sizeMode_ == SearchManager::SIZE_ATLEAST)
+        return size >= sizeLimit_;
+    if (sizeMode_ == SearchManager::SIZE_ATMOST)
+        return size <= sizeLimit_;
+    return true;
 }
 
 bool SearchProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const {
     const QAbstractItemModel *model = sourceModel();
     if (!model)
         return true;
-
-    const bool noText = textTerms_.empty();
-    const bool noType = !dirsOnly_ && !filesOnly_ && extFilter_.isEmpty();
-    const bool noSize = !sizeLimit_ || sizeMode_ == SearchManager::SIZE_DONTCARE;
-    if (noText && noType && noSize)
+    if (textTerms_.empty() && !dirsOnly_ && !filesOnly_ && extFilter_.isEmpty()
+            && (!sizeLimit_ || sizeMode_ == SearchManager::SIZE_DONTCARE))
         return true;
 
-    const QModelIndex nameIndex = model->index(sourceRow, COLUMN_SF_FILENAME, sourceParent);
-    const SearchItem *item = static_cast<SearchItem*>(nameIndex.internalPointer());
+    const SearchItem *item = static_cast<SearchItem*>(
+            model->index(sourceRow, COLUMN_SF_FILENAME, sourceParent).internalPointer());
     if (!item)
         return false;
-
-    if (!noText) {
-        // Same case-insensitive fold as hub intake (Util::findSubString / utf8ToLC).
-        const string haystack = _tq(
-                model->data(model->index(sourceRow, COLUMN_SF_PATH, sourceParent)).toString() +
-                model->data(nameIndex).toString() + QLatin1Char(' ') +
-                model->data(model->index(sourceRow, COLUMN_SF_TTH, sourceParent)).toString());
-        for (const Term &term : textTerms_) {
-            const bool found = Util::findSubString(haystack, term.value) != string::npos;
-            if (term.exclude ? found : !found)
-                return false;
-        }
-    }
-
-    if (dirsOnly_) {
-        if (!item->isDir)
-            return false;
-    } else if (filesOnly_ || !extFilter_.isEmpty()) {
-        if (item->isDir)
-            return false;
-        if (!extFilter_.isEmpty()) {
-            const QString ext = model->data(model->index(sourceRow, COLUMN_SF_EXTENSION, sourceParent)).toString();
-            if (ext.isEmpty() || !extFilter_.contains(ext, Qt::CaseInsensitive))
-                return false;
-        }
-    }
-
-    if (!noSize) {
-        const qulonglong size = model->data(model->index(sourceRow, COLUMN_SF_ESIZE, sourceParent)).toULongLong();
-        if (sizeMode_ == SearchManager::SIZE_ATLEAST && size < sizeLimit_)
-            return false;
-        if (sizeMode_ == SearchManager::SIZE_ATMOST && size > sizeLimit_)
-            return false;
-    }
-
-    return true;
+    return acceptText(model, sourceRow, sourceParent)
+            && acceptType(item, model, sourceRow, sourceParent)
+            && acceptSize(model, sourceRow, sourceParent);
 }

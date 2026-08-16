@@ -20,7 +20,7 @@
 #include <QDir>
 #include <QFile>
 #include <QIODevice>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QTextStream>
 
 #include <cstdio>
@@ -105,7 +105,7 @@ void migrateConfig(){
         QTextStream rstream(&orig);
         QTextStream wstream(&new_file);
 
-        QRegExp replace_str("/(\\S+)/\\.eiskaltdc\\+\\+/");
+        QRegularExpression replace_str("/(\\S+)/\\.eiskaltdc\\+\\+/");
         QString line = "";
 
         while (!rstream.atEnd()){

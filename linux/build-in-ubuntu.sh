@@ -10,7 +10,7 @@ set -x
 export CXXFLAGS="$(dpkg-buildflags --get CXXFLAGS) \
                  $(dpkg-buildflags --get CPPFLAGS)"
 export LDFLAGS="$(dpkg-buildflags --get LDFLAGS) -Wl,--as-needed"
-[ "${USE_QT}" = "qt5" ] && CXXFLAGS="${CXXFLAGS} -fPIC" || true
+[ "${USE_QT}" = "qt6" ] && CXXFLAGS="${CXXFLAGS} -fPIC" || true
 
 CMAKE_OPTIONS=".. \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -26,22 +26,22 @@ CMAKE_OPTIONS=".. \
     -DWITH_SOUNDS=ON \
     "
 
-if [ "${USE_QT}" = "qt5" ]
+if [ "${USE_QT}" = "qt6" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DUSE_QT=OFF \
         -DUSE_QT_QML=OFF \
-        -DUSE_QT5=ON \
+        -DUSE_QT6=ON \
         "
 fi
 
-if [ "${USE_QT}" = "qt5" ]
+if [ "${USE_QT}" = "qt6" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DDBUS_NOTIFY=ON \
         -DWITH_EMOTICONS=ON \
         -DWITH_EXAMPLES=ON \
-        -DUSE_JS=ON \
+        -DUSE_JS=OFF \
         -DUSE_ASPELL=ON \
         -DUSE_QT_SQLITE=ON \
         "
@@ -65,7 +65,7 @@ if [ "${USE_GTK}" = "gtk2" ] || [ "${USE_GTK}" = "gtk3" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DUSE_QT=OFF \
-        -DUSE_QT5=OFF \
+        -DUSE_QT6=OFF \
         -DUSE_LIBGNOME2=OFF \
         -DCHECK_GTK_DEPRECATED=OFF \
         -DUSE_LIBCANBERRA=ON \
@@ -78,7 +78,7 @@ if [ "${USE_DAEMON}" = "jsonrpc" ]
 then
     CMAKE_OPTIONS="${CMAKE_OPTIONS} \
         -DUSE_QT=OFF \
-        -DUSE_QT5=OFF \
+        -DUSE_QT6=OFF \
         -DNO_UI_DAEMON=ON \
         -DXMLRPC_DAEMON=OFF \
         -DJSONRPC_DAEMON=ON \

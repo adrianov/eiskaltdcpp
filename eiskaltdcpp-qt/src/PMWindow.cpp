@@ -111,7 +111,7 @@ PMWindow::PMWindow(const QString &cid_, const QString &hubUrl_):
         QColor clr = AppTheme::chatBackground();
 
         if (WBGET("hubframe/change-chat-background-color", false)){
-            clr.setNamedColor(WSGET("hubframe/chat-background-color"));
+            clr = QColor::fromString(WSGET("hubframe/chat-background-color"));
 
             if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
                 clr = AppTheme::chatBackground();
@@ -549,7 +549,7 @@ void PMWindow::slotSettingChanged(const QString &key, const QString &value){
         QColor clr = AppTheme::chatBackground();
 
         if (WBGET("hubframe/change-chat-background-color", false)){
-            clr.setNamedColor(WSGET("hubframe/chat-background-color"));
+            clr = QColor::fromString(WSGET("hubframe/chat-background-color"));
 
             if (!clr.isValid() || AppTheme::isLegacyBackground(clr))
                 clr = AppTheme::chatBackground();
@@ -611,7 +611,7 @@ void PMWindow::slotFindAll(){
         QTextEdit::ExtraSelection selection;
 
         QColor color;
-        color.setNamedColor(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
+        color = QColor::fromString(AppTheme::chatColor(WS_CHAT_FIND_COLOR));
         color.setAlpha(WIGET(WI_CHAT_FIND_COLOR_ALPHA));
 
         selection.format.setBackground(color);

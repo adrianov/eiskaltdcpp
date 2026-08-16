@@ -54,7 +54,7 @@ SearchResultsMenu::Action SearchResultsMenu::exec(const QStringList &list, bool 
         return DownloadTo;
     } else if (down_wh_to->takeTarget(ret, downToPath)) {
         return DownloadWholeDirTo;
-    } else if (ret && ret->data().canConvert(QVariant::Int)) {
+    } else if (ret && ret->data().canConvert<int>()) {
         uc_cmd_id = ret->data().toInt();
         return UserCommands;
     } else {

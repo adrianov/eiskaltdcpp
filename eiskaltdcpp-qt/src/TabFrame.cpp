@@ -35,16 +35,16 @@ TabFrame::TabFrame(QWidget *parent) :
     setMinimumHeight(20);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    shortcuts << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_1), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_2), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_3), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_4), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_5), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_6), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_7), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_8), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_9), this))
-              << (new QShortcut(QKeySequence(Qt::ALT + Qt::Key_0), this));
+    shortcuts << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_1), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_2), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_3), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_4), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_5), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_6), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_7), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_8), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_9), this))
+              << (new QShortcut(QKeySequence(Qt::ALT | Qt::Key_0), this));
 
     for (const auto &s : shortcuts){
         s->setContext(Qt::ApplicationShortcut);

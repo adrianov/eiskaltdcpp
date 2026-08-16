@@ -11,7 +11,7 @@
 #include "MainWindowPrivate.h"
 #include "HashProgress.h"
 #include "PmSpamFilter.h"
-#include "ShortcutManager.h"
+#include "shortcut/ShortcutManager.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"
 #include "mainwindow/actions/MenuLabels.h"

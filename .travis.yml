@@ -8,25 +8,25 @@ if: tag IS blank
 jobs:
   include:
     - os: linux
-      dist: bionic
+      dist: noble
       compiler: clang
-      env: TARGET=linux64 USE_QT=qt5 DIST=bionic
+      env: TARGET=linux64 USE_QT=qt6 DIST=noble
       
     - os: linux
-      dist: bionic
+      dist: noble
       compiler: gcc
-      env: TARGET=linux64 USE_QT=qt5 DIST=bionic
+      env: TARGET=linux64 USE_QT=qt6 DIST=noble
       
     - os: linux
-      dist: bionic
+      dist: jammy
       env: TARGET=linux64 USE_GTK=gtk3
       
     - os: linux
-      dist: bionic
+      dist: jammy
       env: TARGET=linux64 USE_GTK=gtk2
       
     - os: linux
-      dist: bionic
+      dist: jammy
       env: TARGET=linux64 USE_DAEMON=jsonrpc
       
     - os: osx

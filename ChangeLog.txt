@@ -1,6 +1,9 @@
 --- 2.4.3 2024-07-xx ---
 *** common changes ***
-* Stopped support of cmake versions less than 3.7.2.
+* Stopped support of cmake versions less than 3.16.
+* Port Qt UI from Qt 5 to Qt 6 (>= 6.4). Qt 4 and Qt 5 builds are no longer
+  supported. Hub encodings (QTextCodec) and wildcard filters (QRegExp) keep
+  the same behavior via Qt Core5Compat. QtScript support is removed.
 * Added configuration option INSTALL_METAINFO. (Useful in GNU/Linux systems.)
 * Port ADL search from PCRECPP to PCRE2. [Thanks to Yavor Doganov]
 *** libeiskaltdcpp ***

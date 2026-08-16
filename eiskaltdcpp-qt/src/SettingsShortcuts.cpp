@@ -9,7 +9,7 @@
 
 #include "SettingsShortcuts.h"
 #include "MainWindow.h"
-#include "ShortcutGetter.h"
+#include "shortcut/ShortcutGetter.h"
 #include "WulforSettings.h"
 #include "WulforUtil.h"
 

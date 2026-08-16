@@ -22,20 +22,16 @@
 
 using namespace dcpp;
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 QString ShareDirModel::filePath(const QModelIndex &index) const
 {
-    return QDir::toNativeSeparators(QDirModel::filePath(index));
+    return QDir::toNativeSeparators(QFileSystemModel::filePath(index));
 }
 
 ShareDirModel::ShareDirModel(QObject *parent)
+    : QFileSystemModel(parent)
 {
-    QDirModel::setParent(parent);
-    QDirModel::setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
+    setFilter(QDir::AllDirs | QDir::NoDotAndDotDot);
+    setRootPath(QDir::rootPath());
 
     for (const auto &pair : ShareManager::getInstance()->getDirectories()) {
         QString path = pair.second.c_str();
@@ -50,7 +46,7 @@ ShareDirModel::~ShareDirModel() = default;
 
 Qt::ItemFlags ShareDirModel::flags(const QModelIndex &index) const
 {
-    Qt::ItemFlags f = QDirModel::flags(index);
+    Qt::ItemFlags f = QFileSystemModel::flags(index);
     if (!index.column())
         f |= Qt::ItemIsUserCheckable;
 
@@ -83,13 +79,13 @@ QVariant ShareDirModel::data(const QModelIndex &index, int role) const
         font.setBold(true);
         return font;
     }
-    return QDirModel::data(index, role);
+    return QFileSystemModel::data(index, role);
 }
 
 bool ShareDirModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (!index.isValid() || index.column() || role != Qt::CheckStateRole)
-        return QDirModel::setData(index, value, role);
+        return QFileSystemModel::setData(index, value, role);
 
     if (value.toInt() == Qt::Checked) {
         emit getName(index);
@@ -123,7 +119,7 @@ void ShareDirModel::setAlias(const QModelIndex &index, const QString &alias)
         return;
     }
 
-    QDirModel::setData(index, true, Qt::CheckStateRole);
+    emit dataChanged(index, index);
     emit layoutChanged();
 }
 
@@ -137,7 +133,3 @@ void ShareDirModel::beginExpanding()
             emit expandMe(stack.pop());
     }
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

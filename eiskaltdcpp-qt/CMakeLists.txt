@@ -1,26 +1,25 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.16)
 project (eiskaltdcpp-qt)
 
 include_directories(${PROJECT_BINARY_DIR})
 
-find_package (Qt5Core          5.15.0 REQUIRED)
-find_package (Qt5Gui           5.15.0 REQUIRED)
-find_package (Qt5Widgets       5.15.0 REQUIRED)
-find_package (Qt5Xml           5.15.0 REQUIRED)
-find_package (Qt5Network       5.15.0 REQUIRED)
-# This is temporary workaround which fixes build with Qt5 on Travis CI:
-find_package (Qt5LinguistTools       REQUIRED)
-find_package (Qt5Multimedia    5.15.0 REQUIRED)
-find_package (Qt5Concurrent    5.15.0 REQUIRED)
+find_package (Qt6 6.4 REQUIRED COMPONENTS
+              Core
+              Gui
+              Widgets
+              Xml
+              Network
+              LinguistTools
+              Multimedia
+              Concurrent
+              Core5Compat)
 
 if (USE_QT_QML)
-    find_package (Qt5Declarative 5.15.0 REQUIRED)
-    find_package (Qt5XmlPatterns 5.15.0 REQUIRED)
+    find_package (Qt6 6.4 REQUIRED COMPONENTS QuickWidgets)
     add_definitions(-DUSE_QML)
-    set (USE_JS ON)
-    message (STATUS "Building with Qt Declarative UI support")
+    message (STATUS "Building with Qt Quick UI support")
 else (USE_QT_QML)
-    message (STATUS "Building without Qt Declarative UI support")
+    message (STATUS "Building without Qt Quick UI support")
 endif (USE_QT_QML)
 
 if (APPLE OR HAIKU)
@@ -28,7 +27,7 @@ if (APPLE OR HAIKU)
 endif ()
 
 if (DBUS_NOTIFY)
-    find_package (Qt5DBus 5.15.0 REQUIRED)
+    find_package (Qt6 6.4 REQUIRED COMPONENTS DBus)
     add_definitions (-DDBUS_NOTIFY)
     message (STATUS "Building with Qt DBus support")
 else (DBUS_NOTIFY)
@@ -36,15 +35,13 @@ else (DBUS_NOTIFY)
 endif (DBUS_NOTIFY)
 
 if (USE_JS)
-    find_package (Qt5Script 5.15.0 REQUIRED)
-    add_definitions (-DUSE_JS)
-    message (STATUS "Building with Qt Script support")
+    message (FATAL_ERROR "QtScript was removed in Qt 6; USE_JS is no longer supported")
 else (USE_JS)
     message (STATUS "Building without Qt Script support")
 endif (USE_JS)
 
 if (USE_QT_SQLITE)
-    find_package (Qt5Sql 5.15.0 REQUIRED)
+    find_package (Qt6 6.4 REQUIRED COMPONENTS Sql)
     find_package (DuckDB REQUIRED)
     add_definitions (-DUSE_QT_SQLITE)
     message (STATUS "Building with Qt SQLite (FinishedTransfers) + DuckDB ShareIndex")
@@ -174,6 +171,10 @@ set(QT_EXTRA_SOURCES
     src/SearchModelMutate.cpp
     src/SearchModelNav.cpp
     src/SearchProxyModel.cpp
+    src/shortcut/ShortcutChord.cpp
+    src/shortcut/ShortcutGetter.cpp
+    src/shortcut/ShortcutManager.cpp
+    src/shortcut/ShortcutsModel.cpp
     src/search/SearchItem.cpp
     src/ReciprocalList.cpp
     src/ReciprocalListPeer.cpp
@@ -361,6 +362,11 @@ file (GLOB MOC_HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/statusbar/StatusBarLogLabel.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/transfergrace/TransferGrace.h)
 list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/appshell/AppPriority.h)
+list (APPEND MOC_HDRS ${PROJECT_SOURCE_DIR}/src/sharebrowser/AsyncRunner.h)
+list (APPEND MOC_HDRS
+            ${PROJECT_SOURCE_DIR}/src/shortcut/ShortcutGetter.h
+            ${PROJECT_SOURCE_DIR}/src/shortcut/ShortcutManager.h
+            ${PROJECT_SOURCE_DIR}/src/shortcut/ShortcutsModel.h)
 list (APPEND MOC_HDRS
             ${PROJECT_SOURCE_DIR}/src/mainwindow/MainWindow.h
             ${PROJECT_SOURCE_DIR}/src/filebrowser/FileBrowserFilterProxy.h
@@ -449,12 +455,15 @@ endif (NOT USE_JS)
 
 #Create moc files
 # -I src so subdirectory headers (e.g. queuedusers/) resolve ArenaWidget and peers for moc.
-QT5_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn -I${PROJECT_SOURCE_DIR}/src)
+QT6_WRAP_CPP (M_SRCS ${MOC_HDRS} OPTIONS -nn -I${PROJECT_SOURCE_DIR}/src)
 #Create .h files from ui files
-QT5_WRAP_UI (U_SRCS ${UI_FORMS})
+QT6_WRAP_UI (U_SRCS ${UI_FORMS})
 
-set (QT_LRELEASE_EXECUTABLE ${Qt5_LRELEASE_EXECUTABLE})
-get_target_property(QT_RCC_EXECUTABLE Qt5::rcc LOCATION)
+set (QT_LRELEASE_EXECUTABLE Qt6::lrelease)
+get_target_property(QT_RCC_EXECUTABLE Qt6::rcc IMPORTED_LOCATION)
+if (NOT QT_RCC_EXECUTABLE)
+    get_target_property(QT_RCC_EXECUTABLE Qt6::rcc IMPORTED_LOCATION_RELEASE)
+endif ()
 
 #Create translations
 file (MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/translations/)
@@ -471,7 +480,10 @@ endforeach ()
 
 if (WIN32 OR APPLE OR INSTALL_QT_TRANSLATIONS OR BUILD_STATIC)
     # Qt translations
-    get_target_property (QtCore_location Qt5::Core LOCATION)
+    get_target_property (QtCore_location Qt6::Core IMPORTED_LOCATION)
+    if (NOT QtCore_location)
+        get_target_property (QtCore_location Qt6::Core IMPORTED_LOCATION_RELEASE)
+    endif ()
     get_filename_component (QtCore_DIR "${QtCore_location}" PATH)
     if (WIN32)
         set (QT_ROOT_DIR "${QtCore_DIR}/..")
@@ -480,7 +492,7 @@ if (WIN32 OR APPLE OR INSTALL_QT_TRANSLATIONS OR BUILD_STATIC)
     elseif (BUILD_STATIC)
         set (QT_ROOT_DIR "${QtCore_DIR}/..")
     elseif (INSTALL_QT_TRANSLATIONS AND NOT BUILD_STATIC)
-        set (QT_ROOT_DIR "/usr/share/qt5")
+        set (QT_ROOT_DIR "/usr/share/qt6")
     endif ()
     set (QT_TRANSLATIONS_DIR "${QT_ROOT_DIR}/translations/")
     file (GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qt_*.qm")
@@ -517,32 +529,25 @@ execute_process (COMMAND ${QT_RCC_EXECUTABLE} -binary  ${DEFAULT_QRC_FILE}
                                               -o ${PROJECT_BINARY_DIR}/default.rcc
                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/)
 
-include_directories (${Qt5Core_INCLUDE_DIRS}
-                     ${Qt5Gui_INCLUDE_DIRS}
-                     ${Qt5Widgets_INCLUDE_DIRS}
-                     ${Qt5Xml_INCLUDE_DIRS}
-                     ${Qt5Multimedia_INCLUDE_DIRS}
-                     ${Qt5Concurrent_INCLUDE_DIRS}
-                     ${Qt5Declarative_INCLUDE_DIRS}
-                     ${Qt5XmlPatterns_INCLUDE_DIRS}
-                     ${Qt5DBus_INCLUDE_DIRS}
-                     ${Qt5Script_INCLUDE_DIRS}
-                     ${Qt5Sql_INCLUDE_DIRS}
-                     ${Qt5Network_INCLUDE_DIRS})
-list (APPEND LIBS ${Qt5Core_LIBRARIES}
-                  ${Qt5Gui_LIBRARIES}
-                  ${Qt5Widgets_LIBRARIES}
-                  ${Qt5Xml_LIBRARIES}
-                  ${Qt5Multimedia_LIBRARIES}
-                  ${Qt5Concurrent_LIBRARIES}
-                  ${Qt5Declarative_LIBRARIES}
-                  ${Qt5XmlPatterns_LIBRARIES}
-                  ${Qt5DBus_LIBRARIES}
-                  ${Qt5Script_LIBRARIES}
-                  ${Qt5Sql_LIBRARIES}
-                  ${Qt5Network_LIBRARIES})
+list (APPEND LIBS Qt6::Core
+                  Qt6::Gui
+                  Qt6::Widgets
+                  Qt6::Xml
+                  Qt6::Multimedia
+                  Qt6::Concurrent
+                  Qt6::Network
+                  Qt6::Core5Compat)
+
+if (USE_QT_QML)
+    list (APPEND LIBS Qt6::QuickWidgets)
+endif ()
+
+if (DBUS_NOTIFY)
+    list (APPEND LIBS Qt6::DBus)
+endif ()
 
 if (USE_QT_SQLITE)
+    list (APPEND LIBS Qt6::Sql)
     include_directories (${DuckDB_INCLUDE_DIRS})
     list (APPEND LIBS ${DuckDB_LIBRARIES})
 endif ()
@@ -563,27 +568,27 @@ if (NOT APPLE)
     list (APPEND LIBS ${ICONV_LIBRARIES})
 endif ()
 
-if (BUILD_STATIC AND USE_QT5)
+if (BUILD_STATIC AND USE_QT6)
     if (WIN32)
-        find_library (QT5FontDatabaseSupport Qt5FontDatabaseSupport)
-        find_library (QT5EventDispatcherSupport Qt5EventDispatcherSupport)
-        find_library (QT5ThemeSupport Qt5ThemeSupport)
-        find_library (QT5AccessibilitySupport Qt5AccessibilitySupport)
-        find_library (QT5WindowsUIAutomationSupport Qt5WindowsUIAutomationSupport)
-        list (INSERT LIBS 0 Qt5::QWindowsVistaStylePlugin)
+        find_library (QT6FontDatabaseSupport Qt6FontDatabaseSupport)
+        find_library (QT6EventDispatcherSupport Qt6EventDispatcherSupport)
+        find_library (QT6ThemeSupport Qt6ThemeSupport)
+        find_library (QT6AccessibilitySupport Qt6AccessibilitySupport)
+        find_library (QT6WindowsUIAutomationSupport Qt6WindowsUIAutomationSupport)
+        list (INSERT LIBS 0 Qt6::QWindowsVistaStylePlugin)
         if (DBUS_NOTIFY)
-            list (APPEND LIBS Qt5::DBus -ldbus-1)
+            list (APPEND LIBS Qt6::DBus -ldbus-1)
         endif (DBUS_NOTIFY)
-        list (APPEND LIBS Qt5::QWindowsIntegrationPlugin
-                          ${QT5FontDatabaseSupport}
-                          ${QT5EventDispatcherSupport}
-                          ${QT5ThemeSupport}
-                          ${QT5AccessibilitySupport}
-                          ${QT5WindowsUIAutomationSupport}
-                          Qt5::QSQLiteDriverPlugin
-                          Qt5::Sql
-                          Qt5::QWindowsAudioPlugin
-                          Qt5::Multimedia
+        list (APPEND LIBS Qt6::QWindowsIntegrationPlugin
+                          ${QT6FontDatabaseSupport}
+                          ${QT6EventDispatcherSupport}
+                          ${QT6ThemeSupport}
+                          ${QT6AccessibilitySupport}
+                          ${QT6WindowsUIAutomationSupport}
+                          Qt6::QSQLiteDriverPlugin
+                          Qt6::Sql
+                          Qt6::QWindowsAudioPlugin
+                          Qt6::Multimedia
                           ${PCRE2_LIBRARIES}
                           -lharfbuzz
                           -lwinmm
@@ -600,31 +605,31 @@ if (BUILD_STATIC AND USE_QT5)
              )
     elseif (UNIX AND NOT APPLE AND NOT HAIKU)
         add_definitions (-DSQLITE_ENABLE_COLUMN_METADATA=1)
-        find_library (QT5FontDatabaseSupport Qt5FontDatabaseSupport)
-        find_library (QT5EventDispatcherSupport Qt5EventDispatcherSupport)
-        find_library (QT5ThemeSupport Qt5ThemeSupport)
-        find_library (QT5ServiceSupport Qt5ServiceSupport)
-        find_library (QT5AccessibilitySupport Qt5AccessibilitySupport)
-        find_library (QT5EdidSupport Qt5EdidSupport)
-        find_library (QT5XcbQpa Qt5XcbQpa)
+        find_library (QT6FontDatabaseSupport Qt6FontDatabaseSupport)
+        find_library (QT6EventDispatcherSupport Qt6EventDispatcherSupport)
+        find_library (QT6ThemeSupport Qt6ThemeSupport)
+        find_library (QT6ServiceSupport Qt6ServiceSupport)
+        find_library (QT6AccessibilitySupport Qt6AccessibilitySupport)
+        find_library (QT6EdidSupport Qt6EdidSupport)
+        find_library (QT6XcbQpa Qt6XcbQpa)
         find_library (XcbStatic xcb-static)
         if (DBUS_NOTIFY)
-            set (QT5DBus Qt5::DBus)
+            set (QT6DBus Qt6::DBus)
         else (DBUS_NOTIFY)
-            set (QT5DBus "")
+            set (QT6DBus "")
         endif (DBUS_NOTIFY)
-        list (APPEND LIBS Qt5::QXcbIntegrationPlugin
-                          ${QT5XcbQpa}
-                          ${QT5FontDatabaseSupport}
-                          ${QT5EventDispatcherSupport}
-                          ${QT5ThemeSupport}
-                          ${QT5ServiceSupport}
-                          ${QT5AccessibilitySupport}
-                          ${QT5EdidSupport}
-                          Qt5::QSQLiteDriverPlugin
-                          Qt5::Sql
-                          Qt5::Multimedia
-                          ${QT5DBus}
+        list (APPEND LIBS Qt6::QXcbIntegrationPlugin
+                          ${QT6XcbQpa}
+                          ${QT6FontDatabaseSupport}
+                          ${QT6EventDispatcherSupport}
+                          ${QT6ThemeSupport}
+                          ${QT6ServiceSupport}
+                          ${QT6AccessibilitySupport}
+                          ${QT6EdidSupport}
+                          Qt6::QSQLiteDriverPlugin
+                          Qt6::Sql
+                          Qt6::Multimedia
+                          ${QT6DBus}
                           ${XcbStatic}
                           ${PCRE2_LIBRARIES}
                           -lsqlite3
@@ -655,7 +660,7 @@ if (BUILD_STATIC AND USE_QT5)
                           -lXdmcp
              )
     endif (WIN32)
-endif (BUILD_STATIC AND USE_QT5)
+endif (BUILD_STATIC AND USE_QT6)
 
 if (WIN32)
     if (OPENSSL_MSVC)
@@ -840,22 +845,55 @@ if (INSTALL_METAINFO)
 endif ()
 
 if (APPLE)
-    if (${_qt5Core_install_prefix} STREQUAL "")
-    message(WARNING "Warning! \"_qt5Core_install_prefix\" is not set, macdeployqt found in PATH will be used")
-    set (MACDEPLOYQT "macdeployqt")
-    else (${_qt5Core_install_prefix} STREQUAL "")
-    set (MACDEPLOYQT "${_qt5Core_install_prefix}/bin/macdeployqt")
-    endif (${_qt5Core_install_prefix} STREQUAL "")
+    get_target_property (_qt_qmake Qt6::qmake IMPORTED_LOCATION)
+    if (NOT _qt_qmake)
+        get_target_property (_qt_qmake Qt6::qmake IMPORTED_LOCATION_RELEASE)
+    endif ()
+    if (NOT _qt_qmake)
+        message(WARNING "Qt6 qmake not found, macdeployqt from PATH will be used")
+        set (MACDEPLOYQT "macdeployqt")
+    else ()
+        get_filename_component (_qt_bin_dir "${_qt_qmake}" DIRECTORY)
+        set (MACDEPLOYQT "${_qt_bin_dir}/macdeployqt")
+    endif ()
     # Help macdeployqt find Homebrew-linked libs (DuckDB, aspell, …).
     if (DuckDB_LIBRARY)
         get_filename_component (_MAC_LIBPATH "${DuckDB_LIBRARY}" DIRECTORY)
     else (DuckDB_LIBRARY)
         set (_MAC_LIBPATH "/opt/homebrew/lib")
     endif (DuckDB_LIBRARY)
+    set (_MACDEPLOY_LIBPATHS "${_MAC_LIBPATH}")
+    foreach (_qt_mod qtbase qtsvg qtmultimedia qt5compat qtimageformats qtvirtualkeyboard qtdeclarative qttools)
+        foreach (_p "/opt/homebrew/opt/${_qt_mod}/lib" "/usr/local/opt/${_qt_mod}/lib")
+            if (EXISTS "${_p}")
+                list (APPEND _MACDEPLOY_LIBPATHS "${_p}")
+            endif ()
+        endforeach ()
+    endforeach ()
+    set (_MACDEPLOY_ARGS "${MACDEPLOYQT}" "${PROJECT_NAME_GLOBAL}.app" "-verbose=1")
+    foreach (_p IN LISTS _MACDEPLOY_LIBPATHS)
+        list (APPEND _MACDEPLOY_ARGS "-libpath=${_p}")
+    endforeach ()
+    # Incremental install into dist/ can leave Qt 5 frameworks (Versions/5) and
+    # plugins; macdeployqt will not replace them, but the Qt 6 binary needs Versions/A.
+    get_filename_component (_FIX_DIST "${PROJECT_SOURCE_DIR}/../macos/fix_dist_install_names.sh" ABSOLUTE)
     install (CODE "
-                execute_process(COMMAND ${MACDEPLOYQT} ${PROJECT_NAME_GLOBAL}.app -verbose=1
-                    -libpath=${_MAC_LIBPATH}
-                    WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})")
+                set (_mac_app \"\${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME_GLOBAL}.app\")
+                file (GLOB _stale_qt \"\${_mac_app}/Contents/Frameworks/Qt*.framework\")
+                foreach (_fw IN LISTS _stale_qt)
+                    if (EXISTS \"\${_fw}/Versions/5\" AND NOT EXISTS \"\${_fw}/Versions/A\")
+                        file (REMOVE_RECURSE \"\${_fw}\")
+                    endif ()
+                endforeach ()
+                file (REMOVE_RECURSE \"\${_mac_app}/Contents/PlugIns\")
+                execute_process(COMMAND ${_MACDEPLOY_ARGS}
+                    WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX})
+                execute_process(COMMAND \"${_FIX_DIST}\" \"\${_mac_app}\"
+                    RESULT_VARIABLE _fix_rc)
+                if (_fix_rc)
+                    message (FATAL_ERROR \"fix_dist_install_names.sh failed (\${_fix_rc})\")
+                endif ()
+            ")
 
     # Explicitly embed DuckDB (macdeployqt may miss non-Qt dylibs). Self-contained .app.
     if (USE_QT_SQLITE AND DuckDB_LIBRARY)

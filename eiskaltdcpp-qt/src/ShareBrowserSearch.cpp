@@ -129,7 +129,7 @@ void ShareBrowserSearch::findMatches(FileBrowserItem *item){
         if (i->dir){
             if (type_search == 1 || type_search == 2) {
                 fname = _q(i->dir->getName());
-                if (fname.indexOf(lineEdit_SEARCHSTR->text(), 0, Qt::CaseInsensitive) >= 0 || fname.indexOf(regexp) >= 0 || regexp.exactMatch(fname))
+                if (fname.indexOf(lineEdit_SEARCHSTR->text(), 0, Qt::CaseInsensitive) >= 0 || regexp.indexIn(fname) >= 0 || regexp.exactMatch(fname))
                     emit gotItem(_q(i->dir->getName()), item);
             }
             findMatches(i);
@@ -137,7 +137,7 @@ void ShareBrowserSearch::findMatches(FileBrowserItem *item){
                 for (const auto &it_file : i->dir->files){
                     fname = _q(it_file->getName());
 
-                    if (fname.indexOf(lineEdit_SEARCHSTR->text(), 0, Qt::CaseInsensitive) >= 0 || fname.indexOf(regexp) >= 0 || regexp.exactMatch(fname))
+                    if (fname.indexOf(lineEdit_SEARCHSTR->text(), 0, Qt::CaseInsensitive) >= 0 || regexp.indexIn(fname) >= 0 || regexp.exactMatch(fname))
                         emit gotItem(_q(it_file->getName()), i);
                 }
             }

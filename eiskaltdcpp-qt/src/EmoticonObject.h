@@ -36,7 +36,7 @@ public:
 
     // FlowLayout sizes from sizeHint; never use QPixmap::size() (physical on Retina).
     QSize sizeHint() const override {
-        const QPixmap px = pixmap(Qt::ReturnByValue);
+        const QPixmap px = pixmap();
         if (px.isNull())
             return QLabel::sizeHint();
         const qreal dpr = qMax(qreal(1), px.devicePixelRatio());

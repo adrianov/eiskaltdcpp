@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include "EmoticonDialog.h"
+#include "QtCompat.h"
 
 #include <QLabel>
 #include <QLayout>
@@ -21,7 +22,7 @@ EmoticonDialog::EmoticonDialog(QWidget * parent, Qt::WindowFlags f)
 : QDialog(parent, f) {
     m_pLayout = new FlowLayout(this);
 
-    m_pLayout->setMargin(0);
+    wulforSetMargin(m_pLayout, 0);
     m_pLayout->setSpacing(0);
 
     setWindowTitle(tr("Select emoticon"));

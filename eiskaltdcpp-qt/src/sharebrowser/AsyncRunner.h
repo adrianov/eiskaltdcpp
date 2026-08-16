@@ -16,6 +16,7 @@
 
 /** Runs one function on a worker thread, then finishes (used by share browser load/search). */
 class AsyncRunner : public QThread {
+    Q_OBJECT
 public:
     explicit AsyncRunner(QObject *parent = nullptr);
     ~AsyncRunner() override;

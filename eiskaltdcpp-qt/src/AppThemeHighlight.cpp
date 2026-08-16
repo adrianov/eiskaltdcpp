@@ -31,7 +31,7 @@ QColor AppTheme::sharedFileHighlight()
     if (stored.isEmpty() || isLegacyDefault(stored))
         c = successColor();
     else
-        c.setNamedColor(stored);
+        c = QColor::fromString(stored);
     if (!c.isValid())
         c = successColor();
 
@@ -45,7 +45,7 @@ QColor AppTheme::queuedFileHighlight()
     if (stored.isEmpty() || isLegacyDefault(stored))
         c = linkColor();
     else
-        c.setNamedColor(stored);
+        c = QColor::fromString(stored);
     if (!c.isValid())
         c = linkColor();
 

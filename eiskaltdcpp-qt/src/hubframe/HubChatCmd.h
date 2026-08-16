@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include <QString>
+#include <QStringList>
+
 class HubFrame;
-class QString;
-class QStringList;
 class QWidget;
 
 class HubChatCmd

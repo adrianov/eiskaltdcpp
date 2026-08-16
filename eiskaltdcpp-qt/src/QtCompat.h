@@ -12,6 +12,11 @@
 #pragma once
 
 #include <Qt>
+#include <QtGlobal>
+#include <QDropEvent>
+#include <QLayout>
+#include <QMouseEvent>
+#include <QPoint>
 #include <QString>
 #include <QStringList>
 #include <QWheelEvent>
@@ -26,7 +31,27 @@ inline int wulforWheelDeltaY(QWheelEvent *e) {
     return e->angleDelta().y();
 }
 
+inline QPoint wulforEventPos(const QMouseEvent *e) {
+    return e->position().toPoint();
+}
+
+inline QPoint wulforEventPos(const QDropEvent *e) {
+    return e->position().toPoint();
+}
+
+inline void wulforSetMargin(QLayout *layout, int m) {
+    if (layout)
+        layout->setContentsMargins(m, m, m, m);
+}
+
 // Fails at compile time if WULFOR_SKIP_EMPTY is broken (e.g. self-referential macro).
 inline QStringList wulforSplitSkipEmpty(const QString &s, QChar sep) {
     return s.split(sep, WULFOR_SKIP_EMPTY);
 }
+
+// Call from QSortFilterProxyModel subclasses only (begin/endFilterChange are protected).
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+#define WULFOR_INVALIDATE_FILTER() do { beginFilterChange(); endFilterChange(); } while (0)
+#else
+#define WULFOR_INVALIDATE_FILTER() invalidateFilter()
+#endif

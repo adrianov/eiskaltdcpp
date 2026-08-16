@@ -9,22 +9,32 @@
 
 #pragma once
 
-#include <QLineEdit>
-#include <QEvent>
-#include <QKeyEvent>
+#include "shortcut/ShortcutChord.h"
 
-#include "LineEdit.h"
+#include <QDialog>
 
-class ShortcutEdit : public LineEdit
+class QLineEdit;
+
+class ShortcutGetter : public QDialog
 {
     Q_OBJECT
+
 public:
-    explicit ShortcutEdit(QWidget *parent = nullptr);
+    ShortcutGetter(QWidget *parent = nullptr);
+
+    QString exec(const QString& s);
+
+protected slots:
+    void setCaptureKeyboard(bool b);
 
 protected:
-    virtual bool eventFilter(QObject *, QEvent *);
+    bool captureKeyboard() { return capture; }
+
+    bool event(QEvent *e);
+    bool eventFilter(QObject *o, QEvent *e);
 
 private:
-    int keyNumber;
-    int keys[4];
+    QLineEdit *leKey;
+    ShortcutChord chord;
+    bool capture;
 };

@@ -150,7 +150,6 @@ void SessionBootstrap::loadChrome()
     if (WulforUtil::getInstance()->loadIcons())
         std::cout << QObject::tr("Application icons has been loaded").toStdString() << std::endl;
     app_.setWindowIcon(WICON(AppIcons::eiICON_APPL));
-    app_.setAttribute(Qt::AA_DisableWindowContextHelpButton);
 }
 
 void SessionBootstrap::createWindow()

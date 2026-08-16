@@ -66,7 +66,7 @@ HubFrameMenu::Action HubFrameMenu::resolveSelection(QAction *res, QMenu *antispa
     if (antispam_menu && antispam_menu->actions().contains(res))
         return static_cast<Action>(res->data().toInt());
 
-    if (!res || !res->data().canConvert(QVariant::Int))
+    if (!res || !res->data().canConvert<int>())
         return None;
 
     const int id = res->data().toInt();
