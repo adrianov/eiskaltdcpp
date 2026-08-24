@@ -11,13 +11,13 @@
 
 #include "filebrowser/AdultVideo.h"
 
-#include <QRegularExpression>
-#include <QString>
+#include "filebrowser/AdultCueSet.h"
 
 namespace AdultVideo {
 
 namespace {
 
+/** DC share lists use backslash separators even on Unix. */
 QString joinPath(const QString &path, const QString &name)
 {
     if (path.isEmpty())
@@ -27,31 +27,6 @@ QString joinPath(const QString &path, const QString &name)
     return path + QLatin1Char('\\') + name;
 }
 
-bool hasKeyword(const QString &lower)
-{
-    static const char *const words[] = {
-        "[18+]", "[adult]", "[porn]", "[xxx]", "18+", "+18", "nsfw", "onlyfans",
-        "porn", "pornhub", "xxx", "xvideos", "ladyboy", "hentai", "brazzers",
-        "tushy", "ultrafilms", "sacana"
-    };
-    for (const char *word : words) {
-        if (lower.contains(QLatin1String(word)))
-            return true;
-    }
-    return lower.contains(QStringLiteral("порно"));
-}
-
-bool hasJavCode(const QString &text)
-{
-    static const QRegularExpression jav(
-            QStringLiteral(
-                    "\\b(?:JUR|JUQ|JUL|ROE|ACHJ|SSIS|MIDE|IPX|FSDSS|MIMK|START|ABP|"
-                    "STARS|MIDV|CAWD|HND|MEYD|WAAA|DASS|PPPE|SONE|FAD|SDDE|SDMU|RCT|"
-                    "HEYZO|1PON|CARIB|10MU|FC2)-\\d{2,5}\\b"),
-            QRegularExpression::CaseInsensitiveOption);
-    return jav.match(text).hasMatch();
-}
-
 } // namespace
 
 bool matches(const QString &name, const QString &path)
@@ -59,7 +34,7 @@ bool matches(const QString &name, const QString &path)
     const QString hay = joinPath(path, name);
     if (hay.isEmpty())
         return false;
-    return hasKeyword(hay.toLower()) || hasJavCode(hay);
+    return AdultCueSet::instance().matches(hay);
 }
 
 } // namespace AdultVideo

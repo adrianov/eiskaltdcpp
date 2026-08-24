@@ -71,6 +71,7 @@ set(QT_EXTRA_SOURCES
     src/FileBrowserModelPath.cpp
     src/MediaEnrichQueue.cpp
     src/filebrowser/AdultVideo.cpp
+    src/filebrowser/AdultCueSet.cpp
     src/filebrowser/FileTypeCounter.cpp
     src/filebrowser/FilterMatch.cpp
     src/filebrowser/ListingMatch.cpp

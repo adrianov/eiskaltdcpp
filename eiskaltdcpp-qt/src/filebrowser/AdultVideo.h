@@ -13,7 +13,17 @@
 
 class QString;
 
-/** Adult-video name/path tags (Transmission cues plus hentai / 18+ / Cyrillic порно). */
+/**
+ * Adult-video cue matcher over a file name plus its share path.
+ *
+ * Covers age tags ([18+], +18), porn-site and studio brands, well-known
+ * performer names, erotic-cinema classics, JAV label codes (SSIS-123, FC2-PPV),
+ * and explicit act/anatomy words in Latin, Cyrillic, Japanese and Korean.
+ * Tokens that would false-positive as substrings («анализ» vs «анал»,
+ * NUD4700 LED drivers vs nude) are matched on Unicode-aware word boundaries;
+ * ambiguous lowercase brand spellings (Vixen, Deeper) require release-style
+ * uppercase spelling with a date or RAW suffix.
+ */
 namespace AdultVideo {
 
 bool matches(const QString &name, const QString &path);
