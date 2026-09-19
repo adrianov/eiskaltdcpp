@@ -20,6 +20,7 @@
 #include <QAtomicInt>
 #include <QHash>
 #include <QSet>
+#include <QElapsedTimer>
 
 #include <memory>
 
@@ -153,7 +154,20 @@ private:
     void upsertMediaSync(const QHash<QString, MediaInfo> &media);
     bool removeOrphans(duckdb::Connection &con);
     bool refreshEntryCount(duckdb::Connection &con);
-    void reclaimFreePages(duckdb::Connection &con);
+    bool runWriteTail(duckdb::Connection &con);
+    void maybeRunWriteTail();
+    /** Light tail: entry-count refresh + checkpoint (insert-only writers). */
+    void markWriteTailCount() { writeTailCount = true; }
+    /** Full tail: additionally sweeps orphans (deletes, list replacement). */
+    void markWriteTailDirty() { writeTailCount = true; writeTailSweep = true; }
+
+    /** Maintenance tail (orphan sweep when requested, entry-count refresh,
+     *  checkpoint) runs at drain end or at most every kWriteTailIntervalMs
+     *  while a backlog keeps the worker busy. */
+    static constexpr qint64 kWriteTailIntervalMs = 30 * 1000;
+    bool writeTailCount = false;
+    bool writeTailSweep = false;
+    QElapsedTimer writeTailClock;
     void drainWriteQueue();
     void closeDb();
     void wipeDbFiles();

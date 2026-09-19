@@ -246,7 +246,6 @@ set(QT_EXTRA_SOURCES
     src/ShareIndexUsers.cpp
     src/ShareIndexMedia.cpp
     src/shareindex/ShareIndexCap.cpp
-    src/shareindex/ShareIndexVacuum.cpp
     src/ShareIndexStats.cpp
     src/ShareIndexSmoke.cpp
     src/ShareIndexSmokeWrite.cpp

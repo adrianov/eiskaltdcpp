@@ -165,11 +165,15 @@ bool shareIndexSmokeMigrate(const QString &path, QString *error)
             || ShareIndexDb::qstr(staged->GetValue(2, 0)) != QLatin1String("S\\"))
         return fail(error, QStringLiteral("staged canonical / NULL override"));
 
+    if (!idx.runWriteTail(*con))
+        return fail(error, QStringLiteral("write tail"));
+
     const ShareIndex::IndexStats stats = idx.indexStats();
     if (stats.files != 1 || stats.dbBytes <= 0)
         return fail(error, QStringLiteral("index stats missing"));
 
     idx.removeTthSync(QStringLiteral("C"), QStringLiteral("TTH3"));
+    idx.maybeRunWriteTail();
     staged = con->Query("SELECT count(*) FROM share_files WHERE tth='TTH3'");
     if (staged->HasError() || ShareIndexDb::qi64(staged->GetValue(0, 0)) != 0)
         return fail(error, QStringLiteral("orphan file retained"));

@@ -82,6 +82,12 @@ void ShareIndex::drainWriteQueue()
                 break;
             }
             }
+
+            // Open already erases+retries once on a poisoned DB; avoid a second rebuild loop.
+            if (ShareIndexDb::takeFatal() && !(job.kind == OpenDb && isOpen()))
+                recoverDb();
+
+            maybeRunWriteTail();
         } catch (const duckdb::FatalException &e) {
             const QString msg = QString::fromUtf8(e.what());
             ShareIndexDb::noteFailure(duckdb::ExceptionType::FATAL, msg);
@@ -98,10 +104,51 @@ void ShareIndex::drainWriteQueue()
             setLastError(QStringLiteral("share index write failed"));
         }
 
-        // Open already erases+retries once on a poisoned DB; avoid a second rebuild loop.
-        if (ShareIndexDb::takeFatal() && !(job.kind == OpenDb && isOpen()))
+        // Maintenance may also invalidate the DB; heal before the next job or exit.
+        if (ShareIndexDb::takeFatal())
             recoverDb();
     }
+}
+
+bool ShareIndex::runWriteTail(duckdb::Connection &con)
+{
+    if (writeTailSweep && !removeOrphans(con))
+        return false;
+    writeTailSweep = false;
+    if (!refreshEntryCount(con))
+        return false;
+    // Fold the WAL back into the DB; skip on shutdown so the worker exits
+    // promptly and DuckDB replays the WAL on the next open.
+    if (isStopping())
+        return true;
+    QString err;
+    if (!ShareIndexDb::execOk(con, "CHECKPOINT", &err)) {
+        setLastError(err);
+        return false;
+    }
+    writeTailCount = false;
+    return true;
+}
+
+void ShareIndex::maybeRunWriteTail()
+{
+    if (!writeTailCount)
+        return;
+    bool drained = false;
+    {
+        QMutexLocker lock(&writeMutex);
+        drained = writeQueue.isEmpty();
+    }
+    if (!drained && writeTailClock.isValid()
+            && writeTailClock.elapsed() < kWriteTailIntervalMs)
+        return;
+    duckdb::Connection *con = threadConn();
+    if (!con)
+        return; // no connection yet: keep the request pending for the next boundary
+    writeTailClock.start();
+    // runWriteTail consumes the flags on success only; a failure or throw
+    // leaves them pending for the next maintenance boundary.
+    runWriteTail(*con);
 }
 
 #endif

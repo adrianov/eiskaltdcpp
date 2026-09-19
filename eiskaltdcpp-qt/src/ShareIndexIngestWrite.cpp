@@ -61,10 +61,7 @@ bool ShareIndex::writeListRows(const QString &cid, const QList<QVariantMap> &row
         setLastError(QStringLiteral("COMMIT failed"));
         return false;
     }
-    if (!removeOrphans(*con))
-        return false;
-    refreshEntryCount(*con);
-    reclaimFreePages(*con);
+    markWriteTailDirty();
     return true;
 }
 
@@ -94,7 +91,7 @@ void ShareIndex::removeTthSync(const QString &cid, const QString &tth)
         "DELETE FROM share_files WHERE tth = ? AND NOT EXISTS ("
         "SELECT 1 FROM share_locations l WHERE l.file_id = share_files.file_id)",
         ShareIndexDb::strVal(tth));
-    refreshEntryCount(*con);
+    markWriteTailDirty();
 }
 
 void ShareIndex::removeUserSync(const QString &cid)
@@ -121,9 +118,7 @@ void ShareIndex::removeUserSync(const QString &cid)
     // Drop the user row(s) even if file-orphan batches fail later.
     ShareIndexDb::query1(*con, "DELETE FROM share_users WHERE cid = ?",
                          ShareIndexDb::strVal(cid));
-    if (!removeOrphans(*con))
-        return;
-    refreshEntryCount(*con);
+    markWriteTailDirty();
 }
 
 namespace {

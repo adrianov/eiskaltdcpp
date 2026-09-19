@@ -65,6 +65,12 @@ bool ShareIndex::ensureSchema(duckdb::Connection &con, const std::string &prefix
     ShareIndexDb::execOk(con,
             "CREATE INDEX IF NOT EXISTS share_users_cid ON "
             + prefix + "share_users(cid)");
+    ShareIndexDb::execOk(con,
+            "CREATE INDEX IF NOT EXISTS share_loc_file ON "
+            + prefix + "share_locations(file_id)");
+    ShareIndexDb::execOk(con,
+            "CREATE INDEX IF NOT EXISTS share_loc_user ON "
+            + prefix + "share_locations(user_id)");
 
     if (!ShareIndexDb::execOk(con,
             "CREATE TABLE IF NOT EXISTS " + prefix + "share_list_meta ("
